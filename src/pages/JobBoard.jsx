@@ -4,8 +4,9 @@ import { base44 } from "@/api/base44Client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { JOB_STATUSES } from "@/lib/jobHelpers";
 import JobCard from "@/components/jobs/JobCard";
+import JobRowView from "@/components/jobs/JobRowView";
 import { Button } from "@/components/ui/button";
-import { Plus, Filter } from "lucide-react";
+import { Plus, Filter, LayoutGrid, List } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,6 +24,7 @@ const COLUMN_COLORS = {
 
 export default function JobBoard() {
   const [filterType, setFilterType] = useState("all");
+  const [viewMode, setViewMode] = useState("kanban");
   const queryClient = useQueryClient();
 
   const { data: jobs = [], isLoading } = useQuery({
@@ -91,6 +93,23 @@ export default function JobBoard() {
               <SelectItem value="Other">Other</SelectItem>
             </SelectContent>
           </Select>
+          {/* View toggle */}
+          <div className="flex items-center border border-border rounded-md overflow-hidden h-9">
+            <button
+              onClick={() => setViewMode("kanban")}
+              className={`px-2.5 h-full flex items-center transition-colors ${viewMode === "kanban" ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"}`}
+              title="Kanban View"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("row")}
+              className={`px-2.5 h-full flex items-center border-l border-border transition-colors ${viewMode === "row" ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"}`}
+              title="Row View"
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
           <Link to="/jobs/new">
             <Button size="sm" className="h-9">
               <Plus className="w-4 h-4 mr-1.5" />
@@ -101,44 +120,51 @@ export default function JobBoard() {
       </div>
 
       {/* Kanban board */}
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="flex gap-3 overflow-x-auto flex-1 pb-4">
-          {JOB_STATUSES.map(status => (
-            <Droppable key={status} droppableId={status}>
-              {(provided, snapshot) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={`shrink-0 w-64 lg:w-72 flex flex-col rounded-xl border border-t-4 ${COLUMN_COLORS[status]} ${snapshot.isDraggingOver ? 'bg-accent/20' : 'bg-muted/30'}`}
-                >
-                  <div className="px-3 py-2.5 flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{status}</span>
-                    <span className="text-xs font-medium text-muted-foreground bg-muted rounded-full w-5 h-5 flex items-center justify-center">
-                      {columns[status].length}
-                    </span>
+      {viewMode === "kanban" ? (
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="flex gap-3 overflow-x-auto flex-1 pb-4">
+            {JOB_STATUSES.map(status => (
+              <Droppable key={status} droppableId={status}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`shrink-0 w-64 lg:w-72 flex flex-col rounded-xl border border-t-4 ${COLUMN_COLORS[status]} ${snapshot.isDraggingOver ? 'bg-accent/20' : 'bg-muted/30'}`}
+                  >
+                    <div className="px-3 py-2.5 flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{status}</span>
+                      <span className="text-xs font-medium text-muted-foreground bg-muted rounded-full w-5 h-5 flex items-center justify-center">
+                        {columns[status].length}
+                      </span>
+                    </div>
+                    <div className="flex-1 px-2 pb-2 space-y-2 overflow-y-auto min-h-[200px]">
+                      {columns[status].map((job, index) => (
+                        <Draggable key={job.id} draggableId={job.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                            >
+                              <JobCard job={job} isDragging={snapshot.isDragging} />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
                   </div>
-                  <div className="flex-1 px-2 pb-2 space-y-2 overflow-y-auto min-h-[200px]">
-                    {columns[status].map((job, index) => (
-                      <Draggable key={job.id} draggableId={job.id} index={index}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                          >
-                            <JobCard job={job} isDragging={snapshot.isDragging} />
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                </div>
-              )}
-            </Droppable>
-          ))}
-        </div>
-      </DragDropContext>
+                )}
+              </Droppable>
+            ))}
+          </div>
+        </DragDropContext>
+      ) : (
+        <JobRowView
+          jobs={filteredJobs}
+          onUpdateJob={(id, data) => updateJobMutation.mutate({ id, data })}
+        />
+      )}
     </div>
   );
 }
