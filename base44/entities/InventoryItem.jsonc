@@ -1,0 +1,58 @@
+{
+  "name": "InventoryItem",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Material name"
+    },
+    "sku": {
+      "type": "string",
+      "description": "SKU or part number"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Steel",
+        "Hardware",
+        "Consumables",
+        "Tools",
+        "Other"
+      ],
+      "description": "Category"
+    },
+    "unit": {
+      "type": "string",
+      "description": "Unit of measure (ft, lbs, ea, etc.)"
+    },
+    "quantity_on_hand": {
+      "type": "number",
+      "default": 0
+    },
+    "reorder_point": {
+      "type": "number",
+      "default": 0,
+      "description": "Alert when below this"
+    },
+    "unit_cost": {
+      "type": "number",
+      "default": 0
+    },
+    "vendor_id": {
+      "type": "string"
+    },
+    "vendor_name": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string",
+      "description": "Shelf / bin location"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

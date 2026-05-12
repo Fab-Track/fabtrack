@@ -1,0 +1,49 @@
+{
+  "name": "JobAttachment",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string"
+    },
+    "job_number": {
+      "type": "string"
+    },
+    "file_url": {
+      "type": "string"
+    },
+    "file_name": {
+      "type": "string"
+    },
+    "file_type": {
+      "type": "string",
+      "description": "MIME type"
+    },
+    "label": {
+      "type": "string",
+      "enum": [
+        "Drawing",
+        "Cut List",
+        "Photo",
+        "Permit",
+        "Signed Estimate",
+        "Other"
+      ],
+      "default": "Other"
+    },
+    "version": {
+      "type": "string",
+      "description": "e.g. v1, v2, Rev A"
+    },
+    "uploaded_by": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_id",
+    "file_url",
+    "file_name"
+  ]
+}

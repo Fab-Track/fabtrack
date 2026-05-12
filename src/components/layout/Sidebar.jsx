@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Kanban, Wrench, Clock, FileText, 
   CalendarDays, ShoppingCart, Users, Package, 
   Trophy, ChevronLeft, ChevronRight, Search,
-  Building2, Menu, X
+  Building2, Menu, X, FileDiff
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ const navItems = [
   { label: "Customers", icon: Users, path: "/customers" },
   { label: "Inventory", icon: Package, path: "/inventory" },
   { label: "Craftsman Score", icon: Trophy, path: "/craftsman" },
+  { label: "Change Orders", icon: FileDiff, path: "/change-orders" },
   { label: "Employees", icon: Building2, path: "/employees" },
 ];
 

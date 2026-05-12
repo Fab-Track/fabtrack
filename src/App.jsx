@@ -20,6 +20,7 @@ import Customers from '@/pages/Customers';
 import Inventory from '@/pages/Inventory';
 import CraftsmanScore from '@/pages/CraftsmanScore';
 import Employees from '@/pages/Employees';
+import ChangeOrders from '@/pages/ChangeOrders';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -63,6 +64,7 @@ const AuthenticatedApp = () => {
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/craftsman" element={<CraftsmanScore />} />
         <Route path="/employees" element={<Employees />} />
+        <Route path="/change-orders" element={<ChangeOrders />} />
       </Route>
 
       <Route path="*" element={<PageNotFound />} />

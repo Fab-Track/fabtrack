@@ -11,7 +11,7 @@ import { Link } from "react-router-dom";
 import JobOverviewTab from "@/components/jobs/JobOverviewTab";
 import JobShopLogTab from "@/components/jobs/JobShopLogTab";
 import JobCostingTab from "@/components/jobs/JobCostingTab";
-import JobAttachmentsTab from "@/components/jobs/JobAttachmentsTab";
+import JobAttachmentsTab from "@/components/jobs/JobAttachmentsTab.jsx";
 
 export default function JobDetail() {
   const jobId = new URLSearchParams(window.location.search).get("id") 
