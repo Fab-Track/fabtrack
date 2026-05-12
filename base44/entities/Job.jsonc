@@ -1,0 +1,138 @@
+{
+  "name": "Job",
+  "type": "object",
+  "properties": {
+    "job_number": {
+      "type": "string",
+      "description": "Auto-generated job number e.g. HCMW-2025-047"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Linked customer ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Customer name (denormalized)"
+    },
+    "job_name": {
+      "type": "string",
+      "description": "Job name / description"
+    },
+    "job_type": {
+      "type": "string",
+      "enum": [
+        "Fence",
+        "Gate",
+        "Railing",
+        "Staircase",
+        "Custom Structure",
+        "Other"
+      ],
+      "description": "Job type"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Estimate",
+        "Approved",
+        "Fab Queue",
+        "In Fabrication",
+        "Powder Coat",
+        "Install Scheduled",
+        "Install Complete",
+        "Invoiced"
+      ],
+      "default": "Estimate",
+      "description": "Current job status"
+    },
+    "site_address": {
+      "type": "string",
+      "description": "Location / site address"
+    },
+    "expected_install_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Expected install date"
+    },
+    "design_details": {
+      "type": "string",
+      "description": "Design details (free text)"
+    },
+    "powder_coat_color": {
+      "type": "string",
+      "description": "Powder coat color name"
+    },
+    "powder_coat_code": {
+      "type": "string",
+      "description": "RAL or color code"
+    },
+    "tools_needed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tools needed for install"
+    },
+    "special_considerations": {
+      "type": "string",
+      "description": "Special considerations"
+    },
+    "assigned_crew": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Assigned crew member IDs"
+    },
+    "assigned_crew_names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Assigned crew member names"
+    },
+    "customer_approval_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending"
+    },
+    "internal_notes": {
+      "type": "string",
+      "description": "Internal notes"
+    },
+    "estimate_total": {
+      "type": "number",
+      "description": "Estimate total amount"
+    },
+    "actual_cost": {
+      "type": "number",
+      "description": "Actual cost accumulated",
+      "default": 0
+    },
+    "estimated_labor_hours": {
+      "type": "number",
+      "description": "Total estimated labor hours"
+    },
+    "actual_labor_hours": {
+      "type": "number",
+      "description": "Total actual labor hours logged",
+      "default": 0
+    },
+    "last_activity_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last status change or time entry date"
+    },
+    "work_center_queue_order": {
+      "type": "object",
+      "description": "Priority order per work center"
+    }
+  },
+  "required": [
+    "job_name"
+  ]
+}

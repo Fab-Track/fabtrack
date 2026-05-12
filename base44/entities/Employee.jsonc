@@ -1,0 +1,48 @@
+{
+  "name": "Employee",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Full name"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "welder",
+        "fitter",
+        "cutter",
+        "installer",
+        "foreman",
+        "admin",
+        "grinder"
+      ],
+      "description": "Shop role"
+    },
+    "hourly_rate": {
+      "type": "number",
+      "description": "Hourly rate for job costing (hidden from floor)"
+    },
+    "pin": {
+      "type": "string",
+      "description": "4-digit PIN for kiosk clock-in"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Active or inactive"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email (linked to user account if applicable)"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Phone number"
+    }
+  },
+  "required": [
+    "name",
+    "role"
+  ]
+}

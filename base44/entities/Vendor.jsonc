@@ -1,0 +1,36 @@
+{
+  "name": "Vendor",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Vendor name"
+    },
+    "contact_name": {
+      "type": "string",
+      "description": "Contact person"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "material_type": {
+      "type": "string",
+      "enum": [
+        "Steel Supplier",
+        "Hardware",
+        "Powder Coat Vendor",
+        "Equipment Rental",
+        "Other"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

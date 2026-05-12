@@ -1,0 +1,69 @@
+{
+  "name": "TimeEntry",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "Employee ID"
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Employee name"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Job ID"
+    },
+    "job_number": {
+      "type": "string",
+      "description": "Job number"
+    },
+    "work_center": {
+      "type": "string",
+      "enum": [
+        "Cut",
+        "Fit",
+        "Weld",
+        "Grind",
+        "Powder Coat",
+        "Install",
+        "Demo",
+        "Design"
+      ],
+      "description": "Work center"
+    },
+    "clock_in": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Clock in timestamp"
+    },
+    "clock_out": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Clock out timestamp"
+    },
+    "duration_hours": {
+      "type": "number",
+      "description": "Duration in hours"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Currently clocked in"
+    },
+    "is_manual": {
+      "type": "boolean",
+      "default": false,
+      "description": "Manually entered by foreman/owner"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes"
+    }
+  },
+  "required": [
+    "employee_id",
+    "job_id",
+    "work_center"
+  ]
+}

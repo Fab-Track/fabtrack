@@ -1,0 +1,69 @@
+{
+  "name": "ChangeOrder",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "Linked job ID"
+    },
+    "job_number": {
+      "type": "string",
+      "description": "Job number"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of scope change"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Sent",
+        "Approved",
+        "Rejected"
+      ],
+      "default": "Draft"
+    },
+    "cost_impact": {
+      "type": "number",
+      "description": "Cost impact amount"
+    },
+    "line_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit_cost": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "customer_approval_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "customer_signature": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_id",
+    "description"
+  ]
+}

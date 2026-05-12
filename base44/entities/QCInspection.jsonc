@@ -1,0 +1,76 @@
+{
+  "name": "QCInspection",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "Job ID"
+    },
+    "job_number": {
+      "type": "string"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "Employee being inspected"
+    },
+    "employee_name": {
+      "type": "string"
+    },
+    "work_center": {
+      "type": "string",
+      "enum": [
+        "Cut",
+        "Fit",
+        "Weld",
+        "Grind"
+      ]
+    },
+    "weld_quality": {
+      "type": "number",
+      "description": "1-5 score"
+    },
+    "alignment_squareness": {
+      "type": "number",
+      "description": "1-5 score"
+    },
+    "baseplate_centering": {
+      "type": "number",
+      "description": "1-5 score"
+    },
+    "cut_list_adherence": {
+      "type": "number",
+      "description": "1-5 score"
+    },
+    "grind_finish_quality": {
+      "type": "number",
+      "description": "1-5 score"
+    },
+    "material_waste": {
+      "type": "number",
+      "description": "1-5 score"
+    },
+    "quality_score": {
+      "type": "number",
+      "description": "Computed quality score 0-100"
+    },
+    "passed_first_time": {
+      "type": "boolean",
+      "default": true
+    },
+    "rework_required": {
+      "type": "boolean",
+      "default": false
+    },
+    "rework_notes": {
+      "type": "string"
+    },
+    "inspector_notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_id",
+    "employee_id",
+    "work_center"
+  ]
+}

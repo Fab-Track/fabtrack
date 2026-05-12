@@ -1,0 +1,87 @@
+{
+  "name": "Estimate",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "Linked job ID"
+    },
+    "job_number": {
+      "type": "string",
+      "description": "Job number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Sent",
+        "Approved",
+        "Rejected"
+      ],
+      "default": "Draft"
+    },
+    "line_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "unit_cost": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "phase": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "subtotal": {
+      "type": "number",
+      "default": 0
+    },
+    "markup_percent": {
+      "type": "number",
+      "default": 0
+    },
+    "overhead_percent": {
+      "type": "number",
+      "default": 0
+    },
+    "tax_percent": {
+      "type": "number",
+      "default": 0
+    },
+    "total": {
+      "type": "number",
+      "default": 0
+    },
+    "approved_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "customer_signature": {
+      "type": "string",
+      "description": "Customer name/initials for approval"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_id"
+  ]
+}
