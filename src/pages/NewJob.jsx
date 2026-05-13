@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Save } from "lucide-react";
 import { Link } from "react-router-dom";
 import { generateJobNumber } from "@/lib/jobHelpers";
+import CustomerCombobox from "@/components/customers/CustomerCombobox";
 
 export default function NewJob() {
   const navigate = useNavigate();
@@ -51,11 +52,10 @@ export default function NewJob() {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleCustomerChange = (customerId) => {
-    const customer = customers.find(c => c.id === customerId);
+  const handleCustomerChange = (customer) => {
     setForm(prev => ({
       ...prev,
-      customer_id: customerId,
+      customer_id: customer?.id || "",
       customer_name: customer?.name || "",
       site_address: customer?.address || prev.site_address,
     }));
@@ -111,14 +111,11 @@ export default function NewJob() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-xs">Customer</Label>
-                <Select value={form.customer_id} onValueChange={handleCustomerChange}>
-                  <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-                  <SelectContent>
-                    {customers.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CustomerCombobox
+                  customers={customers}
+                  value={form.customer_id}
+                  onChange={handleCustomerChange}
+                />
               </div>
               <div>
                 <Label className="text-xs">Expected Install Date</Label>
