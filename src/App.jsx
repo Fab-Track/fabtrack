@@ -19,6 +19,7 @@ import Inventory from '@/pages/Inventory';
 import CraftsmanScore from '@/pages/CraftsmanScore';
 import Employees from '@/pages/Employees';
 import Documents from '@/pages/Documents';
+import LeadForm from '@/pages/LeadForm';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -45,8 +46,9 @@ const AuthenticatedApp = () => {
 
   return (
     <Routes>
-      {/* Kiosk mode - no sidebar */}
+      {/* Public pages - no sidebar */}
       <Route path="/kiosk" element={<ShopKiosk />} />
+      <Route path="/lead" element={<LeadForm />} />
       
       {/* Main app with sidebar layout */}
       <Route element={<AppLayout />}>

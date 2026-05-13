@@ -14,6 +14,7 @@ import JobCostingTab from "@/components/jobs/JobCostingTab";
 import JobAttachmentsTab from "@/components/jobs/JobAttachmentsTab.jsx";
 import ProductionSchedule from "@/components/jobs/ProductionSchedule";
 import JobDocumentsTab from "@/components/jobs/JobDocumentsTab";
+import JobHistoryTab from "@/components/jobs/JobHistoryTab";
 
 export default function JobDetail() {
   const jobId = new URLSearchParams(window.location.search).get("id") 
@@ -71,10 +72,17 @@ export default function JobDetail() {
       <div className="bg-card rounded-xl border p-5 mb-4">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
           <div>
-            <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center gap-3 mb-1 flex-wrap">
               <div className={`w-2.5 h-2.5 rounded-full ${getHealthDot(health)}`} />
               <span className="text-sm font-mono text-muted-foreground">{job.job_number}</span>
-              <Badge className={STATUS_COLORS[job.status]}>{job.status}</Badge>
+              {job.pipeline_board && (
+                <Badge variant="outline" className="text-xs">{job.pipeline_board} Board</Badge>
+              )}
+              {job.stage ? (
+                <Badge className="text-xs bg-muted text-muted-foreground">{job.stage}</Badge>
+              ) : (
+                <Badge className={STATUS_COLORS[job.status]}>{job.status}</Badge>
+              )}
             </div>
             <h1 className="text-xl font-bold">{job.job_name}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">{job.customer_name}</p>
@@ -116,6 +124,12 @@ export default function JobDetail() {
           <TabsTrigger value="shop-log">Shop Log</TabsTrigger>
           <TabsTrigger value="costing">Costing</TabsTrigger>
           <TabsTrigger value="attachments">Attachments</TabsTrigger>
+          <TabsTrigger value="history">
+            History
+            {job.stage_history?.length > 0 && (
+              <span className="ml-1.5 text-[10px] bg-muted text-muted-foreground rounded-full px-1.5">{job.stage_history.length}</span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -135,6 +149,9 @@ export default function JobDetail() {
         </TabsContent>
         <TabsContent value="attachments">
           <JobAttachmentsTab job={job} />
+        </TabsContent>
+        <TabsContent value="history">
+          <JobHistoryTab job={job} />
         </TabsContent>
       </Tabs>
     </div>

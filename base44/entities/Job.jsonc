@@ -30,6 +30,54 @@
       ],
       "description": "Job type"
     },
+    "pipeline_board": {
+      "type": "string",
+      "enum": [
+        "Sales",
+        "Shop",
+        "Billing"
+      ],
+      "default": "Sales",
+      "description": "Which pipeline board the job is currently on"
+    },
+    "stage": {
+      "type": "string",
+      "description": "Current stage within the pipeline board",
+      "default": "New Lead"
+    },
+    "stage_entered_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the job entered the current stage"
+    },
+    "stage_history": {
+      "type": "array",
+      "description": "Log of all stage transitions",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from_board": {
+            "type": "string"
+          },
+          "to_board": {
+            "type": "string"
+          },
+          "from_stage": {
+            "type": "string"
+          },
+          "to_stage": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "status": {
       "type": "string",
       "enum": [
@@ -43,7 +91,7 @@
         "Invoiced"
       ],
       "default": "Estimate",
-      "description": "Current job status"
+      "description": "Legacy status field (kept for compatibility)"
     },
     "site_address": {
       "type": "string",
@@ -96,6 +144,14 @@
       },
       "description": "Assigned crew member names"
     },
+    "assigned_estimator": {
+      "type": "string",
+      "description": "Estimator user ID"
+    },
+    "assigned_estimator_name": {
+      "type": "string",
+      "description": "Estimator name"
+    },
     "customer_approval_status": {
       "type": "string",
       "enum": [
@@ -135,6 +191,32 @@
     "work_center_queue_order": {
       "type": "object",
       "description": "Priority order per work center"
+    },
+    "lead_source": {
+      "type": "string",
+      "enum": [
+        "Manual",
+        "Website Form",
+        "Referral",
+        "Phone",
+        "Other"
+      ],
+      "default": "Manual"
+    },
+    "lead_customer_phone": {
+      "type": "string"
+    },
+    "lead_customer_email": {
+      "type": "string"
+    },
+    "second_half_invoice_id": {
+      "type": "string",
+      "description": "Invoice ID for the 2nd-half invoice in Billing flow"
+    },
+    "invoice_sent_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the 2nd half invoice was sent"
     },
     "schedule_phases": {
       "type": "array",
