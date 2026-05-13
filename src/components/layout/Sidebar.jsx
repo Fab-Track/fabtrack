@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, Kanban, Wrench, Clock, FileText, 
-  CalendarDays, ShoppingCart, Users, Package, 
+  CalendarDays, Users, Package, 
   Trophy, ChevronLeft, ChevronRight, Search,
-  Building2, Menu, X, FileDiff
+  Building2, Menu, X
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -14,13 +14,11 @@ const navItems = [
   { label: "Job Board", icon: Kanban, path: "/jobs" },
   { label: "Work Centers", icon: Wrench, path: "/work-centers" },
   { label: "Shop Floor", icon: Clock, path: "/kiosk" },
-  { label: "Estimates", icon: FileText, path: "/estimates" },
   { label: "Schedule", icon: CalendarDays, path: "/schedule" },
-  { label: "Purchasing", icon: ShoppingCart, path: "/purchasing" },
+  { label: "Documents", icon: FileText, path: "/documents" },
   { label: "Customers", icon: Users, path: "/customers" },
   { label: "Inventory", icon: Package, path: "/inventory" },
   { label: "Craftsman Score", icon: Trophy, path: "/craftsman" },
-  { label: "Change Orders", icon: FileDiff, path: "/change-orders" },
   { label: "Employees", icon: Building2, path: "/employees" },
 ];
 

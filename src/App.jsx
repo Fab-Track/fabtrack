@@ -13,14 +13,12 @@ import JobDetail from '@/pages/JobDetail';
 import NewJob from '@/pages/NewJob';
 import WorkCenters from '@/pages/WorkCenters';
 import ShopKiosk from '@/pages/ShopKiosk';
-import Estimates from '@/pages/Estimates';
 import Schedule from '@/pages/Schedule';
-import Purchasing from '@/pages/Purchasing';
 import Customers from '@/pages/Customers';
 import Inventory from '@/pages/Inventory';
 import CraftsmanScore from '@/pages/CraftsmanScore';
 import Employees from '@/pages/Employees';
-import ChangeOrders from '@/pages/ChangeOrders';
+import Documents from '@/pages/Documents';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -57,14 +55,12 @@ const AuthenticatedApp = () => {
         <Route path="/jobs/new" element={<NewJob />} />
         <Route path="/jobs/:id" element={<JobDetail />} />
         <Route path="/work-centers" element={<WorkCenters />} />
-        <Route path="/estimates" element={<Estimates />} />
         <Route path="/schedule" element={<Schedule />} />
-        <Route path="/purchasing" element={<Purchasing />} />
         <Route path="/customers" element={<Customers />} />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/craftsman" element={<CraftsmanScore />} />
         <Route path="/employees" element={<Employees />} />
-        <Route path="/change-orders" element={<ChangeOrders />} />
+        <Route path="/documents" element={<Documents />} />
       </Route>
 
       <Route path="*" element={<PageNotFound />} />

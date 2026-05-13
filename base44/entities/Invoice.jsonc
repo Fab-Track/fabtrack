@@ -1,0 +1,122 @@
+{
+  "name": "Invoice",
+  "type": "object",
+  "properties": {
+    "invoice_number": {
+      "type": "string",
+      "description": "Auto-generated invoice number e.g. INV-2025-001"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Linked job ID"
+    },
+    "job_number": {
+      "type": "string",
+      "description": "Job number"
+    },
+    "job_name": {
+      "type": "string"
+    },
+    "customer_id": {
+      "type": "string"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "site_address": {
+      "type": "string"
+    },
+    "invoice_type": {
+      "type": "string",
+      "enum": [
+        "Deposit",
+        "Progress",
+        "Final"
+      ],
+      "default": "Final"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Unpaid",
+        "Partial",
+        "Paid",
+        "Overdue"
+      ],
+      "default": "Unpaid"
+    },
+    "line_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "group": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "unit_cost": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "subtotal": {
+      "type": "number",
+      "default": 0
+    },
+    "tax_percent": {
+      "type": "number",
+      "default": 0
+    },
+    "tax_amount": {
+      "type": "number",
+      "default": 0
+    },
+    "total": {
+      "type": "number",
+      "default": 0
+    },
+    "amount_paid": {
+      "type": "number",
+      "default": 0
+    },
+    "balance_due": {
+      "type": "number",
+      "default": 0
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "issued_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "paid_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Customer-visible notes"
+    },
+    "internal_notes": {
+      "type": "string",
+      "description": "Internal only"
+    }
+  },
+  "required": [
+    "job_id"
+  ]
+}
