@@ -12,6 +12,7 @@ import JobOverviewTab from "@/components/jobs/JobOverviewTab";
 import JobShopLogTab from "@/components/jobs/JobShopLogTab";
 import JobCostingTab from "@/components/jobs/JobCostingTab";
 import JobAttachmentsTab from "@/components/jobs/JobAttachmentsTab.jsx";
+import ProductionSchedule from "@/components/jobs/ProductionSchedule";
 
 export default function JobDetail() {
   const jobId = new URLSearchParams(window.location.search).get("id") 
@@ -104,6 +105,12 @@ export default function JobDetail() {
       <Tabs defaultValue="overview">
         <TabsList className="mb-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="schedule">
+            Schedule
+            {job.schedule_phases?.length > 0 && (
+              <span className="ml-1.5 text-[10px] bg-accent text-accent-foreground rounded-full px-1.5">●</span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="shop-log">Shop Log</TabsTrigger>
           <TabsTrigger value="costing">Costing</TabsTrigger>
           <TabsTrigger value="attachments">Attachments</TabsTrigger>
@@ -111,6 +118,9 @@ export default function JobDetail() {
 
         <TabsContent value="overview">
           <JobOverviewTab job={job} />
+        </TabsContent>
+        <TabsContent value="schedule">
+          <ProductionSchedule job={job} />
         </TabsContent>
         <TabsContent value="shop-log">
           <JobShopLogTab timeEntries={timeEntries} job={job} />

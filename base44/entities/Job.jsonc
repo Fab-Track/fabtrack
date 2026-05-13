@@ -54,6 +54,11 @@
       "format": "date",
       "description": "Expected install date"
     },
+    "promised_install_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Customer-facing committed install date"
+    },
     "design_details": {
       "type": "string",
       "description": "Design details (free text)"
@@ -130,6 +135,49 @@
     "work_center_queue_order": {
       "type": "object",
       "description": "Priority order per work center"
+    },
+    "schedule_phases": {
+      "type": "array",
+      "description": "Auto-generated production schedule phases",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "upcoming",
+              "in_progress",
+              "complete"
+            ]
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "color": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "schedule_created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "schedule_updated_at": {
+      "type": "string",
+      "format": "date-time"
     }
   },
   "required": [
