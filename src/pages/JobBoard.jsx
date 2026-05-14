@@ -2,12 +2,15 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { getBoardsForRole, getDefaultBoard, SALES_STAGES, SHOP_STAGES, BILLING_STAGES } from "@/lib/pipelineHelpers";
+
+const BOARD_STAGES = { Sales: SALES_STAGES, Shop: SHOP_STAGES, Billing: BILLING_STAGES };
 import SalesBoard from "@/components/pipeline/SalesBoard";
 import ShopBoard from "@/components/pipeline/ShopBoard";
 import BillingBoard from "@/components/pipeline/BillingBoard";
+import PipelineRowView from "@/components/pipeline/PipelineRowView";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Filter, TrendingUp, Wrench, DollarSign } from "lucide-react";
+import { Plus, Filter, TrendingUp, Wrench, DollarSign, LayoutGrid, List } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 
@@ -27,6 +30,8 @@ export default function JobBoard() {
   const [filterType, setFilterType] = useState("all");
   const [activeBoard, setActiveBoard] = useState(null);
   const [userRole, setUserRole] = useState(null);
+  // Per-board view: "kanban" | "row"
+  const [viewMode, setViewMode] = useState({ Sales: "kanban", Shop: "kanban", Billing: "kanban" });
 
   const queryClient = useQueryClient();
 
@@ -95,6 +100,25 @@ export default function JobBoard() {
               ))}
             </SelectContent>
           </Select>
+          {/* View toggle */}
+          {activeBoard && (
+            <div className="flex items-center border rounded-md h-9 overflow-hidden">
+              <button
+                onClick={() => setViewMode(v => ({ ...v, [activeBoard]: "kanban" }))}
+                className={`px-2.5 h-full flex items-center transition-colors ${viewMode[activeBoard] === "kanban" ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"}`}
+                title="Kanban view"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode(v => ({ ...v, [activeBoard]: "row" }))}
+                className={`px-2.5 h-full flex items-center transition-colors border-l ${viewMode[activeBoard] === "row" ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"}`}
+                title="Row view"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+          )}
           <Link to="/jobs/new">
             <Button size="sm" className="h-9">
               <Plus className="w-4 h-4 mr-1.5" />New Job
@@ -131,9 +155,21 @@ export default function JobBoard() {
 
       {/* Active Board */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        {activeBoard === "Sales"   && <SalesBoard   jobs={filtered.Sales}   />}
-        {activeBoard === "Shop"    && <ShopBoard    jobs={filtered.Shop}    />}
-        {activeBoard === "Billing" && <BillingBoard jobs={filtered.Billing} />}
+        {activeBoard === "Sales" && (
+          viewMode.Sales === "row"
+            ? <PipelineRowView jobs={filtered.Sales}   stages={SALES_STAGES}   board="Sales"   />
+            : <SalesBoard   jobs={filtered.Sales}   />
+        )}
+        {activeBoard === "Shop" && (
+          viewMode.Shop === "row"
+            ? <PipelineRowView jobs={filtered.Shop}    stages={SHOP_STAGES}    board="Shop"    />
+            : <ShopBoard    jobs={filtered.Shop}    />
+        )}
+        {activeBoard === "Billing" && (
+          viewMode.Billing === "row"
+            ? <PipelineRowView jobs={filtered.Billing} stages={BILLING_STAGES} board="Billing" />
+            : <BillingBoard jobs={filtered.Billing} />
+        )}
       </div>
     </div>
   );
