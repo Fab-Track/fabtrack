@@ -7,16 +7,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Clock, LogIn, LogOut, ArrowLeft, Check } from "lucide-react";
 import { formatDistanceToNow, parseISO } from "date-fns";
+import { useEffect, useRef } from "react";
 
 const WORK_CENTERS = ["Cut", "Fit", "Weld", "Grind", "Powder Coat", "Install", "Demo", "Design"];
 
 export default function ShopKiosk() {
-  const [step, setStep] = useState("select-employee"); // select-employee, enter-pin, select-job, select-center, clocked-in
+  const [step, setStep] = useState("select-employee"); // select-employee, enter-pin, select-job, select-center, clocked-in, clock-out-summary
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [pin, setPin] = useState("");
   const [pinError, setPinError] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
   const [selectedCenter, setSelectedCenter] = useState(null);
+  const [clockOutSummary, setClockOutSummary] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: employees = [] } = useQuery({
@@ -47,16 +49,28 @@ export default function ShopKiosk() {
     mutationFn: async (entry) => {
       const now = new Date();
       const clockIn = new Date(entry.clock_in);
-      const duration = (now - clockIn) / (1000 * 60 * 60);
+      const durationMs = now - clockIn;
+      const duration = durationMs / (1000 * 60 * 60);
       await base44.entities.TimeEntry.update(entry.id, {
         clock_out: now.toISOString(),
         duration_hours: Math.round(duration * 100) / 100,
         is_active: false,
       });
+      const totalMins = Math.round(durationMs / 60000);
+      const h = Math.floor(totalMins / 60);
+      const m = totalMins % 60;
+      return { entry, timeLabel: h > 0 ? `${h}h ${m}m` : `${m}m` };
     },
-    onSuccess: () => {
+    onSuccess: ({ entry, timeLabel }) => {
       queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
-      reset();
+      setClockOutSummary({
+        employeeName: entry.employee_name,
+        jobNumber: entry.job_number,
+        jobName: jobs.find(j => j.id === entry.job_id)?.job_name || "",
+        workCenter: entry.work_center,
+        timeLabel,
+      });
+      setStep("clock-out-summary");
     },
   });
 
@@ -73,7 +87,15 @@ export default function ShopKiosk() {
   const activeEntry = selectedEmployee 
     ? activeEntries.find(e => e.employee_id === selectedEmployee.id)
     : null;
-  const activeJobs = jobs.filter(j => !["Invoiced", "Estimate", "Install Complete"].includes(j.status));
+  const STAGE_PRIORITY = { "Fab Queue": 0, "In Fabrication": 1 };
+  const activeJobs = jobs
+    .filter(j => !["Invoiced", "Estimate", "Install Complete"].includes(j.status))
+    .sort((a, b) => {
+      const pa = STAGE_PRIORITY[a.status] ?? 99;
+      const pb = STAGE_PRIORITY[b.status] ?? 99;
+      if (pa !== pb) return pa - pb;
+      return (a.job_number || "").localeCompare(b.job_number || "");
+    });
 
   const handleEmployeeSelect = (emp) => {
     setSelectedEmployee(emp);
@@ -252,6 +274,38 @@ export default function ShopKiosk() {
           </Button>
         </div>
       )}
+
+      {/* Step: Clock-Out Summary */}
+      {step === "clock-out-summary" && clockOutSummary && (
+        <ClockOutSummary summary={clockOutSummary} onDone={reset} />
+      )}
+    </div>
+  );
+}
+
+function ClockOutSummary({ summary, onDone }) {
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    timerRef.current = setTimeout(onDone, 5000);
+    return () => clearTimeout(timerRef.current);
+  }, [onDone]);
+
+  return (
+    <div
+      className="max-w-lg mx-auto text-center cursor-pointer select-none"
+      onClick={onDone}
+    >
+      <div className="w-20 h-20 rounded-full bg-emerald-500 flex items-center justify-center mx-auto mb-6">
+        <Check className="w-10 h-10 text-white" />
+      </div>
+      <p className="text-3xl font-bold mb-2">{summary.employeeName}</p>
+      <p className="text-xl opacity-80 mb-1">{summary.workCenter}</p>
+      <p className="text-base font-mono opacity-70 mb-1">
+        {summary.jobNumber}{summary.jobName ? ` — ${summary.jobName}` : ""}
+      </p>
+      <p className="text-2xl font-bold text-emerald-400 mt-4 mb-8">{summary.timeLabel} logged</p>
+      <p className="text-sm opacity-40">Tap anywhere to continue • returning in 5s</p>
     </div>
   );
 }
