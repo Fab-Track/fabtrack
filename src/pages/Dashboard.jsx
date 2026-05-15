@@ -2,23 +2,38 @@ import React, { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import OwnerDashboard from "./dashboard/OwnerDashboard";
 import ShopManagerDashboard from "./dashboard/ShopManagerDashboard";
+import FabricatorDashboard from "./dashboard/FabricatorDashboard";
+import EstimatorDashboard from "./dashboard/EstimatorDashboard";
 
-// Views available to owners — other roles see their own view directly
-const OWNER_VIEWS = [
-  { id: "owner",   label: "Command Center" },
-  { id: "shop",    label: "Shop Performance" },
+const ALL_VIEWS = [
+  { id: "owner",      label: "Command Center" },
+  { id: "shop",       label: "Shop Performance" },
+  { id: "fabricator", label: "My Work" },
+  { id: "estimator",  label: "Pipeline" },
 ];
 
 const STORAGE_KEY = "fabtrack_dashboard_view";
 
-function ViewSwitcher({ activeView, onChange }) {
+// Roles that can toggle between views (owner sees all 4)
+const OWNER_ROLES = ["owner", "admin"];
+
+function getDashboardForRole(role) {
+  const r = (role || "").toLowerCase();
+  if (OWNER_ROLES.includes(r)) return "owner";
+  if (r === "shop_manager" || r === "foreman") return "shop";
+  if (["welder", "fitter", "cutter", "installer", "grinder"].includes(r)) return "fabricator";
+  if (r === "estimator") return "estimator";
+  return "owner";
+}
+
+function ViewSwitcher({ activeView, onChange, views }) {
   return (
-    <div className="flex items-center bg-muted rounded-lg p-1 gap-0.5">
-      {OWNER_VIEWS.map(v => (
+    <div className="flex items-center bg-muted rounded-lg p-1 gap-0.5 flex-wrap">
+      {views.map(v => (
         <button
           key={v.id}
           onClick={() => onChange(v.id)}
-          className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+          className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all whitespace-nowrap ${
             activeView === v.id
               ? "bg-primary text-primary-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground"
@@ -31,19 +46,20 @@ function ViewSwitcher({ activeView, onChange }) {
   );
 }
 
-function getDashboardForRole(role) {
-  const r = (role || "").toLowerCase();
-  if (r === "owner" || r === "admin") return "owner";
-  if (r === "shop_manager") return "shop";
-  return "owner"; // default fallback
-}
+const VIEW_LABELS = {
+  owner:      "Command Center",
+  shop:       "Shop Performance",
+  fabricator: "My Work",
+  estimator:  "Pipeline",
+};
 
 export default function Dashboard() {
   const { user } = useAuth();
   const role = user?.role || "owner";
-  const isOwner = ["owner", "admin"].includes(role.toLowerCase());
+  const isOwner = OWNER_ROLES.includes(role.toLowerCase());
 
   const defaultView = getDashboardForRole(role);
+
   const [activeView, setActiveView] = useState(() => {
     if (!isOwner) return defaultView;
     try {
@@ -58,11 +74,8 @@ export default function Dashboard() {
     try { localStorage.setItem(STORAGE_KEY, view); } catch {}
   };
 
-  // Non-owner roles: fixed view
   const displayView = isOwner ? activeView : defaultView;
-
-  const viewLabel = OWNER_VIEWS.find(v => v.id === displayView)?.label || "Dashboard";
-  const subLabel = isOwner ? "Command Center" : role.replace(/_/g, " ");
+  const viewLabel = VIEW_LABELS[displayView] || "Dashboard";
 
   return (
     <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
@@ -75,13 +88,15 @@ export default function Dashboard() {
           </p>
         </div>
         {isOwner && (
-          <ViewSwitcher activeView={activeView} onChange={handleViewChange} />
+          <ViewSwitcher activeView={activeView} onChange={handleViewChange} views={ALL_VIEWS} />
         )}
       </div>
 
       {/* Dashboard content */}
-      {displayView === "owner" && <OwnerDashboard />}
-      {displayView === "shop" && <ShopManagerDashboard />}
+      {displayView === "owner"      && <OwnerDashboard />}
+      {displayView === "shop"       && <ShopManagerDashboard />}
+      {displayView === "fabricator" && <FabricatorDashboard />}
+      {displayView === "estimator"  && <EstimatorDashboard />}
     </div>
   );
 }
