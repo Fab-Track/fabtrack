@@ -15,6 +15,7 @@ import JobAttachmentsTab from "@/components/jobs/JobAttachmentsTab.jsx";
 import ProductionSchedule from "@/components/jobs/ProductionSchedule";
 import JobDocumentsTab from "@/components/jobs/JobDocumentsTab";
 import JobHistoryTab from "@/components/jobs/JobHistoryTab";
+import ProjectDetailsTab from "@/components/jobs/ProjectDetailsTab";
 
 export default function JobDetail() {
   const jobId = new URLSearchParams(window.location.search).get("id") 
@@ -124,6 +125,12 @@ export default function JobDetail() {
           <TabsTrigger value="shop-log">Shop Log</TabsTrigger>
           <TabsTrigger value="costing">Costing</TabsTrigger>
           <TabsTrigger value="attachments">Attachments</TabsTrigger>
+          <TabsTrigger value="project-details">
+            Project Details
+            {job.product_instances?.length > 0 && (
+              <span className="ml-1.5 text-[10px] bg-accent text-accent-foreground rounded-full px-1.5">{job.product_instances.length}</span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="history">
             History
             {job.stage_history?.length > 0 && (
@@ -149,6 +156,9 @@ export default function JobDetail() {
         </TabsContent>
         <TabsContent value="attachments">
           <JobAttachmentsTab job={job} />
+        </TabsContent>
+        <TabsContent value="project-details">
+          <ProjectDetailsTab job={job} />
         </TabsContent>
         <TabsContent value="history">
           <JobHistoryTab job={job} />

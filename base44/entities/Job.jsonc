@@ -260,6 +260,33 @@
     "schedule_updated_at": {
       "type": "string",
       "format": "date-time"
+    },
+    "product_instances": {
+      "type": "array",
+      "description": "Per-product structured detail forms (Railing, Gate, Staircase, etc.)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "product_type": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
     }
   },
   "required": [
