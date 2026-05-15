@@ -1,78 +1,87 @@
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
-import { Skeleton } from "@/components/ui/skeleton";
-import StatsRow from "@/components/dashboard/StatsRow";
-import InstallDateTracker from "@/components/dashboard/InstallDateTracker";
-import MarginTracker from "@/components/dashboard/MarginTracker";
-import CapacityView from "@/components/dashboard/CapacityView";
-import StalledJobs from "@/components/dashboard/StalledJobs";
-import ActiveClockIns from "@/components/dashboard/ActiveClockIns";
+import React, { useState } from "react";
+import { useAuth } from "@/lib/AuthContext";
+import OwnerDashboard from "./dashboard/OwnerDashboard";
+import ShopManagerDashboard from "./dashboard/ShopManagerDashboard";
+
+// Views available to owners — other roles see their own view directly
+const OWNER_VIEWS = [
+  { id: "owner",   label: "Command Center" },
+  { id: "shop",    label: "Shop Performance" },
+];
+
+const STORAGE_KEY = "fabtrack_dashboard_view";
+
+function ViewSwitcher({ activeView, onChange }) {
+  return (
+    <div className="flex items-center bg-muted rounded-lg p-1 gap-0.5">
+      {OWNER_VIEWS.map(v => (
+        <button
+          key={v.id}
+          onClick={() => onChange(v.id)}
+          className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeView === v.id
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {v.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function getDashboardForRole(role) {
+  const r = (role || "").toLowerCase();
+  if (r === "owner" || r === "admin") return "owner";
+  if (r === "shop_manager") return "shop";
+  return "owner"; // default fallback
+}
 
 export default function Dashboard() {
-  const { data: jobs = [], isLoading: jobsLoading } = useQuery({
-    queryKey: ["jobs"],
-    queryFn: () => base44.entities.Job.list("-created_date", 200),
+  const { user } = useAuth();
+  const role = user?.role || "owner";
+  const isOwner = ["owner", "admin"].includes(role.toLowerCase());
+
+  const defaultView = getDashboardForRole(role);
+  const [activeView, setActiveView] = useState(() => {
+    if (!isOwner) return defaultView;
+    try {
+      return localStorage.getItem(STORAGE_KEY) || defaultView;
+    } catch {
+      return defaultView;
+    }
   });
 
-  const { data: purchaseOrders = [] } = useQuery({
-    queryKey: ["purchaseOrders"],
-    queryFn: () => base44.entities.PurchaseOrder.list("-created_date", 100),
-  });
+  const handleViewChange = (view) => {
+    setActiveView(view);
+    try { localStorage.setItem(STORAGE_KEY, view); } catch {}
+  };
 
-  const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", "active"],
-    queryFn: () => base44.entities.TimeEntry.filter({ is_active: true }),
-  });
+  // Non-owner roles: fixed view
+  const displayView = isOwner ? activeView : defaultView;
 
-  if (jobsLoading) {
-    return (
-      <div className="p-6 space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {[1,2,3,4].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
-        </div>
-        <div className="grid lg:grid-cols-2 gap-4">
-          <Skeleton className="h-64 rounded-xl" />
-          <Skeleton className="h-64 rounded-xl" />
-        </div>
-      </div>
-    );
-  }
+  const viewLabel = OWNER_VIEWS.find(v => v.id === displayView)?.label || "Dashboard";
+  const subLabel = isOwner ? "Command Center" : role.replace(/_/g, " ");
 
   return (
     <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Operations Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{viewLabel}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+          </p>
+        </div>
+        {isOwner && (
+          <ViewSwitcher activeView={activeView} onChange={handleViewChange} />
+        )}
       </div>
 
-      {/* Stats row */}
-      <StatsRow jobs={jobs} purchaseOrders={purchaseOrders} />
-
-      {/* Main grid: 4 key questions */}
-      <div className="grid lg:grid-cols-2 gap-4">
-        <div className="bg-card rounded-xl border p-4">
-          <InstallDateTracker jobs={jobs} />
-        </div>
-        <div className="bg-card rounded-xl border p-4">
-          <MarginTracker jobs={jobs} />
-        </div>
-        <div className="bg-card rounded-xl border p-4">
-          <CapacityView jobs={jobs} />
-        </div>
-        <div className="bg-card rounded-xl border p-4">
-          <StalledJobs jobs={jobs} />
-        </div>
-      </div>
-
-      {/* Active clock-ins */}
-      <div className="bg-card rounded-xl border p-4">
-        <ActiveClockIns timeEntries={timeEntries} />
-      </div>
+      {/* Dashboard content */}
+      {displayView === "owner" && <OwnerDashboard />}
+      {displayView === "shop" && <ShopManagerDashboard />}
     </div>
   );
 }
