@@ -42,6 +42,11 @@ export default function JobDetail() {
     enabled: !!jobId,
   });
 
+  const { data: employees = [] } = useQuery({
+    queryKey: ["employees"],
+    queryFn: () => base44.entities.Employee.list("-created_date", 100),
+  });
+
   if (isLoading) {
     return (
       <div className="p-6 space-y-4">
@@ -152,7 +157,7 @@ export default function JobDetail() {
           <JobShopLogTab timeEntries={timeEntries} job={job} />
         </TabsContent>
         <TabsContent value="costing">
-          <JobCostingTab job={job} timeEntries={timeEntries} purchaseOrders={purchaseOrders} />
+          <JobCostingTab job={job} timeEntries={timeEntries} purchaseOrders={purchaseOrders} employees={employees} />
         </TabsContent>
         <TabsContent value="attachments">
           <JobAttachmentsTab job={job} />

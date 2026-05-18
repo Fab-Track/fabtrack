@@ -25,23 +25,36 @@ function calcLine(line) {
   return { ...line, total: (line.quantity || 0) * (line.unit_cost || 0) };
 }
 
-export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimates = [], onClose }) {
+export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimates = [], changeOrders = [], prefill = null, onClose }) {
   const qc = useQueryClient();
   const isNew = !invoice?.id;
 
-  const [invoiceType, setInvoiceType] = useState(invoice?.invoice_type || "Final");
+  // prefill is set when creating from an approved estimate (deposit) or final invoice
+  const [invoiceType, setInvoiceType] = useState(prefill?.invoice_type || invoice?.invoice_type || "Final");
   const [status, setStatus] = useState(invoice?.status || "Unpaid");
-  const [lines, setLines] = useState(
-    (invoice?.line_items || []).map(l => ({ ...l, _id: Math.random().toString(36).slice(2) }))
-  );
-  const [tax, setTax] = useState(invoice?.tax_percent || 0);
+  const [lines, setLines] = useState(() => {
+    if (prefill?.line_items) return prefill.line_items.map(l => ({ ...l, _id: Math.random().toString(36).slice(2) }));
+    return (invoice?.line_items || []).map(l => ({ ...l, _id: Math.random().toString(36).slice(2) }));
+  });
+  const [tax, setTax] = useState(prefill?.tax ?? invoice?.tax_percent ?? 0);
+  const [depositModifier] = useState(prefill?.deposit_modifier || null); // "50%" label
   const [amountPaid, setAmountPaid] = useState(invoice?.amount_paid || 0);
-  const [notes, setNotes] = useState(invoice?.notes || "");
+  const [notes, setNotes] = useState(prefill?.notes || invoice?.notes || "");
   const [internalNotes, setInternalNotes] = useState(invoice?.internal_notes || "");
   const [issuedDate, setIssuedDate] = useState(invoice?.issued_date || new Date().toISOString().split("T")[0]);
-  const [dueDate, setDueDate] = useState(invoice?.due_date || "");
+  const [dueDate, setDueDate] = useState(() => {
+    if (invoice?.due_date) return invoice.due_date;
+    if (prefill?.due_days) {
+      const d = new Date();
+      d.setDate(d.getDate() + prefill.due_days);
+      return d.toISOString().split("T")[0];
+    }
+    return "";
+  });
 
-  const subtotal = lines.reduce((s, l) => s + (l.total || 0), 0);
+  const rawSubtotal = lines.reduce((s, l) => s + (l.total || 0), 0);
+  // For deposit invoices created from estimate, apply 50% at summary level
+  const subtotal = depositModifier === "50%" ? rawSubtotal * 0.5 : rawSubtotal;
   const taxAmount = subtotal * (tax / 100);
   const total = subtotal + taxAmount;
   const balanceDue = total - (amountPaid || 0);
@@ -92,13 +105,15 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
         due_date: dueDate,
         notes,
         internal_notes: internalNotes,
+        ...(depositModifier ? { deposit_modifier: depositModifier } : {}),
       };
       return isNew
         ? base44.entities.Invoice.create(payload)
         : base44.entities.Invoice.update(invoice.id, payload);
     },
-    onSuccess: () => {
+    onSuccess: async (saved) => {
       qc.invalidateQueries(["invoices", job.id]);
+      qc.invalidateQueries(["job", job.id]);
       onClose?.();
     },
   });
@@ -220,7 +235,13 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
             <h3 className="font-semibold text-sm mb-3">Summary</h3>
             <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span>${subtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></div>
             {tax > 0 && <div className="flex justify-between text-muted-foreground"><span>Tax ({tax}%)</span><span>+${taxAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></div>}
-            <div className="flex justify-between font-bold text-base border-t pt-1"><span>Total</span><span>${total.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></div>
+            {depositModifier === "50%" && (
+            <div className="flex justify-between text-muted-foreground text-xs bg-amber-50 px-2 py-1 rounded">
+              <span>Deposit — 50% of Approved Estimate</span>
+              <span>${subtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+            </div>
+          )}
+          <div className="flex justify-between font-bold text-base border-t pt-1"><span>Total</span><span>${total.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></div>
             <div className="flex justify-between text-muted-foreground"><span>Paid</span><span>−${(amountPaid || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></div>
             <div className={`flex justify-between font-bold ${balanceDue > 0 ? "text-destructive" : "text-emerald-600"}`}>
               <span>Balance Due</span><span>${balanceDue.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, FileText } from "lucide-react";
 
 const CATEGORIES = ["Labor", "Material", "Equipment", "Sub-contractor", "Other"];
 const PHASES = ["Fabrication", "Powder Coat", "Install", "Design", "Other"];
@@ -30,7 +30,7 @@ function calcLine(line) {
   return { ...line, total: (line.quantity || 0) * (line.unit_cost || 0) };
 }
 
-export default function EstimateEditor({ estimate, job, onClose }) {
+export default function EstimateEditor({ estimate, job, onClose, onCreateDepositInvoice }) {
   const qc = useQueryClient();
   const isNew = !estimate?.id;
 
@@ -70,10 +70,17 @@ export default function EstimateEditor({ estimate, job, onClose }) {
         ? base44.entities.Estimate.create(payload)
         : base44.entities.Estimate.update(estimate.id, payload);
     },
-    onSuccess: async (saved) => {
-      // Update job estimate_total when approved
+    onSuccess: async () => {
       if (status === "Approved") {
-        await base44.entities.Job.update(job.id, { estimate_total: total, customer_approval_status: "approved" });
+        // Update job estimate_total and advance to Awaiting Deposit if still in early Sales stages
+        const earlyStages = ["New Lead", "Estimate In Progress", "Estimate Sent", "Negotiation"];
+        const updates = { estimate_total: total, customer_approval_status: "approved" };
+        if (!job.stage || earlyStages.includes(job.stage)) {
+          updates.stage = "Awaiting Deposit";
+          updates.pipeline_board = "Sales";
+          updates.stage_entered_at = new Date().toISOString();
+        }
+        await base44.entities.Job.update(job.id, updates);
       }
       qc.invalidateQueries(["estimates"]);
       qc.invalidateQueries(["estimates", job.id]);
@@ -124,6 +131,15 @@ export default function EstimateEditor({ estimate, job, onClose }) {
           <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
             {save.isPending ? "Saving…" : isNew ? "Create Estimate" : "Save Changes"}
           </Button>
+          {!isNew && status === "Approved" && onCreateDepositInvoice && (
+            <Button
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+              onClick={() => onCreateDepositInvoice({ lines, total, markup, overhead, tax, notes })}
+            >
+              <FileText className="w-3.5 h-3.5" /> Create Deposit Invoice
+            </Button>
+          )}
           {onClose && (
             <Button size="sm" variant="outline" onClick={onClose}>Close</Button>
           )}
