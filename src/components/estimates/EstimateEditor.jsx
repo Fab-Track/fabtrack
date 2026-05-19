@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, CheckCircle2, FileText } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, FileText, LayoutList, AlignJustify } from "lucide-react";
 import { toast } from "sonner";
 import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
 
@@ -32,20 +32,30 @@ function calcLine(line) {
   return { ...line, total: (line.quantity || 0) * (line.unit_cost || 0) };
 }
 
-export default function EstimateEditor({ estimate, job, onClose, onCreateDepositInvoice, currentUser }) {
+export default function EstimateEditor({ estimate, job, onClose, onCreateDepositInvoice, currentUser, prefillData }) {
   const qc = useQueryClient();
   const isNew = !estimate?.id;
 
   const [status, setStatus] = useState(estimate?.status || "Draft");
-  const [lines, setLines] = useState(
-    (estimate?.line_items || []).map(l => ({ ...l, _id: Math.random().toString(36).slice(2) }))
-  );
+  const [lines, setLines] = useState(() => {
+    if (isNew && prefillData?.lineItems) {
+      return prefillData.lineItems.map(l => ({ ...l, _id: Math.random().toString(36).slice(2) }));
+    }
+    return (estimate?.line_items || []).map(l => ({ ...l, _id: Math.random().toString(36).slice(2) }));
+  });
   const [markup, setMarkup] = useState(estimate?.markup_percent || 0);
   const [overhead, setOverhead] = useState(estimate?.overhead_percent || 0);
   const [tax, setTax] = useState(estimate?.tax_percent || 0);
-  const [notes, setNotes] = useState(estimate?.notes || "");
+  const [notes, setNotes] = useState(() => {
+    if (isNew && prefillData?.notes) return prefillData.notes;
+    return estimate?.notes || "";
+  });
   const [signature, setSignature] = useState(estimate?.customer_signature || "");
   const [collapsed, setCollapsed] = useState({});
+  const [viewMode, setViewMode] = useState(estimate?.view_mode || "summary");
+  const stylePhotoUrl = isNew ? prefillData?.stylePhotoUrl : estimate?.style_photo_url;
+  const railingStyle = isNew ? prefillData?.style : estimate?.railing_style;
+  const railingLnft = isNew ? prefillData?.lnft : estimate?.railing_lnft;
 
   const subtotal = lines.reduce((s, l) => s + (l.total || 0), 0);
   const afterMarkup = subtotal * (1 + markup / 100);
@@ -68,6 +78,9 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
         total,
         notes,
         customer_signature: signature,
+        view_mode: viewMode,
+        ...(stylePhotoUrl ? { style_photo_url: stylePhotoUrl } : {}),
+        ...(railingStyle ? { railing_style: railingStyle, railing_lnft: railingLnft } : {}),
         ...(status === "Approved" ? { approved_date: new Date().toISOString().split("T")[0] } : {}),
       };
       return isNew
@@ -158,6 +171,21 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
           <h2 className="font-semibold text-sm">{job.job_name}</h2>
         </div>
         <div className="flex items-center gap-2">
+          {/* Detail / Summary toggle */}
+          <div className="flex items-center border rounded-md overflow-hidden h-8">
+            <button
+              className={`px-2.5 h-full text-xs flex items-center gap-1 transition-colors ${viewMode === "summary" ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"}`}
+              onClick={() => setViewMode("summary")}
+            >
+              <AlignJustify className="w-3 h-3" /> Summary
+            </button>
+            <button
+              className={`px-2.5 h-full text-xs flex items-center gap-1 transition-colors ${viewMode === "detail" ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"}`}
+              onClick={() => setViewMode("detail")}
+            >
+              <LayoutList className="w-3 h-3" /> Detail
+            </button>
+          </div>
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -185,6 +213,21 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        {/* Style Photo */}
+        {stylePhotoUrl && (
+          <div className="px-5 pt-4">
+            <img src={stylePhotoUrl} alt={railingStyle || "Style"} className="max-h-48 rounded-lg object-cover border" />
+            {railingStyle && <p className="text-xs text-muted-foreground mt-1">{railingStyle} — {railingLnft} lnft</p>}
+          </div>
+        )}
+
+        {/* Summary view banner */}
+        {viewMode === "summary" && (
+          <div className="mx-5 mt-4 mb-2 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
+            <span className="font-semibold">Summary View active</span> — Customer sees one line: "{railingStyle || "Railing"} — {railingLnft || "—"} lnft — ${total.toLocaleString("en-US", { minimumFractionDigits: 2 })}". Switch to Detail View to show full breakdown.
+          </div>
+        )}
+
         {/* Line Items */}
         <div className="p-5">
           <div className="flex items-center justify-between mb-3">

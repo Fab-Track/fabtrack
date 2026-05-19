@@ -79,6 +79,27 @@
     },
     "notes": {
       "type": "string"
+    },
+    "view_mode": {
+      "type": "string",
+      "enum": [
+        "summary",
+        "detail"
+      ],
+      "default": "summary",
+      "description": "Whether to show full line-item breakdown or summary view to customer"
+    },
+    "style_photo_url": {
+      "type": "string",
+      "description": "Auto-attached style photo URL from Railing Calculator"
+    },
+    "railing_style": {
+      "type": "string",
+      "description": "Railing style used in calculator"
+    },
+    "railing_lnft": {
+      "type": "number",
+      "description": "Linear feet from railing calculator"
     }
   },
   "required": [

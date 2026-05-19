@@ -23,6 +23,7 @@ import Documents from '@/pages/Documents';
 import LeadForm from '@/pages/LeadForm';
 import EmployeeProfilePage from '@/pages/EmployeeProfilePage';
 import OnboardingSurveyPage from '@/pages/OnboardingSurveyPage';
+import Settings from '@/pages/Settings';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -68,6 +69,7 @@ const AuthenticatedApp = () => {
         <Route path="/employees" element={<Employees />} />
         <Route path="/employees/:id" element={<EmployeeProfilePage />} />
         <Route path="/documents" element={<Documents />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
 
       <Route path="*" element={<PageNotFound />} />

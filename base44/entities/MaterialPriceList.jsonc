@@ -1,0 +1,32 @@
+{
+  "name": "MaterialPriceList",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Material name / description"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Square Tube",
+        "Rectangle Tube",
+        "Flat Bar",
+        "HR Channel",
+        "Angle",
+        "Round Bar",
+        "Stair",
+        "Other"
+      ],
+      "default": "Other"
+    },
+    "cost_per_foot": {
+      "type": "number",
+      "description": "Cost per linear foot in USD",
+      "default": 0
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

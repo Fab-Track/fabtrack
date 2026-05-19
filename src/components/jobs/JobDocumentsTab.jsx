@@ -10,6 +10,7 @@ import EstimateEditor from "@/components/estimates/EstimateEditor";
 import InvoiceEditor from "@/components/documents/InvoiceEditor";
 import ChangeOrderEditor from "@/components/documents/ChangeOrderEditor";
 import JobFinancialSummary from "@/components/jobs/JobFinancialSummary";
+import RailingCalculatorModal from "@/components/estimates/RailingCalculatorModal";
 import { useAuth } from "@/lib/AuthContext";
 
 const EST_STATUS = {
@@ -44,6 +45,15 @@ function SectionHeader({ icon: Icon, title, count, onNew, newLabel, extraButton 
   );
 }
 
+// Detect if job has a Railing product
+function jobHasRailing(job) {
+  if (job?.job_type === "Railing") return true;
+  if (Array.isArray(job?.product_instances)) {
+    return job.product_instances.some(p => p.product_type === "Railing");
+  }
+  return false;
+}
+
 export default function JobDocumentsTab({ job }) {
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -54,6 +64,9 @@ export default function JobDocumentsTab({ job }) {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedCo, setSelectedCo] = useState(null);
   const [invoicePrefill, setInvoicePrefill] = useState(null);
+  const [railingPromptOpen, setRailingPromptOpen] = useState(false);
+  const [railingCalcOpen, setRailingCalcOpen] = useState(false);
+  const [estimatePrefillLines, setEstimatePrefillLines] = useState(null);
 
   const { data: estimates = [] } = useQuery({
     queryKey: ["estimates", job.id],
@@ -78,7 +91,25 @@ export default function JobDocumentsTab({ job }) {
   const hasDepositInvoice = invoices.some(i => i.invoice_type === "Deposit");
   const hasFinalInvoice = invoices.some(i => i.invoice_type === "Final");
 
-  function openEstimate(est = null) { setSelectedEstimate(est); setEstimateOpen(true); }
+  function openEstimate(est = null, prefillLines = null) {
+    setSelectedEstimate(est);
+    setEstimatePrefillLines(prefillLines);
+    setEstimateOpen(true);
+  }
+
+  function handleNewEstimateClick() {
+    if (jobHasRailing(job)) {
+      setRailingPromptOpen(true);
+    } else {
+      openEstimate();
+    }
+  }
+
+  function handleRailingCalcGenerate({ lineItems, total, notes, stylePhotoUrl, style, lnft }) {
+    setRailingCalcOpen(false);
+    setRailingPromptOpen(false);
+    openEstimate(null, { lineItems, total, notes, stylePhotoUrl, style, lnft });
+  }
 
   function openInvoice(inv = null, prefill = null) {
     setSelectedInvoice(inv);
@@ -147,7 +178,7 @@ export default function JobDocumentsTab({ job }) {
 
       {/* ── ESTIMATES ─────────────────────────────────────────────── */}
       <div>
-        <SectionHeader icon={FileText} title="Estimates" count={estimates.length} onNew={() => openEstimate()} newLabel="New Estimate" />
+        <SectionHeader icon={FileText} title="Estimates" count={estimates.length} onNew={handleNewEstimateClick} newLabel="New Estimate" />
         {estimates.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground bg-muted/20 rounded-lg mt-2 text-sm">No estimates yet.</div>
         ) : (
@@ -239,6 +270,30 @@ export default function JobDocumentsTab({ job }) {
         )}
       </div>
 
+      {/* ── Railing prompt dialog ─────────────────────────────────── */}
+      <Dialog open={railingPromptOpen} onOpenChange={setRailingPromptOpen}>
+        <DialogContent className="max-w-sm">
+          <h2 className="font-semibold text-base mb-2">New Estimate</h2>
+          <p className="text-sm text-muted-foreground mb-4">This job includes a Railing product. Would you like to use the Railing Calculator?</p>
+          <div className="flex gap-3">
+            <Button className="flex-1" onClick={() => { setRailingPromptOpen(false); setRailingCalcOpen(true); }}>
+              Yes — Use Calculator
+            </Button>
+            <Button variant="outline" className="flex-1" onClick={() => { setRailingPromptOpen(false); openEstimate(); }}>
+              No — Blank Estimate
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Railing Calculator Modal ──────────────────────────────── */}
+      <RailingCalculatorModal
+        open={railingCalcOpen}
+        onClose={() => setRailingCalcOpen(false)}
+        job={job}
+        onGenerateEstimate={handleRailingCalcGenerate}
+      />
+
       {/* ── Estimate Dialog ───────────────────────────────────────── */}
       <Dialog open={estimateOpen} onOpenChange={setEstimateOpen}>
         <DialogContent className="max-w-4xl h-[85vh] p-0 flex flex-col overflow-hidden">
@@ -248,6 +303,7 @@ export default function JobDocumentsTab({ job }) {
             onClose={() => setEstimateOpen(false)}
             onCreateDepositInvoice={handleCreateDepositInvoice}
             currentUser={user}
+            prefillData={estimatePrefillLines}
           />
         </DialogContent>
       </Dialog>

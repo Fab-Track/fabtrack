@@ -1,0 +1,21 @@
+{
+  "name": "RailingStyleLibrary",
+  "type": "object",
+  "properties": {
+    "style_name": {
+      "type": "string",
+      "description": "Railing style name"
+    },
+    "photo_url": {
+      "type": "string",
+      "description": "Uploaded photo URL"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description"
+    }
+  },
+  "required": [
+    "style_name"
+  ]
+}
