@@ -23,8 +23,11 @@ export default function JobDetail() {
   const { user } = useAuth();
   const effectiveRole = useEffectiveRole(user?.role || "admin");
   const isFabricator = effectiveRole.toLowerCase() === "fabricator";
+  const isAccountant = effectiveRole.toLowerCase() === "accountant";
   const [searchParams] = useSearchParams();
-  const fromSchedule = searchParams.get("from") === "schedule";
+  const fromParam = searchParams.get("from");
+  const fromSchedule = fromParam === "schedule";
+  const fromBilling = fromParam === "billing";
 
   const jobId = window.location.pathname.split("/jobs/")[1]?.split("?")[0];
 
@@ -82,7 +85,7 @@ export default function JobDetail() {
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"
       >
         <ArrowLeft className="w-4 h-4" />
-        {fromSchedule ? "Back to Schedule" : "Back to Job Board"}
+        {fromSchedule ? "Back to Schedule" : fromBilling ? "Back to Job Board" : "Back to Job Board"}
       </Link>
 
       {/* Header */}
@@ -132,27 +135,33 @@ export default function JobDetail() {
         <TabsList className="mb-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           {!isFabricator && <TabsTrigger value="documents">Documents</TabsTrigger>}
-          <TabsTrigger value="schedule">
-            Schedule
-            {job.schedule_phases?.length > 0 && (
-              <span className="ml-1.5 text-[10px] bg-accent text-accent-foreground rounded-full px-1.5">●</span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="shop-log">Shop Log</TabsTrigger>
+          {!isFabricator && !isAccountant && (
+            <TabsTrigger value="schedule">
+              Schedule
+              {job.schedule_phases?.length > 0 && (
+                <span className="ml-1.5 text-[10px] bg-accent text-accent-foreground rounded-full px-1.5">●</span>
+              )}
+            </TabsTrigger>
+          )}
+          {!isAccountant && <TabsTrigger value="shop-log">Shop Log</TabsTrigger>}
           {!isFabricator && <TabsTrigger value="costing">Costing</TabsTrigger>}
-          <TabsTrigger value="attachments">Attachments</TabsTrigger>
-          <TabsTrigger value="project-details">
-            Project Details
-            {job.product_instances?.length > 0 && (
-              <span className="ml-1.5 text-[10px] bg-accent text-accent-foreground rounded-full px-1.5">{job.product_instances.length}</span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="history">
-            History
-            {job.stage_history?.length > 0 && (
-              <span className="ml-1.5 text-[10px] bg-muted text-muted-foreground rounded-full px-1.5">{job.stage_history.length}</span>
-            )}
-          </TabsTrigger>
+          {!isAccountant && <TabsTrigger value="attachments">Attachments</TabsTrigger>}
+          {!isAccountant && (
+            <TabsTrigger value="project-details">
+              Project Details
+              {job.product_instances?.length > 0 && (
+                <span className="ml-1.5 text-[10px] bg-accent text-accent-foreground rounded-full px-1.5">{job.product_instances.length}</span>
+              )}
+            </TabsTrigger>
+          )}
+          {!isAccountant && (
+            <TabsTrigger value="history">
+              History
+              {job.stage_history?.length > 0 && (
+                <span className="ml-1.5 text-[10px] bg-muted text-muted-foreground rounded-full px-1.5">{job.stage_history.length}</span>
+              )}
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="overview">
@@ -163,26 +172,36 @@ export default function JobDetail() {
             <JobDocumentsTab job={job} />
           </TabsContent>
         )}
-        <TabsContent value="schedule">
-          <ProductionSchedule job={job} readOnly={isFabricator} />
-        </TabsContent>
-        <TabsContent value="shop-log">
-          <JobShopLogTab timeEntries={timeEntries} job={job} />
-        </TabsContent>
+        {!isFabricator && !isAccountant && (
+          <TabsContent value="schedule">
+            <ProductionSchedule job={job} readOnly={isFabricator} />
+          </TabsContent>
+        )}
+        {!isAccountant && (
+          <TabsContent value="shop-log">
+            <JobShopLogTab timeEntries={timeEntries} job={job} />
+          </TabsContent>
+        )}
         {!isFabricator && (
           <TabsContent value="costing">
             <JobCostingTab job={job} timeEntries={timeEntries} purchaseOrders={purchaseOrders} employees={employees} />
           </TabsContent>
         )}
-        <TabsContent value="attachments">
-          <JobAttachmentsTab job={job} />
-        </TabsContent>
-        <TabsContent value="project-details">
-          <ProjectDetailsTab job={job} />
-        </TabsContent>
-        <TabsContent value="history">
-          <JobHistoryTab job={job} />
-        </TabsContent>
+        {!isAccountant && (
+          <TabsContent value="attachments">
+            <JobAttachmentsTab job={job} />
+          </TabsContent>
+        )}
+        {!isAccountant && (
+          <TabsContent value="project-details">
+            <ProjectDetailsTab job={job} />
+          </TabsContent>
+        )}
+        {!isAccountant && (
+          <TabsContent value="history">
+            <JobHistoryTab job={job} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

@@ -42,7 +42,7 @@ export const BILLING_STAGES = [
 export const BOARD_ACCESS = {
   Sales:   ["owner", "estimator", "admin"],
   Shop:    ["owner", "shop_manager", "fabricator", "design_specialist", "foreman", "admin"],
-  Billing: ["owner", "estimator", "admin"],
+  Billing: ["owner", "estimator", "admin", "accountant"],
 };
 
 export function getBoardsForRole(role) {

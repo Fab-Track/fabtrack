@@ -72,7 +72,7 @@ function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder }) {
           </span>
         )}
       </div>
-      <Link to={`/jobs/${job.id}`}>
+      <Link to={`/jobs/${job.id}?from=billing`}>
         <h4 className="text-sm font-semibold leading-tight mb-0.5 line-clamp-1 hover:text-accent transition-colors">{job.job_name}</h4>
       </Link>
       <p className="text-xs text-muted-foreground mb-2">{job.customer_name}</p>
@@ -112,7 +112,7 @@ function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder }) {
 }
 
 // ── Billing Board ──────────────────────────────────────────────────────────────
-export default function BillingBoard({ jobs = [] }) {
+export default function BillingBoard({ jobs = [], readOnly = false }) {
   const qc = useQueryClient();
 
   const { data: invoices = [] } = useQuery({
@@ -165,48 +165,52 @@ export default function BillingBoard({ jobs = [] }) {
     });
   }
 
+  const columnContent = (
+    <div className="flex gap-3 overflow-x-auto flex-1 pb-4">
+      {BILLING_STAGES.map(stage => (
+        <Droppable key={stage} droppableId={stage} isDropDisabled={readOnly}>
+          {(provided, snapshot) => (
+            <div
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+              className={`shrink-0 w-60 flex flex-col rounded-xl border border-t-4 ${BILLING_COLORS[stage]} ${snapshot.isDraggingOver ? "bg-accent/20" : "bg-muted/30"}`}
+            >
+              <div className="px-3 py-2.5 flex items-center justify-between">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground leading-tight">{stage}</span>
+                <span className="text-xs font-medium text-muted-foreground bg-muted rounded-full w-5 h-5 flex items-center justify-center shrink-0">
+                  {columns[stage].length}
+                </span>
+              </div>
+              <div className="flex-1 px-2 pb-2 space-y-2 overflow-y-auto min-h-[200px]">
+                {columns[stage].map((job, index) => (
+                  <Draggable key={job.id} draggableId={job.id} index={index} isDragDisabled={readOnly}>
+                    {(prov, snap) => (
+                      <div ref={prov.innerRef} {...prov.draggableProps} {...(readOnly ? {} : prov.dragHandleProps)}>
+                        <BillingCard
+                          job={job}
+                          isDragging={snap.isDragging}
+                          invoice={invoiceMap[job.second_half_invoice_id]}
+                          onMarkPaid={handleMarkPaid}
+                          onSendReminder={handleSendReminder}
+                        />
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            </div>
+          )}
+        </Droppable>
+      ))}
+    </div>
+  );
+
   return (
     <>
       <BillingSummary jobs={jobs} invoiceMap={invoiceMap} />
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="flex gap-3 overflow-x-auto flex-1 pb-4">
-          {BILLING_STAGES.map(stage => (
-            <Droppable key={stage} droppableId={stage}>
-              {(provided, snapshot) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={`shrink-0 w-60 flex flex-col rounded-xl border border-t-4 ${BILLING_COLORS[stage]} ${snapshot.isDraggingOver ? "bg-accent/20" : "bg-muted/30"}`}
-                >
-                  <div className="px-3 py-2.5 flex items-center justify-between">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground leading-tight">{stage}</span>
-                    <span className="text-xs font-medium text-muted-foreground bg-muted rounded-full w-5 h-5 flex items-center justify-center shrink-0">
-                      {columns[stage].length}
-                    </span>
-                  </div>
-                  <div className="flex-1 px-2 pb-2 space-y-2 overflow-y-auto min-h-[200px]">
-                    {columns[stage].map((job, index) => (
-                      <Draggable key={job.id} draggableId={job.id} index={index}>
-                        {(prov, snap) => (
-                          <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}>
-                            <BillingCard
-                              job={job}
-                              isDragging={snap.isDragging}
-                              invoice={invoiceMap[job.second_half_invoice_id]}
-                              onMarkPaid={handleMarkPaid}
-                              onSendReminder={handleSendReminder}
-                            />
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                </div>
-              )}
-            </Droppable>
-          ))}
-        </div>
+      <DragDropContext onDragEnd={readOnly ? () => {} : handleDragEnd}>
+        {columnContent}
       </DragDropContext>
     </>
   );

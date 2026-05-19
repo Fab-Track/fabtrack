@@ -64,6 +64,7 @@ const ROLE_NAV = {
   ],
   accountant: [
     { group: "OVERVIEW",    items: ["dashboard"] },
+    { group: "SALES",       items: ["jobBoard"] },
     { group: "FINANCE",     items: ["documents", "customers"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],

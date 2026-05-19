@@ -32,6 +32,7 @@ export default function JobBoard() {
   const { user } = useAuth();
   const effectiveRole = useEffectiveRole(user?.role || "admin");
   const isFabricator = effectiveRole.toLowerCase() === "fabricator";
+  const isAccountant = effectiveRole.toLowerCase() === "accountant";
 
   const [filterType, setFilterType] = useState("all");
   const [activeBoard, setActiveBoard] = useState(null);
@@ -116,7 +117,7 @@ export default function JobBoard() {
               </button>
             </div>
           )}
-          {!isFabricator && (
+          {!isFabricator && !isAccountant && (
             <Link to="/jobs/new">
               <Button size="sm" className="h-9">
                 <Plus className="w-4 h-4 mr-1.5" />New Job
@@ -167,7 +168,7 @@ export default function JobBoard() {
         {activeBoard === "Billing" && (
           viewMode.Billing === "row"
             ? <PipelineRowView jobs={filtered.Billing} stages={BILLING_STAGES} board="Billing" />
-            : <BillingBoard jobs={filtered.Billing} />
+            : <BillingBoard jobs={filtered.Billing} readOnly={isAccountant} />
         )}
       </div>
     </div>
