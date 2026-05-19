@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Save } from "lucide-react";
 import { Link } from "react-router-dom";
 import { generateJobNumber } from "@/lib/jobHelpers";
@@ -25,7 +24,6 @@ export default function NewJob() {
   const [form, setForm] = useState({
     job_number: generateJobNumber(),
     job_name: "",
-    job_type: "",
     customer_id: "",
     customer_name: "",
     status: "Estimate",
@@ -80,22 +78,9 @@ export default function NewJob() {
             <CardTitle className="text-sm font-semibold">Basic Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-xs">Job Number</Label>
-                <Input value={form.job_number} readOnly className="bg-muted font-mono text-sm" />
-              </div>
-              <div>
-                <Label className="text-xs">Job Type</Label>
-                <Select value={form.job_type} onValueChange={v => updateField("job_type", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                  <SelectContent>
-                    {["Fence", "Gate", "Railing", "Staircase", "Custom Structure", "Other"].map(t => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label className="text-xs">Job Number</Label>
+              <Input value={form.job_number} readOnly className="bg-muted font-mono text-sm" />
             </div>
 
             <div>

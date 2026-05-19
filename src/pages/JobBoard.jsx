@@ -61,7 +61,11 @@ export default function JobBoard() {
 
   const filtered = {};
   Object.keys(boardJobs).forEach(board => {
-    filtered[board] = filterType === "all" ? boardJobs[board] : boardJobs[board].filter(j => j.job_type === filterType);
+    filtered[board] = filterType === "all"
+      ? boardJobs[board]
+      : boardJobs[board].filter(j =>
+          j.product_instances?.some(i => i.product_type === filterType)
+        );
   });
 
   if (isLoading || !activeBoard) {
@@ -93,7 +97,7 @@ export default function JobBoard() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              {["Fence","Gate","Railing","Staircase","Custom Structure","Other"].map(t => (
+              {["Railing","Gate","Staircase","Structural","Pergola","Planter Box","Chimney Cap"].map(t => (
                 <SelectItem key={t} value={t}>{t}</SelectItem>
               ))}
             </SelectContent>

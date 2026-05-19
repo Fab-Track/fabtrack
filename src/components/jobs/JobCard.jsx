@@ -5,6 +5,37 @@ import { CalendarDays, Users, Paintbrush } from "lucide-react";
 import { getJobHealth, getHealthBorder } from "@/lib/jobHelpers";
 import { Link } from "react-router-dom";
 
+const PRODUCT_BADGE_COLORS = {
+  Railing:      "bg-blue-100 text-blue-800 border-blue-200",
+  Gate:         "bg-purple-100 text-purple-800 border-purple-200",
+  Staircase:    "bg-amber-100 text-amber-800 border-amber-200",
+  Structural:   "bg-slate-100 text-slate-800 border-slate-200",
+  Pergola:      "bg-green-100 text-green-800 border-green-200",
+  "Planter Box":"bg-lime-100 text-lime-800 border-lime-200",
+  "Chimney Cap":"bg-orange-100 text-orange-800 border-orange-200",
+};
+
+function ProductBadges({ instances }) {
+  if (!instances?.length) return null;
+  const types = [...new Set(instances.map(i => i.product_type).filter(Boolean))];
+  const visible = types.slice(0, 2);
+  const extra = types.length - 2;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {visible.map(t => (
+        <span key={t} className={`text-[10px] px-1.5 py-0 rounded border font-medium ${PRODUCT_BADGE_COLORS[t] || "bg-muted text-muted-foreground border-border"}`}>
+          {t}
+        </span>
+      ))}
+      {extra > 0 && (
+        <span className="text-[10px] px-1.5 py-0 rounded border bg-muted text-muted-foreground border-border font-medium">
+          +{extra}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function JobCard({ job, isDragging }) {
   const health = getJobHealth(job);
 
@@ -15,9 +46,7 @@ export default function JobCard({ job, isDragging }) {
     >
       <div className="flex items-start justify-between mb-1.5">
         <span className="text-xs font-mono text-muted-foreground">{job.job_number}</span>
-        {job.job_type && (
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.job_type}</Badge>
-        )}
+        <ProductBadges instances={job.product_instances} />
       </div>
 
       <h4 className="text-sm font-semibold leading-tight mb-1 line-clamp-2">{job.job_name}</h4>

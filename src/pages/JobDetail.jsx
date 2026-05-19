@@ -9,6 +9,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { STATUS_COLORS, getJobHealth, getHealthDot } from "@/lib/jobHelpers";
 import { format, parseISO } from "date-fns";
 import { ArrowLeft, CalendarDays, MapPin, Paintbrush } from "lucide-react";
+
+const PRODUCT_BADGE_COLORS = {
+  Railing:      "bg-blue-100 text-blue-800 border-blue-200",
+  Gate:         "bg-purple-100 text-purple-800 border-purple-200",
+  Staircase:    "bg-amber-100 text-amber-800 border-amber-200",
+  Structural:   "bg-slate-100 text-slate-800 border-slate-200",
+  Pergola:      "bg-green-100 text-green-800 border-green-200",
+  "Planter Box":"bg-lime-100 text-lime-800 border-lime-200",
+  "Chimney Cap":"bg-orange-100 text-orange-800 border-orange-200",
+};
 import { Link, useSearchParams } from "react-router-dom";
 import JobOverviewTab from "@/components/jobs/JobOverviewTab";
 import JobShopLogTab from "@/components/jobs/JobShopLogTab";
@@ -102,6 +112,13 @@ export default function JobDetail() {
                 <Badge className="text-xs bg-muted text-muted-foreground">{job.stage}</Badge>
               ) : (
                 <Badge className={STATUS_COLORS[job.status]}>{job.status}</Badge>
+              )}
+              {job.product_instances?.length > 0 && (
+                [...new Set(job.product_instances.map(i => i.product_type).filter(Boolean))].map(t => (
+                  <span key={t} className={`text-xs px-2 py-0.5 rounded border font-medium ${PRODUCT_BADGE_COLORS[t] || "bg-muted text-muted-foreground border-border"}`}>
+                    {t}
+                  </span>
+                ))
               )}
             </div>
             <h1 className="text-xl font-bold">{job.job_name}</h1>
