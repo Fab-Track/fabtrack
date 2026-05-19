@@ -1,18 +1,37 @@
 import React, { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { SALES_STAGES, SALES_COLORS, daysInStage, buildStageTransition } from "@/lib/pipelineHelpers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Clock, DollarSign, User } from "lucide-react";
+import { Clock, DollarSign, AlertTriangle } from "lucide-react";
 import StageTransitionDialog from "./StageTransitionDialog";
+import { differenceInDays, parseISO } from "date-fns";
+
+const EST_PILL = {
+  Draft:    "bg-muted text-muted-foreground",
+  Sent:     "bg-blue-100 text-blue-800",
+  Approved: "bg-emerald-100 text-emerald-800",
+  Rejected: "bg-red-100 text-red-800",
+};
 
 // ── Sales Card ─────────────────────────────────────────────────────────────────
-function SalesCard({ job, isDragging, onPromote }) {
+function SalesCard({ job, isDragging, onPromote, estimates = [] }) {
   const days = daysInStage(job);
   const isStale = days > 7 && job.stage !== "Deposit Received / Sale Won";
+
+  // Most recent estimate for this job
+  const latestEst = estimates.length > 0
+    ? estimates.reduce((a, b) => (a.created_date > b.created_date ? a : b))
+    : null;
+
+  // Idle estimate warning: in "Estimate In Progress" stage, estimate is Draft and >7 days old
+  const showIdleWarning = latestEst?.status === "Draft"
+    && job.stage === "Estimate In Progress"
+    && latestEst.created_date
+    && differenceInDays(new Date(), parseISO(latestEst.created_date)) > 7;
 
   return (
     <div className={`bg-card rounded-lg border p-3 hover:shadow-md transition-all ${isDragging ? "shadow-lg ring-2 ring-accent/50" : ""}`}>
@@ -25,12 +44,22 @@ function SalesCard({ job, isDragging, onPromote }) {
       </Link>
       <p className="text-xs text-muted-foreground mb-2">{job.customer_name}</p>
 
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
         {job.estimate_total > 0 && (
           <div className="flex items-center gap-1">
             <DollarSign className="w-3 h-3" />
             <span className="font-medium text-foreground">${job.estimate_total.toLocaleString()}</span>
           </div>
+        )}
+        {latestEst && (
+          <span className={`inline-flex items-center rounded-full px-1.5 py-0 text-[10px] font-semibold ${EST_PILL[latestEst.status] || EST_PILL.Draft}`}>
+            {latestEst.status}
+          </span>
+        )}
+        {showIdleWarning && (
+          <span title="Estimate has been sitting idle for more than 7 days">
+            <AlertTriangle className="w-3 h-3 text-amber-500" />
+          </span>
         )}
         <div className={`flex items-center gap-1 ml-auto ${isStale ? "text-amber-600 font-semibold" : ""}`}>
           <Clock className="w-3 h-3" />
@@ -63,7 +92,21 @@ function SalesCard({ job, isDragging, onPromote }) {
 // ── Sales Board ────────────────────────────────────────────────────────────────
 export default function SalesBoard({ jobs = [] }) {
   const qc = useQueryClient();
-  const [promoting, setPromoting] = useState(null); // job being promoted
+  const [promoting, setPromoting] = useState(null);
+
+  // Fetch all estimates for jobs on this board to display on cards
+  const jobIds = jobs.map(j => j.id);
+  const { data: allEstimates = [] } = useQuery({
+    queryKey: ["salesBoardEstimates", jobIds.join(",")],
+    queryFn: () => base44.entities.Estimate.list("-created_date", 200),
+    enabled: jobIds.length > 0,
+  });
+  // Group estimates by job_id for quick lookup
+  const estimatesByJob = allEstimates.reduce((acc, e) => {
+    if (!acc[e.job_id]) acc[e.job_id] = [];
+    acc[e.job_id].push(e);
+    return acc;
+  }, {});
 
   const columns = {};
   SALES_STAGES.forEach(s => { columns[s] = []; });
@@ -76,7 +119,20 @@ export default function SalesBoard({ jobs = [] }) {
   const moveMutation = useMutation({
     mutationFn: ({ job, toBoard, toStage, note }) =>
       base44.entities.Job.update(job.id, buildStageTransition(job, toBoard, toStage, note)),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["jobs"] }); setPromoting(null); },
+    onSuccess: async (_, vars) => {
+      // Reverse sync: job dragged to "Estimate Sent" → update Draft estimate to Sent
+      if (vars.toStage === "Estimate Sent") {
+        const jobEstimates = estimatesByJob[vars.job.id] || [];
+        const draftEst = jobEstimates.find(e => e.status === "Draft");
+        if (draftEst) {
+          await base44.entities.Estimate.update(draftEst.id, { status: "Sent" });
+          qc.invalidateQueries({ queryKey: ["estimates", vars.job.id] });
+        }
+      }
+      qc.invalidateQueries({ queryKey: ["jobs"] });
+      qc.invalidateQueries({ queryKey: ["salesBoardEstimates"] });
+      setPromoting(null);
+    },
   });
 
   function handleDragEnd(result) {
@@ -85,8 +141,6 @@ export default function SalesBoard({ jobs = [] }) {
     const newStage = destination.droppableId;
     const job = jobs.find(j => j.id === draggableId);
     if (!job || job.stage === newStage) return;
-
-    // If dragged into "Sale Won", just move — the button triggers the full confirm
     moveMutation.mutate({ job, toBoard: "Sales", toStage: newStage, note: "" });
   }
 
@@ -118,7 +172,12 @@ export default function SalesBoard({ jobs = [] }) {
                       <Draggable key={job.id} draggableId={job.id} index={index}>
                         {(prov, snap) => (
                           <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}>
-                            <SalesCard job={job} isDragging={snap.isDragging} onPromote={setPromoting} />
+                            <SalesCard
+                              job={job}
+                              isDragging={snap.isDragging}
+                              onPromote={setPromoting}
+                              estimates={estimatesByJob[job.id] || []}
+                            />
                           </div>
                         )}
                       </Draggable>

@@ -8,6 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
+import { buildStageTransition } from "@/lib/pipelineHelpers";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const GROUPS = ["Materials", "Labor", "Hardware", "Other"];
 
@@ -25,9 +32,10 @@ function calcLine(line) {
   return { ...line, total: (line.quantity || 0) * (line.unit_cost || 0) };
 }
 
-export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimates = [], changeOrders = [], prefill = null, onClose }) {
+export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimates = [], changeOrders = [], prefill = null, onClose, currentUser }) {
   const qc = useQueryClient();
   const isNew = !invoice?.id;
+  const [shopPrompt, setShopPrompt] = useState(false); // Trigger 4 confirm dialog
 
   // prefill is set when creating from an approved estimate (deposit) or final invoice
   const [invoiceType, setInvoiceType] = useState(prefill?.invoice_type || invoice?.invoice_type || "Final");
@@ -83,6 +91,8 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
     setTax(est.tax_percent || 0);
   }
 
+  const actorName = currentUser?.full_name || currentUser?.email || "Team Member";
+
   const save = useMutation({
     mutationFn: () => {
       const payload = {
@@ -111,12 +121,46 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
         ? base44.entities.Invoice.create(payload)
         : base44.entities.Invoice.update(invoice.id, payload);
     },
-    onSuccess: async (saved) => {
+    onSuccess: async () => {
+      const prevStatus = invoice?.status || "Unpaid";
+      const isDepositNowPaid = invoiceType === "Deposit" && status === "Paid" && prevStatus !== "Paid";
+
+      if (isDepositNowPaid) {
+        // Trigger 4 — move job to Deposit Received / Sale Won
+        await autoMoveSalesStage(
+          job,
+          "Deposit Received / Sale Won",
+          `Deposit invoice marked Paid — job auto-moved to Deposit Received / Sale Won`,
+          actorName
+        );
+        qc.invalidateQueries(["invoices", job.id]);
+        qc.invalidateQueries(["job", job.id]);
+        // Show confirm prompt to move to Shop
+        setShopPrompt(true);
+        return;
+      }
+
       qc.invalidateQueries(["invoices", job.id]);
       qc.invalidateQueries(["job", job.id]);
       onClose?.();
     },
   });
+
+  async function handleMoveToShop() {
+    const transition = buildStageTransition(job, "Shop", "New Jobs Landed — Needs Approval", "Deposit received — moved to Shop Flow");
+    await base44.entities.Job.update(job.id, transition);
+    qc.invalidateQueries(["jobs"]);
+    qc.invalidateQueries(["job", job.id]);
+    toast(`Deposit received — ${job.job_name} moved to Shop Flow`);
+    setShopPrompt(false);
+    onClose?.();
+  }
+
+  function handleStayInSales() {
+    qc.invalidateQueries(["jobs"]);
+    setShopPrompt(false);
+    onClose?.();
+  }
 
   const approvedEstimates = estimates.filter(e => e.status === "Approved");
 
@@ -263,6 +307,22 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
           </div>
         </div>
       </div>
-    </div>
+
+    {/* Trigger 4 — Deposit Paid: confirm move to Shop */}
+    <AlertDialog open={shopPrompt} onOpenChange={setShopPrompt}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Deposit received for {job.job_name}</AlertDialogTitle>
+          <AlertDialogDescription>
+            The deposit invoice is marked paid. Move this job to the Shop Flow board under "New Jobs Landed — Needs Approval"?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={handleStayInSales}>Keep in Sales Flow</AlertDialogCancel>
+          <AlertDialogAction onClick={handleMoveToShop}>Yes, Move to Shop</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </div>
   );
 }

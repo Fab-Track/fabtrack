@@ -10,6 +10,7 @@ import EstimateEditor from "@/components/estimates/EstimateEditor";
 import InvoiceEditor from "@/components/documents/InvoiceEditor";
 import ChangeOrderEditor from "@/components/documents/ChangeOrderEditor";
 import JobFinancialSummary from "@/components/jobs/JobFinancialSummary";
+import { useAuth } from "@/lib/AuthContext";
 
 const EST_STATUS = {
   Draft:    "bg-muted text-muted-foreground",
@@ -45,6 +46,7 @@ function SectionHeader({ icon: Icon, title, count, onNew, newLabel, extraButton 
 
 export default function JobDocumentsTab({ job }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const [estimateOpen, setEstimateOpen] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [coOpen, setCoOpen] = useState(false);
@@ -245,6 +247,7 @@ export default function JobDocumentsTab({ job }) {
             job={job}
             onClose={() => setEstimateOpen(false)}
             onCreateDepositInvoice={handleCreateDepositInvoice}
+            currentUser={user}
           />
         </DialogContent>
       </Dialog>
@@ -260,6 +263,7 @@ export default function JobDocumentsTab({ job }) {
             changeOrders={changeOrders}
             prefill={invoicePrefill}
             onClose={() => { setInvoiceOpen(false); setInvoicePrefill(null); }}
+            currentUser={user}
           />
         </DialogContent>
       </Dialog>

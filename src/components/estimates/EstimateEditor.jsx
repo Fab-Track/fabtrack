@@ -11,6 +11,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Trash2, CheckCircle2, FileText } from "lucide-react";
+import { toast } from "sonner";
+import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
 
 const CATEGORIES = ["Labor", "Material", "Equipment", "Sub-contractor", "Other"];
 const PHASES = ["Fabrication", "Powder Coat", "Install", "Design", "Other"];
@@ -30,7 +32,7 @@ function calcLine(line) {
   return { ...line, total: (line.quantity || 0) * (line.unit_cost || 0) };
 }
 
-export default function EstimateEditor({ estimate, job, onClose, onCreateDepositInvoice }) {
+export default function EstimateEditor({ estimate, job, onClose, onCreateDepositInvoice, currentUser }) {
   const qc = useQueryClient();
   const isNew = !estimate?.id;
 
@@ -49,6 +51,8 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
   const afterMarkup = subtotal * (1 + markup / 100);
   const afterOverhead = afterMarkup * (1 + overhead / 100);
   const total = afterOverhead * (1 + tax / 100);
+
+  const actorName = currentUser?.full_name || currentUser?.email || "Team Member";
 
   const save = useMutation({
     mutationFn: () => {
@@ -71,17 +75,51 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
         : base44.entities.Estimate.update(estimate.id, payload);
     },
     onSuccess: async () => {
-      if (status === "Approved") {
-        // Update job estimate_total and advance to Awaiting Deposit if still in early Sales stages
-        const earlyStages = ["New Lead", "Estimate In Progress", "Estimate Sent", "Negotiation"];
-        const updates = { estimate_total: total, customer_approval_status: "approved" };
-        if (!job.stage || earlyStages.includes(job.stage)) {
-          updates.stage = "Awaiting Deposit";
-          updates.pipeline_board = "Sales";
-          updates.stage_entered_at = new Date().toISOString();
+      const prevStatus = estimate?.status || "Draft";
+
+      // Trigger 1 — New estimate created while job is in "New Lead"
+      if (isNew) {
+        const moved = await autoMoveSalesStage(
+          job,
+          "Estimate In Progress",
+          "Estimate created — job auto-moved to Estimate In Progress",
+          actorName
+        );
+        if (moved) {
+          // update local job ref for downstream triggers in same save
+          job = { ...job, stage: "Estimate In Progress", pipeline_board: "Sales" };
         }
-        await base44.entities.Job.update(job.id, updates);
       }
+
+      // Trigger 2 — Estimate status changed to "Sent"
+      if (status === "Sent" && prevStatus !== "Sent") {
+        const moved = await autoMoveSalesStage(
+          job,
+          "Estimate Sent",
+          `Estimate marked Sent — job auto-moved to Estimate Sent`,
+          actorName
+        );
+        if (moved) {
+          toast("Job moved to Estimate Sent");
+          job = { ...job, stage: "Estimate Sent", pipeline_board: "Sales" };
+        }
+      }
+
+      // Trigger 3 — Estimate Approved
+      if (status === "Approved" && prevStatus !== "Approved") {
+        const estUpdate = { estimate_total: total, customer_approval_status: "approved" };
+        await base44.entities.Job.update(job.id, estUpdate);
+        const moved = await autoMoveSalesStage(
+          { ...job, ...estUpdate },
+          "Awaiting Deposit",
+          `Estimate approved by ${signature} — job auto-moved to Awaiting Deposit`,
+          actorName
+        );
+        if (moved) {
+          toast("Estimate approved — job moved to Awaiting Deposit");
+        }
+      }
+
       qc.invalidateQueries(["estimates"]);
       qc.invalidateQueries(["estimates", job.id]);
       qc.invalidateQueries(["job", job.id]);

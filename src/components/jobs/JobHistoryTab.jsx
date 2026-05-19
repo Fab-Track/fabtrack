@@ -67,7 +67,10 @@ export default function JobHistoryTab({ job }) {
                 <Badge className={`text-[10px] ml-1 ${BOARD_COLORS[entry.to_board] || ""}`}>→ {entry.to_board}</Badge>
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">{fmt(entry.timestamp)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {fmt(entry.timestamp)}
+              {entry.triggered_by && <span className="ml-2 text-muted-foreground/70">· by {entry.triggered_by}</span>}
+            </p>
             {entry.note && (
               <p className="text-xs text-muted-foreground mt-1 bg-muted/40 rounded px-2 py-1 italic">"{entry.note}"</p>
             )}
