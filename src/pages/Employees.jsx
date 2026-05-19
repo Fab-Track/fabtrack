@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,9 +14,12 @@ import { Plus, User, Shield, Phone, Mail } from "lucide-react";
 const ROLES = ["welder", "fitter", "cutter", "installer", "foreman", "admin", "grinder"];
 
 export default function Employees() {
+  const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ name: "", role: "", hourly_rate: "", pin: "", email: "", phone: "", is_active: true });
   const queryClient = useQueryClient();
+
+  const canAddEmployee = ["admin", "owner", "shop_manager", "foreman"].includes((user?.role || "").toLowerCase());
 
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ["employees"],
@@ -44,10 +48,11 @@ export default function Employees() {
           <h1 className="text-2xl font-bold tracking-tight">Employees</h1>
           <p className="text-sm text-muted-foreground">{active.length} active</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm"><Plus className="w-4 h-4 mr-1.5" />Add Employee</Button>
-          </DialogTrigger>
+        {canAddEmployee && (
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm"><Plus className="w-4 h-4 mr-1.5" />Add Employee</Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>New Employee</DialogTitle>
@@ -93,8 +98,9 @@ export default function Employees() {
               </Button>
             </form>
           </DialogContent>
-        </Dialog>
-      </div>
+          </Dialog>
+          )}
+          </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
         {active.map(emp => (
