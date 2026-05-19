@@ -4,6 +4,12 @@
  *   key, label, type ('select'|'text'|'number'|'textarea'|'checkbox'),
  *   options (for select), role ('designer'|'installer'|'both'),
  *   section (string label for grouping)
+ *
+ * Sections kept per product: Project Scope, Design Details, Beam Callouts,
+ * Column Callouts, Finish, Install Details.
+ *
+ * Moved to job level: Site Access, Materials Checklist, Site Photos.
+ * Removed entirely: Approval & Status (incl. Ready to Fabricate).
  */
 
 export const PRODUCT_TYPES = [
@@ -16,36 +22,13 @@ export const PRODUCT_TYPES = [
   "Chimney Cap",
 ];
 
-// ─── Shared sections ────────────────────────────────────────────────────────
-
-const SITE_ACCESS_FIELDS = [
-  { key: "someone_on_site", label: "Someone On Site", type: "select", options: ["Yes","No","Unknown"], role: "installer" },
-  { key: "entry_code", label: "Entry Code", type: "text", role: "installer" },
-  { key: "onsite_contact_name", label: "On-Site Contact Name", type: "text", role: "installer" },
-  { key: "onsite_contact_phone", label: "On-Site Contact Phone", type: "text", role: "installer" },
-  { key: "backup_contact_name", label: "Backup Contact Name", type: "text", role: "installer" },
-  { key: "backup_contact_phone", label: "Backup Contact Phone", type: "text", role: "installer" },
-];
-
-const APPROVAL_STATUS_FIELDS = [
-  { key: "shop_drawings_required", label: "Shop Drawings Required", type: "select", options: ["Yes","No"], role: "designer" },
-  { key: "customer_approval_required", label: "Customer Approval Required on Drawings", type: "select", options: ["Yes","No"], role: "designer" },
-  { key: "drawing_status", label: "Drawing Status", type: "select", options: ["Not Started","In Progress","Sent to Customer","Approved","Revision Requested"], role: "designer" },
-  { key: "ready_to_fabricate", label: "Ready to Fabricate", type: "select", options: ["Yes","No"], role: "both" },
-  { key: "site_photos_uploaded", label: "Site Photos Uploaded", type: "select", options: ["Yes","No","Pending"], role: "both" },
-];
+// ─── Shared finish presets ───────────────────────────────────────────────────
 
 const STANDARD_FINISH_FIELDS = [
   { key: "powder_coat_color", label: "Powder Coat Color", type: "select", options: ["Matte Black","Gloss Black","Iron Ore","None"], role: "both" },
   { key: "ral_code", label: "RAL / Color Code", type: "text", role: "both" },
   { key: "powder_coat_shop", label: "Name of Powder Coat Shop", type: "select", options: ["Quality Powder Coat","High Country Powders","Other"], role: "both" },
   { key: "touchup_paint", label: "Touch-up Paint Needed on Site", type: "select", options: ["Yes","No"], role: "both" },
-];
-
-const GENERIC_FINISH_FIELDS = [
-  { key: "powder_coat_color", label: "Powder Coat Color", type: "text", role: "both" },
-  { key: "ral_code", label: "RAL / Color Code", type: "text", role: "both" },
-  { key: "finish_type", label: "Finish Type", type: "select", options: ["Powder Coat","Paint","Raw","Galvanized","Other"], role: "designer" },
 ];
 
 // ─── RAILING ────────────────────────────────────────────────────────────────
@@ -74,25 +57,6 @@ const RAILING_FIELDS = [
   { key: "estimated_install_time", label: "Estimated Install Time (hrs)", type: "number", role: "installer", section: "Install Details" },
   { key: "num_installers", label: "Number of Installers Needed", type: "number", role: "installer", section: "Install Details" },
   { key: "crane_required", label: "Crane or Telehandler Required", type: "select", options: ["Yes","No","Maybe","We can borrow one on-site"], role: "installer", section: "Install Details" },
-  // Site Access
-  ...SITE_ACCESS_FIELDS.map(f => ({ ...f, section: "Site Access" })),
-  // Materials Checklist
-  { key: "mat_anchor_bolts", label: "Anchor Bolts", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_base_plates", label: "Base Plates", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_concrete_anchors", label: "Concrete Anchors", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_lag_bolts", label: "Lag Bolts & Wood Screws", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_through_bolts", label: "Through Bolts", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_touchup_paint", label: "Touch-up Paint & Pen", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_silicone", label: "Silicone & Caulk", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_level", label: "Level", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_template", label: "Template & Jig", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_grinder", label: "Grinder & Angle Grinder", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_post_caps", label: "Post Caps & Safety Caps", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_cable_tensioners", label: "Cable Tensioners & End Fittings", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_custom_1", label: "Custom Item 1", type: "text", role: "installer", section: "Materials Checklist" },
-  { key: "mat_custom_2", label: "Custom Item 2", type: "text", role: "installer", section: "Materials Checklist" },
-  // Approval & Status
-  ...APPROVAL_STATUS_FIELDS.map(f => ({ ...f, section: "Approval & Status" })),
 ];
 
 // ─── STAIRCASE ──────────────────────────────────────────────────────────────
@@ -129,20 +93,6 @@ const STAIRCASE_FIELDS = [
   { key: "num_installers", label: "Number of Installers Needed", type: "number", role: "installer", section: "Install Details" },
   { key: "lift_scaffold", label: "Lift / Scaffold Required", type: "select", options: ["Yes","No","Maybe"], role: "installer", section: "Install Details" },
   { key: "concrete_pour", label: "Concrete Pour Required", type: "select", options: ["Yes","No","By Others"], role: "installer", section: "Install Details" },
-  // Site Access
-  ...SITE_ACCESS_FIELDS.map(f => ({ ...f, section: "Site Access" })),
-  // Materials Checklist
-  { key: "mat_anchor_epoxy", label: "Anchor Bolts & Epoxy Anchors", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_concrete_mix", label: "Concrete Mix (if footer needed)", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_lag_through_bolts", label: "Lag Bolts & Through Bolts", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_shims", label: "Shims & Leveling Hardware", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_touchup_paint", label: "Touch-up Paint & Pen", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_level", label: "Level & Laser Level", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_grinder", label: "Grinder & Angle Grinder", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_custom_1", label: "Custom Item 1", type: "text", role: "installer", section: "Materials Checklist" },
-  { key: "mat_custom_2", label: "Custom Item 2", type: "text", role: "installer", section: "Materials Checklist" },
-  // Approval
-  ...APPROVAL_STATUS_FIELDS.map(f => ({ ...f, section: "Approval & Status" })),
 ];
 
 // ─── GATE ────────────────────────────────────────────────────────────────────
@@ -180,23 +130,6 @@ const GATE_FIELDS = [
   { key: "estimated_install_time", label: "Estimated Install Time (hrs)", type: "number", role: "installer", section: "Install Details" },
   { key: "num_installers", label: "Number of Installers Needed", type: "number", role: "installer", section: "Install Details" },
   { key: "concrete_pour", label: "Concrete Pour Required", type: "select", options: ["Yes","No","By Others"], role: "installer", section: "Install Details" },
-  // Site Access
-  ...SITE_ACCESS_FIELDS.map(f => ({ ...f, section: "Site Access" })),
-  // Materials Checklist
-  { key: "mat_anchor_post", label: "Anchor Bolts & Post Bases", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_concrete_mix", label: "Concrete Mix", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_hinge_hardware", label: "Hinge Hardware", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_latch_lock", label: "Latch & Lock Hardware", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_motor_kit", label: "Motor & Automation Kit", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_touchup_paint", label: "Touch-up Paint & Pen", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_level", label: "Level", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_grinder", label: "Grinder", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_custom_1", label: "Custom Item 1", type: "text", role: "installer", section: "Materials Checklist" },
-  // Approval
-  { key: "shop_drawings_required", label: "Shop Drawings Required", type: "select", options: ["Yes","No"], role: "designer", section: "Approval & Status" },
-  { key: "drawing_status", label: "Drawing Status", type: "select", options: ["Not Started","In Progress","Sent to Customer","Approved","Revision Requested"], role: "designer", section: "Approval & Status" },
-  { key: "ready_to_fabricate", label: "Ready to Fabricate", type: "select", options: ["Yes","No"], role: "both", section: "Approval & Status" },
-  { key: "site_photos_uploaded", label: "Site Photos Uploaded", type: "select", options: ["Yes","No","Pending"], role: "both", section: "Approval & Status" },
 ];
 
 // ─── STRUCTURAL ──────────────────────────────────────────────────────────────
@@ -243,25 +176,6 @@ const STRUCTURAL_FIELDS = [
   { key: "lift_scaffold", label: "Lift / Scaffold Required", type: "select", options: ["Yes","No","Maybe"], role: "installer", section: "Install Details" },
   { key: "estimated_install_time", label: "Estimated Install Time (hrs)", type: "number", role: "installer", section: "Install Details" },
   { key: "num_installers", label: "Number of Installers Needed", type: "number", role: "installer", section: "Install Details" },
-  // Site Access (no backup contact)
-  { key: "someone_on_site", label: "Someone On Site", type: "select", options: ["Yes","No","Unknown"], role: "installer", section: "Site Access" },
-  { key: "entry_code", label: "Entry Code", type: "text", role: "installer", section: "Site Access" },
-  { key: "onsite_contact_name", label: "On-Site Contact Name", type: "text", role: "installer", section: "Site Access" },
-  { key: "onsite_contact_phone", label: "On-Site Contact Phone", type: "text", role: "installer", section: "Site Access" },
-  // Materials Checklist
-  { key: "mat_anchor_epoxy", label: "Anchor Bolts & Epoxy", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_concrete_mix", label: "Concrete Mix", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_shim_plates", label: "Shim Plates", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_high_strength_bolts", label: "High-Strength Bolts", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_grinder_welder", label: "Grinder & Welder on Site", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_touchup_paint", label: "Touch-up Paint & Primer", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_custom_1", label: "Custom Item 1", type: "text", role: "installer", section: "Materials Checklist" },
-  // Approval
-  { key: "shop_drawings_required", label: "Shop Drawings Required", type: "select", options: ["Yes","No"], role: "designer", section: "Approval & Status" },
-  { key: "engineer_approved", label: "Engineer Approved", type: "select", options: ["Yes","No","Pending","N/A"], role: "designer", section: "Approval & Status" },
-  { key: "drawing_status", label: "Drawing Status", type: "select", options: ["Not Started","In Progress","Sent to Customer","Approved","Revision Requested"], role: "designer", section: "Approval & Status" },
-  { key: "ready_to_fabricate", label: "Ready to Fabricate", type: "select", options: ["Yes","No"], role: "both", section: "Approval & Status" },
-  { key: "site_photos_uploaded", label: "Site Photos Uploaded", type: "select", options: ["Yes","No","Pending"], role: "both", section: "Approval & Status" },
 ];
 
 // ─── PERGOLA ─────────────────────────────────────────────────────────────────
@@ -291,19 +205,6 @@ const PERGOLA_FIELDS = [
   { key: "lift_scaffold", label: "Lift / Scaffold Required", type: "select", options: ["Yes","No","Maybe"], role: "installer", section: "Install Details" },
   { key: "estimated_install_time", label: "Estimated Install Time (hrs)", type: "number", role: "installer", section: "Install Details" },
   { key: "num_installers", label: "Number of Installers Needed", type: "number", role: "installer", section: "Install Details" },
-  // Site Access
-  ...SITE_ACCESS_FIELDS.map(f => ({ ...f, section: "Site Access" })),
-  // Materials Checklist
-  { key: "mat_post_bases", label: "Post Bases & Anchor Bolts", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_concrete_mix", label: "Concrete Mix (Yes / No / NA)", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_lag_bolts", label: "Lag Bolts & Structural Screws", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_flashing", label: "Flashing if attached to house", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_touchup_paint", label: "Touch-up Paint & Pen", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_level", label: "Level & String Line", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_custom_1", label: "Custom Item 1", type: "text", role: "installer", section: "Materials Checklist" },
-  // Approval
-  { key: "permit_required", label: "Permit Required", type: "select", options: ["Yes","No","Checking"], role: "designer", section: "Approval & Status" },
-  ...APPROVAL_STATUS_FIELDS.map(f => ({ ...f, section: "Approval & Status" })),
 ];
 
 // ─── PLANTER BOX ─────────────────────────────────────────────────────────────
@@ -330,15 +231,6 @@ const PLANTER_BOX_FIELDS = [
   { key: "surface_type", label: "Surface Type", type: "select", options: ["Concrete","Wood","Pavers","Dirt","Other"], role: "installer", section: "Install Details" },
   { key: "estimated_install_time", label: "Estimated Install Time (hrs)", type: "number", role: "installer", section: "Install Details" },
   { key: "num_installers", label: "Number of Installers Needed", type: "number", role: "installer", section: "Install Details" },
-  // Site Access
-  ...SITE_ACCESS_FIELDS.map(f => ({ ...f, section: "Site Access" })),
-  // Materials Checklist
-  { key: "mat_anchor_hardware", label: "Anchor Hardware if anchoring", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_touchup_paint", label: "Touch-up Paint & Pen", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_gloves", label: "Gloves & Protection for sharp edges", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_custom_1", label: "Custom Item 1", type: "text", role: "installer", section: "Materials Checklist" },
-  // Approval
-  ...APPROVAL_STATUS_FIELDS.map(f => ({ ...f, section: "Approval & Status" })),
 ];
 
 // ─── CHIMNEY CAP ─────────────────────────────────────────────────────────────
@@ -376,19 +268,6 @@ const CHIMNEY_CAP_FIELDS = [
   { key: "roof_access", label: "Ladder / Roof Access Required", type: "select", options: ["Yes — bring extension ladder","Yes — scaffolding needed","Roof walk only"], role: "installer", section: "Install Details" },
   { key: "estimated_install_time", label: "Estimated Install Time (hrs)", type: "number", role: "installer", section: "Install Details" },
   { key: "num_installers", label: "Number of Installers Needed", type: "number", role: "installer", section: "Install Details" },
-  // Site Access
-  ...SITE_ACCESS_FIELDS.map(f => ({ ...f, section: "Site Access" })),
-  // Materials Checklist
-  { key: "mat_set_screws", label: "Set Screws & Hardware", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_silicone", label: "Silicone & Sealant", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_touchup_paint", label: "Touch-up Paint & Pen", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_safety_harness", label: "Safety Harness & Roof Anchors", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_ladder", label: "Extension Ladder", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_roof_boots", label: "Non-slip Roof Boots", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_grinder", label: "Grinder", type: "checkbox", role: "installer", section: "Materials Checklist" },
-  { key: "mat_custom_1", label: "Custom Item 1", type: "text", role: "installer", section: "Materials Checklist" },
-  // Approval
-  ...APPROVAL_STATUS_FIELDS.map(f => ({ ...f, section: "Approval & Status" })),
 ];
 
 export const PRODUCT_FIELDS = {
@@ -400,3 +279,19 @@ export const PRODUCT_FIELDS = {
   "Planter Box": PLANTER_BOX_FIELDS,
   "Chimney Cap": CHIMNEY_CAP_FIELDS,
 };
+
+// ─── Job-level materials checklist (standard items shown for every job) ──────
+export const JOB_MATERIALS_CHECKLIST = [
+  { key: "mat_anchor_bolts", label: "Anchor Bolts" },
+  { key: "mat_base_plates", label: "Base Plates" },
+  { key: "mat_concrete_anchors", label: "Concrete Anchors" },
+  { key: "mat_lag_bolts", label: "Lag Bolts & Wood Screws" },
+  { key: "mat_through_bolts", label: "Through Bolts" },
+  { key: "mat_touchup_paint", label: "Touch-up Paint & Pen" },
+  { key: "mat_silicone", label: "Silicone & Caulk" },
+  { key: "mat_level", label: "Level" },
+  { key: "mat_template", label: "Template & Jig" },
+  { key: "mat_grinder", label: "Grinder & Angle Grinder" },
+  { key: "mat_post_caps", label: "Post Caps & Safety Caps" },
+  { key: "mat_cable_tensioners", label: "Cable Tensioners & End Fittings" },
+];

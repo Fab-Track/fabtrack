@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Save, Loader2 } from "lucide-react";
 import AddProductMenu from "@/components/products/AddProductMenu";
 import ProductInstanceCard from "@/components/products/ProductInstanceCard";
+import JobLevelSections from "@/components/jobs/JobLevelSections";
 import { useToast } from "@/components/ui/use-toast";
 
 const VIEW_OPTIONS = ["all", "designer", "installer"];
@@ -32,11 +33,12 @@ export default function ProjectDetailsTab({ job }) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [instances, setInstances] = useState(job.product_instances || []);
+  const [jobLevelData, setJobLevelData] = useState(job.job_level_data || {});
   const [viewFilter, setViewFilter] = useState("all");
   const [dirty, setDirty] = useState(false);
 
   const saveMutation = useMutation({
-    mutationFn: () => base44.entities.Job.update(job.id, { product_instances: instances }),
+    mutationFn: () => base44.entities.Job.update(job.id, { product_instances: instances, job_level_data: jobLevelData }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["job", job.id] });
       setDirty(false);
@@ -46,6 +48,11 @@ export default function ProjectDetailsTab({ job }) {
 
   const update = useCallback((idx, updated) => {
     setInstances(prev => prev.map((inst, i) => i === idx ? updated : inst));
+    setDirty(true);
+  }, []);
+
+  const updateJobLevel = useCallback((section, val) => {
+    setJobLevelData(prev => ({ ...prev, [section]: val }));
     setDirty(true);
   }, []);
 
@@ -146,6 +153,14 @@ export default function ProjectDetailsTab({ job }) {
           ))}
         </div>
       )}
+
+      {/* Job-level sections */}
+      <JobLevelSections
+        job={job}
+        data={jobLevelData}
+        onChangeField={updateJobLevel}
+        viewFilter={viewFilter}
+      />
     </div>
   );
 }

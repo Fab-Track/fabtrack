@@ -1,10 +1,9 @@
 import React, { useState } from "react";
-import { ChevronDown, ChevronRight, Copy, Trash2, CheckCircle2, Circle, Printer } from "lucide-react";
+import { ChevronDown, ChevronRight, Copy, Trash2, CheckCircle2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PRODUCT_FIELDS } from "@/lib/productConfigs";
 import ProductSectionForm from "./ProductSectionForm";
-import ProductPhotoUpload from "./ProductPhotoUpload";
 
 const SECTION_ORDER = [
   "Project Scope",
@@ -13,9 +12,6 @@ const SECTION_ORDER = [
   "Column Callouts",
   "Finish",
   "Install Details",
-  "Site Access",
-  "Materials Checklist",
-  "Approval & Status",
 ];
 
 function isComplete(instance) {
@@ -49,25 +45,6 @@ export default function ProductInstanceCard({
 
   const complete = isComplete(instance);
 
-  const handlePrint = () => {
-    const checklist = fields.filter(f => f.section === "Materials Checklist");
-    const html = `
-      <html><head><title>Checklist</title>
-      <style>body{font-family:sans-serif;padding:24px}h1{font-size:18px}h2{font-size:14px;margin-top:16px}
-      .item{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #eee;font-size:13px}
-      .box{width:16px;height:16px;border:1.5px solid #333;display:inline-block;margin-right:6px}
-      @media print{body{padding:12px}}</style></head><body>
-      <h1>${instance.label}</h1>
-      <p style="color:#666;font-size:12px">Job: ${instance.job_name || ""}</p>
-      <h2>Materials Checklist</h2>
-      ${checklist.map(f => `<div class="item"><span class="box"></span>${f.label}${f.type === "text" ? `: ${instance.data?.[f.key] || "_____________"}` : ""}</div>`).join("")}
-      </body></html>`;
-    const w = window.open("", "_blank");
-    w.document.write(html);
-    w.document.close();
-    w.print();
-  };
-
   return (
     <div className={`rounded-xl border transition-all ${complete ? "border-emerald-400 bg-emerald-50/30" : "border-border bg-card"}`}>
       {/* Header */}
@@ -81,9 +58,6 @@ export default function ProductInstanceCard({
           {complete && <Badge className="text-[10px] bg-emerald-100 text-emerald-700 border-emerald-300">Fully Spec'd</Badge>}
         </button>
         <div className="flex items-center gap-1 shrink-0">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handlePrint} title="Print checklist">
-            <Printer className="w-3.5 h-3.5" />
-          </Button>
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDuplicate} title="Duplicate">
             <Copy className="w-3.5 h-3.5" />
           </Button>
@@ -133,14 +107,6 @@ export default function ProductInstanceCard({
             );
           })}
 
-          {/* Per-product photo upload */}
-          <div className="border-l-2 border-l-border pl-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Site Photos</p>
-            <ProductPhotoUpload
-              photos={instance.photos || []}
-              onChange={photos => onChange({ ...instance, photos })}
-            />
-          </div>
         </div>
       )}
     </div>

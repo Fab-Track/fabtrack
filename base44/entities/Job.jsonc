@@ -287,6 +287,35 @@
           }
         }
       }
+    },
+    "job_level_data": {
+      "type": "object",
+      "description": "Job-level shared data: site_access, materials checklist, site_photos",
+      "properties": {
+        "site_access": {
+          "type": "object"
+        },
+        "materials": {
+          "type": "object"
+        },
+        "site_photos": {
+          "type": "object",
+          "properties": {
+            "before": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "after": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "required": [
