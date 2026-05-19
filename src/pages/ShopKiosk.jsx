@@ -190,20 +190,35 @@ export default function ShopKiosk() {
             onKeyDown={e => e.key === "Enter" && handlePinSubmit()}
           />
           {pinError && <p className="text-red-400 text-sm mb-4">Incorrect PIN. Try again.</p>}
-          <Button 
-            size="lg" 
-            onClick={handlePinSubmit} 
-            className="w-full min-h-[56px] text-lg bg-accent text-accent-foreground hover:bg-accent/90"
-          >
-            Continue
-          </Button>
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              size="lg" 
+              onClick={() => { setStep("select-employee"); setPinError(false); setPin(""); }}
+              className="flex-1 min-h-[56px] text-lg border-white/20 bg-white/10 hover:bg-white/20 text-foreground"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" /> Back
+            </Button>
+            <Button 
+              size="lg" 
+              onClick={handlePinSubmit} 
+              className="flex-1 min-h-[56px] text-lg bg-accent text-accent-foreground hover:bg-accent/90"
+            >
+              Continue
+            </Button>
+          </div>
         </div>
       )}
 
       {/* Step: Select Job */}
       {step === "select-job" && (
         <div>
-          <p className="text-lg font-medium mb-4 opacity-80">Select a job</p>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-lg font-medium opacity-80">Select a job</p>
+            <Button variant="outline" size="sm" onClick={() => { setStep("enter-pin"); setPin(""); }} className="border-white/20 bg-white/10 hover:bg-white/20 text-foreground">
+              <ArrowLeft className="w-4 h-4 mr-1" /> Back
+            </Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {activeJobs.map(job => (
               <button
@@ -226,9 +241,14 @@ export default function ShopKiosk() {
       {/* Step: Select Work Center */}
       {step === "select-center" && (
         <div>
-          <p className="text-lg font-medium mb-4 opacity-80">
-            {selectedJob?.job_number} — Select work center
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-lg font-medium opacity-80">
+              {selectedJob?.job_number} — Select work center
+            </p>
+            <Button variant="outline" size="sm" onClick={() => setStep("select-job")} className="border-white/20 bg-white/10 hover:bg-white/20 text-foreground">
+              <ArrowLeft className="w-4 h-4 mr-1" /> Back
+            </Button>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {WORK_CENTERS.map(wc => (
               <button
