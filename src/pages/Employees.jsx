@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
+import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -15,11 +16,12 @@ const ROLES = ["welder", "fitter", "cutter", "installer", "foreman", "admin", "g
 
 export default function Employees() {
   const { user } = useAuth();
+  const effectiveRole = useEffectiveRole(user?.role || "");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ name: "", role: "", hourly_rate: "", pin: "", email: "", phone: "", is_active: true });
   const queryClient = useQueryClient();
 
-  const canAddEmployee = ["admin", "owner", "shop_manager", "foreman"].includes((user?.role || "").toLowerCase());
+  const canAddEmployee = ["admin", "owner"].includes(effectiveRole.toLowerCase());
 
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ["employees"],
