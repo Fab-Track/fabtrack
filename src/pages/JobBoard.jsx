@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
+import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 import { getBoardsForRole, getDefaultBoard, SALES_STAGES, SHOP_STAGES, BILLING_STAGES } from "@/lib/pipelineHelpers";
 
 const BOARD_STAGES = { Sales: SALES_STAGES, Shop: SHOP_STAGES, Billing: BILLING_STAGES };
@@ -27,32 +29,27 @@ const BOARD_COLORS = {
 };
 
 export default function JobBoard() {
+  const { user } = useAuth();
+  const effectiveRole = useEffectiveRole(user?.role || "admin");
+  const isFabricator = effectiveRole.toLowerCase() === "fabricator";
+
   const [filterType, setFilterType] = useState("all");
   const [activeBoard, setActiveBoard] = useState(null);
-  const [userRole, setUserRole] = useState(null);
   // Per-board view: "kanban" | "row"
   const [viewMode, setViewMode] = useState({ Sales: "kanban", Shop: "kanban", Billing: "kanban" });
 
   const queryClient = useQueryClient();
 
-  // Load current user role
   useEffect(() => {
-    base44.auth.me().then(user => {
-      const role = user?.role || "admin";
-      setUserRole(role);
-      setActiveBoard(prev => prev || getDefaultBoard(role));
-    }).catch(() => {
-      setUserRole("admin");
-      setActiveBoard("Sales");
-    });
-  }, []);
+    setActiveBoard(getDefaultBoard(effectiveRole));
+  }, [effectiveRole]);
 
   const { data: jobs = [], isLoading } = useQuery({
     queryKey: ["jobs"],
     queryFn: () => base44.entities.Job.list("-created_date", 500),
   });
 
-  const allowedBoards = userRole ? getBoardsForRole(userRole) : ["Sales", "Shop", "Billing"];
+  const allowedBoards = getBoardsForRole(effectiveRole);
 
   // Partition jobs by board
   const boardJobs = {
@@ -119,11 +116,13 @@ export default function JobBoard() {
               </button>
             </div>
           )}
-          <Link to="/jobs/new">
-            <Button size="sm" className="h-9">
-              <Plus className="w-4 h-4 mr-1.5" />New Job
-            </Button>
-          </Link>
+          {!isFabricator && (
+            <Link to="/jobs/new">
+              <Button size="sm" className="h-9">
+                <Plus className="w-4 h-4 mr-1.5" />New Job
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -163,7 +162,7 @@ export default function JobBoard() {
         {activeBoard === "Shop" && (
           viewMode.Shop === "row"
             ? <PipelineRowView jobs={filtered.Shop}    stages={SHOP_STAGES}    board="Shop"    />
-            : <ShopBoard    jobs={filtered.Shop}    />
+            : <ShopBoard    jobs={filtered.Shop}    readOnly={isFabricator} />
         )}
         {activeBoard === "Billing" && (
           viewMode.Billing === "row"

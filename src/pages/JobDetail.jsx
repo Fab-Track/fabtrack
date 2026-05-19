@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
+import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,6 +20,10 @@ import JobHistoryTab from "@/components/jobs/JobHistoryTab";
 import ProjectDetailsTab from "@/components/jobs/ProjectDetailsTab";
 
 export default function JobDetail() {
+  const { user } = useAuth();
+  const effectiveRole = useEffectiveRole(user?.role || "admin");
+  const isFabricator = effectiveRole.toLowerCase() === "fabricator";
+
   const jobId = new URLSearchParams(window.location.search).get("id") 
     || window.location.pathname.split("/jobs/")[1];
 
@@ -100,7 +106,7 @@ export default function JobDetail() {
                 {format(parseISO(job.expected_install_date), "MMM d, yyyy")}
               </div>
             )}
-            {job.site_address && (
+            {job.site_address && !isFabricator && (
               <div className="flex items-center gap-1.5">
                 <MapPin className="w-4 h-4" />
                 {job.site_address}
@@ -117,10 +123,10 @@ export default function JobDetail() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="overview">
+      <Tabs defaultValue={isFabricator ? "shop-log" : "overview"}>
         <TabsList className="mb-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
+          {!isFabricator && <TabsTrigger value="overview">Overview</TabsTrigger>}
+          {!isFabricator && <TabsTrigger value="documents">Documents</TabsTrigger>}
           <TabsTrigger value="schedule">
             Schedule
             {job.schedule_phases?.length > 0 && (
@@ -128,7 +134,7 @@ export default function JobDetail() {
             )}
           </TabsTrigger>
           <TabsTrigger value="shop-log">Shop Log</TabsTrigger>
-          <TabsTrigger value="costing">Costing</TabsTrigger>
+          {!isFabricator && <TabsTrigger value="costing">Costing</TabsTrigger>}
           <TabsTrigger value="attachments">Attachments</TabsTrigger>
           <TabsTrigger value="project-details">
             Project Details
@@ -136,38 +142,48 @@ export default function JobDetail() {
               <span className="ml-1.5 text-[10px] bg-accent text-accent-foreground rounded-full px-1.5">{job.product_instances.length}</span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="history">
-            History
-            {job.stage_history?.length > 0 && (
-              <span className="ml-1.5 text-[10px] bg-muted text-muted-foreground rounded-full px-1.5">{job.stage_history.length}</span>
-            )}
-          </TabsTrigger>
+          {!isFabricator && (
+            <TabsTrigger value="history">
+              History
+              {job.stage_history?.length > 0 && (
+                <span className="ml-1.5 text-[10px] bg-muted text-muted-foreground rounded-full px-1.5">{job.stage_history.length}</span>
+              )}
+            </TabsTrigger>
+          )}
         </TabsList>
 
-        <TabsContent value="overview">
-          <JobOverviewTab job={job} />
-        </TabsContent>
-        <TabsContent value="documents">
-          <JobDocumentsTab job={job} />
-        </TabsContent>
+        {!isFabricator && (
+          <TabsContent value="overview">
+            <JobOverviewTab job={job} />
+          </TabsContent>
+        )}
+        {!isFabricator && (
+          <TabsContent value="documents">
+            <JobDocumentsTab job={job} />
+          </TabsContent>
+        )}
         <TabsContent value="schedule">
-          <ProductionSchedule job={job} />
+          <ProductionSchedule job={job} readOnly={isFabricator} />
         </TabsContent>
         <TabsContent value="shop-log">
           <JobShopLogTab timeEntries={timeEntries} job={job} />
         </TabsContent>
-        <TabsContent value="costing">
-          <JobCostingTab job={job} timeEntries={timeEntries} purchaseOrders={purchaseOrders} employees={employees} />
-        </TabsContent>
+        {!isFabricator && (
+          <TabsContent value="costing">
+            <JobCostingTab job={job} timeEntries={timeEntries} purchaseOrders={purchaseOrders} employees={employees} />
+          </TabsContent>
+        )}
         <TabsContent value="attachments">
           <JobAttachmentsTab job={job} />
         </TabsContent>
         <TabsContent value="project-details">
           <ProjectDetailsTab job={job} />
         </TabsContent>
-        <TabsContent value="history">
-          <JobHistoryTab job={job} />
-        </TabsContent>
+        {!isFabricator && (
+          <TabsContent value="history">
+            <JobHistoryTab job={job} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

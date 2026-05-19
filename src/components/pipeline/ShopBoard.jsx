@@ -11,7 +11,7 @@ import StageTransitionDialog from "./StageTransitionDialog";
 import { format, parseISO, isValid } from "date-fns";
 
 // ── Shop Card ──────────────────────────────────────────────────────────────────
-function ShopCard({ job, isDragging, onComplete }) {
+function ShopCard({ job, isDragging, onComplete, readOnly = false }) {
   const days = daysInStage(job);
   const isStale = days > 5;
   const installDate = job.promised_install_date && isValid(parseISO(job.promised_install_date))
@@ -63,7 +63,7 @@ function ShopCard({ job, isDragging, onComplete }) {
         </div>
       )}
 
-      {job.stage === "Install Complete" && (
+      {job.stage === "Install Complete" && !readOnly && (
         <Button
           size="sm"
           className="w-full mt-2 h-7 text-xs bg-emerald-600 hover:bg-emerald-700"
@@ -77,7 +77,7 @@ function ShopCard({ job, isDragging, onComplete }) {
 }
 
 // ── Shop Board ─────────────────────────────────────────────────────────────────
-export default function ShopBoard({ jobs = [] }) {
+export default function ShopBoard({ jobs = [], readOnly = false }) {
   const qc = useQueryClient();
   const [completing, setCompleting] = useState(null);
 
@@ -96,7 +96,7 @@ export default function ShopBoard({ jobs = [] }) {
   });
 
   function handleDragEnd(result) {
-    if (!result.destination) return;
+    if (readOnly || !result.destination) return;
     const { draggableId, destination } = result;
     const newStage = destination.droppableId;
     const job = jobs.find(j => j.id === draggableId);
@@ -129,10 +129,10 @@ export default function ShopBoard({ jobs = [] }) {
                   </div>
                   <div className="flex-1 px-2 pb-2 space-y-2 overflow-y-auto min-h-[200px]">
                     {columns[stage].map((job, index) => (
-                      <Draggable key={job.id} draggableId={job.id} index={index}>
+                      <Draggable key={job.id} draggableId={job.id} index={index} isDragDisabled={readOnly}>
                         {(prov, snap) => (
-                          <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}>
-                            <ShopCard job={job} isDragging={snap.isDragging} onComplete={setCompleting} />
+                          <div ref={prov.innerRef} {...prov.draggableProps} {...(!readOnly ? prov.dragHandleProps : {})}>
+                            <ShopCard job={job} isDragging={snap.isDragging} onComplete={readOnly ? undefined : setCompleting} readOnly={readOnly} />
                           </div>
                         )}
                       </Draggable>

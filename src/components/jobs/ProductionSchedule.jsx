@@ -64,7 +64,7 @@ function StatusBadge({ status }) {
 }
 
 // ─── Gantt Bar Row ─────────────────────────────────────────────────────────────
-function GanttBar({ phase, timelineStart, totalDays, onPhaseUpdate }) {
+function GanttBar({ phase, timelineStart, totalDays, onPhaseUpdate, readOnly = false }) {
   const [open, setOpen] = useState(false);
   const ref = useRef();
 
@@ -107,7 +107,7 @@ function GanttBar({ phase, timelineStart, totalDays, onPhaseUpdate }) {
           </span>
         </div>
 
-        {open && (
+        {open && !readOnly && (
           <div style={{ left: `${leftPct}%` }} className="absolute top-8 z-50">
             <PhasePopup
               phase={phase}
@@ -123,7 +123,7 @@ function GanttBar({ phase, timelineStart, totalDays, onPhaseUpdate }) {
 }
 
 // ─── Main Component ────────────────────────────────────────────────────────────
-export default function ProductionSchedule({ job }) {
+export default function ProductionSchedule({ job, readOnly = false }) {
   const [expanded, setExpanded] = useState(true);
   const [promisedDate, setPromisedDate] = useState(job.promised_install_date || "");
   const [preview, setPreview] = useState(null);
@@ -228,42 +228,44 @@ export default function ProductionSchedule({ job }) {
 
       {expanded && (
         <div className="px-5 pb-5 border-t">
-          {/* Date input */}
-          <div className="flex items-center gap-3 mt-4 mb-3">
-            <div className="flex-1">
-              <label className="text-xs font-medium text-muted-foreground block mb-1.5">Promised Install Date</label>
-              <Input
-                type="date"
-                value={promisedDate}
-                onChange={e => handleDateChange(e.target.value)}
-                className="h-9 text-sm max-w-xs"
-              />
-            </div>
-            {preview && (
-              <div className="flex gap-2 items-end">
+          {/* Date input — hidden for read-only (fabricator) */}
+          {!readOnly && (
+            <div className="flex items-center gap-3 mt-4 mb-3">
+              <div className="flex-1">
+                <label className="text-xs font-medium text-muted-foreground block mb-1.5">Promised Install Date</label>
+                <Input
+                  type="date"
+                  value={promisedDate}
+                  onChange={e => handleDateChange(e.target.value)}
+                  className="h-9 text-sm max-w-xs"
+                />
+              </div>
+              {preview && (
+                <div className="flex gap-2 items-end">
+                  <Button
+                    size="sm"
+                    className="h-9"
+                    onClick={handleConfirmSchedule}
+                    disabled={saveJobMutation.isPending}
+                  >
+                    <Check className="w-3.5 h-3.5 mr-1.5" />
+                    Confirm & Save Schedule
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-9" onClick={() => setPreview(null)}>Cancel</Button>
+                </div>
+              )}
+              {existingSchedule && !preview && (
                 <Button
                   size="sm"
-                  className="h-9"
-                  onClick={handleConfirmSchedule}
-                  disabled={saveJobMutation.isPending}
+                  variant="outline"
+                  className="h-9 text-destructive border-destructive/40 hover:bg-destructive/10"
+                  onClick={() => { setShowConfirm(true); setConfirmAction("remove"); }}
                 >
-                  <Check className="w-3.5 h-3.5 mr-1.5" />
-                  Confirm & Save Schedule
+                  <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Remove Schedule
                 </Button>
-                <Button size="sm" variant="ghost" className="h-9" onClick={() => setPreview(null)}>Cancel</Button>
-              </div>
-            )}
-            {existingSchedule && !preview && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-9 text-destructive border-destructive/40 hover:bg-destructive/10"
-                onClick={() => { setShowConfirm(true); setConfirmAction("remove"); }}
-              >
-                <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Remove Schedule
-              </Button>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Weekend bump notice */}
           {preview?.wasBumped && (
@@ -337,6 +339,7 @@ export default function ProductionSchedule({ job }) {
                     timelineStart={timelineStart}
                     totalDays={totalDays}
                     onPhaseUpdate={handlePhaseUpdate}
+                    readOnly={readOnly}
                   />
                 ))}
               </div>
@@ -359,7 +362,7 @@ export default function ProductionSchedule({ job }) {
 
           {!phasesToShow?.length && !preview && (
             <div className="text-sm text-muted-foreground text-center py-6 bg-muted/20 rounded-lg">
-              Set a Promised Install Date above to auto-generate a production schedule.
+              {readOnly ? "No production schedule has been created for this job yet." : "Set a Promised Install Date above to auto-generate a production schedule."}
             </div>
           )}
         </div>
