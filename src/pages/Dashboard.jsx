@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/AuthContext";
+import { useEffectiveRole, usePreviewRole } from "@/lib/PreviewRoleContext";
 import OwnerDashboard from "./dashboard/OwnerDashboard";
 import ShopManagerDashboard from "./dashboard/ShopManagerDashboard";
 import FabricatorDashboard from "./dashboard/FabricatorDashboard";
@@ -21,8 +22,9 @@ function getDashboardForRole(role) {
   const r = (role || "").toLowerCase();
   if (OWNER_ROLES.includes(r)) return "owner";
   if (r === "shop_manager" || r === "foreman") return "shop";
-  if (["welder", "fitter", "cutter", "installer", "grinder"].includes(r)) return "fabricator";
-  if (r === "estimator") return "estimator";
+  if (["welder", "fitter", "cutter", "installer", "grinder", "fabricator"].includes(r)) return "fabricator";
+  if (r === "estimator" || r === "accountant") return "estimator";
+  if (r === "design_specialist") return "owner";
   return "owner";
 }
 
@@ -55,13 +57,17 @@ const VIEW_LABELS = {
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const role = user?.role || "owner";
-  const isOwner = OWNER_ROLES.includes(role.toLowerCase());
+  const realRole = user?.role || "owner";
+  const effectiveRole = useEffectiveRole(realRole);
+  const { isPreviewing } = usePreviewRole();
 
-  const defaultView = getDashboardForRole(role);
+  const isRealOwner = OWNER_ROLES.includes(realRole.toLowerCase());
+  const isEffectiveOwner = OWNER_ROLES.includes(effectiveRole.toLowerCase()) && !isPreviewing;
+
+  const defaultView = getDashboardForRole(effectiveRole);
 
   const [activeView, setActiveView] = useState(() => {
-    if (!isOwner) return defaultView;
+    if (!isRealOwner) return defaultView;
     try {
       return localStorage.getItem(STORAGE_KEY) || defaultView;
     } catch {
@@ -69,12 +75,21 @@ export default function Dashboard() {
     }
   });
 
+  // When preview role changes, reset the active view to match that role
+  useEffect(() => {
+    setActiveView(getDashboardForRole(effectiveRole));
+  }, [effectiveRole]);
+
   const handleViewChange = (view) => {
     setActiveView(view);
-    try { localStorage.setItem(STORAGE_KEY, view); } catch {}
+    if (!isPreviewing) {
+      try { localStorage.setItem(STORAGE_KEY, view); } catch {}
+    }
   };
 
-  const displayView = isOwner ? activeView : defaultView;
+  // Only real owner (not previewing) can switch views
+  const canSwitchViews = isRealOwner && !isPreviewing;
+  const displayView = canSwitchViews ? activeView : defaultView;
   const viewLabel = VIEW_LABELS[displayView] || "Dashboard";
 
   return (
@@ -87,7 +102,7 @@ export default function Dashboard() {
             {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
           </p>
         </div>
-        {isOwner && (
+        {canSwitchViews && (
           <ViewSwitcher activeView={activeView} onChange={handleViewChange} views={ALL_VIEWS} />
         )}
       </div>

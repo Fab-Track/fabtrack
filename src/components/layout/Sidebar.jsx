@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
+import { useEffectiveRole, usePreviewRole } from "@/lib/PreviewRoleContext";
+import PreviewRoleSelector from "./PreviewRoleSelector";
 
 // ── All possible nav items ──────────────────────────────────────────────────
 const ALL_ITEMS = {
@@ -60,6 +62,11 @@ const ROLE_NAV = {
     { group: "SHOP",        items: ["shopFloor"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
+  accountant: [
+    { group: "OVERVIEW",    items: ["dashboard"] },
+    { group: "FINANCE",     items: ["documents", "customers"] },
+    { group: "ACCOUNT",     items: ["settings"] },
+  ],
   // fallback for any unrecognized role — same as admin
   user: [
     { group: "OVERVIEW",    items: ["dashboard"] },
@@ -106,13 +113,18 @@ function NavLink({ item, collapsed, onClick }) {
 }
 
 // ── Main Sidebar ─────────────────────────────────────────────────────────────
+const OWNER_ROLES = ["owner", "admin"];
+
 export default function Sidebar() {
   const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const role = user?.role || "user";
-  const navGroups = getNavGroups(role);
+  const realRole = user?.role || "user";
+  const effectiveRole = useEffectiveRole(realRole);
+  const isOwner = OWNER_ROLES.includes(realRole.toLowerCase());
+
+  const navGroups = getNavGroups(effectiveRole);
   const mobileItems = getMobileItems(navGroups);
 
   const sidebarContent = (
@@ -157,8 +169,9 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Collapse toggle — desktop only */}
-      <div className="hidden md:block px-2 py-3 border-t border-sidebar-border">
+      {/* Preview Role + Collapse — desktop only */}
+      <div className="hidden md:block px-2 py-3 border-t border-sidebar-border space-y-1">
+        {isOwner && <PreviewRoleSelector collapsed={collapsed} />}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
