@@ -1,0 +1,46 @@
+{
+  "name": "EmployeeDocument",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string"
+    },
+    "employee_name": {
+      "type": "string"
+    },
+    "file_url": {
+      "type": "string"
+    },
+    "file_name": {
+      "type": "string"
+    },
+    "document_type": {
+      "type": "string",
+      "enum": [
+        "Offer Letter",
+        "Certification",
+        "ID",
+        "Signed Policy",
+        "Review",
+        "Write-Up",
+        "Other"
+      ],
+      "default": "Other"
+    },
+    "uploaded_by": {
+      "type": "string"
+    },
+    "shared_with_employee": {
+      "type": "boolean",
+      "default": false
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "employee_id",
+    "file_url",
+    "file_name"
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "name": "WriteUp",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string"
+    },
+    "employee_name": {
+      "type": "string"
+    },
+    "writeup_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "incident_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "written_by": {
+      "type": "string"
+    },
+    "written_by_id": {
+      "type": "string"
+    },
+    "warning_bucket": {
+      "type": "string",
+      "enum": [
+        "Bucket 1 - Attendance & Time",
+        "Bucket 2 - Conduct",
+        "Bucket 3 - Work Standards"
+      ]
+    },
+    "specific_reason": {
+      "type": "string"
+    },
+    "incident_description": {
+      "type": "string"
+    },
+    "prior_warnings": {
+      "type": "string",
+      "enum": [
+        "None",
+        "1 Prior",
+        "2 Prior",
+        "3+ Prior"
+      ],
+      "default": "None"
+    },
+    "action_taken": {
+      "type": "string",
+      "enum": [
+        "Verbal Warning",
+        "Written Warning",
+        "Final Written Warning",
+        "Suspension",
+        "Termination"
+      ]
+    },
+    "improvement_plan": {
+      "type": "string"
+    },
+    "followup_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "witness_name": {
+      "type": "string"
+    },
+    "attachment_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "employee_response": {
+      "type": "string"
+    },
+    "acknowledgment_status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Acknowledged",
+        "Refused to Sign"
+      ],
+      "default": "Pending"
+    },
+    "acknowledged_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "employee_id",
+    "warning_bucket",
+    "specific_reason",
+    "incident_description"
+  ]
+}

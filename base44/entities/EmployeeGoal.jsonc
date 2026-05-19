@@ -1,0 +1,50 @@
+{
+  "name": "EmployeeGoal",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string"
+    },
+    "employee_name": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "goal_type": {
+      "type": "string",
+      "enum": [
+        "Professional",
+        "Personal",
+        "Performance",
+        "Certification",
+        "Other"
+      ],
+      "default": "Professional"
+    },
+    "description": {
+      "type": "string"
+    },
+    "target_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Achieved",
+        "Carried Forward",
+        "Abandoned"
+      ],
+      "default": "Active"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "employee_id",
+    "title"
+  ]
+}

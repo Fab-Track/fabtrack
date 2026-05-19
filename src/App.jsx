@@ -18,9 +18,11 @@ import Schedule from '@/pages/Schedule';
 import Customers from '@/pages/Customers';
 import Inventory from '@/pages/Inventory';
 import CraftsmanScore from '@/pages/CraftsmanScore';
-import Employees from '@/pages/Employees';
+import Employees from '@/pages/Employees.jsx';
 import Documents from '@/pages/Documents';
 import LeadForm from '@/pages/LeadForm';
+import EmployeeProfilePage from '@/pages/EmployeeProfilePage';
+import OnboardingSurveyPage from '@/pages/OnboardingSurveyPage';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -50,6 +52,7 @@ const AuthenticatedApp = () => {
       {/* Public pages - no sidebar */}
       <Route path="/kiosk" element={<ShopKiosk />} />
       <Route path="/lead" element={<LeadForm />} />
+      <Route path="/onboarding" element={<OnboardingSurveyPage />} />
       
       {/* Main app with sidebar layout */}
       <Route element={<AppLayout />}>
@@ -63,6 +66,7 @@ const AuthenticatedApp = () => {
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/craftsman" element={<CraftsmanScore />} />
         <Route path="/employees" element={<Employees />} />
+        <Route path="/employees/:id" element={<EmployeeProfilePage />} />
         <Route path="/documents" element={<Documents />} />
       </Route>
 

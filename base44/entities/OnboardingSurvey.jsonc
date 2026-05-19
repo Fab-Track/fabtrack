@@ -1,0 +1,36 @@
+{
+  "name": "OnboardingSurvey",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string"
+    },
+    "employee_name": {
+      "type": "string"
+    },
+    "token": {
+      "type": "string",
+      "description": "Unique secure token for the survey link"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "is_completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "submitted_data": {
+      "type": "object",
+      "description": "Raw submitted form data"
+    }
+  },
+  "required": [
+    "employee_id",
+    "token"
+  ]
+}

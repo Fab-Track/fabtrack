@@ -6,6 +6,14 @@
       "type": "string",
       "description": "Full name"
     },
+    "preferred_name": {
+      "type": "string",
+      "description": "Preferred name / nickname"
+    },
+    "date_of_birth": {
+      "type": "string",
+      "format": "date"
+    },
     "role": {
       "type": "string",
       "enum": [
@@ -15,13 +23,41 @@
         "installer",
         "foreman",
         "admin",
-        "grinder"
+        "grinder",
+        "estimator",
+        "design_specialist",
+        "accountant",
+        "owner"
       ],
       "description": "Shop role"
     },
+    "work_center_primary": {
+      "type": "string",
+      "enum": [
+        "Cut",
+        "Fit",
+        "Weld",
+        "Grind",
+        "Install",
+        "Design",
+        "Powder Coat"
+      ]
+    },
+    "work_center_secondary": {
+      "type": "string",
+      "enum": [
+        "Cut",
+        "Fit",
+        "Weld",
+        "Grind",
+        "Install",
+        "Design",
+        "Powder Coat"
+      ]
+    },
     "hourly_rate": {
       "type": "number",
-      "description": "Hourly rate for job costing (hidden from floor)"
+      "description": "Hourly rate - internal only"
     },
     "pin": {
       "type": "string",
@@ -29,20 +65,123 @@
     },
     "is_active": {
       "type": "boolean",
-      "default": true,
-      "description": "Active or inactive"
+      "default": true
+    },
+    "employment_status": {
+      "type": "string",
+      "enum": [
+        "Full Time",
+        "Part Time",
+        "Seasonal",
+        "Terminated"
+      ],
+      "default": "Full Time"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date"
     },
     "email": {
-      "type": "string",
-      "description": "Email (linked to user account if applicable)"
+      "type": "string"
     },
     "phone": {
+      "type": "string"
+    },
+    "personal_email": {
+      "type": "string"
+    },
+    "home_address": {
+      "type": "string"
+    },
+    "emergency_contact_name": {
+      "type": "string"
+    },
+    "emergency_contact_phone": {
+      "type": "string"
+    },
+    "emergency_contact_relationship": {
+      "type": "string"
+    },
+    "tshirt_size": {
       "type": "string",
-      "description": "Phone number"
+      "enum": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL",
+        "XXL",
+        "XXXL"
+      ]
+    },
+    "profile_photo_url": {
+      "type": "string"
+    },
+    "years_experience": {
+      "type": "number"
+    },
+    "certifications": {
+      "type": "string"
+    },
+    "has_drivers_license": {
+      "type": "boolean"
+    },
+    "can_operate_forklift": {
+      "type": "boolean"
+    },
+    "can_operate_boom_lift": {
+      "type": "boolean"
+    },
+    "internal_notes": {
+      "type": "string"
+    },
+    "favorite_energy_drink": {
+      "type": "string"
+    },
+    "favorite_snack": {
+      "type": "string"
+    },
+    "favorite_restaurant": {
+      "type": "string"
+    },
+    "favorite_music_genre": {
+      "type": "string"
+    },
+    "hobbies": {
+      "type": "string"
+    },
+    "favorite_sports_team": {
+      "type": "string"
+    },
+    "goto_lunch_order": {
+      "type": "string"
+    },
+    "work_motivation": {
+      "type": "string"
+    },
+    "fun_fact_self": {
+      "type": "string"
+    },
+    "bucket_list_item": {
+      "type": "string"
+    },
+    "fun_fact_team": {
+      "type": "string",
+      "description": "Fun fact added by owner/team"
+    },
+    "onboarding_completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "onboarding_submitted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "previous_employers": {
+      "type": "string"
     }
   },
   "required": [
-    "name",
-    "role"
+    "name"
   ]
 }

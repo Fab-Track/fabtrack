@@ -1,0 +1,100 @@
+{
+  "name": "EmployeeReview",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string"
+    },
+    "employee_name": {
+      "type": "string"
+    },
+    "review_period": {
+      "type": "string",
+      "description": "e.g. Q2 2026"
+    },
+    "review_quarter": {
+      "type": "string",
+      "enum": [
+        "Q1",
+        "Q2",
+        "Q3",
+        "Q4"
+      ]
+    },
+    "review_year": {
+      "type": "number"
+    },
+    "review_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "conducted_by": {
+      "type": "string"
+    },
+    "conducted_by_id": {
+      "type": "string"
+    },
+    "overall_rating": {
+      "type": "string",
+      "enum": [
+        "Exceeds Expectations",
+        "Meets Expectations",
+        "Needs Improvement",
+        "Unsatisfactory"
+      ]
+    },
+    "craftsman_score_snapshot": {
+      "type": "number",
+      "description": "QC avg for the quarter"
+    },
+    "hours_logged_snapshot": {
+      "type": "number",
+      "description": "Hours logged for the quarter"
+    },
+    "strengths": {
+      "type": "string"
+    },
+    "areas_for_improvement": {
+      "type": "string"
+    },
+    "goals_reviewed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "goal_id": {
+            "type": "string"
+          },
+          "goal_title": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "owner_notes": {
+      "type": "string"
+    },
+    "employee_comments": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Shared with Employee",
+        "Acknowledged by Employee"
+      ],
+      "default": "Draft"
+    },
+    "acknowledged_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "employee_id"
+  ]
+}
