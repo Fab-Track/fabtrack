@@ -45,10 +45,12 @@ function SalesCard({ job, isDragging, onPromote, estimates = [] }) {
       <p className="text-xs text-muted-foreground mb-2">{job.customer_name}</p>
 
       <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-        {job.estimate_total > 0 && (
+        {latestEst && (
           <div className="flex items-center gap-1">
             <DollarSign className="w-3 h-3" />
-            <span className="font-medium text-foreground">${job.estimate_total.toLocaleString()}</span>
+            <span className="font-medium text-foreground">
+              ${(latestEst.total ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
           </div>
         )}
         {latestEst && (
@@ -184,6 +186,22 @@ export default function SalesBoard({ jobs = [] }) {
                     ))}
                     {provided.placeholder}
                   </div>
+                  {/* Column total */}
+                  {(() => {
+                    const colTotal = columns[stage].reduce((sum, job) => {
+                      const ests = estimatesByJob[job.id] || [];
+                      if (ests.length === 0) return sum;
+                      const latest = ests.reduce((a, b) => (a.created_date > b.created_date ? a : b));
+                      return sum + (latest.total ?? 0);
+                    }, 0);
+                    return (
+                      <div className="px-3 py-2 border-t border-border/50">
+                        <span className="text-xs text-muted-foreground">
+                          Total: ${colTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </Droppable>
