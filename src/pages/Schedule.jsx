@@ -73,7 +73,7 @@ function JobGanttRow({ job, days, windowStart, windowEnd }) {
 
   return (
     <Link
-      to={`/jobs/${job.id}`}
+      to={`/jobs/${job.id}?from=schedule`}
       className="flex items-center h-10 hover:bg-muted/40 transition-colors border-b border-border/30 group"
     >
       {/* Job label */}

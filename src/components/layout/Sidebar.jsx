@@ -53,7 +53,7 @@ const ROLE_NAV = {
   ],
   fabricator: [
     { group: "OVERVIEW",    items: ["dashboard"] },
-    { group: "SHOP",        items: ["shopFloor"] },
+    { group: "SHOP",        items: ["schedule", "shopFloor"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   installer: [

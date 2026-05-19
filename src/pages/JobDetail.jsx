@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { STATUS_COLORS, getJobHealth, getHealthDot } from "@/lib/jobHelpers";
 import { format, parseISO } from "date-fns";
 import { ArrowLeft, CalendarDays, MapPin, Paintbrush } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import JobOverviewTab from "@/components/jobs/JobOverviewTab";
 import JobShopLogTab from "@/components/jobs/JobShopLogTab";
 import JobCostingTab from "@/components/jobs/JobCostingTab";
@@ -23,9 +23,10 @@ export default function JobDetail() {
   const { user } = useAuth();
   const effectiveRole = useEffectiveRole(user?.role || "admin");
   const isFabricator = effectiveRole.toLowerCase() === "fabricator";
+  const [searchParams] = useSearchParams();
+  const fromSchedule = searchParams.get("from") === "schedule";
 
-  const jobId = new URLSearchParams(window.location.search).get("id") 
-    || window.location.pathname.split("/jobs/")[1];
+  const jobId = window.location.pathname.split("/jobs/")[1]?.split("?")[0];
 
   const { data: job, isLoading } = useQuery({
     queryKey: ["job", jobId],
@@ -76,8 +77,12 @@ export default function JobDetail() {
   return (
     <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
       {/* Back link */}
-      <Link to="/jobs" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4">
-        <ArrowLeft className="w-4 h-4" /> Back to Job Board
+      <Link
+        to={fromSchedule ? "/schedule" : "/jobs"}
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        {fromSchedule ? "Back to Schedule" : "Back to Job Board"}
       </Link>
 
       {/* Header */}
@@ -123,9 +128,9 @@ export default function JobDetail() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue={isFabricator ? "shop-log" : "overview"}>
+      <Tabs defaultValue="overview">
         <TabsList className="mb-4">
-          {!isFabricator && <TabsTrigger value="overview">Overview</TabsTrigger>}
+          <TabsTrigger value="overview">Overview</TabsTrigger>
           {!isFabricator && <TabsTrigger value="documents">Documents</TabsTrigger>}
           <TabsTrigger value="schedule">
             Schedule
@@ -142,21 +147,17 @@ export default function JobDetail() {
               <span className="ml-1.5 text-[10px] bg-accent text-accent-foreground rounded-full px-1.5">{job.product_instances.length}</span>
             )}
           </TabsTrigger>
-          {!isFabricator && (
-            <TabsTrigger value="history">
-              History
-              {job.stage_history?.length > 0 && (
-                <span className="ml-1.5 text-[10px] bg-muted text-muted-foreground rounded-full px-1.5">{job.stage_history.length}</span>
-              )}
-            </TabsTrigger>
-          )}
+          <TabsTrigger value="history">
+            History
+            {job.stage_history?.length > 0 && (
+              <span className="ml-1.5 text-[10px] bg-muted text-muted-foreground rounded-full px-1.5">{job.stage_history.length}</span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
-        {!isFabricator && (
-          <TabsContent value="overview">
-            <JobOverviewTab job={job} />
-          </TabsContent>
-        )}
+        <TabsContent value="overview">
+          <JobOverviewTab job={job} />
+        </TabsContent>
         {!isFabricator && (
           <TabsContent value="documents">
             <JobDocumentsTab job={job} />
@@ -179,11 +180,9 @@ export default function JobDetail() {
         <TabsContent value="project-details">
           <ProjectDetailsTab job={job} />
         </TabsContent>
-        {!isFabricator && (
-          <TabsContent value="history">
-            <JobHistoryTab job={job} />
-          </TabsContent>
-        )}
+        <TabsContent value="history">
+          <JobHistoryTab job={job} />
+        </TabsContent>
       </Tabs>
     </div>
   );
