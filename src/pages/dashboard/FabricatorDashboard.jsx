@@ -48,10 +48,11 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
     ? (employees.find(e => e.id === overrideEmployee.id) || overrideEmployee)
     : (employees.find(e => e.email === user?.email) || null);
 
-  // Active entry for this employee
-  const myActiveEntry = myEmployee
-    ? activeEntries.find(e => e.employee_id === myEmployee.id) || null
-    : null;
+  // All active entries for this employee (supports multiple simultaneous clock-ins)
+  const myActiveEntries = myEmployee
+    ? activeEntries.filter(e => e.employee_id === myEmployee.id)
+    : [];
+  const myActiveEntry = myActiveEntries[0] || null;
 
   // Real-time subscription to TimeEntry changes — invalidates queries instantly
   useEffect(() => {
@@ -101,7 +102,7 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
 
       {/* Current job clock-out widget */}
       <MyCurrentJob
-        activeEntry={myActiveEntry}
+        activeEntries={myActiveEntries}
         activeElapsedSeconds={activeElapsedSeconds}
         allTimeEntries={allTimeEntries}
       />
