@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { format, parseISO } from "date-fns";
 import { Plus, FileText, FileDiff, Receipt, CheckCircle2, AlertCircle, Clock, Sparkles } from "lucide-react";
-import EstimateEditor from "@/components/estimates/EstimateEditor";
 import InvoiceEditor from "@/components/documents/InvoiceEditor";
 import ChangeOrderEditor from "@/components/documents/ChangeOrderEditor";
 import JobFinancialSummary from "@/components/jobs/JobFinancialSummary";
@@ -64,16 +64,14 @@ function jobHasRailing(job) {
 export default function JobDocumentsTab({ job }) {
   const qc = useQueryClient();
   const { user } = useAuth();
-  const [estimateOpen, setEstimateOpen] = useState(false);
+  const navigate = useNavigate();
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [coOpen, setCoOpen] = useState(false);
-  const [selectedEstimate, setSelectedEstimate] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedCo, setSelectedCo] = useState(null);
   const [invoicePrefill, setInvoicePrefill] = useState(null);
   const [railingPromptOpen, setRailingPromptOpen] = useState(false);
   const [railingCalcOpen, setRailingCalcOpen] = useState(false);
-  const [estimatePrefillLines, setEstimatePrefillLines] = useState(null);
 
   const { data: estimates = [] } = useQuery({
     queryKey: ["estimates", job.id],
@@ -98,24 +96,22 @@ export default function JobDocumentsTab({ job }) {
   const hasDepositInvoice = invoices.some(i => i.invoice_type === "Deposit");
   const hasFinalInvoice = invoices.some(i => i.invoice_type === "Final");
 
-  function openEstimate(est = null, prefillLines = null) {
-    setSelectedEstimate(est);
-    setEstimatePrefillLines(prefillLines);
-    setEstimateOpen(true);
+  function openEstimate(est = null) {
+    if (est?.id) {
+      navigate(`/jobs/${job.id}/estimates/${est.id}`);
+    } else {
+      navigate(`/jobs/${job.id}/estimates/new`);
+    }
   }
 
   function handleNewEstimateClick() {
-    if (jobHasRailing(job)) {
-      setRailingPromptOpen(true);
-    } else {
-      openEstimate();
-    }
+    navigate(`/jobs/${job.id}/estimates/new`);
   }
 
   function handleRailingCalcGenerate({ lineItems, total, notes, stylePhotoUrl, style, lnft }) {
     setRailingCalcOpen(false);
     setRailingPromptOpen(false);
-    openEstimate(null, { lineItems, total, notes, stylePhotoUrl, style, lnft });
+    navigate(`/jobs/${job.id}/estimates/new`);
   }
 
   function openInvoice(inv = null, prefill = null) {
@@ -136,7 +132,6 @@ export default function JobDocumentsTab({ job }) {
       due_days: 7,
       notes: "Thank you for choosing High Country Metal Works. This deposit invoice represents 50% of your approved project total. Work will begin upon receipt of deposit.",
     };
-    setEstimateOpen(false);
     openInvoice(null, prefill);
   }
 
@@ -329,19 +324,6 @@ export default function JobDocumentsTab({ job }) {
         onGenerateEstimate={handleRailingCalcGenerate}
       />
 
-      {/* ── Estimate Dialog ───────────────────────────────────────── */}
-      <Dialog open={estimateOpen} onOpenChange={setEstimateOpen}>
-        <DialogContent className="max-w-4xl h-[85vh] p-0 flex flex-col overflow-hidden">
-          <EstimateEditor
-            estimate={selectedEstimate}
-            job={job}
-            onClose={() => setEstimateOpen(false)}
-            onCreateDepositInvoice={handleCreateDepositInvoice}
-            currentUser={user}
-            prefillData={estimatePrefillLines}
-          />
-        </DialogContent>
-      </Dialog>
 
       {/* ── Invoice Dialog ────────────────────────────────────────── */}
       <Dialog open={invoiceOpen} onOpenChange={setInvoiceOpen}>

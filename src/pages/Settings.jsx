@@ -8,9 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Upload, AlertTriangle, Save, Image, DollarSign, Check } from "lucide-react";
+import { Upload, AlertTriangle, Save, Image, DollarSign, Check, Package } from "lucide-react";
 import { toast } from "sonner";
 import { RAILING_STYLES, DEFAULT_MATERIALS } from "@/lib/railingData";
+import ProductServiceLibrarySection from "@/components/settings/ProductServiceLibrarySection";
 
 // ── Style Library ─────────────────────────────────────────────────────────────
 function StyleLibrarySection() {
@@ -229,11 +230,13 @@ export default function Settings() {
         <p className="text-sm text-muted-foreground">Manage estimate templates, style photos, and material pricing.</p>
       </div>
 
-      <Tabs defaultValue="styles">
+      <Tabs defaultValue="products">
         <TabsList className="mb-6">
+          <TabsTrigger value="products" className="gap-1.5"><Package className="w-3.5 h-3.5" />Products & Services</TabsTrigger>
           <TabsTrigger value="styles" className="gap-1.5"><Image className="w-3.5 h-3.5" />Style Library</TabsTrigger>
           <TabsTrigger value="materials" className="gap-1.5"><DollarSign className="w-3.5 h-3.5" />Materials Price List</TabsTrigger>
         </TabsList>
+        <TabsContent value="products"><ProductServiceLibrarySection /></TabsContent>
         <TabsContent value="styles"><StyleLibrarySection /></TabsContent>
         <TabsContent value="materials"><MaterialsPriceSection /></TabsContent>
       </Tabs>
