@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Clock, LogIn, LogOut, ArrowLeft, Check } from "lucide-react";
+import { Clock, LogIn, LogOut, ArrowLeft, Check, Home } from "lucide-react";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
@@ -325,15 +325,27 @@ export default function ShopKiosk() {
           <p className="text-sm opacity-60 mb-8">
             Clocked in {activeEntry.clock_in && formatDistanceToNow(parseISO(activeEntry.clock_in), { addSuffix: true })}
           </p>
-          <Button
-            size="lg"
-            onClick={() => clockOutMutation.mutate(activeEntry)}
-            disabled={clockOutMutation.isPending}
-            className="min-h-[64px] text-xl px-12 bg-red-600 hover:bg-red-700"
-          >
-            <LogOut className="w-6 h-6 mr-3" />
-            {clockOutMutation.isPending ? "Clocking Out..." : "Clock Out"}
-          </Button>
+          <div className="space-y-3 flex flex-col gap-3">
+            <Button
+              size="lg"
+              onClick={() => clockOutMutation.mutate(activeEntry)}
+              disabled={clockOutMutation.isPending}
+              className="min-h-[64px] text-xl px-12 bg-red-600 hover:bg-red-700 w-full"
+            >
+              <LogOut className="w-6 h-6 mr-3" />
+              {clockOutMutation.isPending ? "Clocking Out..." : "Clock Out"}
+            </Button>
+            <Link to="/">
+              <Button
+                size="lg"
+                variant="outline"
+                className="min-h-[56px] text-lg px-12 w-full border-white/20 bg-white/10 hover:bg-white/20 text-foreground"
+              >
+                <Home className="w-5 h-5 mr-2" />
+                Return to Dashboard
+              </Button>
+            </Link>
+          </div>
         </div>
       )}
 
