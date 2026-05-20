@@ -1,5 +1,6 @@
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useEffect, useState } from "react";
+import { differenceInSeconds, parseISO } from "date-fns";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +12,10 @@ import MyMonthComparison from "@/components/dashboard/fabricator/MyMonthComparis
 
 export default function FabricatorDashboard() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Live elapsed seconds for active session — drives real-time hour counts
+  const [activeElapsedSeconds, setActiveElapsedSeconds] = useState(0);
 
   const { data: employees = [] } = useQuery({
     queryKey: ["employees"],
@@ -30,7 +35,7 @@ export default function FabricatorDashboard() {
   const { data: activeEntries = [] } = useQuery({
     queryKey: ["timeEntries", "active"],
     queryFn: () => base44.entities.TimeEntry.filter({ is_active: true }),
-    refetchInterval: 15000,
+    refetchInterval: 30000,
   });
 
   const { data: qcInspections = [] } = useQuery({
@@ -46,6 +51,29 @@ export default function FabricatorDashboard() {
     ? activeEntries.find(e => e.employee_id === myEmployee.id) || null
     : null;
 
+  // Real-time subscription to TimeEntry changes — invalidates queries instantly
+  useEffect(() => {
+    const unsubscribe = base44.entities.TimeEntry.subscribe((event) => {
+      queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+    });
+    return unsubscribe;
+  }, [queryClient]);
+
+  // Live 1-second ticker for the active session elapsed time
+  useEffect(() => {
+    if (!myActiveEntry?.clock_in) {
+      setActiveElapsedSeconds(0);
+      return;
+    }
+    const tick = () => {
+      const secs = differenceInSeconds(new Date(), parseISO(myActiveEntry.clock_in));
+      setActiveElapsedSeconds(Math.max(0, secs));
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [myActiveEntry?.clock_in]);
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -60,16 +88,19 @@ export default function FabricatorDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Large stat cards */}
+      {/* Large stat cards — activeElapsedSeconds keeps hours live */}
       <FabricatorStatsRow
         employee={myEmployee}
         timeEntries={allTimeEntries}
+        activeEntry={myActiveEntry}
+        activeElapsedSeconds={activeElapsedSeconds}
         qcInspections={qcInspections}
       />
 
       {/* Current job clock-out widget */}
       <MyCurrentJob
         activeEntry={myActiveEntry}
+        activeElapsedSeconds={activeElapsedSeconds}
         allTimeEntries={allTimeEntries}
       />
 
@@ -77,6 +108,8 @@ export default function FabricatorDashboard() {
       <MyJobsThisWeek
         employee={myEmployee}
         timeEntries={allTimeEntries}
+        activeEntry={myActiveEntry}
+        activeElapsedSeconds={activeElapsedSeconds}
         qcInspections={qcInspections}
         jobs={jobs}
       />

@@ -1,16 +1,17 @@
 import React from "react";
 import { startOfWeek, parseISO } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
-export default function MyJobsThisWeek({ employee, timeEntries, qcInspections, jobs }) {
+export default function MyJobsThisWeek({ employee, timeEntries, activeEntry, activeElapsedSeconds = 0, qcInspections, jobs }) {
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
 
-  const weekEntries = (timeEntries || []).filter(
+  const weekCompleted = (timeEntries || []).filter(
     e => e.employee_id === employee?.id && !e.is_active && e.clock_in && parseISO(e.clock_in) >= weekStart
   );
 
   // Group by job + work center
   const grouped = {};
-  weekEntries.forEach(e => {
+  weekCompleted.forEach(e => {
     const key = `${e.job_id}|${e.work_center}`;
     if (!grouped[key]) {
       grouped[key] = {
@@ -19,10 +20,32 @@ export default function MyJobsThisWeek({ employee, timeEntries, qcInspections, j
         job_name: jobs?.find(j => j.id === e.job_id)?.job_name || "",
         work_center: e.work_center,
         hours: 0,
+        isActive: false,
       };
     }
     grouped[key].hours += e.duration_hours || 0;
   });
+
+  // Merge active session into grouped rows
+  const isMyActive = activeEntry && activeEntry.employee_id === employee?.id &&
+    activeEntry.clock_in && parseISO(activeEntry.clock_in) >= weekStart;
+
+  if (isMyActive) {
+    const key = `${activeEntry.job_id}|${activeEntry.work_center}`;
+    const activeHours = activeElapsedSeconds / 3600;
+    if (!grouped[key]) {
+      grouped[key] = {
+        job_id: activeEntry.job_id,
+        job_number: activeEntry.job_number,
+        job_name: jobs?.find(j => j.id === activeEntry.job_id)?.job_name || "",
+        work_center: activeEntry.work_center,
+        hours: 0,
+        isActive: true,
+      };
+    }
+    grouped[key].hours += activeHours;
+    grouped[key].isActive = true;
+  }
 
   const rows = Object.values(grouped).sort((a, b) => b.hours - a.hours);
 
@@ -69,8 +92,15 @@ export default function MyJobsThisWeek({ employee, timeEntries, qcInspections, j
               return (
                 <tr key={i} className="border-b last:border-0">
                   <td className="py-3 pr-4">
-                    <p className="font-semibold">{row.job_name || row.job_number}</p>
-                    <p className="text-xs text-muted-foreground font-mono">{row.job_number}</p>
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <p className="font-semibold">{row.job_name || row.job_number}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{row.job_number}</p>
+                      </div>
+                      {row.isActive && (
+                        <Badge className="bg-green-100 text-green-700 border-green-200 text-xs shrink-0">Active</Badge>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3 pr-4">
                     <span className="px-2 py-1 rounded-md bg-muted text-xs font-medium">{row.work_center}</span>
