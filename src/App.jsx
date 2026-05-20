@@ -25,6 +25,7 @@ import EmployeeProfilePage from '@/pages/EmployeeProfilePage';
 import OnboardingSurveyPage from '@/pages/OnboardingSurveyPage';
 import Settings from '@/pages/Settings';
 import EstimatePage from '@/pages/EstimatePage';
+import Reports from '@/pages/Reports';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -64,6 +65,7 @@ const AuthenticatedApp = () => {
         <Route path="/jobs/:id" element={<JobDetail />} />
         <Route path="/jobs/:jobId/estimates/:estimateId" element={<EstimatePage />} />
         <Route path="/work-centers" element={<WorkCenters />} />
+        <Route path="/reports" element={<Reports />} />
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/customers" element={<Customers />} />
         <Route path="/inventory" element={<Inventory />} />

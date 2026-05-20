@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Kanban, Wrench, Clock,
   FileText, CalendarDays, Users, Package,
   Trophy, ChevronLeft, ChevronRight,
-  Building2, Settings, Menu, X
+  Building2, Settings, Menu, X, BarChart2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -17,6 +17,7 @@ const ALL_ITEMS = {
   jobBoard:       { label: "Job Board",        icon: Kanban,          path: "/jobs" },
   customers:      { label: "Customers",        icon: Users,           path: "/customers" },
   documents:      { label: "Documents",        icon: FileText,        path: "/documents" },
+  reports:        { label: "Reports",          icon: BarChart2,       path: "/reports" },
   schedule:       { label: "Schedule",         icon: CalendarDays,    path: "/schedule" },
   workCenters:    { label: "Work Centers",     icon: Wrench,          path: "/work-centers" },
   inventory:      { label: "Inventory",        icon: Package,         path: "/inventory" },
@@ -31,19 +32,20 @@ const ROLE_NAV = {
   admin: [
     { group: "OVERVIEW",    items: ["dashboard"] },
     { group: "SALES",       items: ["jobBoard", "customers", "documents"] },
-    { group: "OPERATIONS",  items: ["schedule", "workCenters", "inventory"] },
+    { group: "OPERATIONS",  items: ["reports", "schedule", "workCenters", "inventory"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   shop_manager: [
     { group: "OVERVIEW",    items: ["dashboard"] },
-    { group: "OPERATIONS",  items: ["jobBoard", "schedule", "workCenters", "inventory"] },
+    { group: "OPERATIONS",  items: ["jobBoard", "reports", "schedule", "workCenters", "inventory"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   estimator: [
     { group: "OVERVIEW",    items: ["dashboard"] },
     { group: "SALES",       items: ["jobBoard", "customers", "documents"] },
+    { group: "OPERATIONS",  items: ["reports"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   design_specialist: [
@@ -65,14 +67,14 @@ const ROLE_NAV = {
   accountant: [
     { group: "OVERVIEW",    items: ["dashboard"] },
     { group: "SALES",       items: ["jobBoard"] },
-    { group: "FINANCE",     items: ["documents", "customers"] },
+    { group: "FINANCE",     items: ["documents", "customers", "reports"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   // fallback for any unrecognized role — same as admin
   user: [
     { group: "OVERVIEW",    items: ["dashboard"] },
     { group: "SALES",       items: ["jobBoard", "customers", "documents"] },
-    { group: "OPERATIONS",  items: ["schedule", "workCenters", "inventory"] },
+    { group: "OPERATIONS",  items: ["reports", "schedule", "workCenters", "inventory"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],

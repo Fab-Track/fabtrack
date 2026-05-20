@@ -26,6 +26,20 @@
     "site_address": {
       "type": "string"
     },
+    "service_category": {
+      "type": "string",
+      "enum": [
+        "Railing",
+        "Staircase",
+        "Structural",
+        "Gate",
+        "Planter Box",
+        "Wall Wrap",
+        "Awning",
+        "Other / Custom"
+      ],
+      "description": "Carried over from estimate for reporting"
+    },
     "invoice_type": {
       "type": "string",
       "enum": [

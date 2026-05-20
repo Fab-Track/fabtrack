@@ -212,6 +212,9 @@ export default function JobDocumentsTab({ job }) {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="font-semibold text-sm">${(est.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                  {est.service_category && (
+                    <Badge variant="outline" className="text-xs border-blue-200 text-blue-700 bg-blue-50">{est.service_category}</Badge>
+                  )}
                   <Badge className={`text-xs ${EST_STATUS[est.status] || ""}`}>{est.status}</Badge>
                   {est.status === "Approved" && !hasDepositInvoice && (
                     <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs">

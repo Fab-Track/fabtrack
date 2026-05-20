@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, CheckCircle2, FileText, LayoutList, AlignJustify } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, FileText, LayoutList, AlignJustify, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
 
@@ -61,6 +61,7 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
   const isNew = !estimate?.id;
 
   const [status, setStatus] = useState(estimate?.status || "Draft");
+  const [serviceCategory, setServiceCategory] = useState(estimate?.service_category || "");
   const [lines, setLines] = useState(() => {
     if (isNew && prefillData?.lineItems) {
       return prefillData.lineItems.map(l => ({ ...l, _id: Math.random().toString(36).slice(2) }));
@@ -90,10 +91,16 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
 
   const save = useMutation({
     mutationFn: () => {
+      // Validate — require service_category before Sent
+      if (status === "Sent" && !serviceCategory) {
+        toast.error("Please select a Primary Service Category before marking as Sent.");
+        throw new Error("service_category required");
+      }
       const payload = {
         job_id: job.id,
         job_number: job.job_number,
         status,
+        service_category: serviceCategory || undefined,
         line_items: lines.map(({ _id, ...rest }) => rest),
         subtotal,
         markup_percent: markup,
@@ -186,9 +193,24 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
     <div className="flex flex-col h-full">
       {/* Toolbar */}
       <div className="flex items-center justify-between px-5 py-3 border-b bg-muted/30 shrink-0">
-        <div>
-          <p className="text-xs text-muted-foreground font-mono">{job.job_number}</p>
-          <h2 className="font-semibold text-sm">{job.job_name}</h2>
+        <div className="flex items-center gap-4">
+          <div>
+            <p className="text-xs text-muted-foreground font-mono">{job.job_number}</p>
+            <h2 className="font-semibold text-sm">{job.job_name}</h2>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Select value={serviceCategory} onValueChange={setServiceCategory}>
+              <SelectTrigger className={`h-8 text-xs w-44 ${!serviceCategory ? "border-amber-400 bg-amber-50" : ""}`}>
+                <SelectValue placeholder="Service Category…" />
+              </SelectTrigger>
+              <SelectContent>
+                {["Railing","Staircase","Structural","Gate","Planter Box","Wall Wrap","Awning","Other / Custom"].map(c => (
+                  <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!serviceCategory && <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" title="Required for Sent status" />}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {/* Detail / Summary toggle */}

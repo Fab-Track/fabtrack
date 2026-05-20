@@ -3,15 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Skeleton } from "@/components/ui/skeleton";
 import OwnerStatsRow from "@/components/dashboard/owner/OwnerStatsRow";
-import InstallDateTracker from "@/components/dashboard/InstallDateTracker";
 import MarginTracker from "@/components/dashboard/MarginTracker";
-import CapacityView from "@/components/dashboard/CapacityView";
-import StalledJobs from "@/components/dashboard/StalledJobs";
 import ActiveClockIns from "@/components/dashboard/ActiveClockIns";
 import SalesFunnelWidget from "@/components/dashboard/owner/SalesFunnelWidget";
-import OverdueBillingWidget from "@/components/dashboard/owner/OverdueBillingWidget";
-import TeamUtilizationWidget from "@/components/dashboard/owner/TeamUtilizationWidget";
-import InstallLocationWidget from "@/components/dashboard/owner/InstallLocationWidget";
+import NeedsAttention from "@/components/dashboard/owner/NeedsAttention";
+import ShopSnapshot from "@/components/dashboard/owner/ShopSnapshot";
+import RevenueByServiceType from "@/components/dashboard/owner/RevenueByServiceType";
 
 export default function OwnerDashboard() {
   const { data: jobs = [], isLoading: jobsLoading } = useQuery({
@@ -25,6 +22,10 @@ export default function OwnerDashboard() {
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices"],
     queryFn: () => base44.entities.Invoice.list("-created_date", 200),
+  });
+  const { data: estimates = [] } = useQuery({
+    queryKey: ["estimates-all"],
+    queryFn: () => base44.entities.Estimate.list("-created_date", 300),
   });
   const { data: timeEntries = [] } = useQuery({
     queryKey: ["timeEntries", "active"],
@@ -46,7 +47,7 @@ export default function OwnerDashboard() {
           {[1,2,3,4,5,6].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
         </div>
         <div className="grid lg:grid-cols-2 gap-4">
-          {[1,2,3,4].map(i => <Skeleton key={i} className="h-64 rounded-xl" />)}
+          {[1,2,3,4].map(i => <Skeleton key={i} className="h-48 rounded-xl" />)}
         </div>
       </div>
     );
@@ -54,44 +55,35 @@ export default function OwnerDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Extended stats + full pipeline bar */}
+      {/* Row 1 + 2: Stats + Pipeline Bar */}
       <OwnerStatsRow jobs={jobs} purchaseOrders={purchaseOrders} invoices={invoices} />
 
-      {/* Main 2-col grid */}
+      {/* Row 3: Needs Attention + Shop Snapshot */}
       <div className="grid lg:grid-cols-2 gap-4">
         <div className="bg-card rounded-xl border p-4">
-          <InstallDateTracker jobs={jobs} />
+          <NeedsAttention jobs={jobs} invoices={invoices} estimates={estimates} />
         </div>
+        <div className="bg-card rounded-xl border p-4">
+          <ShopSnapshot
+            timeEntries={timeEntries}
+            allTimeEntries={allTimeEntries}
+            jobs={jobs}
+            employees={employees}
+          />
+        </div>
+      </div>
+
+      {/* Row 4: Margins + Revenue by Service Type + Sales Funnel */}
+      <div className="grid lg:grid-cols-3 gap-4">
         <div className="bg-card rounded-xl border p-4">
           <MarginTracker jobs={jobs} />
         </div>
         <div className="bg-card rounded-xl border p-4">
-          <CapacityView jobs={jobs} />
+          <RevenueByServiceType invoices={invoices} />
         </div>
-        <div className="bg-card rounded-xl border p-4">
-          <StalledJobs jobs={jobs} />
-        </div>
-      </div>
-
-      {/* Owner-only widgets row */}
-      <div className="grid lg:grid-cols-3 gap-4">
         <div className="bg-card rounded-xl border p-4">
           <SalesFunnelWidget jobs={jobs} />
         </div>
-        <div className="bg-card rounded-xl border p-4">
-          <OverdueBillingWidget jobs={jobs} />
-        </div>
-        <div className="bg-card rounded-xl border p-4">
-          <TeamUtilizationWidget employees={employees} timeEntries={allTimeEntries} />
-        </div>
-      </div>
-
-      {/* Install Location Breakdown */}
-      <InstallLocationWidget />
-
-      {/* Active clock-ins */}
-      <div className="bg-card rounded-xl border p-4">
-        <ActiveClockIns timeEntries={timeEntries} />
       </div>
     </div>
   );

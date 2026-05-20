@@ -10,6 +10,20 @@
       "type": "string",
       "description": "Job number"
     },
+    "service_category": {
+      "type": "string",
+      "enum": [
+        "Railing",
+        "Staircase",
+        "Structural",
+        "Gate",
+        "Planter Box",
+        "Wall Wrap",
+        "Awning",
+        "Other / Custom"
+      ],
+      "description": "Primary service category for reporting"
+    },
     "status": {
       "type": "string",
       "enum": [
