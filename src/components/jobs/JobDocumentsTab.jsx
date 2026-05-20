@@ -11,6 +11,8 @@ import InvoiceEditor from "@/components/documents/InvoiceEditor";
 import ChangeOrderEditor from "@/components/documents/ChangeOrderEditor";
 import JobFinancialSummary from "@/components/jobs/JobFinancialSummary";
 import RailingCalculatorModal from "@/components/estimates/RailingCalculatorModal";
+import JobServicesSection from "@/components/jobs/JobServicesSection";
+import NewInvoiceFlow from "@/components/invoices/NewInvoiceFlow";
 import { useAuth } from "@/lib/AuthContext";
 
 const EST_STATUS = {
@@ -67,11 +69,17 @@ export default function JobDocumentsTab({ job }) {
   const navigate = useNavigate();
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [coOpen, setCoOpen] = useState(false);
+  const [newInvoiceFlowOpen, setNewInvoiceFlowOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedCo, setSelectedCo] = useState(null);
   const [invoicePrefill, setInvoicePrefill] = useState(null);
   const [railingPromptOpen, setRailingPromptOpen] = useState(false);
   const [railingCalcOpen, setRailingCalcOpen] = useState(false);
+
+  const { data: services = [], refetch: refetchServices } = useQuery({
+    queryKey: ["services", job.id],
+    queryFn: () => base44.entities.JobService.filter({ job_id: job.id }, "sort_order"),
+  });
 
   const { data: estimates = [] } = useQuery({
     queryKey: ["estimates", job.id],
@@ -94,7 +102,6 @@ export default function JobDocumentsTab({ job }) {
 
   // Already have a deposit invoice?
   const hasDepositInvoice = invoices.some(i => i.invoice_type === "Deposit");
-  const hasFinalInvoice = invoices.some(i => i.invoice_type === "Final");
 
   function openEstimate(est = null) {
     if (est?.id) {
@@ -120,6 +127,30 @@ export default function JobDocumentsTab({ job }) {
     setInvoiceOpen(true);
   }
 
+  async function handleNewInvoiceConfirm({ invoiceType, lineItems, selectedAmounts }) {
+    // Mark services as invoiced
+    const updates = Object.entries(selectedAmounts)
+      .filter(([, v]) => v.checked && v.amount > 0)
+      .map(([id, v]) => {
+        const svc = services.find(s => s.id === id);
+        if (!svc) return null;
+        const newInvoiced = (svc.invoiced_amount || 0) + v.amount;
+        const newStatus = newInvoiced >= (svc.total_price || 0) - 0.01
+          ? "Fully Invoiced"
+          : "Partially Invoiced";
+        return base44.entities.JobService.update(id, {
+          invoiced_amount: newInvoiced,
+          status: newStatus,
+        });
+      })
+      .filter(Boolean);
+
+    await Promise.all(updates);
+    qc.invalidateQueries(["services", job.id]);
+
+    openInvoice(null, { invoice_type: invoiceType, line_items: lineItems });
+  }
+
   function openCo(co = null) { setSelectedCo(co); setCoOpen(true); }
 
   // Called from EstimateEditor "Create Deposit Invoice" button
@@ -135,35 +166,7 @@ export default function JobDocumentsTab({ job }) {
     openInvoice(null, prefill);
   }
 
-  // "Create Final Invoice" button on the tab
-  function handleCreateFinalInvoice() {
-    if (!approvedEstimate) return;
-    const baseLines = (approvedEstimate.line_items || []).map(l => ({
-      ...l,
-      group: l.category || "Other",
-      description: `[Base 50%] ${l.description}`,
-      total: (l.quantity || 0) * (l.unit_cost || 0) * 0.5,
-    }));
 
-    const coLines = approvedCOs.map(co => ({
-      _co_id: co.id,
-      group: "Change Order",
-      description: `Change Order #${co.id.slice(-6).toUpperCase()} — ${co.description}`,
-      quantity: 1,
-      unit: "ls",
-      unit_cost: co.cost_impact || 0,
-      total: co.cost_impact || 0,
-    }));
-
-    const prefill = {
-      invoice_type: "Final",
-      line_items: [...baseLines, ...coLines],
-      tax: approvedEstimate.tax_percent || 0,
-      due_days: 30,
-      notes: "Thank you for allowing us to complete your project. This final invoice represents the remaining balance including any approved change orders.",
-    };
-    openInvoice(null, prefill);
-  }
 
   return (
     <div className="space-y-6">
@@ -177,6 +180,13 @@ export default function JobDocumentsTab({ job }) {
           onInvoiceClick={(inv) => openInvoice(inv)}
         />
       )}
+
+      {/* ── SERVICES ──────────────────────────────────────────────── */}
+      <JobServicesSection
+        job={job}
+        services={services}
+        onServicesChange={() => qc.invalidateQueries(["services", job.id])}
+      />
 
       {/* ── ESTIMATES ─────────────────────────────────────────────── */}
       <div>
@@ -221,19 +231,8 @@ export default function JobDocumentsTab({ job }) {
           icon={Receipt}
           title="Invoices"
           count={invoices.length}
-          onNew={() => openInvoice()}
+          onNew={() => setNewInvoiceFlowOpen(true)}
           newLabel="New Invoice"
-          extraButton={
-            approvedEstimate && !hasFinalInvoice ? (
-              <Button
-                size="sm"
-                className="h-7 text-xs gap-1 bg-primary text-primary-foreground"
-                onClick={handleCreateFinalInvoice}
-              >
-                <Sparkles className="w-3 h-3" /> Create Final Invoice
-              </Button>
-            ) : null
-          }
         />
         {invoices.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground bg-muted/20 rounded-lg mt-2 text-sm">
@@ -324,6 +323,14 @@ export default function JobDocumentsTab({ job }) {
         onGenerateEstimate={handleRailingCalcGenerate}
       />
 
+
+      {/* ── New Invoice Flow ──────────────────────────────────────── */}
+      <NewInvoiceFlow
+        open={newInvoiceFlowOpen}
+        onClose={() => setNewInvoiceFlowOpen(false)}
+        services={services}
+        onConfirm={handleNewInvoiceConfirm}
+      />
 
       {/* ── Invoice Dialog ────────────────────────────────────────── */}
       <Dialog open={invoiceOpen} onOpenChange={setInvoiceOpen}>
