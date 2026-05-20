@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, ZoomControl } from "react-leaflet";
 import L from "leaflet";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -98,7 +98,7 @@ function FitBounds({ points }) {
 }
 
 // Utah center default
-const UTAH_CENTER = [39.5, -111.5];
+const UTAH_CENTER = [39.3210, -111.0937];
 const UTAH_ZOOM = 7;
 
 // Shop flow stages to include
@@ -183,8 +183,10 @@ export default function ActiveJobLocationsMap({ jobs = [] }) {
           center={UTAH_CENTER}
           zoom={UTAH_ZOOM}
           style={{ height: "100%", width: "100%" }}
-          scrollWheelZoom={false}
+          scrollWheelZoom={true}
+          zoomControl={false}
         >
+          <ZoomControl position="topright" />
           <TileLayer
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
             attribution='&copy; <a href="https://carto.com/">CARTO</a>'
