@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Clock, LogIn } from "lucide-react";
+import { LogOut, Clock, LogIn, UtensilsCrossed, ArrowRightLeft } from "lucide-react";
 import { parseISO, startOfDay } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
@@ -20,7 +20,7 @@ export default function MyCurrentJob({ activeEntry, activeElapsedSeconds = 0, al
   const navigate = useNavigate();
 
   const clockOutMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ note } = {}) => {
       const now = new Date();
       const clockIn = new Date(activeEntry.clock_in);
       const duration = (now - clockIn) / (1000 * 60 * 60);
@@ -28,10 +28,12 @@ export default function MyCurrentJob({ activeEntry, activeElapsedSeconds = 0, al
         clock_out: now.toISOString(),
         duration_hours: Math.round(duration * 100) / 100,
         is_active: false,
+        ...(note ? { notes: note } : {}),
       });
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+      if (variables?.afterAction === "switch") navigate("/kiosk");
     },
   });
 
@@ -93,15 +95,39 @@ export default function MyCurrentJob({ activeEntry, activeElapsedSeconds = 0, al
           </p>
         </div>
 
-        <Button
-          size="lg"
-          onClick={() => clockOutMutation.mutate()}
-          disabled={clockOutMutation.isPending}
-          className="min-h-[64px] text-xl px-10 bg-red-600 hover:bg-red-700 text-white shrink-0"
-        >
-          <LogOut className="w-6 h-6 mr-3" />
-          {clockOutMutation.isPending ? "Clocking Out..." : "Clock Out"}
-        </Button>
+        <div className="flex flex-col gap-2 shrink-0 w-full md:w-auto">
+          <Button
+            size="lg"
+            onClick={() => clockOutMutation.mutate({})}
+            disabled={clockOutMutation.isPending}
+            className="min-h-[64px] text-xl px-10 bg-red-600 hover:bg-red-700 text-white w-full"
+          >
+            <LogOut className="w-6 h-6 mr-3" />
+            {clockOutMutation.isPending ? "Clocking Out..." : "Clock Out"}
+          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => clockOutMutation.mutate({ note: "Lunch break", afterAction: "none" })}
+              disabled={clockOutMutation.isPending}
+              className="flex-1 min-h-[48px] gap-2"
+            >
+              <UtensilsCrossed className="w-4 h-4" />
+              Lunch
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => clockOutMutation.mutate({ note: "", afterAction: "switch" })}
+              disabled={clockOutMutation.isPending}
+              className="flex-1 min-h-[48px] gap-2"
+            >
+              <ArrowRightLeft className="w-4 h-4" />
+              Switch Job
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
