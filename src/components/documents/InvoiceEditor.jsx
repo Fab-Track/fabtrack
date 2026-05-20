@@ -85,6 +85,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
       ...l,
       _id: Math.random().toString(36).slice(2),
       group: l.category || "Other",
+      install_location: l.install_location || "N/A",
       total: (l.quantity || 0) * (l.unit_cost || 0),
     }));
     setLines(imported);

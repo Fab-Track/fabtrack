@@ -24,24 +24,23 @@ function getDateRange(filter) {
 export default function InstallLocationWidget() {
   const [dateFilter, setDateFilter] = useState("this_year");
 
-  const { data: estimates = [], isLoading } = useQuery({
-    queryKey: ["estimates-all"],
-    queryFn: () => base44.entities.Estimate.filter({ status: "Approved" }),
+  const { data: invoices = [], isLoading } = useQuery({
+    queryKey: ["invoices-all-for-report"],
+    queryFn: () => base44.entities.Invoice.list("-paid_date", 500),
   });
 
-  // Build breakdown data
-  const filtered = estimates.filter(est => {
+  // Only Paid or Partial invoices
+  const filtered = invoices.filter(inv => {
+    if (inv.status !== "Paid" && inv.status !== "Partial") return false;
     if (dateFilter === "all") return true;
     const year = new Date().getFullYear();
     const cutoff = dateFilter === "this_year"
       ? new Date(year, 0, 1)
       : new Date(year - 1, 0, 1);
-    const endCutoff = dateFilter === "last_year"
-      ? new Date(year, 0, 1)
-      : null;
-    const approvedDate = new Date(est.approved_date || est.created_date || 0);
-    if (approvedDate < cutoff) return false;
-    if (endCutoff && approvedDate >= endCutoff) return false;
+    const endCutoff = dateFilter === "last_year" ? new Date(year, 0, 1) : null;
+    const paidDate = new Date(inv.paid_date || inv.issued_date || inv.created_date || 0);
+    if (paidDate < cutoff) return false;
+    if (endCutoff && paidDate >= endCutoff) return false;
     return true;
   });
 
@@ -49,9 +48,9 @@ export default function InstallLocationWidget() {
   const locationMap = {};
   const jobsPerLocation = {};
 
-  filtered.forEach(est => {
-    const jobId = est.job_id;
-    (est.line_items || []).forEach(item => {
+  filtered.forEach(inv => {
+    const jobId = inv.job_id;
+    (inv.line_items || []).forEach(item => {
       const loc = item.install_location || "N/A";
       if (!locationMap[loc]) {
         locationMap[loc] = 0;
@@ -96,7 +95,7 @@ export default function InstallLocationWidget() {
         <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">Loading…</div>
       ) : chartData.length === 0 ? (
         <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">
-          No approved estimates with install locations yet.
+          No paid invoices with install locations yet.
         </div>
       ) : (
         <>
