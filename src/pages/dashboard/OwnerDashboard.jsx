@@ -11,6 +11,7 @@ import ActiveClockIns from "@/components/dashboard/ActiveClockIns";
 import SalesFunnelWidget from "@/components/dashboard/owner/SalesFunnelWidget";
 import OverdueBillingWidget from "@/components/dashboard/owner/OverdueBillingWidget";
 import TeamUtilizationWidget from "@/components/dashboard/owner/TeamUtilizationWidget";
+import InstallLocationWidget from "@/components/dashboard/owner/InstallLocationWidget";
 
 export default function OwnerDashboard() {
   const { data: jobs = [], isLoading: jobsLoading } = useQuery({
@@ -84,6 +85,9 @@ export default function OwnerDashboard() {
           <TeamUtilizationWidget employees={employees} timeEntries={allTimeEntries} />
         </div>
       </div>
+
+      {/* Install Location Breakdown */}
+      <InstallLocationWidget />
 
       {/* Active clock-ins */}
       <div className="bg-card rounded-xl border p-4">

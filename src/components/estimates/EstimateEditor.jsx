@@ -15,16 +15,40 @@ import { toast } from "sonner";
 import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
 
 const CATEGORIES = ["Labor", "Material", "Equipment", "Sub-contractor", "Other"];
-const PHASES = ["Fabrication", "Powder Coat", "Install", "Design", "Other"];
+
+const INSTALL_LOCATIONS = [
+  "Interior — Main Staircase",
+  "Interior — Secondary Staircase",
+  "Interior — Loft / Mezzanine",
+  "Interior — Balcony / Overlook",
+  "Interior — Basement Staircase",
+  "Interior — Other",
+  "Exterior — Front Porch",
+  "Exterior — Front Balcony",
+  "Exterior — Back Deck",
+  "Exterior — Back Porch",
+  "Exterior — Side Yard",
+  "Exterior — Pool Area",
+  "Exterior — Driveway / Entry",
+  "Exterior — Rooftop / Terrace",
+  "Exterior — Staircase to Grade",
+  "Exterior — Other",
+  "Commercial — Staircase",
+  "Commercial — Corridor / Hallway",
+  "Commercial — Parking Structure",
+  "Commercial — Exterior Entry",
+  "Commercial — Other",
+  "N/A",
+];
 
 const blankLine = () => ({
   _id: Math.random().toString(36).slice(2),
   category: "Material",
   description: "",
+  install_location: "N/A",
   quantity: 1,
   unit: "ea",
   unit_cost: 0,
-  phase: "Fabrication",
   total: 0,
 });
 
@@ -156,11 +180,7 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
     setLines(prev => prev.filter((_, i) => i !== idx));
   }
 
-  // Group lines by phase for display
-  const byPhase = PHASES.reduce((acc, p) => {
-    acc[p] = lines.filter(l => l.phase === p);
-    return acc;
-  }, {});
+
 
   return (
     <div className="flex flex-col h-full">
@@ -224,7 +244,7 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
         {/* Summary view banner */}
         {viewMode === "summary" && (
           <div className="mx-5 mt-4 mb-2 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
-            <span className="font-semibold">Summary View active</span> — Customer sees one line: "{railingStyle || "Railing"} — {railingLnft || "—"} lnft — ${total.toLocaleString("en-US", { minimumFractionDigits: 2 })}". Switch to Detail View to show full breakdown.
+            <span className="font-semibold">Summary View active</span> — Customer sees one line per item with description, install location, and total. Switch to Detail View to show full breakdown.
           </div>
         )}
 
@@ -238,10 +258,10 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
           </div>
 
           {/* Header row */}
-          <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
+          <div className="grid grid-cols-[2fr_1.5fr_1fr_0.7fr_1fr_1fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
             <span>Description</span>
+            <span>Install Location</span>
             <span>Category</span>
-            <span>Phase</span>
             <span>Qty</span>
             <span>Unit Cost</span>
             <span>Total</span>
@@ -250,20 +270,20 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
 
           <div className="space-y-1.5">
             {lines.map((line, idx) => (
-              <div key={line._id} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_auto] gap-1.5 items-center">
+              <div key={line._id} className="grid grid-cols-[2fr_1.5fr_1fr_0.7fr_1fr_1fr_auto] gap-1.5 items-center">
                 <Input
                   className="h-8 text-xs"
                   placeholder="Description"
                   value={line.description}
                   onChange={e => updateLine(idx, "description", e.target.value)}
                 />
+                <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
+                </Select>
                 <Select value={line.category} onValueChange={v => updateLine(idx, "category", v)}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}</SelectContent>
-                </Select>
-                <Select value={line.phase} onValueChange={v => updateLine(idx, "phase", v)}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>{PHASES.map(p => <SelectItem key={p} value={p} className="text-xs">{p}</SelectItem>)}</SelectContent>
                 </Select>
                 <Input
                   className="h-8 text-xs"
