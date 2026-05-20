@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Skeleton } from "@/components/ui/skeleton";
 import OwnerStatsRow from "@/components/dashboard/owner/OwnerStatsRow";
+import ActiveJobLocationsMap from "@/components/dashboard/owner/ActiveJobLocationsMap";
 import MarginTracker from "@/components/dashboard/MarginTracker";
 import ActiveClockIns from "@/components/dashboard/ActiveClockIns";
 import SalesFunnelWidget from "@/components/dashboard/owner/SalesFunnelWidget";
@@ -58,7 +59,10 @@ export default function OwnerDashboard() {
       {/* Row 1 + 2: Stats + Pipeline Bar */}
       <OwnerStatsRow jobs={jobs} purchaseOrders={purchaseOrders} invoices={invoices} />
 
-      {/* Row 3: Needs Attention + Shop Snapshot */}
+      {/* Row 3: Active Job Locations Map — full width */}
+      <ActiveJobLocationsMap jobs={jobs} />
+
+      {/* Row 4: Needs Attention + Shop Snapshot */}
       <div className="grid lg:grid-cols-2 gap-4">
         <div className="bg-card rounded-xl border p-4">
           <NeedsAttention jobs={jobs} invoices={invoices} estimates={estimates} />
