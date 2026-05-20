@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole, usePreviewRole } from "@/lib/PreviewRoleContext";
+import { useImpersonation } from "@/lib/ImpersonationContext";
 import OwnerDashboard from "./dashboard/OwnerDashboard";
 import ShopManagerDashboard from "./dashboard/ShopManagerDashboard";
 import FabricatorDashboard from "./dashboard/FabricatorDashboard";
@@ -60,6 +61,7 @@ export default function Dashboard() {
   const realRole = user?.role || "owner";
   const effectiveRole = useEffectiveRole(realRole);
   const { isPreviewing } = usePreviewRole();
+  const { isImpersonating, impersonatedEmployee } = useImpersonation();
 
   const isRealOwner = OWNER_ROLES.includes(realRole.toLowerCase());
   const isEffectiveOwner = OWNER_ROLES.includes(effectiveRole.toLowerCase()) && !isPreviewing;
@@ -87,9 +89,12 @@ export default function Dashboard() {
     }
   };
 
-  // Only real owner (not previewing) can switch views
-  const canSwitchViews = isRealOwner && !isPreviewing;
-  const displayView = canSwitchViews ? activeView : defaultView;
+  // When impersonating, always show fabricator view regardless of their role (most employees are fab-type)
+  const impersonationView = isImpersonating ? "fabricator" : null;
+
+  // Only real owner (not previewing, not impersonating) can switch views
+  const canSwitchViews = isRealOwner && !isPreviewing && !isImpersonating;
+  const displayView = impersonationView || (canSwitchViews ? activeView : defaultView);
   const viewLabel = VIEW_LABELS[displayView] || "Dashboard";
 
   return (
@@ -110,7 +115,7 @@ export default function Dashboard() {
       {/* Dashboard content */}
       {displayView === "owner"      && <OwnerDashboard />}
       {displayView === "shop"       && <ShopManagerDashboard />}
-      {displayView === "fabricator" && <FabricatorDashboard />}
+      {displayView === "fabricator" && <FabricatorDashboard overrideEmployee={isImpersonating ? impersonatedEmployee : null} />}
       {displayView === "estimator"  && <EstimatorDashboard />}
     </div>
   );

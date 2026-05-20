@@ -10,7 +10,7 @@ import MyJobsThisWeek from "@/components/dashboard/fabricator/MyJobsThisWeek";
 import MyScoreBreakdown from "@/components/dashboard/fabricator/MyScoreBreakdown";
 import MyMonthComparison from "@/components/dashboard/fabricator/MyMonthComparison";
 
-export default function FabricatorDashboard() {
+export default function FabricatorDashboard({ overrideEmployee = null }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -43,8 +43,10 @@ export default function FabricatorDashboard() {
     queryFn: () => base44.entities.QCInspection.list("-created_date", 200),
   });
 
-  // Match the logged-in user to an employee record by email
-  const myEmployee = employees.find(e => e.email === user?.email) || null;
+  // Use impersonated employee if provided, otherwise match logged-in user by email
+  const myEmployee = overrideEmployee
+    ? (employees.find(e => e.id === overrideEmployee.id) || overrideEmployee)
+    : (employees.find(e => e.email === user?.email) || null);
 
   // Active entry for this employee
   const myActiveEntry = myEmployee

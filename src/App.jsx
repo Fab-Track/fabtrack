@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { PreviewRoleProvider } from '@/lib/PreviewRoleContext';
+import { ImpersonationProvider } from '@/lib/ImpersonationContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
 import AppLayout from '@/components/layout/AppLayout';
@@ -85,12 +86,14 @@ function App() {
   return (
     <AuthProvider>
       <PreviewRoleProvider>
+        <ImpersonationProvider>
         <QueryClientProvider client={queryClientInstance}>
           <Router>
             <AuthenticatedApp />
           </Router>
           <Toaster />
         </QueryClientProvider>
+        </ImpersonationProvider>
       </PreviewRoleProvider>
     </AuthProvider>
   )

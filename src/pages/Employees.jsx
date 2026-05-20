@@ -1,15 +1,16 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
+import { useImpersonation, canImpersonate, canImpersonateEmployee } from "@/lib/ImpersonationContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, AlertCircle, Plus, Search, UserCircle } from "lucide-react";
+import { CheckCircle, AlertCircle, Plus, Search, UserCircle, Eye } from "lucide-react";
 import { differenceInMonths, parseISO } from "date-fns";
 
 function tenureString(startDate) {
@@ -29,9 +30,19 @@ export default function Employees() {
   const effectiveRole = useEffectiveRole(user?.role || "");
   const isOwner = ["admin", "owner"].includes(effectiveRole.toLowerCase());
   const canManageHR = isOwner || effectiveRole.toLowerCase() === "shop_manager";
+  const { startImpersonation } = useImpersonation();
+  const navigate = useNavigate();
+  const userCanImpersonate = canImpersonate(user?.role);
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("Active");
+
+  const handleViewAsEmployee = (e, emp) => {
+    e.preventDefault();
+    e.stopPropagation();
+    startImpersonation(emp, user);
+    navigate("/");
+  };
 
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ["employees"],
@@ -114,6 +125,7 @@ export default function Employees() {
             const tenure = tenureString(emp.start_date);
             const isTerminated = emp.employment_status === "Terminated";
 
+            const showViewAs = userCanImpersonate && !isTerminated && canImpersonateEmployee(user?.role, emp.role);
             return (
               <Link key={emp.id} to={`/employees/${emp.id}`}>
                 <div className={`bg-card border rounded-xl p-4 hover:shadow-md transition-shadow flex items-center gap-4 ${isTerminated ? "opacity-60" : ""}`}>
@@ -155,6 +167,16 @@ export default function Employees() {
                       )}
                     </div>
                   </div>
+                  {showViewAs && (
+                    <button
+                      onClick={(e) => handleViewAsEmployee(e, emp)}
+                      className="shrink-0 flex items-center gap-1 text-xs text-muted-foreground hover:text-primary hover:bg-primary/10 px-2 py-1.5 rounded-md transition-colors"
+                      title={`View dashboard as ${emp.name}`}
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>View As</span>
+                    </button>
+                  )}
                 </div>
               </Link>
             );

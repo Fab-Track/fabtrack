@@ -8,11 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Upload, AlertTriangle, Save, Image, DollarSign, Check, Package, BookOpen } from "lucide-react";
+import { Upload, AlertTriangle, Save, Image, DollarSign, Check, Package, BookOpen, Activity } from "lucide-react";
 import { toast } from "sonner";
 import { RAILING_STYLES, DEFAULT_MATERIALS } from "@/lib/railingData";
 import ProductServiceLibrarySection from "@/components/settings/ProductServiceLibrarySection";
 import ServiceCatalogSection from "@/components/settings/ServiceCatalogSection";
+import AdminActivityLogSection from "@/components/settings/AdminActivityLogSection";
+import { useAuth } from "@/lib/AuthContext";
 
 // ── Style Library ─────────────────────────────────────────────────────────────
 function StyleLibrarySection() {
@@ -224,6 +226,9 @@ function MaterialsPriceSection() {
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 export default function Settings() {
+  const { user } = useAuth();
+  const isOwnerOrAdmin = ["admin", "owner"].includes((user?.role || "").toLowerCase());
+
   return (
     <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
       <div className="mb-6">
@@ -232,16 +237,22 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="catalog">
-        <TabsList className="mb-6">
+        <TabsList className="mb-6 flex-wrap">
           <TabsTrigger value="catalog" className="gap-1.5"><BookOpen className="w-3.5 h-3.5" />Service Catalog</TabsTrigger>
           <TabsTrigger value="products" className="gap-1.5"><Package className="w-3.5 h-3.5" />Products & Services</TabsTrigger>
           <TabsTrigger value="styles" className="gap-1.5"><Image className="w-3.5 h-3.5" />Style Library</TabsTrigger>
           <TabsTrigger value="materials" className="gap-1.5"><DollarSign className="w-3.5 h-3.5" />Materials Price List</TabsTrigger>
+          {isOwnerOrAdmin && (
+            <TabsTrigger value="activity" className="gap-1.5"><Activity className="w-3.5 h-3.5" />Admin Activity Log</TabsTrigger>
+          )}
         </TabsList>
         <TabsContent value="catalog"><ServiceCatalogSection /></TabsContent>
         <TabsContent value="products"><ProductServiceLibrarySection /></TabsContent>
         <TabsContent value="styles"><StyleLibrarySection /></TabsContent>
         <TabsContent value="materials"><MaterialsPriceSection /></TabsContent>
+        {isOwnerOrAdmin && (
+          <TabsContent value="activity"><AdminActivityLogSection /></TabsContent>
+        )}
       </Tabs>
     </div>
   );

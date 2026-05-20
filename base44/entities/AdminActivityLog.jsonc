@@ -1,0 +1,45 @@
+{
+  "name": "AdminActivityLog",
+  "type": "object",
+  "properties": {
+    "admin_user_email": {
+      "type": "string",
+      "description": "Email of the admin/owner who performed the action"
+    },
+    "admin_user_name": {
+      "type": "string",
+      "description": "Display name of the admin who performed the action"
+    },
+    "impersonated_employee_id": {
+      "type": "string",
+      "description": "Employee ID being impersonated"
+    },
+    "impersonated_employee_name": {
+      "type": "string",
+      "description": "Name of the employee being impersonated"
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "impersonation_started",
+        "impersonation_ended",
+        "clock_out_override",
+        "time_entry_edit"
+      ],
+      "description": "Type of action taken"
+    },
+    "action_detail": {
+      "type": "string",
+      "description": "Human-readable description of what was done"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional structured data about the action"
+    }
+  },
+  "required": [
+    "admin_user_email",
+    "impersonated_employee_id",
+    "action_type"
+  ]
+}

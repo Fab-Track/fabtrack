@@ -9,6 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole, usePreviewRole } from "@/lib/PreviewRoleContext";
+import { useImpersonation, canImpersonate } from "@/lib/ImpersonationContext";
 import PreviewRoleSelector from "./PreviewRoleSelector";
 
 // ── All possible nav items ──────────────────────────────────────────────────
@@ -126,6 +127,7 @@ export default function Sidebar() {
   const realRole = user?.role || "user";
   const effectiveRole = useEffectiveRole(realRole);
   const isOwner = OWNER_ROLES.includes(realRole.toLowerCase());
+  const userCanImpersonate = canImpersonate(realRole);
 
   const navGroups = getNavGroups(effectiveRole);
   const mobileItems = getMobileItems(navGroups);
@@ -174,7 +176,7 @@ export default function Sidebar() {
 
       {/* Preview Role + Collapse — desktop only */}
       <div className="hidden md:block px-2 py-3 border-t border-sidebar-border space-y-1">
-        {isOwner && <PreviewRoleSelector collapsed={collapsed} />}
+        {userCanImpersonate && <PreviewRoleSelector collapsed={collapsed} />}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
