@@ -20,6 +20,13 @@ const EST_STATUS = {
   Rejected: "bg-red-100 text-red-800",
 };
 
+const INV_STATUS = {
+  Unpaid:  "bg-yellow-100 text-yellow-800",
+  Partial: "bg-blue-100 text-blue-800",
+  Paid:    "bg-emerald-100 text-emerald-800",
+  Overdue: "bg-red-100 text-red-800",
+};
+
 const CO_STATUS = {
   Draft:    "bg-muted text-muted-foreground",
   Sent:     "bg-blue-100 text-blue-800",
@@ -233,11 +240,39 @@ export default function JobDocumentsTab({ job }) {
             ) : null
           }
         />
-        {invoices.length === 0 && (
+        {invoices.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground bg-muted/20 rounded-lg mt-2 text-sm">
             {approvedEstimate && !hasDepositInvoice
               ? "Estimate approved — open the estimate to create a deposit invoice."
               : "No invoices yet."}
+          </div>
+        ) : (
+          <div className="divide-y border rounded-lg mt-2 overflow-hidden">
+            {invoices.map(inv => (
+              <div key={inv.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 cursor-pointer" onClick={() => openInvoice(inv)}>
+                <div className="flex items-center gap-3">
+                  {inv.status === "Paid"
+                    ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    : inv.status === "Overdue"
+                    ? <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                    : <Clock className="w-4 h-4 text-muted-foreground/40 shrink-0" />}
+                  <div>
+                    <p className="text-sm font-medium">
+                      {inv.invoice_number || `Invoice #${inv.id.slice(-6).toUpperCase()}`}
+                      <span className="ml-2 text-xs text-muted-foreground font-normal">{inv.invoice_type}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {inv.issued_date ? `Issued ${format(parseISO(inv.issued_date), "MMM d, yyyy")}` : "—"}
+                      {inv.due_date ? ` · Due ${format(parseISO(inv.due_date), "MMM d, yyyy")}` : ""}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-semibold text-sm">${(inv.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                  <Badge className={`text-xs ${INV_STATUS[inv.status] || ""}`}>{inv.status}</Badge>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
