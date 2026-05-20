@@ -15,7 +15,8 @@ function formatElapsed(seconds) {
   return `${m}m ${s}s`;
 }
 
-function ActiveJobRow({ entry, allTimeEntries, onClockOut, isPending }) {
+function ActiveJobRow({ entry, allTimeEntries, jobs = [], onClockOut, isPending }) {
+  const job = jobs.find(j => j.id === entry.job_id);
   const todayStart = startOfDay(new Date());
   const elapsedSeconds = entry.clock_in
     ? Math.max(0, differenceInSeconds(new Date(), parseISO(entry.clock_in)))
@@ -39,6 +40,7 @@ function ActiveJobRow({ entry, allTimeEntries, onClockOut, isPending }) {
           <p className="text-2xl font-bold">{entry.job_number}</p>
           <Badge className="bg-green-100 text-green-700 border-green-200">Active</Badge>
         </div>
+        {job && <p className="text-base font-semibold text-foreground">{job.job_name}</p>}
         <p className="text-base text-muted-foreground">{entry.work_center}</p>
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-accent" />
@@ -62,7 +64,7 @@ function ActiveJobRow({ entry, allTimeEntries, onClockOut, isPending }) {
   );
 }
 
-export default function MyCurrentJob({ activeEntries = [], activeElapsedSeconds = 0, allTimeEntries }) {
+export default function MyCurrentJob({ activeEntries = [], activeElapsedSeconds = 0, allTimeEntries, jobs = [] }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -135,6 +137,7 @@ export default function MyCurrentJob({ activeEntries = [], activeElapsedSeconds 
             key={entry.id}
             entry={entry}
             allTimeEntries={allTimeEntries}
+            jobs={jobs}
             onClockOut={(e) => clockOutMutation.mutate({ entry: e })}
             isPending={clockOutMutation.isPending}
           />

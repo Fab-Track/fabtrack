@@ -105,6 +105,7 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
         activeEntries={myActiveEntries}
         activeElapsedSeconds={activeElapsedSeconds}
         allTimeEntries={allTimeEntries}
+        jobs={jobs}
       />
 
       {/* Jobs this week */}
