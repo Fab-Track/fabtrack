@@ -20,7 +20,9 @@ export default function ShopKiosk() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [selectedCenter, setSelectedCenter] = useState(null);
   const [clockOutSummary, setClockOutSummary] = useState(null);
+  const [jobSearch, setJobSearch] = useState("");
   const queryClient = useQueryClient();
+  const searchInputRef = useRef(null);
 
   const { data: employees = [] } = useQuery({
     queryKey: ["employees"],
@@ -82,7 +84,15 @@ export default function ShopKiosk() {
     setPinError(false);
     setSelectedJob(null);
     setSelectedCenter(null);
+    setJobSearch("");
   };
+
+  // Focus search input when entering job selection screen
+  useEffect(() => {
+    if (step === "select-job" && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [step]);
 
   const activeEmployees = employees.filter(e => e.is_active !== false);
   const activeEntry = selectedEmployee 
@@ -97,6 +107,16 @@ export default function ShopKiosk() {
       if (pa !== pb) return pa - pb;
       return (a.job_number || "").localeCompare(b.job_number || "");
     });
+
+  // Filter jobs by search term
+  const searchLower = jobSearch.toLowerCase();
+  const filteredJobs = activeJobs.filter(j => {
+    if (!searchLower) return true;
+    const jobNumber = (j.job_number || "").toLowerCase();
+    const jobName = (j.job_name || "").toLowerCase();
+    const customerName = (j.customer_name || "").toLowerCase();
+    return jobNumber.includes(searchLower) || jobName.includes(searchLower) || customerName.includes(searchLower);
+  });
 
   const handleEmployeeSelect = (emp) => {
     setSelectedEmployee(emp);
@@ -223,22 +243,49 @@ export default function ShopKiosk() {
               <ArrowLeft className="w-4 h-4 mr-1" /> Back
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {activeJobs.map(job => (
-              <button
-                key={job.id}
-                onClick={() => { setSelectedJob(job); setStep("select-center"); }}
-                className="p-5 rounded-xl bg-white/10 hover:bg-white/20 text-left transition-all min-h-[70px]"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-mono opacity-70">{job.job_number}</span>
-                  <Badge className="bg-white/20 text-white text-xs">{job.status}</Badge>
-                </div>
-                <p className="font-bold">{job.job_name}</p>
-                <p className="text-sm opacity-60">{job.customer_name}</p>
-              </button>
-            ))}
+
+          {/* Search Bar */}
+          <div className="mb-6">
+            <div className="relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search by job #, name, or customer..."
+                value={jobSearch}
+                onChange={e => setJobSearch(e.target.value)}
+                className="w-full h-12 pl-12 pr-4 rounded-lg bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-accent focus:bg-white/15 transition-all"
+              />
+            </div>
           </div>
+
+          {/* Job Cards or Empty State */}
+          {filteredJobs.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {filteredJobs.map(job => (
+                <button
+                  key={job.id}
+                  onClick={() => { setSelectedJob(job); setStep("select-center"); }}
+                  className="p-5 rounded-xl bg-white/10 hover:bg-white/20 text-left transition-all min-h-[70px]"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-mono opacity-70">{job.job_number}</span>
+                    <Badge className="bg-white/20 text-white text-xs">{job.status}</Badge>
+                  </div>
+                  <p className="font-bold">{job.job_name}</p>
+                  <p className="text-sm opacity-60">{job.customer_name}</p>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-white/40 text-lg">No jobs found</p>
+            </div>
+          )}
         </div>
       )}
 
