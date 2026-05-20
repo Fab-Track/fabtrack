@@ -35,8 +35,10 @@ export default function EmployeeWorkInfoTab({ employee, canEdit, canSeeRate }) {
     setSaving(true);
     const payload = { ...form };
     if (!canSeeRate) delete payload.hourly_rate;
-    if (payload.hourly_rate !== "") payload.hourly_rate = parseFloat(payload.hourly_rate);
-    if (payload.years_experience !== "") payload.years_experience = parseFloat(payload.years_experience);
+    if (payload.hourly_rate === "" || payload.hourly_rate === null) delete payload.hourly_rate;
+    else payload.hourly_rate = parseFloat(payload.hourly_rate);
+    if (payload.years_experience === "" || payload.years_experience === null) delete payload.years_experience;
+    else payload.years_experience = parseFloat(payload.years_experience);
     await base44.entities.Employee.update(employee.id, payload);
     qc.invalidateQueries({ queryKey: ["employee", employee.id] });
     qc.invalidateQueries({ queryKey: ["employees"] });
