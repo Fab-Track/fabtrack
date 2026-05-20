@@ -5,26 +5,19 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { X, Send, Link, Check } from "lucide-react";
 import { toast } from "sonner";
-import { base44 } from "@/api/base44Client";
-
 export default function SendEstimatePanel({ estimate, job, customer, onClose, onSent }) {
   const firstName = customer?.name?.split(" ")[0] || customer?.name || "there";
   const [to, setTo] = useState(customer?.email || "");
   const [subject, setSubject] = useState(`Your Estimate from High Country Metal Works — ${job?.job_name || ""}`);
   const [message, setMessage] = useState(`Hi ${firstName},\n\nPlease find your estimate attached. Let us know if you have any questions!\n\nThank you,\nHigh Country Metal Works`);
-  const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  async function handleSend() {
-    setSending(true);
-    await base44.integrations.Core.SendEmail({
-      to,
-      subject,
-      body: `${message}\n\n---\nEstimate Total: $${(estimate?.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
-    });
-    setSending(false);
+  function handleSend() {
+    const body = `${message}\n\n---\nEstimate Total: $${(estimate?.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+    const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailtoUrl, "_blank");
     onSent?.(to);
-    toast.success(`Estimate sent to ${to}`);
+    toast.success(`Email draft opened for ${to}`);
   }
 
   function handleCopyLink() {
@@ -72,9 +65,9 @@ export default function SendEstimatePanel({ estimate, job, customer, onClose, on
         </div>
       </div>
       <div className="p-4 border-t">
-        <Button className="w-full gap-2" onClick={handleSend} disabled={sending || !to}>
+        <Button className="w-full gap-2" onClick={handleSend} disabled={!to}>
           <Send className="w-3.5 h-3.5" />
-          {sending ? "Sending…" : "Send Estimate"}
+          Send Estimate
         </Button>
       </div>
     </div>
