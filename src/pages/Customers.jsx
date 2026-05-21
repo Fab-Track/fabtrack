@@ -11,15 +11,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import {
   Plus, Search, Phone, Mail, MapPin, Building2,
-  DollarSign, Briefcase, TrendingUp, AlertCircle, ArrowLeft,
-  ChevronRight, FileText, Receipt, FileDiff
+  DollarSign, Briefcase, TrendingUp, ArrowLeft,
+  ChevronRight, ArrowUpDown
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format, parseISO, isValid } from "date-fns";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { STATUS_COLORS } from "@/lib/jobHelpers";
+import OutstandingAgingCard from "@/components/customers/OutstandingAgingCard";
+import PaymentBehaviorCard from "@/components/customers/PaymentBehaviorCard";
+import QuickActionsBar from "@/components/customers/QuickActionsBar";
+import CustomerARSummaryBar from "@/components/customers/CustomerARSummaryBar";
 
 const JOB_TYPE_COLORS = ["#3b82f6", "#f97316", "#a855f7", "#10b981", "#84cc16", "#ef4444"];
+
+const CUSTOMER_TYPES = [
+  "Homeowner",
+  "General Contractor",
+  "Builder / Developer",
+  "Commercial Business",
+  "Subcontractor",
+  "Other",
+];
 
 function StatCard({ icon: Icon, label, value, sub, color = "text-foreground" }) {
   return (
@@ -38,8 +51,30 @@ function StatCard({ icon: Icon, label, value, sub, color = "text-foreground" }) 
   );
 }
 
+// ── Customer Type Badge ────────────────────────────────────────────────────────
+function TypeBadge({ type }) {
+  if (!type) return null;
+  const colorMap = {
+    "Homeowner": "bg-blue-100 text-blue-700 border-blue-200",
+    "General Contractor": "bg-purple-100 text-purple-700 border-purple-200",
+    "Builder / Developer": "bg-green-100 text-green-700 border-green-200",
+    "Commercial Business": "bg-orange-100 text-orange-700 border-orange-200",
+    "Subcontractor": "bg-yellow-100 text-yellow-700 border-yellow-200",
+    "Other": "bg-gray-100 text-gray-600 border-gray-200",
+  };
+  return (
+    <Badge className={`text-[10px] border ${colorMap[type] || "bg-gray-100 text-gray-600 border-gray-200"}`}>
+      {type}
+    </Badge>
+  );
+}
+
 // ── Customer Detail Panel ──────────────────────────────────────────────────────
-function CustomerDetail({ customer, allJobs, allInvoices, onBack }) {
+function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
+  const queryClient = useQueryClient();
+  const [editingType, setEditingType] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview"); // overview | invoices
+
   const customerJobs = useMemo(() =>
     allJobs.filter(j => j.customer_id === customer.id || j.customer_name === customer.name)
       .sort((a, b) => (b.created_date || "").localeCompare(a.created_date || "")),
@@ -51,8 +86,9 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack }) {
     [allInvoices, customer]
   );
 
-  const totalRevenue = customerInvoices.filter(inv => inv.status === "Paid").reduce((s, inv) => s + (inv.total || 0), 0);
-  const outstandingBalance = customerInvoices.filter(inv => inv.status !== "Paid").reduce((s, inv) => s + (inv.balance_due || 0), 0);
+  const paidInvoices = customerInvoices.filter(inv => inv.status === "Paid");
+  const unpaidInvoices = customerInvoices.filter(inv => inv.status !== "Paid");
+  const totalRevenue = paidInvoices.reduce((s, inv) => s + (inv.total || 0), 0);
   const totalJobs = customerJobs.length;
   const avgJobSize = totalJobs > 0 ? totalRevenue / totalJobs : 0;
 
@@ -64,7 +100,7 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack }) {
   });
   const typeData = Object.entries(typeMap).map(([name, value]) => ({ name, value }));
 
-  // Revenue by year (from invoices)
+  // Revenue by year
   const revenueByYear = {};
   customerInvoices.forEach(inv => {
     if (inv.status !== "Paid" || !inv.paid_date) return;
@@ -73,9 +109,19 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack }) {
   });
   const revenueData = Object.entries(revenueByYear).sort().map(([year, amt]) => ({ year, amt }));
 
+  const updateTypeMutation = useMutation({
+    mutationFn: (type) => base44.entities.Customer.update(customer.id, { type }),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      onUpdated({ ...customer, type: updated.type });
+      setEditingType(false);
+    },
+  });
+
+  const invoicesToShow = activeTab === "invoices" ? unpaidInvoices : customerInvoices;
+
   return (
     <div>
-      {/* Back */}
       <button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-5">
         <ArrowLeft className="w-4 h-4" /> All Customers
       </button>
@@ -84,9 +130,33 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack }) {
       <div className="bg-card border rounded-xl p-5 mb-5">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold">{customer.name}</h2>
-            {customer.company && <p className="text-sm text-muted-foreground">{customer.company}</p>}
-            {customer.type && <Badge variant="outline" className="mt-1 text-xs">{customer.type}</Badge>}
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl font-bold">{customer.name}</h2>
+              {editingType ? (
+                <Select
+                  value={customer.type || ""}
+                  onValueChange={(v) => updateTypeMutation.mutate(v)}
+                  onOpenChange={(open) => { if (!open) setEditingType(false); }}
+                  defaultOpen
+                >
+                  <SelectTrigger className="h-7 w-44 text-xs">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CUSTOMER_TYPES.map(t => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <button onClick={() => setEditingType(true)} className="hover:opacity-70 transition-opacity">
+                  {customer.type ? <TypeBadge type={customer.type} /> : (
+                    <Badge variant="outline" className="text-[10px] text-muted-foreground border-dashed">+ Add Type</Badge>
+                  )}
+                </button>
+              )}
+            </div>
+            {customer.company && <p className="text-sm text-muted-foreground mt-0.5">{customer.company}</p>}
           </div>
           <div className="space-y-1 text-sm text-muted-foreground">
             {customer.phone && <div className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />{customer.phone}</div>}
@@ -101,8 +171,22 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack }) {
         <StatCard icon={DollarSign} label="Total Revenue" value={`$${totalRevenue.toLocaleString()}`} />
         <StatCard icon={Briefcase} label="Total Jobs" value={totalJobs} />
         <StatCard icon={TrendingUp} label="Avg Job Size" value={`$${avgJobSize.toLocaleString("en-US", { maximumFractionDigits: 0 })}`} />
-        <StatCard icon={AlertCircle} label="Outstanding" value={`$${outstandingBalance.toLocaleString()}`} color={outstandingBalance > 0 ? "text-destructive" : "text-foreground"} />
+        <PaymentBehaviorCard paidInvoices={paidInvoices} />
       </div>
+
+      {/* Outstanding Aging */}
+      {unpaidInvoices.length > 0 && (
+        <div className="mb-5">
+          <OutstandingAgingCard unpaidInvoices={unpaidInvoices} lifetimeRevenue={totalRevenue} />
+        </div>
+      )}
+
+      {/* Quick Actions */}
+      <QuickActionsBar
+        customer={customer}
+        unpaidInvoices={unpaidInvoices}
+        onViewOutstanding={() => setActiveTab("invoices")}
+      />
 
       {/* Charts */}
       {(typeData.length > 0 || revenueData.length > 0) && (
@@ -153,48 +237,92 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack }) {
         </div>
       )}
 
-      {/* Jobs list */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Briefcase className="w-4 h-4 text-muted-foreground" />
-            Job History ({totalJobs})
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {customerJobs.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No jobs yet.</p>
-          ) : (
-            <div className="divide-y">
-              {customerJobs.map(job => (
-                <div key={job.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/30">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-xs font-mono text-muted-foreground">{job.job_number}</span>
-                      <Badge className={`text-[10px] ${STATUS_COLORS[job.status] || ""}`}>{job.status}</Badge>
-                    </div>
-                    <p className="text-sm font-medium truncate">{job.job_name}</p>
-                    {job.expected_install_date && isValid(parseISO(job.expected_install_date)) && (
-                      <p className="text-xs text-muted-foreground">{format(parseISO(job.expected_install_date), "MMM d, yyyy")}</p>
-                    )}
-                  </div>
-                  {job.estimate_total > 0 && (
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-semibold">${job.estimate_total.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">estimate</p>
-                    </div>
-                  )}
-                  <Link to={`/jobs/${job.id}`} className="text-muted-foreground hover:text-foreground shrink-0">
-                    <ChevronRight className="w-4 h-4" />
-                  </Link>
-                </div>
-              ))}
-            </div>
+      {/* Jobs / Invoices tabs */}
+      <div className="flex gap-2 mb-3">
+        <button
+          onClick={() => setActiveTab("overview")}
+          className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${activeTab === "overview" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          Job History ({totalJobs})
+        </button>
+        <button
+          onClick={() => setActiveTab("invoices")}
+          className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${activeTab === "invoices" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          {activeTab === "invoices" ? "Outstanding Invoices" : `Outstanding Invoices`}
+          {unpaidInvoices.length > 0 && (
+            <Badge className="ml-1.5 bg-orange-100 text-orange-700 border-orange-200 text-[10px] px-1">{unpaidInvoices.length}</Badge>
           )}
-        </CardContent>
-      </Card>
+        </button>
+      </div>
 
-      {/* Notes */}
+      {activeTab === "overview" && (
+        <Card>
+          <CardContent className="p-0">
+            {customerJobs.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No jobs yet.</p>
+            ) : (
+              <div className="divide-y">
+                {customerJobs.map(job => (
+                  <div key={job.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/30">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-xs font-mono text-muted-foreground">{job.job_number}</span>
+                        <Badge className={`text-[10px] ${STATUS_COLORS[job.status] || ""}`}>{job.status}</Badge>
+                      </div>
+                      <p className="text-sm font-medium truncate">{job.job_name}</p>
+                      {job.expected_install_date && isValid(parseISO(job.expected_install_date)) && (
+                        <p className="text-xs text-muted-foreground">{format(parseISO(job.expected_install_date), "MMM d, yyyy")}</p>
+                      )}
+                    </div>
+                    {job.estimate_total > 0 && (
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-semibold">${job.estimate_total.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground">estimate</p>
+                      </div>
+                    )}
+                    <Link to={`/jobs/${job.id}`} className="text-muted-foreground hover:text-foreground shrink-0">
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTab === "invoices" && (
+        <Card>
+          <CardContent className="p-0">
+            {unpaidInvoices.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No outstanding invoices.</p>
+            ) : (
+              <div className="divide-y">
+                {unpaidInvoices.map(inv => (
+                  <div key={inv.id} className="flex items-center gap-3 px-5 py-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-xs font-mono text-muted-foreground">{inv.invoice_number}</span>
+                        <Badge className={`text-[10px] ${inv.status === "Overdue" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"}`}>{inv.status}</Badge>
+                      </div>
+                      <p className="text-sm font-medium">{inv.job_name}</p>
+                      {inv.due_date && isValid(parseISO(inv.due_date)) && (
+                        <p className="text-xs text-muted-foreground">Due {format(parseISO(inv.due_date), "MMM d, yyyy")}</p>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-semibold text-orange-600">${(inv.balance_due || 0).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">balance due</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {customer.notes && (
         <Card className="mt-4">
           <CardHeader className="pb-2"><CardTitle className="text-sm">Notes</CardTitle></CardHeader>
@@ -210,6 +338,9 @@ export default function Customers() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [filterType, setFilterType] = useState("all");
+  const [filterOutstanding, setFilterOutstanding] = useState(false);
+  const [sortBy, setSortBy] = useState("name"); // name | outstanding | lastJob
   const [form, setForm] = useState({ name: "", type: "", company: "", phone: "", email: "", address: "", notes: "" });
   const queryClient = useQueryClient();
 
@@ -237,11 +368,34 @@ export default function Customers() {
     },
   });
 
-  const filtered = customers.filter(c =>
-    c.name?.toLowerCase().includes(search.toLowerCase()) ||
-    c.company?.toLowerCase().includes(search.toLowerCase()) ||
-    c.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  // Per-customer computed metrics for list
+  const customerMetrics = useMemo(() => {
+    const map = {};
+    customers.forEach(c => {
+      const invoices = allInvoices.filter(inv => inv.customer_id === c.id || inv.customer_name === c.name);
+      const jobs = allJobs.filter(j => j.customer_id === c.id || j.customer_name === c.name);
+      const outstanding = invoices.filter(i => i.status !== "Paid").reduce((s, i) => s + (i.balance_due || 0), 0);
+      const lastJob = jobs.sort((a, b) => (b.created_date || "").localeCompare(a.created_date || ""))[0];
+      map[c.id] = { outstanding, lastJobDate: lastJob?.created_date || null };
+    });
+    return map;
+  }, [customers, allInvoices, allJobs]);
+
+  const filtered = useMemo(() => {
+    let list = customers.filter(c =>
+      c.name?.toLowerCase().includes(search.toLowerCase()) ||
+      c.company?.toLowerCase().includes(search.toLowerCase()) ||
+      c.email?.toLowerCase().includes(search.toLowerCase())
+    );
+    if (filterType !== "all") list = list.filter(c => c.type === filterType);
+    if (filterOutstanding) list = list.filter(c => (customerMetrics[c.id]?.outstanding || 0) > 0);
+    list = [...list].sort((a, b) => {
+      if (sortBy === "outstanding") return (customerMetrics[b.id]?.outstanding || 0) - (customerMetrics[a.id]?.outstanding || 0);
+      if (sortBy === "lastJob") return ((customerMetrics[b.id]?.lastJobDate || "") > (customerMetrics[a.id]?.lastJobDate || "")) ? 1 : -1;
+      return (a.name || "").localeCompare(b.name || "");
+    });
+    return list;
+  }, [customers, search, filterType, filterOutstanding, sortBy, customerMetrics]);
 
   if (selectedCustomer) {
     return (
@@ -251,6 +405,7 @@ export default function Customers() {
           allJobs={allJobs}
           allInvoices={allInvoices}
           onBack={() => setSelectedCustomer(null)}
+          onUpdated={(updated) => setSelectedCustomer(updated)}
         />
       </div>
     );
@@ -258,7 +413,7 @@ export default function Customers() {
 
   return (
     <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
           <p className="text-sm text-muted-foreground">{customers.length} contacts</p>
@@ -280,9 +435,7 @@ export default function Customers() {
                   <Select value={form.type} onValueChange={v => setForm({...form, type: v})}>
                     <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent>
-                      {["GC", "Homeowner", "Architect", "Designer", "Other"].map(t => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                      ))}
+                      {CUSTOMER_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -317,48 +470,103 @@ export default function Customers() {
         </Dialog>
       </div>
 
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input placeholder="Search customers..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+      {/* AR Summary Bar */}
+      <CustomerARSummaryBar customers={customers} allInvoices={allInvoices} />
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Search customers..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+        </div>
+        <Select value={filterType} onValueChange={setFilterType}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="All Types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            {CUSTOMER_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <button
+          onClick={() => setFilterOutstanding(v => !v)}
+          className={`flex items-center gap-1.5 px-3 h-9 rounded-md border text-sm transition-colors ${filterOutstanding ? "bg-orange-50 border-orange-300 text-orange-700 font-medium" : "border-input text-muted-foreground hover:text-foreground"}`}
+        >
+          Has Outstanding Balance
+        </button>
+        <button
+          onClick={() => setSortBy(s => s === "outstanding" ? "name" : "outstanding")}
+          className={`flex items-center gap-1.5 px-3 h-9 rounded-md border text-sm transition-colors ${sortBy === "outstanding" ? "bg-primary text-primary-foreground" : "border-input text-muted-foreground hover:text-foreground"}`}
+        >
+          <ArrowUpDown className="w-3.5 h-3.5" />
+          Sort by Balance
+        </button>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {filtered.map(customer => {
-          const cJobs = allJobs.filter(j => j.customer_id === customer.id || j.customer_name === customer.name);
-          const cInvoices = allInvoices.filter(inv => inv.customer_id === customer.id || inv.customer_name === customer.name);
-          const revenue = cInvoices.filter(i => i.status === "Paid").reduce((s, i) => s + (i.total || 0), 0);
-          return (
-            <Card key={customer.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-2">
+      {/* Customer table */}
+      <div className="bg-card border rounded-xl overflow-hidden">
+        <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-4 px-4 py-2.5 border-b bg-muted/30 text-xs font-medium text-muted-foreground">
+          <span>Customer</span>
+          <span>Type</span>
+          <span
+            className="cursor-pointer hover:text-foreground flex items-center gap-1"
+            onClick={() => setSortBy(s => s === "outstanding" ? "name" : "outstanding")}
+          >
+            Outstanding <ArrowUpDown className="w-3 h-3" />
+          </span>
+          <span
+            className="cursor-pointer hover:text-foreground flex items-center gap-1"
+            onClick={() => setSortBy(s => s === "lastJob" ? "name" : "lastJob")}
+          >
+            Last Job <ArrowUpDown className="w-3 h-3" />
+          </span>
+          <span>Contact</span>
+        </div>
+        {filtered.length === 0 && !isLoading ? (
+          <p className="text-center text-muted-foreground py-12">No customers found.</p>
+        ) : (
+          <div className="divide-y">
+            {filtered.map(customer => {
+              const metrics = customerMetrics[customer.id] || {};
+              return (
+                <div
+                  key={customer.id}
+                  className="grid md:grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-4 px-4 py-3.5 hover:bg-muted/30 cursor-pointer items-center"
+                  onClick={() => setSelectedCustomer(customer)}
+                >
                   <div>
-                    <h3 className="font-semibold text-sm">{customer.name}</h3>
+                    <p className="font-semibold text-sm">{customer.name}</p>
                     {customer.company && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                         <Building2 className="w-3 h-3" /> {customer.company}
                       </div>
                     )}
                   </div>
-                  {customer.type && <Badge variant="outline" className="text-xs">{customer.type}</Badge>}
+                  <div><TypeBadge type={customer.type} /></div>
+                  <div>
+                    {metrics.outstanding > 0 ? (
+                      <span className="text-sm font-semibold text-orange-500">${metrics.outstanding.toLocaleString()}</span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
+                  </div>
+                  <div>
+                    {metrics.lastJobDate ? (
+                      <span className="text-xs text-muted-foreground">{format(parseISO(metrics.lastJobDate), "MMM d, yyyy")}</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </div>
+                  <div className="space-y-0.5">
+                    {customer.phone && <div className="flex items-center gap-1 text-xs text-muted-foreground"><Phone className="w-3 h-3" />{customer.phone}</div>}
+                    {customer.email && <div className="flex items-center gap-1 text-xs text-muted-foreground truncate"><Mail className="w-3 h-3" />{customer.email}</div>}
+                  </div>
                 </div>
-                <div className="space-y-0.5 mb-3">
-                  {customer.phone && <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Phone className="w-3 h-3" /> {customer.phone}</div>}
-                  {customer.email && <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Mail className="w-3 h-3" /> {customer.email}</div>}
-                </div>
-                <Separator className="mb-2" />
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{cJobs.length} job{cJobs.length !== 1 ? "s" : ""}</span>
-                  {revenue > 0 && <span className="font-semibold text-foreground">${revenue.toLocaleString()}</span>}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+              );
+            })}
+          </div>
+        )}
       </div>
-
-      {filtered.length === 0 && !isLoading && (
-        <p className="text-center text-muted-foreground py-12">No customers found.</p>
-      )}
     </div>
   );
 }

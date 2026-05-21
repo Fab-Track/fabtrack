@@ -9,10 +9,11 @@
     "type": {
       "type": "string",
       "enum": [
-        "GC",
         "Homeowner",
-        "Architect",
-        "Designer",
+        "General Contractor",
+        "Builder / Developer",
+        "Commercial Business",
+        "Subcontractor",
         "Other"
       ],
       "description": "Customer type"
