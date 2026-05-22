@@ -8,12 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Upload, AlertTriangle, Save, Image, DollarSign, Check, Package, BookOpen, Activity } from "lucide-react";
+import { Upload, AlertTriangle, Save, Image, DollarSign, Check, Package, BookOpen, Activity, MessageSquare, Plug } from "lucide-react";
 import { toast } from "sonner";
 import { RAILING_STYLES, DEFAULT_MATERIALS } from "@/lib/railingData";
 import ProductServiceLibrarySection from "@/components/settings/ProductServiceLibrarySection";
 import ServiceCatalogSection from "@/components/settings/ServiceCatalogSection";
 import AdminActivityLogSection from "@/components/settings/AdminActivityLogSection";
+import MessageTemplatesSection from "@/components/settings/MessageTemplatesSection";
+import IntegrationsSection from "@/components/settings/IntegrationsSection";
 import { useAuth } from "@/lib/AuthContext";
 
 // ── Style Library ─────────────────────────────────────────────────────────────
@@ -242,6 +244,8 @@ export default function Settings() {
           <TabsTrigger value="products" className="gap-1.5"><Package className="w-3.5 h-3.5" />Products & Services</TabsTrigger>
           <TabsTrigger value="styles" className="gap-1.5"><Image className="w-3.5 h-3.5" />Style Library</TabsTrigger>
           <TabsTrigger value="materials" className="gap-1.5"><DollarSign className="w-3.5 h-3.5" />Materials Price List</TabsTrigger>
+          <TabsTrigger value="templates" className="gap-1.5"><MessageSquare className="w-3.5 h-3.5" />Message Templates</TabsTrigger>
+          <TabsTrigger value="integrations" className="gap-1.5"><Plug className="w-3.5 h-3.5" />Integrations</TabsTrigger>
           {isOwnerOrAdmin && (
             <TabsTrigger value="activity" className="gap-1.5"><Activity className="w-3.5 h-3.5" />Admin Activity Log</TabsTrigger>
           )}
@@ -250,6 +254,8 @@ export default function Settings() {
         <TabsContent value="products"><ProductServiceLibrarySection /></TabsContent>
         <TabsContent value="styles"><StyleLibrarySection /></TabsContent>
         <TabsContent value="materials"><MaterialsPriceSection /></TabsContent>
+        <TabsContent value="templates"><MessageTemplatesSection /></TabsContent>
+        <TabsContent value="integrations"><IntegrationsSection /></TabsContent>
         {isOwnerOrAdmin && (
           <TabsContent value="activity"><AdminActivityLogSection /></TabsContent>
         )}

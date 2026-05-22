@@ -12,8 +12,10 @@ import { Separator } from "@/components/ui/separator";
 import {
   Plus, Search, Phone, Mail, MapPin, Building2,
   DollarSign, Briefcase, TrendingUp, ArrowLeft,
-  ChevronRight, ArrowUpDown
+  ChevronRight, ArrowUpDown, Send
 } from "lucide-react";
+import CommHistoryList from "@/components/comms/CommHistoryList";
+import MessageComposerModal from "@/components/comms/MessageComposerModal";
 import { Link } from "react-router-dom";
 import { format, parseISO, isValid } from "date-fns";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -73,7 +75,8 @@ function TypeBadge({ type }) {
 function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
   const queryClient = useQueryClient();
   const [editingType, setEditingType] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview"); // overview | invoices
+  const [activeTab, setActiveTab] = useState("overview"); // overview | invoices | communications
+  const [composerOpen, setComposerOpen] = useState(false);
 
   const customerJobs = useMemo(() =>
     allJobs.filter(j => j.customer_id === customer.id || j.customer_name === customer.name)
@@ -181,6 +184,13 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
         </div>
       )}
 
+      {/* Send Message button */}
+      <div className="flex justify-end mb-2">
+        <Button size="sm" onClick={() => setComposerOpen(true)} className="gap-1.5">
+          <Send className="w-3.5 h-3.5" /> Send Message
+        </Button>
+      </div>
+
       {/* Quick Actions */}
       <QuickActionsBar
         customer={customer}
@@ -237,8 +247,8 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
         </div>
       )}
 
-      {/* Jobs / Invoices tabs */}
-      <div className="flex gap-2 mb-3">
+      {/* Jobs / Invoices / Communications tabs */}
+      <div className="flex gap-2 mb-3 flex-wrap">
         <button
           onClick={() => setActiveTab("overview")}
           className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${activeTab === "overview" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
@@ -249,10 +259,16 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
           onClick={() => setActiveTab("invoices")}
           className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${activeTab === "invoices" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
         >
-          {activeTab === "invoices" ? "Outstanding Invoices" : `Outstanding Invoices`}
+          Outstanding Invoices
           {unpaidInvoices.length > 0 && (
             <Badge className="ml-1.5 bg-orange-100 text-orange-700 border-orange-200 text-[10px] px-1">{unpaidInvoices.length}</Badge>
           )}
+        </button>
+        <button
+          onClick={() => setActiveTab("communications")}
+          className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${activeTab === "communications" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          Communications
         </button>
       </div>
 
@@ -323,12 +339,26 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
         </Card>
       )}
 
-      {customer.notes && (
+      {activeTab === "communications" && (
+        <Card>
+          <CardContent className="p-0">
+            <CommHistoryList customerId={customer.id} />
+          </CardContent>
+        </Card>
+      )}
+
+      {customer.notes && activeTab !== "communications" && (
         <Card className="mt-4">
           <CardHeader className="pb-2"><CardTitle className="text-sm">Notes</CardTitle></CardHeader>
           <CardContent><p className="text-sm text-muted-foreground whitespace-pre-wrap">{customer.notes}</p></CardContent>
         </Card>
       )}
+
+      <MessageComposerModal
+        open={composerOpen}
+        onClose={() => setComposerOpen(false)}
+        customer={customer}
+      />
     </div>
   );
 }

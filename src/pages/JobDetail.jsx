@@ -4,11 +4,12 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { STATUS_COLORS, getJobHealth, getHealthDot } from "@/lib/jobHelpers";
 import { format, parseISO } from "date-fns";
-import { ArrowLeft, CalendarDays, MapPin, Paintbrush } from "lucide-react";
+import { ArrowLeft, CalendarDays, MapPin, Paintbrush, Send } from "lucide-react";
 
 const PRODUCT_BADGE_COLORS = {
   Railing:      "bg-blue-100 text-blue-800 border-blue-200",
@@ -29,12 +30,16 @@ import JobDocumentsTab from "@/components/jobs/JobDocumentsTab";
 import JobHistoryTab from "@/components/jobs/JobHistoryTab";
 import ProjectDetailsTab from "@/components/jobs/ProjectDetailsTab";
 import JobMessagesTab from "@/components/jobs/JobMessagesTab";
+import JobCommunicationsTab from "@/components/jobs/JobCommunicationsTab";
+import QueuedMessageBanner from "@/components/comms/QueuedMessageBanner";
+import MessageComposerModal from "@/components/comms/MessageComposerModal";
 
 export default function JobDetail() {
   const { user } = useAuth();
   const effectiveRole = useEffectiveRole(user?.role || "admin");
   const isFabricator = effectiveRole.toLowerCase() === "fabricator";
   const isAccountant = effectiveRole.toLowerCase() === "accountant";
+  const [composerOpen, setComposerOpen] = useState(false);
   const [searchParams] = useSearchParams();
   const fromParam = searchParams.get("from");
   const fromSchedule = fromParam === "schedule";
@@ -125,7 +130,14 @@ export default function JobDetail() {
             <h1 className="text-xl font-bold">{job.job_name}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">{job.customer_name}</p>
           </div>
-          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-col items-end gap-3">
+            {/* Send Message button */}
+            {!isFabricator && !isAccountant && (
+              <Button size="sm" onClick={() => setComposerOpen(true)} className="gap-1.5 shrink-0">
+                <Send className="w-3.5 h-3.5" /> Send Message
+              </Button>
+            )}
+            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
             {job.expected_install_date && (
               <div className="flex items-center gap-1.5">
                 <CalendarDays className="w-4 h-4" />
@@ -144,9 +156,15 @@ export default function JobDetail() {
                 {job.powder_coat_color} {job.powder_coat_code && `(${job.powder_coat_code})`}
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Queued message banner */}
+      {!isFabricator && !isAccountant && (
+        <QueuedMessageBanner job={job} />
+      )}
 
       {/* Tabs */}
       <Tabs defaultValue="overview">
@@ -181,6 +199,7 @@ export default function JobDetail() {
             </TabsTrigger>
           )}
           <TabsTrigger value="messages">Messages</TabsTrigger>
+          {!isFabricator && <TabsTrigger value="communications">Communications</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview">
@@ -224,7 +243,18 @@ export default function JobDetail() {
         <TabsContent value="messages">
           <JobMessagesTab job={job} />
         </TabsContent>
+        {!isFabricator && (
+          <TabsContent value="communications">
+            <JobCommunicationsTab job={job} />
+          </TabsContent>
+        )}
       </Tabs>
+
+      <MessageComposerModal
+        open={composerOpen}
+        onClose={() => setComposerOpen(false)}
+        job={job}
+      />
     </div>
   );
 }
