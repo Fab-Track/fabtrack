@@ -42,22 +42,15 @@ Deno.serve(async (req) => {
       }],
     });
 
-    // Notify owners/estimators via email
-    // Get admin/estimator users
-    const users = await base44.asServiceRole.entities.User.list();
-    const notifyUsers = users.filter(u =>
-      u.role === "admin" || u.role === "owner" || u.role === "estimator"
-    );
-
-    const emailPromises = notifyUsers.map(u =>
-      base44.asServiceRole.integrations.Core.SendEmail({
-        to: u.email,
-        subject: `New Lead: ${name} — ${project_type}`,
-        body: `A new lead has arrived from the website.\n\nCustomer: ${name}\nPhone: ${phone}\nEmail: ${email}\nAddress: ${address}\nProject Type: ${project_type}\n\nDescription:\n${description}\n\nJob created: ${jobNumber}\n\nLog in to FabTrack to review and assign: https://app.base44.com`,
-      }).catch(() => null) // don't fail if email fails
-    );
-
-    await Promise.all(emailPromises);
+    // In-app notification (no email credits used)
+    await base44.asServiceRole.entities.Notification.create({
+      title: `New Lead: ${name}`,
+      body: `Website lead from ${name}. Phone: ${phone}. Email: ${email}. Project: ${project_type || "Quote Request"}. Description: ${description}`,
+      type: "new_lead",
+      link: `/jobs/${job.id}`,
+      is_read: false,
+      target_roles: ["admin", "owner", "estimator"],
+    });
 
     return Response.json({ success: true, job_id: job.id, job_number: jobNumber });
   } catch (error) {

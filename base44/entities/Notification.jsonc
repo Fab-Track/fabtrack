@@ -1,0 +1,41 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Short notification title"
+    },
+    "body": {
+      "type": "string",
+      "description": "Full notification message"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "new_lead",
+        "overdue_invoice",
+        "info"
+      ],
+      "default": "info"
+    },
+    "link": {
+      "type": "string",
+      "description": "Optional internal link (e.g. /jobs/abc123)"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false
+    },
+    "target_roles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Which roles should see this notification"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}

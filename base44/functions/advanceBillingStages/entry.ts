@@ -12,9 +12,6 @@ Deno.serve(async (req) => {
     const jobs = await base44.asServiceRole.entities.Job.filter({ pipeline_board: "Billing" });
     const billingJobs = jobs.filter(j => j.stage !== "Paid / Closed" && j.stage !== "Needs 2nd Half Invoice Created");
 
-    const users = await base44.asServiceRole.entities.User.list();
-    const notifyUsers = users.filter(u => u.role === "admin" || u.role === "owner" || u.role === "estimator");
-
     const now = new Date();
     const updates = [];
 
@@ -51,15 +48,15 @@ Deno.serve(async (req) => {
 
         updates.push({ job_number: job.job_number, from: job.stage, to: targetStage });
 
-        // Notify
-        const emailPromises = notifyUsers.map(u =>
-          base44.asServiceRole.integrations.Core.SendEmail({
-            to: u.email,
-            subject: `Overdue Invoice: ${job.customer_name} — ${job.job_name}`,
-            body: `${job.customer_name} — ${job.job_name} is now ${days} days overdue.\n\nStage moved to: ${targetStage}\nJob: ${job.job_number}\n\nLog in to FabTrack to take action.`,
-          }).catch(() => null)
-        );
-        await Promise.all(emailPromises);
+        // In-app notification (no email credits used)
+        await base44.asServiceRole.entities.Notification.create({
+          title: `Overdue Invoice: ${job.customer_name}`,
+          body: `${job.customer_name} — ${job.job_name} is now ${days} days past invoice sent date. Stage: ${targetStage}`,
+          type: "overdue_invoice",
+          link: `/jobs/${job.id}`,
+          is_read: false,
+          target_roles: ["admin", "owner", "estimator"],
+        });
       }
     }
 

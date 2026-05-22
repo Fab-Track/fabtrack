@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole, usePreviewRole } from "@/lib/PreviewRoleContext";
 import { useImpersonation, canImpersonate } from "@/lib/ImpersonationContext";
 import PreviewRoleSelector from "./PreviewRoleSelector";
+import NotificationBell from "./NotificationBell";
 
 // ── All possible nav items ──────────────────────────────────────────────────
 const ALL_ITEMS = {
@@ -176,6 +177,7 @@ export default function Sidebar() {
 
       {/* Preview Role + Collapse — desktop only */}
       <div className="hidden md:block px-2 py-3 border-t border-sidebar-border space-y-1">
+        <NotificationBell collapsed={collapsed} />
         {userCanImpersonate && <PreviewRoleSelector collapsed={collapsed} />}
         <button
           onClick={() => setCollapsed(!collapsed)}
