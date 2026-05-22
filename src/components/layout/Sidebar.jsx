@@ -1,10 +1,12 @@
 import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Kanban, Wrench, Clock,
   FileText, CalendarDays, Users, Package,
   Trophy, ChevronLeft, ChevronRight,
-  Building2, Settings, Menu, X, BarChart2
+  Building2, Settings, Menu, X, BarChart2, MessageCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -16,6 +18,7 @@ import NotificationBell from "./NotificationBell";
 // ── All possible nav items ──────────────────────────────────────────────────
 const ALL_ITEMS = {
   dashboard:      { label: "Dashboard",       icon: LayoutDashboard, path: "/" },
+  messages:       { label: "Messages",         icon: MessageCircle,   path: "/messages" },
   jobBoard:       { label: "Job Board",        icon: Kanban,          path: "/jobs" },
   customers:      { label: "Customers",        icon: Users,           path: "/customers" },
   documents:      { label: "Documents",        icon: FileText,        path: "/documents" },
@@ -32,49 +35,49 @@ const ALL_ITEMS = {
 // ── Role → grouped nav config ───────────────────────────────────────────────
 const ROLE_NAV = {
   admin: [
-    { group: "OVERVIEW",    items: ["dashboard"] },
+    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "SALES",       items: ["jobBoard", "customers", "documents"] },
     { group: "OPERATIONS",  items: ["reports", "schedule", "workCenters", "inventory"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   shop_manager: [
-    { group: "OVERVIEW",    items: ["dashboard"] },
+    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "OPERATIONS",  items: ["jobBoard", "reports", "schedule", "workCenters", "inventory"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   estimator: [
-    { group: "OVERVIEW",    items: ["dashboard"] },
+    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "SALES",       items: ["jobBoard", "customers", "documents"] },
     { group: "OPERATIONS",  items: ["reports"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   design_specialist: [
-    { group: "OVERVIEW",    items: ["dashboard"] },
+    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "WORK",        items: ["jobBoard", "schedule"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   fabricator: [
-    { group: "OVERVIEW",    items: ["dashboard"] },
+    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "SHOP",        items: ["schedule", "shopFloor"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   installer: [
-    { group: "OVERVIEW",    items: ["dashboard"] },
+    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "WORK",        items: ["schedule"] },
     { group: "SHOP",        items: ["shopFloor"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   accountant: [
-    { group: "OVERVIEW",    items: ["dashboard"] },
+    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "SALES",       items: ["jobBoard"] },
     { group: "FINANCE",     items: ["documents", "customers", "reports"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   // fallback for any unrecognized role — same as admin
   user: [
-    { group: "OVERVIEW",    items: ["dashboard"] },
+    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "SALES",       items: ["jobBoard", "customers", "documents"] },
     { group: "OPERATIONS",  items: ["reports", "schedule", "workCenters", "inventory"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
@@ -93,7 +96,7 @@ function getMobileItems(groups) {
 }
 
 // ── NavLink ─────────────────────────────────────────────────────────────────
-function NavLink({ item, collapsed, onClick }) {
+function NavLink({ item, collapsed, onClick, badge }) {
   const location = useLocation();
   const isActive = item.path === "/" 
     ? location.pathname === "/" 
@@ -111,8 +114,20 @@ function NavLink({ item, collapsed, onClick }) {
           : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
       )}
     >
-      <item.icon className={cn("w-4 h-4 shrink-0", collapsed && "mx-auto")} />
-      {!collapsed && <span>{item.label}</span>}
+      <div className="relative shrink-0">
+        <item.icon className={cn("w-4 h-4", collapsed && "mx-auto")} />
+        {badge > 0 && collapsed && (
+          <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center font-bold">
+            {badge > 9 ? "9+" : badge}
+          </span>
+        )}
+      </div>
+      {!collapsed && <span className="flex-1">{item.label}</span>}
+      {!collapsed && badge > 0 && (
+        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
     </Link>
   );
 }
@@ -132,6 +147,35 @@ export default function Sidebar() {
 
   const navGroups = getNavGroups(effectiveRole);
   const mobileItems = getMobileItems(navGroups);
+
+  // Unread message count for badge
+  const { data: channels = [] } = useQuery({
+    queryKey: ["channels"],
+    queryFn: () => base44.entities.MessageChannel.list("sort_order", 200),
+    refetchInterval: 30000,
+    enabled: !!user,
+  });
+  const { data: memberships = [] } = useQuery({
+    queryKey: ["memberships", user?.id],
+    queryFn: () => base44.entities.ChannelMembership.filter({ user_id: user?.id || user?.email }),
+    refetchInterval: 30000,
+    enabled: !!user,
+  });
+  const { data: recentMessages = [] } = useQuery({
+    queryKey: ["messages-sidebar-unread"],
+    queryFn: () => base44.entities.Message.list("-created_date", 300),
+    refetchInterval: 30000,
+    enabled: !!user,
+  });
+  const userId = user?.id || user?.email || "";
+  const totalUnread = channels.reduce((acc, ch) => {
+    const membership = memberships.find(m => m.channel_id === ch.id);
+    const lastRead = membership?.last_read_at ? new Date(membership.last_read_at) : new Date(0);
+    const unread = recentMessages.filter(m =>
+      m.channel_id === ch.id && new Date(m.created_date) > lastRead && m.sender_id !== userId
+    ).length;
+    return acc + unread;
+  }, 0);
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
@@ -167,6 +211,7 @@ export default function Sidebar() {
                     item={item}
                     collapsed={collapsed}
                     onClick={() => setMobileOpen(false)}
+                    badge={item.path === "/messages" ? totalUnread : 0}
                   />
                 );
               })}

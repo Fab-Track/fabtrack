@@ -27,6 +27,7 @@ import OnboardingSurveyPage from '@/pages/OnboardingSurveyPage';
 import Settings from '@/pages/Settings';
 import EstimatePage from '@/pages/EstimatePage';
 import Reports from '@/pages/Reports';
+import Messages from '@/pages/Messages';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -68,6 +69,7 @@ const AuthenticatedApp = () => {
         <Route path="/work-centers" element={<WorkCenters />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/schedule" element={<Schedule />} />
+        <Route path="/messages" element={<Messages />} />
         <Route path="/customers" element={<Customers />} />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/craftsman" element={<CraftsmanScore />} />

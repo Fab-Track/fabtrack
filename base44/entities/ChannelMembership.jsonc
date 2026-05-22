@@ -1,0 +1,38 @@
+{
+  "name": "ChannelMembership",
+  "type": "object",
+  "properties": {
+    "channel_id": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string"
+    },
+    "user_email": {
+      "type": "string"
+    },
+    "user_name": {
+      "type": "string"
+    },
+    "user_role": {
+      "type": "string"
+    },
+    "last_read_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notification_pref": {
+      "type": "string",
+      "enum": [
+        "all",
+        "mentions",
+        "muted"
+      ],
+      "default": "all"
+    }
+  },
+  "required": [
+    "channel_id",
+    "user_id"
+  ]
+}

@@ -28,6 +28,7 @@ import ProductionSchedule from "@/components/jobs/ProductionSchedule";
 import JobDocumentsTab from "@/components/jobs/JobDocumentsTab";
 import JobHistoryTab from "@/components/jobs/JobHistoryTab";
 import ProjectDetailsTab from "@/components/jobs/ProjectDetailsTab";
+import JobMessagesTab from "@/components/jobs/JobMessagesTab";
 
 export default function JobDetail() {
   const { user } = useAuth();
@@ -179,6 +180,7 @@ export default function JobDetail() {
               )}
             </TabsTrigger>
           )}
+          <TabsTrigger value="messages">Messages</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -219,6 +221,9 @@ export default function JobDetail() {
             <JobHistoryTab job={job} />
           </TabsContent>
         )}
+        <TabsContent value="messages">
+          <JobMessagesTab job={job} />
+        </TabsContent>
       </Tabs>
     </div>
   );
