@@ -45,39 +45,14 @@ Deno.serve(async (req) => {
         }
       }
     } else if (channel === 'Email') {
-      const sendgridKey = Deno.env.get('SENDGRID_API_KEY');
-
-      if (!sendgridKey) {
-        // Fall back to built-in integration
-        await base44.asServiceRole.integrations.Core.SendEmail({
-          to: to_email,
-          subject: subject || '(no subject)',
-          body: message_body,
-          from_name: from_name || 'High Country Metal Works',
-        });
-        sendResult = { success: true, sid: null, fallback: true };
-      } else {
-        const payload = {
-          personalizations: [{ to: [{ email: to_email }] }],
-          from: { email: from_email || 'info@highcountrymetalworks.com', name: from_name || 'High Country Metal Works' },
-          subject: subject || '(no subject)',
-          content: [{ type: 'text/plain', value: message_body }],
-        };
-        const resp = await fetch('https://api.sendgrid.com/v3/mail/send', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${sendgridKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        });
-        if (resp.ok || resp.status === 202) {
-          sendResult = { success: true, sid: resp.headers.get('x-message-id') };
-        } else {
-          const err = await resp.json().catch(() => ({}));
-          sendResult = { success: false, error: JSON.stringify(err?.errors || 'SendGrid error') };
-        }
-      }
+      // Always use built-in email integration (no SendGrid required)
+      await base44.asServiceRole.integrations.Core.SendEmail({
+        to: to_email,
+        subject: subject || '(no subject)',
+        body: message_body,
+        from_name: from_name || 'High Country Metal Works',
+      });
+      sendResult = { success: true, sid: null };
     }
 
     // Update the CommMessage record if provided
