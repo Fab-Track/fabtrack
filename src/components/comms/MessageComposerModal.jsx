@@ -13,12 +13,17 @@ import { toast } from "sonner";
 import { MERGE_FIELDS, resolveMergeFields, smsSegmentCount } from "@/lib/commTemplates";
 import { useAuth } from "@/lib/AuthContext";
 
-const COMPANY_PHONE = "(801) 210-9103";
-
 export default function MessageComposerModal({ open, onClose, job, customer, prefillMessage = null, onSent }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const textareaRef = useRef(null);
+
+  const { data: appSettings } = useQuery({
+    queryKey: ["appSettings"],
+    queryFn: () => base44.functions.invoke("getAppSettings", {}).then(r => r.data),
+    enabled: open,
+    staleTime: 60000,
+  });
 
   const { data: templates = [] } = useQuery({
     queryKey: ["messageTemplates"],
@@ -58,7 +63,7 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
     setToEmail(cust?.email || "");
     setFromName(myEmployee?.preferred_name || myEmployee?.name || user?.full_name || "");
     setFromEmail(myEmployee?.comm_email || myEmployee?.email || "info@highcountrymetalworks.com");
-    setFromPhone(myEmployee?.comm_phone || COMPANY_PHONE);
+    setFromPhone(appSettings?.twilio_from_number || "");
 
     if (prefillMessage) {
       setChannel(prefillMessage.channel || "SMS");
@@ -71,7 +76,7 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
       setBody("");
       setSelectedTemplateId("");
     }
-  }, [open, prefillMessage]);
+  }, [open, prefillMessage, appSettings, myEmployee]);
 
   function applyTemplate(templateId) {
     const tpl = templates.find(t => t.id === templateId);
