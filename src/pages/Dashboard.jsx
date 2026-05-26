@@ -97,6 +97,9 @@ export default function Dashboard() {
   const displayView = impersonationView || (canSwitchViews ? activeView : defaultView);
   const viewLabel = VIEW_LABELS[displayView] || "Dashboard";
 
+  // Owner sees only Command Center, Shop Performance, and Pipeline (no "My Work")
+  const ownerViews = isRealOwner ? ALL_VIEWS.filter(v => v.id !== "fabricator") : ALL_VIEWS;
+
   return (
     <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
       {/* Header */}
@@ -108,7 +111,7 @@ export default function Dashboard() {
           </p>
         </div>
         {canSwitchViews && (
-          <ViewSwitcher activeView={activeView} onChange={handleViewChange} views={ALL_VIEWS} />
+          <ViewSwitcher activeView={activeView} onChange={handleViewChange} views={ownerViews} />
         )}
       </div>
 
