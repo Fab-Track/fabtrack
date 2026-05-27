@@ -61,7 +61,7 @@ function CommRow({ msg }) {
   );
 }
 
-export default function CommHistoryList({ jobId, customerId }) {
+export default function CommHistoryList({ jobId, customerId, channelFilter }) {
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ["commMessages", jobId, customerId],
     queryFn: async () => {
@@ -73,12 +73,17 @@ export default function CommHistoryList({ jobId, customerId }) {
     refetchInterval: 30000,
   });
 
-  const sorted = [...messages].sort((a, b) =>
+  const filtered = channelFilter
+    ? messages.filter(m => m.channel === channelFilter)
+    : messages;
+
+  const sorted = [...filtered].sort((a, b) =>
     ((b.sent_at || b.created_date) || "").localeCompare((a.sent_at || a.created_date) || "")
   );
 
   if (isLoading) return <p className="text-sm text-muted-foreground p-4">Loading…</p>;
   if (sorted.length === 0) return (
+
     <div className="text-center py-12 text-muted-foreground">
       <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-30" />
       <p className="text-sm">No messages sent yet.</p>

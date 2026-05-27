@@ -14,7 +14,7 @@ import {
   DollarSign, Briefcase, TrendingUp, ArrowLeft,
   ChevronRight, ArrowUpDown, Send
 } from "lucide-react";
-import CommHistoryList from "@/components/comms/CommHistoryList";
+import CustomerCommTab from "@/components/comms/CustomerCommTab";
 import MessageComposerModal from "@/components/comms/MessageComposerModal";
 import { Link } from "react-router-dom";
 import { format, parseISO, isValid } from "date-fns";
@@ -184,12 +184,14 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
         </div>
       )}
 
-      {/* Send Message button */}
-      <div className="flex justify-end mb-2">
-        <Button size="sm" onClick={() => setComposerOpen(true)} className="gap-1.5">
-          <Send className="w-3.5 h-3.5" /> Send Message
-        </Button>
-      </div>
+      {/* Send Message button — only shown outside the communications tab */}
+      {activeTab !== "communications" && (
+        <div className="flex justify-end mb-2">
+          <Button size="sm" onClick={() => setComposerOpen(true)} className="gap-1.5">
+            <Send className="w-3.5 h-3.5" /> Send Message
+          </Button>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <QuickActionsBar
@@ -342,7 +344,7 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
       {activeTab === "communications" && (
         <Card>
           <CardContent className="p-0">
-            <CommHistoryList customerId={customer.id} />
+            <CustomerCommTab customer={customer} />
           </CardContent>
         </Card>
       )}
