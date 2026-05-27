@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Phone, Mail, CheckCircle2, AlertCircle, Circle, ExternalLink, Eye, EyeOff, Send } from "lucide-react";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
+import TwilioPhoneNumbersTable from "./TwilioPhoneNumbersTable";
 
 function StatusDot({ status }) {
   if (status === "connected") return <Badge className="gap-1 bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="w-3 h-3" />Connected</Badge>;
@@ -112,6 +113,11 @@ export default function IntegrationsSection() {
           <a href="#" className="underline">Need help? View SMS setup guide →</a>
         </p>
       </div>
+
+      <Separator />
+
+      {/* Phone Numbers Table */}
+      <TwilioPhoneNumbersTable />
 
       <Separator />
 

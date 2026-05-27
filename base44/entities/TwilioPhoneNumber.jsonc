@@ -1,0 +1,34 @@
+{
+  "name": "TwilioPhoneNumber",
+  "type": "object",
+  "properties": {
+    "phone_number": {
+      "type": "string",
+      "description": "E.164 format, e.g. +18015550142"
+    },
+    "friendly_name": {
+      "type": "string",
+      "description": "Display label, e.g. Main Business Number"
+    },
+    "assigned_employee_id": {
+      "type": "string",
+      "description": "Employee ID this number is assigned to"
+    },
+    "assigned_employee_name": {
+      "type": "string",
+      "description": "Employee name (denormalized)"
+    },
+    "is_main": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if this is the primary business fallback number"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "phone_number"
+  ]
+}

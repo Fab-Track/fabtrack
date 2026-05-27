@@ -98,6 +98,18 @@
       "type": "string",
       "format": "date-time"
     },
+    "sent_by_name": {
+      "type": "string",
+      "description": "Name of the actual sender when an owner sends on behalf of another user"
+    },
+    "assigned_to_employee_id": {
+      "type": "string",
+      "description": "Employee ID whose number received the inbound reply"
+    },
+    "assigned_to_employee_name": {
+      "type": "string",
+      "description": "Employee name whose number received the inbound reply"
+    },
     "attachments": {
       "type": "array",
       "items": {

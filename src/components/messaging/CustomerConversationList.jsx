@@ -109,9 +109,11 @@ function CustomerRow({ conversation, isSelected, onClick }) {
   );
 }
 
-export default function CustomerConversationList({ selectedCustomerId, onSelect }) {
+export default function CustomerConversationList({ selectedCustomerId, onSelect, currentUser, myAssignedNumber }) {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
+
+  const isOwner = ["admin", "owner"].includes(currentUser?.role?.toLowerCase() || "");
 
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ["commMessages-all"],
@@ -131,12 +133,23 @@ export default function CustomerConversationList({ selectedCustomerId, onSelect 
     return m;
   }, [customers]);
 
-  // Group messages by customer
+  // Group messages by customer, filtered by role
+  const normalizePhone = (p) => (p || "").replace(/\D/g, "");
+  const myPhoneNorm = normalizePhone(myAssignedNumber || "");
+
   const conversations = useMemo(() => {
     const grouped = {};
     messages.forEach(msg => {
       const cid = msg.customer_id;
       if (!cid) return;
+
+      // Non-owners: only show threads where from_phone or to_phone matches their assigned number
+      if (!isOwner && myPhoneNorm) {
+        const fromNorm = normalizePhone(msg.from_phone || "");
+        const toNorm = normalizePhone(msg.to_phone || "");
+        if (fromNorm !== myPhoneNorm && toNorm !== myPhoneNorm) return;
+      }
+
       if (!grouped[cid]) grouped[cid] = [];
       grouped[cid].push(msg);
     });

@@ -1,8 +1,12 @@
 import React, { useState } from "react";
 import CustomerConversationList from "@/components/messaging/CustomerConversationList";
 import CustomerConversationPanel from "@/components/messaging/CustomerConversationPanel";
+import { useAuth } from "@/lib/AuthContext";
+import { useAssignedSmsNumber } from "@/lib/useAssignedSmsNumber";
 
 export default function Conversations() {
+  const { user } = useAuth();
+  const { myAssignedNumber } = useAssignedSmsNumber(user?.email, true);
   const [selectedConv, setSelectedConv] = useState(null);
   const [mobileView, setMobileView] = useState("list"); // "list" | "thread"
 
@@ -27,6 +31,8 @@ export default function Conversations() {
           <CustomerConversationList
             selectedCustomerId={selectedConv?.customerId}
             onSelect={handleSelect}
+            currentUser={user}
+            myAssignedNumber={myAssignedNumber}
           />
         </div>
       </div>

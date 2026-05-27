@@ -8,15 +8,19 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { MessageSquare, Mail, X, Plus, Send, Clock, FileText, ChevronDown } from "lucide-react";
+import { MessageSquare, Mail, X, Plus, Send, Clock, FileText, ChevronDown, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { MERGE_FIELDS, resolveMergeFields, smsSegmentCount } from "@/lib/commTemplates";
 import { useAuth } from "@/lib/AuthContext";
+import { useAssignedSmsNumber, formatPhone } from "@/lib/useAssignedSmsNumber";
+import { AlertCircle, Link as LinkIcon } from "lucide-react";
 
 export default function MessageComposerModal({ open, onClose, job, customer, prefillMessage = null, onSent }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const textareaRef = useRef(null);
+
+  const isOwner = ["admin", "owner"].includes(user?.role?.toLowerCase() || "");
 
   const { data: appSettings } = useQuery({
     queryKey: ["appSettings"],
@@ -31,14 +35,10 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
     enabled: open,
   });
 
-  const { data: employees = [] } = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => base44.entities.Employee.list("-created_date", 100),
-    enabled: open,
-  });
+  const { myEmployee, myAssignedNumber, mainNumber, numbersWithEmployees } = useAssignedSmsNumber(user?.email, open);
 
-  // Find current user's employee record for comm settings
-  const myEmployee = employees.find(e => e.email === user?.email);
+  // "Send As" state — defaults to current user's number; owner can change
+  const [sendAsNumberId, setSendAsNumberId] = useState(null); // null = use my number
 
   const [channel, setChannel] = useState("SMS");
   const [toName, setToName] = useState("");
@@ -56,6 +56,25 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
   // Derive customer name/contact
   const cust = customer || { name: job?.customer_name, phone: job?.lead_customer_phone, email: job?.lead_customer_email };
 
+  // Compute effective "from" number for SMS
+  // If owner has selected "send as" another number, use that; else use own assigned or main fallback
+  const effectiveSendAsRecord = sendAsNumberId
+    ? numbersWithEmployees.find(n => n.id === sendAsNumberId)
+    : null;
+
+  const effectiveFromPhone = effectiveSendAsRecord?.phone_number
+    || myAssignedNumber
+    || mainNumber?.phone_number
+    || appSettings?.twilio_from_number
+    || "";
+
+  const effectiveFromName = effectiveSendAsRecord
+    ? (effectiveSendAsRecord.employee?.preferred_name || effectiveSendAsRecord.employee?.name || effectiveSendAsRecord.displayName)
+    : (myEmployee?.preferred_name || myEmployee?.name || user?.full_name || "");
+
+  const usingMainFallback = !myAssignedNumber && !effectiveSendAsRecord;
+  const sendingAsOtherUser = !!effectiveSendAsRecord && effectiveSendAsRecord.assigned_employee_id !== myEmployee?.id;
+
   useEffect(() => {
     if (!open) return;
     setToName(cust?.name || "");
@@ -64,6 +83,7 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
     setFromName(myEmployee?.preferred_name || myEmployee?.name || user?.full_name || "");
     setFromEmail(myEmployee?.comm_email || myEmployee?.email || "info@highcountrymetalworks.com");
     setFromPhone(appSettings?.twilio_from_number || "");
+    setSendAsNumberId(null);
 
     if (prefillMessage) {
       setChannel(prefillMessage.channel || "SMS");
@@ -110,6 +130,10 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
     setSending(true);
     const templateName = templates.find(t => t.id === selectedTemplateId)?.name || null;
 
+    // Use effective from details for SMS
+    const actualFromPhone = channel === "SMS" ? effectiveFromPhone : fromPhone;
+    const actualFromName = channel === "SMS" ? effectiveFromName : fromName;
+
     // Create CommMessage record
     const msgRecord = await base44.entities.CommMessage.create({
       job_id: job?.id || null,
@@ -122,13 +146,14 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
       to_name: toName,
       to_phone: toPhone,
       to_email: toEmail,
-      from_name: fromName,
+      from_name: actualFromName,
       from_email: fromEmail,
-      from_phone: fromPhone,
+      from_phone: actualFromPhone,
       subject,
       body,
       template_id: selectedTemplateId || null,
       template_name: templateName,
+      sent_by_name: sendingAsOtherUser ? (myEmployee?.name || user?.full_name) : null,
       queued_at: new Date().toISOString(),
     });
 
@@ -139,9 +164,9 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
         channel,
         to_phone: toPhone,
         to_email: toEmail,
-        from_phone: fromPhone,
+        from_phone: actualFromPhone,
         from_email: fromEmail,
-        from_name: fromName,
+        from_name: actualFromName,
         subject,
         message_body: body,
       });
@@ -205,19 +230,77 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">From</Label>
-              <Input className="h-8 text-sm" value={fromName} onChange={e => setFromName(e.target.value)} />
+          {/* SMS From — smart display */}
+          {channel === "SMS" ? (
+            <div className="space-y-1.5">
+              {isOwner && numbersWithEmployees.length > 1 ? (
+                /* Owner: editable "send as" dropdown */
+                <div>
+                  <Label className="text-xs">Send As</Label>
+                  <Select
+                    value={sendAsNumberId || "mine"}
+                    onValueChange={val => setSendAsNumberId(val === "mine" ? null : val)}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mine">
+                        {myAssignedNumber
+                          ? `${effectiveFromName} — ${formatPhone(myAssignedNumber)}`
+                          : `${effectiveFromName} — Main Number`}
+                      </SelectItem>
+                      {numbersWithEmployees
+                        .filter(n => n.assigned_employee_id && n.assigned_employee_id !== myEmployee?.id)
+                        .map(n => (
+                          <SelectItem key={n.id} value={n.id}>
+                            {n.displayName} — {formatPhone(n.phone_number)}
+                          </SelectItem>
+                        ))
+                      }
+                      {mainNumber && !mainNumber.assigned_employee_id && (
+                        <SelectItem value={mainNumber.id}>
+                          Main Business Number — {formatPhone(mainNumber.phone_number)}
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {sendingAsOtherUser && (
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Will be logged as: "Sent by {myEmployee?.name || user?.full_name} as {effectiveFromName}"
+                    </p>
+                  )}
+                </div>
+              ) : (
+                /* Non-owner: read-only "Sending from" label */
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${usingMainFallback ? "bg-amber-50 border border-amber-200" : "bg-muted/40"}`}>
+                  {usingMainFallback
+                    ? <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    : <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                  }
+                  <span className={usingMainFallback ? "text-amber-800" : "text-foreground"}>
+                    Sending from: <strong>{formatPhone(effectiveFromPhone)}</strong>
+                    {usingMainFallback ? " — Main Business Number" : ` — ${effectiveFromName}`}
+                  </span>
+                  {usingMainFallback && (
+                    <a href="/settings" className="ml-auto text-xs text-amber-600 underline shrink-0">Assign a number</a>
+                  )}
+                </div>
+              )}
             </div>
-            <div>
-              <Label className="text-xs">{channel === "SMS" ? "From Phone" : "From Email"}</Label>
-              {channel === "SMS"
-                ? <Input className="h-8 text-sm" value={fromPhone} onChange={e => setFromPhone(e.target.value)} />
-                : <Input className="h-8 text-sm" value={fromEmail} onChange={e => setFromEmail(e.target.value)} />
-              }
+          ) : (
+            /* Email From */
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">From</Label>
+                <Input className="h-8 text-sm" value={fromName} onChange={e => setFromName(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">From Email</Label>
+                <Input className="h-8 text-sm" value={fromEmail} onChange={e => setFromEmail(e.target.value)} />
+              </div>
             </div>
-          </div>
+          )}
 
           <Separator />
 

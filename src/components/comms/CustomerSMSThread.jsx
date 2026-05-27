@@ -4,9 +4,10 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Send, MessageSquare, RefreshCw } from "lucide-react";
+import { Send, MessageSquare, RefreshCw, AlertCircle } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { toast } from "sonner";
+import { useAssignedSmsNumber, formatPhone } from "@/lib/useAssignedSmsNumber";
 
 function JobTagPill({ jobNumber, jobName }) {
   if (!jobNumber) return null;
@@ -79,6 +80,15 @@ export default function CustomerSMSThread({ customer, jobFilter = null }) {
     staleTime: 60000,
   });
 
+  const { myEmployee, myAssignedNumber, mainNumber } = useAssignedSmsNumber(user?.email, true);
+
+  const effectiveFromPhone = myAssignedNumber
+    || mainNumber?.phone_number
+    || appSettings?.twilio_from_number
+    || "";
+  const effectiveFromName = myEmployee?.preferred_name || myEmployee?.name || user?.full_name || "High Country Metal Works";
+  const usingMainFallback = !myAssignedNumber;
+
   const { data: messages = [], isLoading, refetch } = useQuery({
     queryKey: ["commMessages", "sms", customer?.id],
     queryFn: () => base44.entities.CommMessage.filter({ customer_id: customer.id, channel: "SMS" }),
@@ -100,7 +110,6 @@ export default function CustomerSMSThread({ customer, jobFilter = null }) {
     if (!customer?.phone) { toast.error("Customer has no phone number on file"); return; }
 
     setSending(true);
-    const fromPhone = appSettings?.twilio_from_number || "";
 
     // Create record
     const msgRecord = await base44.entities.CommMessage.create({
@@ -111,8 +120,8 @@ export default function CustomerSMSThread({ customer, jobFilter = null }) {
       status: "sent",
       to_name: customer.name,
       to_phone: customer.phone,
-      from_name: user?.full_name || "High Country Metal Works",
-      from_phone: fromPhone,
+      from_name: effectiveFromName,
+      from_phone: effectiveFromPhone,
       body: replyText,
       sent_at: new Date().toISOString(),
     });
@@ -122,7 +131,7 @@ export default function CustomerSMSThread({ customer, jobFilter = null }) {
       message_id: msgRecord.id,
       channel: "SMS",
       to_phone: customer.phone,
-      from_phone: fromPhone,
+      from_phone: effectiveFromPhone,
       message_body: replyText,
     });
 
@@ -204,9 +213,16 @@ export default function CustomerSMSThread({ customer, jobFilter = null }) {
             <Send className="w-4 h-4" />
           </Button>
         </div>
-        <p className="text-[10px] text-muted-foreground mt-1.5">
-          From: {appSettings?.twilio_from_number || "—"} · Shift+Enter for new line
-        </p>
+        <div className={`flex items-center gap-1.5 mt-1.5 text-[10px] ${usingMainFallback ? "text-amber-600" : "text-muted-foreground"}`}>
+          {usingMainFallback && <AlertCircle className="w-3 h-3" />}
+          <span>
+            Sending from: {formatPhone(effectiveFromPhone) || "—"}
+            {usingMainFallback ? " — Main Business Number" : ` — ${effectiveFromName}`}
+          </span>
+          {usingMainFallback && (
+            <a href="/settings" className="underline ml-1">Assign a number</a>
+          )}
+        </div>
       </div>
     </div>
   );

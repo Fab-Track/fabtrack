@@ -179,6 +179,10 @@
     },
     "previous_employers": {
       "type": "string"
+    },
+    "assigned_sms_number": {
+      "type": "string",
+      "description": "Assigned Twilio phone number in E.164 format for outgoing SMS"
     }
   },
   "required": [

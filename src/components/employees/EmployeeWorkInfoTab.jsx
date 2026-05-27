@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Save } from "lucide-react";
+import EmployeeSMSNumberSection from "./EmployeeSMSNumberSection";
+import { Separator } from "@/components/ui/separator";
 
 const ROLES = ["welder","fitter","cutter","installer","foreman","admin","grinder","estimator","design_specialist","accountant","owner"];
 const WORK_CENTERS = ["Cut","Fit","Weld","Grind","Install","Design","Powder Coat"];
@@ -118,6 +120,11 @@ export default function EmployeeWorkInfoTab({ employee, canEdit, canSeeRate }) {
           <Save className="w-4 h-4 mr-1.5" />{saving ? "Saving..." : "Save Work Info"}
         </Button>
       )}
+
+      <Separator />
+
+      {/* SMS Number Assignment — only for roles with SMS capability */}
+      <EmployeeSMSNumberSection employee={employee} canEdit={canEdit} />
     </div>
   );
 }
