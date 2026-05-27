@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Kanban, Wrench, Clock,
   FileText, CalendarDays, Users, Package,
   Trophy, ChevronLeft, ChevronRight,
-  Building2, Settings, Menu, X, BarChart2, MessageCircle
+  Building2, Settings, Menu, X, BarChart2, MessageCircle, MessagesSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -21,6 +21,7 @@ const ALL_ITEMS = {
   messages:       { label: "Messages",         icon: MessageCircle,   path: "/messages" },
   jobBoard:       { label: "Job Board",        icon: Kanban,          path: "/jobs" },
   customers:      { label: "Customers",        icon: Users,           path: "/customers" },
+  conversations:  { label: "Conversations",    icon: MessagesSquare,  path: "/conversations" },
   documents:      { label: "Documents",        icon: FileText,        path: "/documents" },
   reports:        { label: "Reports",          icon: BarChart2,       path: "/reports" },
   schedule:       { label: "Schedule",         icon: CalendarDays,    path: "/schedule" },
@@ -36,7 +37,7 @@ const ALL_ITEMS = {
 const ROLE_NAV = {
   admin: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
-    { group: "SALES",       items: ["jobBoard", "customers", "documents"] },
+    { group: "SALES",       items: ["jobBoard", "customers", "conversations", "documents"] },
     { group: "OPERATIONS",  items: ["reports", "schedule", "workCenters", "inventory"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "ACCOUNT",     items: ["settings"] },
@@ -44,12 +45,13 @@ const ROLE_NAV = {
   shop_manager: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "OPERATIONS",  items: ["jobBoard", "reports", "schedule", "workCenters", "inventory"] },
+    { group: "SALES",       items: ["conversations"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   estimator: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
-    { group: "SALES",       items: ["jobBoard", "customers", "documents"] },
+    { group: "SALES",       items: ["jobBoard", "customers", "conversations", "documents"] },
     { group: "OPERATIONS",  items: ["reports"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
@@ -72,13 +74,13 @@ const ROLE_NAV = {
   accountant: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "SALES",       items: ["jobBoard"] },
-    { group: "FINANCE",     items: ["documents", "customers", "reports"] },
+    { group: "FINANCE",     items: ["documents", "customers", "conversations", "reports"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   // fallback for any unrecognized role — same as admin
   user: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
-    { group: "SALES",       items: ["jobBoard", "customers", "documents"] },
+    { group: "SALES",       items: ["jobBoard", "customers", "conversations", "documents"] },
     { group: "OPERATIONS",  items: ["reports", "schedule", "workCenters", "inventory"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "ACCOUNT",     items: ["settings"] },
@@ -195,7 +197,6 @@ export default function Sidebar() {
       new Date(out.sent_at || out.created_date) > inTime
     );
   }).length;
-  const totalUnread = internalUnread + customerUnread;
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
@@ -231,7 +232,11 @@ export default function Sidebar() {
                     item={item}
                     collapsed={collapsed}
                     onClick={() => setMobileOpen(false)}
-                    badge={item.path === "/messages" ? totalUnread : 0}
+                    badge={
+                      item.path === "/messages" ? internalUnread :
+                      item.path === "/conversations" ? customerUnread :
+                      0
+                    }
                   />
                 );
               })}

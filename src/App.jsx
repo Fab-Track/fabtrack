@@ -28,6 +28,7 @@ import Settings from '@/pages/Settings';
 import EstimatePage from '@/pages/EstimatePage';
 import Reports from '@/pages/Reports';
 import Messages from '@/pages/Messages';
+import Conversations from '@/pages/Conversations';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -70,6 +71,7 @@ const AuthenticatedApp = () => {
         <Route path="/reports" element={<Reports />} />
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/messages" element={<Messages />} />
+        <Route path="/conversations" element={<Conversations />} />
         <Route path="/customers" element={<Customers />} />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/craftsman" element={<CraftsmanScore />} />
