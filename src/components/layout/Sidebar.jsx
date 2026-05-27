@@ -167,8 +167,14 @@ export default function Sidebar() {
     refetchInterval: 30000,
     enabled: !!user,
   });
+  const { data: customerMessages = [] } = useQuery({
+    queryKey: ["commMessages-sidebar-unread"],
+    queryFn: () => base44.entities.CommMessage.list("-created_date", 200),
+    refetchInterval: 30000,
+    enabled: !!user,
+  });
   const userId = user?.id || user?.email || "";
-  const totalUnread = channels.reduce((acc, ch) => {
+  const internalUnread = channels.reduce((acc, ch) => {
     const membership = memberships.find(m => m.channel_id === ch.id);
     const lastRead = membership?.last_read_at ? new Date(membership.last_read_at) : new Date(0);
     const unread = recentMessages.filter(m =>
@@ -176,6 +182,20 @@ export default function Sidebar() {
     ).length;
     return acc + unread;
   }, 0);
+  // Count inbound customer messages that have no subsequent outbound reply
+  const sortedCustomerMsgs = [...customerMessages].sort((a, b) =>
+    ((a.sent_at || a.created_date) || "").localeCompare((b.sent_at || b.created_date) || "")
+  );
+  const customerUnread = sortedCustomerMsgs.filter(m => {
+    if (m.direction !== "inbound") return false;
+    const inTime = new Date(m.sent_at || m.created_date);
+    return !sortedCustomerMsgs.find(out =>
+      out.direction !== "inbound" &&
+      out.customer_id === m.customer_id &&
+      new Date(out.sent_at || out.created_date) > inTime
+    );
+  }).length;
+  const totalUnread = internalUnread + customerUnread;
 
   const sidebarContent = (
     <div className="flex flex-col h-full">

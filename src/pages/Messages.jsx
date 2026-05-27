@@ -1,20 +1,26 @@
 import React, { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
-import { canAccessChannel, PERMANENT_CHANNELS } from "@/lib/messagingHelpers";
+import { canAccessChannel } from "@/lib/messagingHelpers";
 import ChannelList from "@/components/messaging/ChannelList";
 import MessageThread from "@/components/messaging/MessageThread";
 import NewChannelDialog from "@/components/messaging/NewChannelDialog";
+import CustomerConversationList from "@/components/messaging/CustomerConversationList";
+import CustomerConversationPanel from "@/components/messaging/CustomerConversationPanel";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Messages() {
   const { user } = useAuth();
+
+  // Which "mode" is selected: "channel" or "customer"
+  const [selectedMode, setSelectedMode] = useState("channel");
   const [selectedChannel, setSelectedChannel] = useState(null);
+  const [selectedCustomerConv, setSelectedCustomerConv] = useState(null);
+
   const [mobileView, setMobileView] = useState("list"); // "list" | "thread"
   const [showArchived, setShowArchived] = useState(false);
   const [showNewChannel, setShowNewChannel] = useState(false);
-  const queryClient = useQueryClient();
 
   // Ensure permanent channels exist on load
   useEffect(() => {
@@ -57,10 +63,15 @@ export default function Messages() {
     if (unread > 0) unreadCounts[ch.id] = unread;
   });
 
-  const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
-
   const handleSelectChannel = (ch) => {
     setSelectedChannel(ch);
+    setSelectedMode("channel");
+    setMobileView("thread");
+  };
+
+  const handleSelectCustomer = (conv) => {
+    setSelectedCustomerConv(conv);
+    setSelectedMode("customer");
     setMobileView("thread");
   };
 
@@ -68,43 +79,65 @@ export default function Messages() {
     return (
       <div className="p-6 space-y-3">
         <Skeleton className="h-8 w-40" />
-        {[1,2,3,4].map(i => <Skeleton key={i} className="h-14 rounded-xl" />)}
+        {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-14 rounded-xl" />)}
       </div>
     );
   }
 
   return (
     <div className="h-[calc(100vh-56px)] md:h-screen flex overflow-hidden">
-      {/* Left panel — channel list */}
+      {/* Left panel — split into Team + Customers */}
       <div className={`
         ${mobileView === "thread" ? "hidden" : "flex"} md:flex
         w-full md:w-72 lg:w-80 flex-col shrink-0
-        border-r bg-card
+        border-r bg-card overflow-hidden
       `}>
-        <ChannelList
-          channels={channels}
-          memberships={memberships}
-          selectedId={selectedChannel?.id}
-          onSelect={handleSelectChannel}
-          user={user}
-          unreadCounts={unreadCounts}
-          onNewChannel={() => setShowNewChannel(true)}
-          showArchived={showArchived}
-          onToggleArchived={() => setShowArchived(v => !v)}
-        />
+        {/* TEAM section */}
+        <div className="shrink-0 flex flex-col" style={{ maxHeight: "55%" }}>
+          <ChannelList
+            channels={channels}
+            memberships={memberships}
+            selectedId={selectedMode === "channel" ? selectedChannel?.id : null}
+            onSelect={handleSelectChannel}
+            user={user}
+            unreadCounts={unreadCounts}
+            onNewChannel={() => setShowNewChannel(true)}
+            showArchived={showArchived}
+            onToggleArchived={() => setShowArchived(v => !v)}
+          />
+        </div>
+
+        {/* Divider */}
+        <div className="border-t shrink-0" />
+
+        {/* CUSTOMERS section */}
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+          <CustomerConversationList
+            selectedCustomerId={selectedMode === "customer" ? selectedCustomerConv?.customerId : null}
+            onSelect={handleSelectCustomer}
+          />
+        </div>
       </div>
 
-      {/* Right panel — message thread */}
+      {/* Right panel */}
       <div className={`
         ${mobileView === "list" ? "hidden" : "flex"} md:flex
         flex-1 flex-col overflow-hidden
       `}>
-        <MessageThread
-          channel={selectedChannel}
-          currentUser={user}
-          onBack={() => setMobileView("list")}
-          isMobile={mobileView === "thread"}
-        />
+        {selectedMode === "channel" ? (
+          <MessageThread
+            channel={selectedChannel}
+            currentUser={user}
+            onBack={() => setMobileView("list")}
+            isMobile={mobileView === "thread"}
+          />
+        ) : (
+          <CustomerConversationPanel
+            customer={selectedCustomerConv?.customer}
+            isMobile={mobileView === "thread"}
+            onBack={() => setMobileView("list")}
+          />
+        )}
       </div>
 
       {showNewChannel && (
