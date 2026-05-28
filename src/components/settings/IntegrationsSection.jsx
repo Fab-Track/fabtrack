@@ -8,6 +8,7 @@ import { Phone, Mail, CheckCircle2, AlertCircle, Circle, ExternalLink, Eye, EyeO
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import TwilioPhoneNumbersTable from "./TwilioPhoneNumbersTable";
+import GmailAccountsTable from "./GmailAccountsTable";
 
 function StatusDot({ status }) {
   if (status === "connected") return <Badge className="gap-1 bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="w-3 h-3" />Connected</Badge>;
@@ -118,6 +119,24 @@ export default function IntegrationsSection() {
 
       {/* Phone Numbers Table */}
       <TwilioPhoneNumbersTable />
+
+      <Separator />
+
+      {/* Gmail / Google Workspace */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center">
+            <Mail className="w-5 h-5 text-red-500" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-sm">Gmail / Google Workspace</h3>
+            <p className="text-xs text-muted-foreground">
+              Connect each team member's HCMW Gmail so FabTrack can send emails on their behalf
+            </p>
+          </div>
+        </div>
+        <GmailAccountsTable />
+      </div>
 
       <Separator />
 

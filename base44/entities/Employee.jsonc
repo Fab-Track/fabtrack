@@ -183,6 +183,29 @@
     "assigned_sms_number": {
       "type": "string",
       "description": "Assigned Twilio phone number in E.164 format for outgoing SMS"
+    },
+    "assigned_comm_email": {
+      "type": "string",
+      "description": "Assigned HCMW email address for outgoing email (e.g. connor@highcountrymetalworks.com)"
+    },
+    "gmail_connected": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this employee's Gmail account is connected via OAuth"
+    },
+    "gmail_connected_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When Gmail was last successfully authorized"
+    },
+    "gmail_token_status": {
+      "type": "string",
+      "enum": [
+        "connected",
+        "expired",
+        "disconnected"
+      ],
+      "description": "Current status of the Gmail OAuth token"
     }
   },
   "required": [

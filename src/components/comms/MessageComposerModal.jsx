@@ -35,7 +35,36 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
     enabled: open,
   });
 
-  const { myEmployee, myAssignedNumber, mainNumber, numbersWithEmployees } = useAssignedSmsNumber(user?.email, open);
+  const { myEmployee, myAssignedNumber, mainNumber, numbersWithEmployees, allEmployees } = useAssignedSmsNumber(user?.email, open);
+
+  // Email send-as state
+  const [sendAsEmailId, setSendAsEmailId] = useState(null); // null = use my email
+
+  const DEFAULT_EMAIL = "info@highcountrymetalworks.com";
+  const EMAIL_ROLES = ["owner", "estimator", "shop_manager", "admin", "accountant"];
+
+  // All employees with an assigned email (for owner "send as" dropdown)
+  const emailEmployees = (allEmployees || []).filter(e =>
+    e.assigned_comm_email && EMAIL_ROLES.includes(e.role?.toLowerCase() || "")
+  );
+
+  const sendAsEmailEmployee = sendAsEmailId
+    ? emailEmployees.find(e => e.id === sendAsEmailId)
+    : null;
+
+  const myCommEmail = myEmployee?.assigned_comm_email || "";
+  const myGmailConnected = myEmployee?.gmail_connected && myEmployee?.gmail_token_status === "connected";
+
+  const effectiveFromEmail = sendAsEmailEmployee?.assigned_comm_email
+    || myCommEmail
+    || DEFAULT_EMAIL;
+
+  const effectiveFromEmailName = sendAsEmailEmployee
+    ? (sendAsEmailEmployee.preferred_name || sendAsEmailEmployee.name)
+    : (myEmployee?.preferred_name || myEmployee?.name || user?.full_name || "");
+
+  const usingEmailFallback = !myCommEmail || !myGmailConnected;
+  const sendingEmailAsOtherUser = !!sendAsEmailEmployee && sendAsEmailEmployee.id !== myEmployee?.id;
 
   // "Send As" state — defaults to current user's number; owner can change
   const [sendAsNumberId, setSendAsNumberId] = useState(null); // null = use my number
@@ -84,6 +113,7 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
     setFromEmail(myEmployee?.comm_email || myEmployee?.email || "info@highcountrymetalworks.com");
     setFromPhone(appSettings?.twilio_from_number || "");
     setSendAsNumberId(null);
+    setSendAsEmailId(null);
 
     if (prefillMessage) {
       setChannel(prefillMessage.channel || "SMS");
@@ -130,9 +160,13 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
     setSending(true);
     const templateName = templates.find(t => t.id === selectedTemplateId)?.name || null;
 
-    // Use effective from details for SMS
+    // Use effective from details
     const actualFromPhone = channel === "SMS" ? effectiveFromPhone : fromPhone;
-    const actualFromName = channel === "SMS" ? effectiveFromName : fromName;
+    const actualFromName = channel === "SMS" ? effectiveFromName : effectiveFromEmailName;
+    const actualFromEmail = channel === "Email" ? effectiveFromEmail : fromEmail;
+    const actualSentByName = channel === "SMS"
+      ? (sendingAsOtherUser ? (myEmployee?.name || user?.full_name) : null)
+      : (sendingEmailAsOtherUser ? (myEmployee?.name || user?.full_name) : null);
 
     // Create CommMessage record
     const msgRecord = await base44.entities.CommMessage.create({
@@ -147,13 +181,13 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
       to_phone: toPhone,
       to_email: toEmail,
       from_name: actualFromName,
-      from_email: fromEmail,
+      from_email: actualFromEmail,
       from_phone: actualFromPhone,
       subject,
       body,
       template_id: selectedTemplateId || null,
       template_name: templateName,
-      sent_by_name: sendingAsOtherUser ? (myEmployee?.name || user?.full_name) : null,
+      sent_by_name: actualSentByName,
       queued_at: new Date().toISOString(),
     });
 
@@ -165,7 +199,7 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
         to_phone: toPhone,
         to_email: toEmail,
         from_phone: actualFromPhone,
-        from_email: fromEmail,
+        from_email: actualFromEmail,
         from_name: actualFromName,
         subject,
         message_body: body,
@@ -289,16 +323,54 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
               )}
             </div>
           ) : (
-            /* Email From */
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">From</Label>
-                <Input className="h-8 text-sm" value={fromName} onChange={e => setFromName(e.target.value)} />
-              </div>
-              <div>
-                <Label className="text-xs">From Email</Label>
-                <Input className="h-8 text-sm" value={fromEmail} onChange={e => setFromEmail(e.target.value)} />
-              </div>
+            /* Email From — smart display, mirrors SMS */
+            <div className="space-y-1.5">
+              {isOwner && emailEmployees.length > 1 ? (
+                <div>
+                  <Label className="text-xs">Send As</Label>
+                  <Select
+                    value={sendAsEmailId || "mine"}
+                    onValueChange={val => setSendAsEmailId(val === "mine" ? null : val)}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mine">
+                        {myCommEmail
+                          ? `${effectiveFromEmailName} — ${myCommEmail}`
+                          : `${effectiveFromEmailName} — ${DEFAULT_EMAIL} (default)`}
+                      </SelectItem>
+                      {emailEmployees
+                        .filter(e => e.id !== myEmployee?.id)
+                        .map(e => (
+                          <SelectItem key={e.id} value={e.id}>
+                            {e.preferred_name || e.name} — {e.assigned_comm_email}
+                          </SelectItem>
+                        ))}
+                      <SelectItem value="default">Default — {DEFAULT_EMAIL}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {sendingEmailAsOtherUser && (
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Will be logged as: "Sent by {myEmployee?.name || user?.full_name} as {effectiveFromEmailName}"
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${usingEmailFallback ? "bg-amber-50 border border-amber-200" : "bg-muted/40"}`}>
+                  {usingEmailFallback
+                    ? <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    : <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />}
+                  <span className={usingEmailFallback ? "text-amber-800" : "text-foreground"}>
+                    Sending from: <strong>{effectiveFromEmail}</strong>
+                    {usingEmailFallback && " — Main"}
+                  </span>
+                  {usingEmailFallback && (
+                    <a href="/settings" className="ml-auto text-xs text-amber-600 underline shrink-0">Connect email</a>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

@@ -45,6 +45,7 @@ export function useAssignedSmsNumber(userEmail, enabled = true) {
     mainNumber,
     numbersWithEmployees,
     allPhoneNumbers: phoneNumbers,
+    allEmployees: employees,
   };
 }
 

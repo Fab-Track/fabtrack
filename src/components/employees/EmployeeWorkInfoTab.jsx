@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Save } from "lucide-react";
 import EmployeeSMSNumberSection from "./EmployeeSMSNumberSection";
+import EmployeeEmailSection from "./EmployeeEmailSection";
 import { Separator } from "@/components/ui/separator";
 
 const ROLES = ["welder","fitter","cutter","installer","foreman","admin","grinder","estimator","design_specialist","accountant","owner"];
@@ -125,6 +126,11 @@ export default function EmployeeWorkInfoTab({ employee, canEdit, canSeeRate }) {
 
       {/* SMS Number Assignment — only for roles with SMS capability */}
       <EmployeeSMSNumberSection employee={employee} canEdit={canEdit} />
+
+      <Separator />
+
+      {/* Email Assignment — only for roles with email capability */}
+      <EmployeeEmailSection employee={employee} canEdit={canEdit} />
     </div>
   );
 }
