@@ -59,6 +59,15 @@
       ],
       "default": "Unpaid"
     },
+    "view_mode": {
+      "type": "string",
+      "enum": [
+        "summary",
+        "detail"
+      ],
+      "default": "detail",
+      "description": "Whether to show full line-item breakdown or summary view to customer"
+    },
     "line_items": {
       "type": "array",
       "items": {
@@ -81,6 +90,18 @@
           },
           "total": {
             "type": "number"
+          },
+          "_est_line_idx": {
+            "type": "number",
+            "description": "Source estimate line index for invoicing tracking"
+          },
+          "_invoiced_amount": {
+            "type": "number",
+            "description": "Amount invoiced for this line"
+          },
+          "_co_id": {
+            "type": "string",
+            "description": "Source change order ID"
           }
         }
       }

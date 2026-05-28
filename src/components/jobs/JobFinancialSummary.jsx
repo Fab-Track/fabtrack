@@ -17,7 +17,7 @@ export default function JobFinancialSummary({ job, estimates, invoices, changeOr
   const qc = useQueryClient();
 
   const approvedEstimate = estimates.find(e => e.status === "Approved");
-  const estimateTotal = approvedEstimate?.total || job.estimate_total || 0;
+  const estimateTotal = approvedEstimate?.total || 0;
 
   const approvedCOs = (changeOrders || []).filter(co => co.status === "Approved");
   const coTotal = approvedCOs.reduce((s, co) => s + (co.cost_impact || 0), 0);
@@ -25,7 +25,7 @@ export default function JobFinancialSummary({ job, estimates, invoices, changeOr
 
   const totalInvoiced = (invoices || []).reduce((s, inv) => s + (inv.total || 0), 0);
   const totalCollected = (invoices || []).reduce((s, inv) => s + (inv.amount_paid || 0), 0);
-  const balanceRemaining = totalInvoiced - totalCollected;
+  const balanceRemaining = revisedTotal - totalCollected;
 
   const markPaid = useMutation({
     mutationFn: async (inv) => {
@@ -81,6 +81,11 @@ export default function JobFinancialSummary({ job, estimates, invoices, changeOr
           <DollarSign className="w-4 h-4 text-muted-foreground" />
           <h3 className="font-semibold text-sm">Financial Summary</h3>
         </div>
+        {!approvedEstimate && (
+          <p className="text-xs text-muted-foreground mb-4 italic">
+            No approved estimate yet — create an estimate to begin billing
+          </p>
+        )}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <SummaryItem label="Approved Estimate" value={estimateTotal} />
           <SummaryItem label="Change Orders" value={coTotal} signed />

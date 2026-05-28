@@ -2,8 +2,15 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Wrench, FileText, CheckSquare } from "lucide-react";
+import JobScopeSection from "@/components/jobs/JobScopeSection";
+import { useAuth } from "@/lib/AuthContext";
+import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 
 export default function JobOverviewTab({ job }) {
+  const { user } = useAuth();
+  const effectiveRole = useEffectiveRole(user?.role || "admin");
+  const isFabricator = effectiveRole.toLowerCase() === "fabricator";
+
   return (
     <div className="grid md:grid-cols-2 gap-4">
       <Card>
@@ -74,7 +81,7 @@ export default function JobOverviewTab({ job }) {
         </CardContent>
       </Card>
 
-      {job.internal_notes && (
+      {job.internal_notes && !isFabricator && (
         <Card className="md:col-span-2">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold">Internal Notes</CardTitle>
@@ -84,6 +91,11 @@ export default function JobOverviewTab({ job }) {
           </CardContent>
         </Card>
       )}
+
+      {/* Scope — visible to all roles including fabricators */}
+      <div className="md:col-span-2">
+        <JobScopeSection job={job} isFabricator={isFabricator} />
+      </div>
     </div>
   );
 }

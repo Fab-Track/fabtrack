@@ -11,7 +11,6 @@ import InvoiceEditor from "@/components/documents/InvoiceEditor";
 import ChangeOrderEditor from "@/components/documents/ChangeOrderEditor";
 import JobFinancialSummary from "@/components/jobs/JobFinancialSummary";
 import RailingCalculatorModal from "@/components/estimates/RailingCalculatorModal";
-import JobServicesSection from "@/components/jobs/JobServicesSection";
 import NewInvoiceFlow from "@/components/invoices/NewInvoiceFlow";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -76,17 +75,12 @@ export default function JobDocumentsTab({ job }) {
   const [railingPromptOpen, setRailingPromptOpen] = useState(false);
   const [railingCalcOpen, setRailingCalcOpen] = useState(false);
 
-  const { data: services = [], refetch: refetchServices } = useQuery({
-    queryKey: ["services", job.id],
-    queryFn: () => base44.entities.JobService.filter({ job_id: job.id }, "sort_order"),
-  });
-
   const { data: estimates = [] } = useQuery({
     queryKey: ["estimates", job.id],
     queryFn: () => base44.entities.Estimate.filter({ job_id: job.id }),
   });
 
-  const { data: invoices = [], refetch: refetchInvoices } = useQuery({
+  const { data: invoices = [] } = useQuery({
     queryKey: ["invoices", job.id],
     queryFn: () => base44.entities.Invoice.filter({ job_id: job.id }),
   });
@@ -127,27 +121,7 @@ export default function JobDocumentsTab({ job }) {
     setInvoiceOpen(true);
   }
 
-  async function handleNewInvoiceConfirm({ invoiceType, lineItems, selectedAmounts }) {
-    // Mark services as invoiced
-    const updates = Object.entries(selectedAmounts)
-      .filter(([, v]) => v.checked && v.amount > 0)
-      .map(([id, v]) => {
-        const svc = services.find(s => s.id === id);
-        if (!svc) return null;
-        const newInvoiced = (svc.invoiced_amount || 0) + v.amount;
-        const newStatus = newInvoiced >= (svc.total_price || 0) - 0.01
-          ? "Fully Invoiced"
-          : "Partially Invoiced";
-        return base44.entities.JobService.update(id, {
-          invoiced_amount: newInvoiced,
-          status: newStatus,
-        });
-      })
-      .filter(Boolean);
-
-    await Promise.all(updates);
-    qc.invalidateQueries(["services", job.id]);
-
+  function handleNewInvoiceConfirm({ invoiceType, lineItems }) {
     openInvoice(null, { invoice_type: invoiceType, line_items: lineItems });
   }
 
@@ -170,22 +144,13 @@ export default function JobDocumentsTab({ job }) {
 
   return (
     <div className="space-y-6">
-      {/* Financial Summary always at top when invoices exist */}
-      {(invoices.length > 0 || approvedEstimate) && (
-        <JobFinancialSummary
-          job={job}
-          estimates={estimates}
-          invoices={invoices}
-          changeOrders={changeOrders}
-          onInvoiceClick={(inv) => openInvoice(inv)}
-        />
-      )}
-
-      {/* ── SERVICES ──────────────────────────────────────────────── */}
-      <JobServicesSection
+      {/* Financial Summary — always visible */}
+      <JobFinancialSummary
         job={job}
-        services={services}
-        onServicesChange={() => qc.invalidateQueries(["services", job.id])}
+        estimates={estimates}
+        invoices={invoices}
+        changeOrders={changeOrders}
+        onInvoiceClick={(inv) => openInvoice(inv)}
       />
 
       {/* ── ESTIMATES ─────────────────────────────────────────────── */}
@@ -331,7 +296,9 @@ export default function JobDocumentsTab({ job }) {
       <NewInvoiceFlow
         open={newInvoiceFlowOpen}
         onClose={() => setNewInvoiceFlowOpen(false)}
-        services={services}
+        approvedEstimate={approvedEstimate}
+        approvedChangeOrders={approvedCOs}
+        existingInvoices={invoices}
         onConfirm={handleNewInvoiceConfirm}
       />
 

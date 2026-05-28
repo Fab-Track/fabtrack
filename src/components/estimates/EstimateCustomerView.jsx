@@ -22,10 +22,9 @@ export default function EstimateCustomerView({ estimate, job, customer, business
   const taxAmt = afterOverhead * ((estimate?.tax_percent || 0) / 100);
   const total = afterOverhead + taxAmt;
 
-  // Summary view: group by description (one line per item)
-  const displayLines = viewMode === "summary"
-    ? lines.map(l => ({ description: l.description, install_location: l.install_location, total: l.total }))
-    : lines;
+  // Summary view: one row per line item — description, qty/unit, location, total (no unit cost)
+  // Detail view: full breakdown with qty, unit cost, total
+  const displayLines = lines;
 
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-xl border shadow-sm overflow-hidden">
@@ -79,29 +78,49 @@ export default function EstimateCustomerView({ estimate, job, customer, business
 
         {/* Line Items */}
         <div>
-          <div className="grid text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 pb-1 border-b"
-            style={{ gridTemplateColumns: viewMode === "detail" ? "3fr 1.5fr 0.7fr 1fr 1fr" : "3fr 1.5fr 1fr" }}>
-            <span>Description</span>
-            <span>Location</span>
-            {viewMode === "detail" && <><span className="text-right">Qty</span><span className="text-right">Unit Cost</span></>}
-            <span className="text-right">Amount</span>
-          </div>
-          <div className="divide-y">
-            {displayLines.map((line, i) => (
-              <div key={i} className="py-2.5 grid text-sm"
-                style={{ gridTemplateColumns: viewMode === "detail" ? "3fr 1.5fr 0.7fr 1fr 1fr" : "3fr 1.5fr 1fr" }}>
-                <span>{line.description || "—"}</span>
-                <span className="text-muted-foreground text-xs">{line.install_location !== "N/A" ? line.install_location : ""}</span>
-                {viewMode === "detail" && (
-                  <>
-                    <span className="text-right text-muted-foreground">{line.quantity}</span>
-                    <span className="text-right text-muted-foreground">${(line.unit_cost || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                  </>
-                )}
-                <span className="text-right font-medium">${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+          {viewMode === "summary" ? (
+            <>
+              <div className="grid text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 pb-1 border-b"
+                style={{ gridTemplateColumns: "3fr 1.5fr 0.7fr 1fr" }}>
+                <span>Description</span>
+                <span>Location</span>
+                <span className="text-right">Qty / Unit</span>
+                <span className="text-right">Amount</span>
               </div>
-            ))}
-          </div>
+              <div className="divide-y">
+                {displayLines.map((line, i) => (
+                  <div key={i} className="py-2.5 grid text-sm" style={{ gridTemplateColumns: "3fr 1.5fr 0.7fr 1fr" }}>
+                    <span>{line.description || "—"}</span>
+                    <span className="text-muted-foreground text-xs">{line.install_location !== "N/A" ? line.install_location : ""}</span>
+                    <span className="text-right text-muted-foreground text-xs">{line.quantity} {line.unit}</span>
+                    <span className="text-right font-medium">${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 pb-1 border-b"
+                style={{ gridTemplateColumns: "3fr 1.5fr 0.7fr 1fr 1fr" }}>
+                <span>Description</span>
+                <span>Location</span>
+                <span className="text-right">Qty</span>
+                <span className="text-right">Unit Cost</span>
+                <span className="text-right">Amount</span>
+              </div>
+              <div className="divide-y">
+                {displayLines.map((line, i) => (
+                  <div key={i} className="py-2.5 grid text-sm" style={{ gridTemplateColumns: "3fr 1.5fr 0.7fr 1fr 1fr" }}>
+                    <span>{line.description || "—"}</span>
+                    <span className="text-muted-foreground text-xs">{line.install_location !== "N/A" ? line.install_location : ""}</span>
+                    <span className="text-right text-muted-foreground">{line.quantity} {line.unit}</span>
+                    <span className="text-right text-muted-foreground">${(line.unit_cost || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                    <span className="text-right font-medium">${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         <Separator />

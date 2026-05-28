@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, AlignJustify, LayoutList } from "lucide-react";
 import { toast } from "sonner";
 import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
 import { buildStageTransition } from "@/lib/pipelineHelpers";
@@ -49,6 +49,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
   const [amountPaid, setAmountPaid] = useState(invoice?.amount_paid || 0);
   const [notes, setNotes] = useState(prefill?.notes || invoice?.notes || "");
   const [internalNotes, setInternalNotes] = useState(invoice?.internal_notes || "");
+  const [viewMode, setViewMode] = useState(invoice?.view_mode || "detail");
   const [issuedDate, setIssuedDate] = useState(invoice?.issued_date || new Date().toISOString().split("T")[0]);
   const [dueDate, setDueDate] = useState(() => {
     if (invoice?.due_date) return invoice.due_date;
@@ -119,8 +120,8 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
         ...(depositModifier ? { deposit_modifier: depositModifier } : {}),
       };
       return isNew
-        ? base44.entities.Invoice.create(payload)
-        : base44.entities.Invoice.update(invoice.id, payload);
+        ? base44.entities.Invoice.create({ ...payload, view_mode: viewMode })
+        : base44.entities.Invoice.update(invoice.id, { ...payload, view_mode: viewMode });
     },
     onSuccess: async () => {
       const prevStatus = invoice?.status || "Unpaid";
@@ -186,6 +187,21 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
               {["Unpaid", "Partial", "Paid", "Overdue"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </SelectContent>
           </Select>
+          {/* Summary / Detail toggle */}
+          <div className="flex items-center border rounded-md overflow-hidden h-8">
+            <button
+              className={`px-2.5 h-full text-xs flex items-center gap-1 transition-colors ${viewMode === "summary" ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"}`}
+              onClick={() => setViewMode("summary")}
+            >
+              <AlignJustify className="w-3 h-3" /> Summary
+            </button>
+            <button
+              className={`px-2.5 h-full text-xs flex items-center gap-1 transition-colors ${viewMode === "detail" ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"}`}
+              onClick={() => setViewMode("detail")}
+            >
+              <LayoutList className="w-3 h-3" /> Detail
+            </button>
+          </div>
           <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
             {save.isPending ? "Saving…" : isNew ? "Create Invoice" : "Save Changes"}
           </Button>
@@ -194,6 +210,13 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        {/* View mode banner */}
+        {viewMode === "summary" && (
+          <div className="mx-5 mt-4 px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
+            <strong>Summary View active</strong> — Customer sees one line per item (description, qty, total). Switch to Detail to show full unit cost breakdown.
+          </div>
+        )}
+
         {/* Already invoiced context */}
         {alreadyInvoiced > 0 && (
           <div className="mx-5 mt-4 bg-muted/40 rounded-lg px-4 py-2 text-xs text-muted-foreground flex justify-between">
