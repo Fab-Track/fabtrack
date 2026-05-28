@@ -1,9 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Users, Paintbrush } from "lucide-react";
+import { CalendarDays, Users, Paintbrush, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { getJobHealth, getHealthBorder } from "@/lib/jobHelpers";
 import { Link } from "react-router-dom";
+import DeleteJobModal from "@/components/jobs/DeleteJobModal";
+import { useAuth } from "@/lib/AuthContext";
+import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 
 const PRODUCT_BADGE_COLORS = {
   Railing:      "bg-blue-100 text-blue-800 border-blue-200",
@@ -38,15 +42,43 @@ function ProductBadges({ instances }) {
 
 export default function JobCard({ job, isDragging }) {
   const health = getJobHealth(job);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const { user } = useAuth();
+  const effectiveRole = useEffectiveRole(user?.role || "admin");
+  const isOwner = effectiveRole.toLowerCase() === "owner";
+  const canDelete = isOwner;
 
   return (
+    <>
     <Link
       to={`/jobs/${job.id}`}
       className={`block bg-card rounded-lg border border-l-4 ${getHealthBorder(health)} p-3 hover:shadow-md transition-all cursor-pointer ${isDragging ? 'shadow-lg ring-2 ring-accent/50' : ''}`}
     >
       <div className="flex items-start justify-between mb-1.5">
         <span className="text-xs font-mono text-muted-foreground">{job.job_number}</span>
-        <ProductBadges instances={job.product_instances} />
+        <div className="flex items-center gap-1">
+          <ProductBadges instances={job.product_instances} />
+          {canDelete && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="p-0.5 rounded hover:bg-muted text-muted-foreground ml-1"
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); }}
+                >
+                  <MoreHorizontal className="w-3.5 h-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }}
+                >
+                  Delete Job
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
 
       <h4 className="text-sm font-semibold leading-tight mb-1 line-clamp-2">{job.job_name}</h4>
@@ -73,5 +105,13 @@ export default function JobCard({ job, isDragging }) {
         )}
       </div>
     </Link>
+
+    <DeleteJobModal
+      open={deleteOpen}
+      onClose={() => setDeleteOpen(false)}
+      job={job}
+      onDeleted={() => setDeleteOpen(false)}
+    />
+    </>
   );
 }

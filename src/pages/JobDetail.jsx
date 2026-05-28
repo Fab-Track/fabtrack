@@ -9,7 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { STATUS_COLORS, getJobHealth, getHealthDot } from "@/lib/jobHelpers";
 import { format, parseISO } from "date-fns";
-import { ArrowLeft, CalendarDays, MapPin, Paintbrush, Send } from "lucide-react";
+import { ArrowLeft, CalendarDays, MapPin, Paintbrush, Send, MoreHorizontal, Trash2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import DeleteJobModal from "@/components/jobs/DeleteJobModal";
 
 const PRODUCT_BADGE_COLORS = {
   Railing:      "bg-blue-100 text-blue-800 border-blue-200",
@@ -20,7 +22,7 @@ const PRODUCT_BADGE_COLORS = {
   "Planter Box":"bg-lime-100 text-lime-800 border-lime-200",
   "Chimney Cap":"bg-orange-100 text-orange-800 border-orange-200",
 };
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import JobOverviewTab from "@/components/jobs/JobOverviewTab";
 import JobShopLogTab from "@/components/jobs/JobShopLogTab";
 import JobCostingTab from "@/components/jobs/JobCostingTab";
@@ -39,8 +41,12 @@ export default function JobDetail() {
   const effectiveRole = useEffectiveRole(user?.role || "admin");
   const isFabricator = effectiveRole.toLowerCase() === "fabricator";
   const isAccountant = effectiveRole.toLowerCase() === "accountant";
+  const isOwner = effectiveRole.toLowerCase() === "owner";
+  const isEstimator = effectiveRole.toLowerCase() === "estimator";
   const [composerOpen, setComposerOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const fromParam = searchParams.get("from");
   const fromSchedule = fromParam === "schedule";
   const fromBilling = fromParam === "billing";
@@ -92,6 +98,8 @@ export default function JobDetail() {
   }
 
   const health = getJobHealth(job);
+  // Re-check canDelete after job is loaded
+  const canDeleteJob = isOwner || (isEstimator && job?.stage && ["New Lead", "Estimate In Progress"].includes(job?.stage));
 
   return (
     <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
@@ -119,6 +127,9 @@ export default function JobDetail() {
               ) : (
                 <Badge className={STATUS_COLORS[job.status]}>{job.status}</Badge>
               )}
+              {job.is_lead_closed && (
+                <Badge variant="outline" className="text-xs border-muted-foreground/40 text-muted-foreground">Closed</Badge>
+              )}
               {job.product_instances?.length > 0 && (
                 [...new Set(job.product_instances.map(i => i.product_type).filter(Boolean))].map(t => (
                   <span key={t} className={`text-xs px-2 py-0.5 rounded border font-medium ${PRODUCT_BADGE_COLORS[t] || "bg-muted text-muted-foreground border-border"}`}>
@@ -128,15 +139,49 @@ export default function JobDetail() {
               )}
             </div>
             <h1 className="text-xl font-bold">{job.job_name}</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">{job.customer_name}</p>
+            {/* Prominent customer display */}
+            {job.customer_name && (
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-xs font-medium text-muted-foreground">Customer:</span>
+                {job.customer_id ? (
+                  <Link
+                    to={`/customers?id=${job.customer_id}`}
+                    className="text-sm font-semibold text-accent hover:underline"
+                  >
+                    {job.customer_name}
+                  </Link>
+                ) : (
+                  <span className="text-sm font-semibold">{job.customer_name}</span>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex flex-col items-end gap-3">
-            {/* Send Message button */}
-            {!isFabricator && !isAccountant && (
-              <Button size="sm" onClick={() => setComposerOpen(true)} className="gap-1.5 shrink-0">
-                <Send className="w-3.5 h-3.5" /> Send Message
-              </Button>
-            )}
+            {/* Action buttons row */}
+            <div className="flex items-center gap-2">
+              {!isFabricator && !isAccountant && (
+                <Button size="sm" onClick={() => setComposerOpen(true)} className="gap-1.5 shrink-0">
+                  <Send className="w-3.5 h-3.5" /> Send Message
+                </Button>
+              )}
+              {canDeleteJob && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" className="h-9 w-9 shrink-0">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => setDeleteOpen(true)}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" /> Delete Job
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
             {job.expected_install_date && (
               <div className="flex items-center gap-1.5">
@@ -254,6 +299,13 @@ export default function JobDetail() {
         open={composerOpen}
         onClose={() => setComposerOpen(false)}
         job={job}
+      />
+
+      <DeleteJobModal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        job={job}
+        onDeleted={() => navigate("/jobs")}
       />
     </div>
   );

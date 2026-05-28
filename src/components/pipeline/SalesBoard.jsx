@@ -6,8 +6,13 @@ import { SALES_STAGES, SALES_COLORS, daysInStage, buildStageTransition } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Clock, DollarSign, AlertTriangle } from "lucide-react";
+import { Clock, DollarSign, AlertTriangle, MoreHorizontal, X } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import StageTransitionDialog from "./StageTransitionDialog";
+import CloseLeadModal from "@/components/jobs/CloseLeadModal";
+import DeleteJobModal from "@/components/jobs/DeleteJobModal";
+import { useAuth } from "@/lib/AuthContext";
+import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 import { differenceInDays, parseISO } from "date-fns";
 
 const EST_PILL = {
@@ -18,7 +23,7 @@ const EST_PILL = {
 };
 
 // ── Sales Card ─────────────────────────────────────────────────────────────────
-function SalesCard({ job, isDragging, onPromote, estimates = [] }) {
+function SalesCard({ job, isDragging, onPromote, estimates = [], onCloseLead, onDeleteJob, canDelete }) {
   const days = daysInStage(job);
   const isStale = days > 7 && job.stage !== "Deposit Received / Sale Won";
 
@@ -34,10 +39,34 @@ function SalesCard({ job, isDragging, onPromote, estimates = [] }) {
     && differenceInDays(new Date(), parseISO(latestEst.created_date)) > 7;
 
   return (
-    <div className={`bg-card rounded-lg border p-3 hover:shadow-md transition-all ${isDragging ? "shadow-lg ring-2 ring-accent/50" : ""}`}>
+    <div className={`bg-card rounded-lg border p-3 hover:shadow-md transition-all ${isDragging ? "shadow-lg ring-2 ring-accent/50" : ""} ${job.is_lead_closed ? "opacity-50" : ""}`}>
       <div className="flex items-start justify-between mb-1">
         <span className="text-[10px] font-mono text-muted-foreground">{job.job_number}</span>
-        {job.job_type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.job_type}</Badge>}
+        <div className="flex items-center gap-1">
+          {job.job_type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.job_type}</Badge>}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-0.5 rounded hover:bg-muted text-muted-foreground" onClick={e => e.preventDefault()}>
+                <MoreHorizontal className="w-3.5 h-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="text-sm">
+              {!job.is_lead_closed && (
+                <DropdownMenuItem onClick={e => { e.preventDefault(); onCloseLead(job); }}>
+                  <X className="w-3.5 h-3.5 mr-2" /> Close Lead
+                </DropdownMenuItem>
+              )}
+              {canDelete && (
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={e => { e.preventDefault(); onDeleteJob(job); }}
+                >
+                  Delete Job
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
       <Link to={`/jobs/${job.id}`}>
         <h4 className="text-sm font-semibold leading-tight mb-0.5 line-clamp-2 hover:text-accent transition-colors">{job.job_name}</h4>
@@ -95,6 +124,18 @@ function SalesCard({ job, isDragging, onPromote, estimates = [] }) {
 export default function SalesBoard({ jobs = [] }) {
   const qc = useQueryClient();
   const [promoting, setPromoting] = useState(null);
+  const [closingLead, setClosingLead] = useState(null);
+  const [deletingJob, setDeletingJob] = useState(null);
+  const [showClosed, setShowClosed] = useState(false);
+  const { user } = useAuth();
+  const effectiveRole = useEffectiveRole(user?.role || "admin");
+  const isOwner = effectiveRole.toLowerCase() === "owner";
+  const isEstimator = effectiveRole.toLowerCase() === "estimator";
+  function canDeleteJob(job) {
+    if (isOwner) return true;
+    if (isEstimator && job?.stage && ["New Lead", "Estimate In Progress"].includes(job?.stage)) return true;
+    return false;
+  }
 
   // Fetch all estimates for jobs on this board to display on cards
   const jobIds = jobs.map(j => j.id);
@@ -110,9 +151,14 @@ export default function SalesBoard({ jobs = [] }) {
     return acc;
   }, {});
 
+  // Split open vs closed leads
+  const openJobs = jobs.filter(j => !j.is_lead_closed);
+  const closedJobs = jobs.filter(j => j.is_lead_closed);
+  const displayJobs = showClosed ? jobs : openJobs;
+
   const columns = {};
   SALES_STAGES.forEach(s => { columns[s] = []; });
-  jobs.forEach(j => {
+  displayJobs.forEach(j => {
     const stage = j.stage || "New Lead";
     if (columns[stage]) columns[stage].push(j);
     else columns["New Lead"].push(j);
@@ -153,6 +199,18 @@ export default function SalesBoard({ jobs = [] }) {
 
   return (
     <>
+      {/* Show Closed toggle */}
+      {closedJobs.length > 0 && (
+        <div className="flex items-center gap-2 mb-2 shrink-0">
+          <button
+            onClick={() => setShowClosed(v => !v)}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${showClosed ? "bg-muted text-foreground border-border" : "text-muted-foreground border-transparent hover:border-border"}`}
+          >
+            <span className="w-3 h-3 rounded-full bg-muted-foreground/40 inline-block" />
+            {showClosed ? "Hide Closed Leads" : `Show Closed Leads (${closedJobs.length})`}
+          </button>
+        </div>
+      )}
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="flex gap-3 overflow-x-auto flex-1 pb-4">
           {SALES_STAGES.map(stage => (
@@ -179,6 +237,9 @@ export default function SalesBoard({ jobs = [] }) {
                               isDragging={snap.isDragging}
                               onPromote={setPromoting}
                               estimates={estimatesByJob[job.id] || []}
+                              onCloseLead={setClosingLead}
+                              onDeleteJob={setDeletingJob}
+                              canDelete={canDeleteJob(job)}
                             />
                           </div>
                         )}
@@ -220,6 +281,19 @@ export default function SalesBoard({ jobs = [] }) {
         confirmLabel="Yes, Move to Shop"
         onConfirm={handlePromoteConfirm}
         isPending={moveMutation.isPending}
+      />
+
+      <CloseLeadModal
+        open={!!closingLead}
+        onClose={() => setClosingLead(null)}
+        job={closingLead}
+      />
+
+      <DeleteJobModal
+        open={!!deletingJob}
+        onClose={() => setDeletingJob(null)}
+        job={deletingJob}
+        onDeleted={() => setDeletingJob(null)}
       />
     </>
   );

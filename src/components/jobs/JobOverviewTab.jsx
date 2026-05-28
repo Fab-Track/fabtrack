@@ -23,6 +23,25 @@ export default function JobOverviewTab({ job }) {
         <CardContent className="space-y-3">
           <DetailRow label="Job Type" value={job.job_type} />
           <DetailRow label="Site Address" value={job.site_address} />
+          {job.lead_outcome && (
+            <DetailRow label="Lead Outcome" value={
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                job.lead_outcome === "Qualified — Won" ? "bg-emerald-100 text-emerald-800" :
+                job.lead_outcome === "Qualified — Lost" ? "bg-red-100 text-red-800" :
+                job.lead_outcome === "Qualified — Not Interested" ? "bg-amber-100 text-amber-800" :
+                "bg-muted text-muted-foreground"
+              }`}>{job.lead_outcome}</span>
+            } />
+          )}
+          {job.lead_lost_to && (
+            <DetailRow label="Lost To" value={job.lead_lost_to} />
+          )}
+          {job.lead_close_reason && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">Close Reason</p>
+              <p className="text-sm text-muted-foreground">{job.lead_close_reason}</p>
+            </div>
+          )}
           <DetailRow label="Customer Approval" value={
             <Badge variant={job.customer_approval_status === "approved" ? "default" : "outline"} className="text-xs">
               {job.customer_approval_status || "pending"}

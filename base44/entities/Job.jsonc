@@ -218,6 +218,34 @@
       "format": "date",
       "description": "Date the 2nd half invoice was sent"
     },
+    "lead_outcome": {
+      "type": "string",
+      "enum": [
+        "Unqualified Lead",
+        "Qualified \u2014 Not Interested",
+        "Qualified \u2014 Lost",
+        "Qualified \u2014 Won"
+      ],
+      "description": "Outcome of the sales lead"
+    },
+    "lead_close_reason": {
+      "type": "string",
+      "description": "Reason the lead closed this way"
+    },
+    "lead_lost_to": {
+      "type": "string",
+      "description": "Competitor or alternative the job was lost to"
+    },
+    "lead_closed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the lead was closed"
+    },
+    "is_lead_closed": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when lead is archived/closed from Sales board"
+    },
     "schedule_phases": {
       "type": "array",
       "description": "Auto-generated production schedule phases",
@@ -263,7 +291,7 @@
     },
     "product_instances": {
       "type": "array",
-      "description": "Per-product structured detail forms (Railing, Gate, Staircase, etc.)",
+      "description": "Per-product structured detail forms",
       "items": {
         "type": "object",
         "properties": {

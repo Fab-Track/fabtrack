@@ -66,9 +66,120 @@ export default function SalesReports() {
     return { category: cat, avgDays: avg !== null ? parseFloat(avg.toFixed(1)) : null, sampleSize: days.length };
   }).filter(d => d.avgDays !== null);
 
+  // ── Lead Outcomes ─────────────────────────────────────────────────────────
+  const closedLeads = jobs.filter(j => j.is_lead_closed || j.lead_outcome);
+  const outcomeCounts = {
+    "Unqualified Lead": 0,
+    "Qualified — Not Interested": 0,
+    "Qualified — Lost": 0,
+    "Qualified — Won": 0,
+  };
+  closedLeads.forEach(j => {
+    if (j.lead_outcome && outcomeCounts[j.lead_outcome] !== undefined) {
+      outcomeCounts[j.lead_outcome]++;
+    }
+  });
+  const outcomeChartData = Object.entries(outcomeCounts).map(([outcome, count]) => ({ outcome: outcome.replace("Qualified — ", ""), count, full: outcome }));
+  const qualifiedWon = outcomeCounts["Qualified — Won"];
+  const qualifiedLost = outcomeCounts["Qualified — Lost"];
+  const qualifiedNotInterested = outcomeCounts["Qualified — Not Interested"];
+  const closeRateDenominator = qualifiedWon + qualifiedLost + qualifiedNotInterested;
+  const closeRate = closeRateDenominator > 0 ? ((qualifiedWon / closeRateDenominator) * 100).toFixed(1) : null;
+
+  // Lost reason frequency
+  const lostReasons = {};
+  closedLeads.filter(j => j.lead_close_reason).forEach(j => {
+    const r = j.lead_close_reason.trim();
+    lostReasons[r] = (lostReasons[r] || 0) + 1;
+  });
+  const lostReasonList = Object.entries(lostReasons).sort((a,b) => b[1]-a[1]);
+
+  // Lost To frequency
+  const lostToMap = {};
+  closedLeads.filter(j => j.lead_lost_to).forEach(j => {
+    const r = j.lead_lost_to.trim();
+    lostToMap[r] = (lostToMap[r] || 0) + 1;
+  });
+  const lostToList = Object.entries(lostToMap).sort((a,b) => b[1]-a[1]);
+
   return (
     <div className="space-y-8">
       <ReportDateFilter onChange={setRange} />
+
+      {/* Lead Outcomes */}
+      <section className="space-y-4">
+        <h2 className="text-base font-semibold">Lead Outcomes</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: "Won", value: qualifiedWon, color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+            { label: "Lost", value: qualifiedLost, color: "text-red-700 bg-red-50 border-red-200" },
+            { label: "Not Interested", value: qualifiedNotInterested, color: "text-amber-700 bg-amber-50 border-amber-200" },
+            { label: "Unqualified", value: outcomeCounts["Unqualified Lead"], color: "text-muted-foreground bg-muted border-border" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className={`rounded-lg border px-4 py-3 ${color}`}>
+              <p className="text-xs font-medium opacity-80">{label}</p>
+              <p className="text-2xl font-bold">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {closeRate !== null && (
+          <div className="flex items-center gap-3 px-4 py-3 bg-card border rounded-lg">
+            <div className="text-3xl font-bold text-emerald-600">{closeRate}%</div>
+            <div>
+              <p className="text-sm font-semibold">Close Rate</p>
+              <p className="text-xs text-muted-foreground">Won ÷ (Won + Lost + Not Interested) — Unqualified leads excluded</p>
+            </div>
+          </div>
+        )}
+
+        {closedLeads.length > 0 && (
+          <div className="h-44">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={outcomeChartData}>
+                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                <XAxis dataKey="outcome" tick={{ fontSize: 11 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Bar dataKey="count" name="Leads" radius={[4,4,0,0]} fill="#6366f1" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {closedLeads.length === 0 && (
+          <p className="text-sm text-center text-muted-foreground py-6">No closed leads yet. Close leads from the Sales Board to track outcomes.</p>
+        )}
+
+        {lostReasonList.length > 0 && (
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <h3 className="text-sm font-semibold mb-2">Most Common Close Reasons</h3>
+              <div className="space-y-1.5">
+                {lostReasonList.slice(0, 8).map(([reason, count]) => (
+                  <div key={reason} className="flex items-center justify-between text-xs border-b pb-1.5">
+                    <span className="text-foreground truncate mr-2">{reason}</span>
+                    <span className="font-semibold text-muted-foreground shrink-0">{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {lostToList.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold mb-2">Lost To (Competitors / Alternatives)</h3>
+                <div className="space-y-1.5">
+                  {lostToList.slice(0, 8).map(([lostTo, count]) => (
+                    <div key={lostTo} className="flex items-center justify-between text-xs border-b pb-1.5">
+                      <span className="text-foreground truncate mr-2">{lostTo}</span>
+                      <span className="font-semibold text-muted-foreground shrink-0">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       {/* Report 1 — Pipeline Summary */}
       <section className="space-y-3">
