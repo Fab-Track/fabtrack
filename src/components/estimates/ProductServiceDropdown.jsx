@@ -33,7 +33,8 @@ export default function ProductServiceDropdown({ value, onChange, onSelect, plac
   function handleSelect(item) {
     setSearch(item.default_description || item.name);
     onChange(item.default_description || item.name);
-    onSelect(item);
+    // Pass full item including photo_url so callers can set show_photo on the line
+    onSelect({ ...item, show_photo: true });
     setOpen(false);
   }
 

@@ -89,11 +89,18 @@ export default function EstimateCustomerView({ estimate, job, customer, business
               </div>
               <div className="divide-y">
                 {displayLines.map((line, i) => (
-                  <div key={i} className="py-2.5 grid text-sm" style={{ gridTemplateColumns: "3fr 1.5fr 0.7fr 1fr" }}>
-                    <span>{line.description || "—"}</span>
-                    <span className="text-muted-foreground text-xs">{line.install_location !== "N/A" ? line.install_location : ""}</span>
-                    <span className="text-right text-muted-foreground text-xs">{line.quantity} {line.unit}</span>
-                    <span className="text-right font-medium">${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                  <div key={i}>
+                    <div className="py-2.5 grid text-sm" style={{ gridTemplateColumns: "3fr 1.5fr 0.7fr 1fr" }}>
+                      <span>{line.description || "—"}</span>
+                      <span className="text-muted-foreground text-xs">{line.install_location !== "N/A" ? line.install_location : ""}</span>
+                      <span className="text-right text-muted-foreground text-xs">{line.quantity} {line.unit}</span>
+                      <span className="text-right font-medium">${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    {line.photo_url && line.show_photo !== false && (
+                      <div className="pb-3">
+                        <img src={line.photo_url} alt={line.description || "Service photo"} className="w-full max-h-56 object-cover rounded-lg border" />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -110,12 +117,19 @@ export default function EstimateCustomerView({ estimate, job, customer, business
               </div>
               <div className="divide-y">
                 {displayLines.map((line, i) => (
-                  <div key={i} className="py-2.5 grid text-sm" style={{ gridTemplateColumns: "3fr 1.5fr 0.7fr 1fr 1fr" }}>
-                    <span>{line.description || "—"}</span>
-                    <span className="text-muted-foreground text-xs">{line.install_location !== "N/A" ? line.install_location : ""}</span>
-                    <span className="text-right text-muted-foreground">{line.quantity} {line.unit}</span>
-                    <span className="text-right text-muted-foreground">${(line.unit_cost || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                    <span className="text-right font-medium">${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                  <div key={i}>
+                    <div className="py-2.5 grid text-sm" style={{ gridTemplateColumns: "3fr 1.5fr 0.7fr 1fr 1fr" }}>
+                      <span>{line.description || "—"}</span>
+                      <span className="text-muted-foreground text-xs">{line.install_location !== "N/A" ? line.install_location : ""}</span>
+                      <span className="text-right text-muted-foreground">{line.quantity} {line.unit}</span>
+                      <span className="text-right text-muted-foreground">${(line.unit_cost || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                      <span className="text-right font-medium">${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    {line.photo_url && line.show_photo !== false && (
+                      <div className="pb-3">
+                        <img src={line.photo_url} alt={line.description || "Service photo"} className="w-full max-h-56 object-cover rounded-lg border" />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

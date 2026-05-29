@@ -8,13 +8,7 @@
     },
     "category": {
       "type": "string",
-      "enum": [
-        "Railing",
-        "Staircase",
-        "Gates",
-        "Other"
-      ],
-      "default": "Other"
+      "description": "Category \u2014 can be custom (not limited to enum)"
     },
     "unit": {
       "type": "string",
@@ -27,6 +21,10 @@
     "default_description": {
       "type": "string",
       "description": "Default line item description shown on invoice"
+    },
+    "photo_url": {
+      "type": "string",
+      "description": "URL of the uploaded photo for this service item"
     },
     "is_active": {
       "type": "boolean",

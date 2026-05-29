@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, CheckCircle2, FileText, LayoutList, AlignJustify, AlertCircle } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, FileText, LayoutList, AlignJustify, AlertCircle, ImageOff, Image } from "lucide-react";
 import { toast } from "sonner";
 import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
 
@@ -50,6 +50,8 @@ const blankLine = () => ({
   unit: "ea",
   unit_cost: 0,
   total: 0,
+  photo_url: null,
+  show_photo: true,
 });
 
 function calcLine(line) {
@@ -290,42 +292,58 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
             <span></span>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {lines.map((line, idx) => (
-              <div key={line._id} className="grid grid-cols-[2fr_1.5fr_1fr_0.7fr_1fr_1fr_auto] gap-1.5 items-center">
-                <Input
-                  className="h-8 text-xs"
-                  placeholder="Description"
-                  value={line.description}
-                  onChange={e => updateLine(idx, "description", e.target.value)}
-                />
-                <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
-                </Select>
-                <Select value={line.category} onValueChange={v => updateLine(idx, "category", v)}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}</SelectContent>
-                </Select>
-                <Input
-                  className="h-8 text-xs"
-                  type="number"
-                  value={line.quantity}
-                  onChange={e => updateLine(idx, "quantity", e.target.value)}
-                />
-                <Input
-                  className="h-8 text-xs"
-                  type="number"
-                  placeholder="0.00"
-                  value={line.unit_cost}
-                  onChange={e => updateLine(idx, "unit_cost", e.target.value)}
-                />
-                <span className="text-sm font-semibold text-right pr-1">
-                  ${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeLine(idx)}>
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
+              <div key={line._id} className="space-y-1">
+                <div className="grid grid-cols-[2fr_1.5fr_1fr_0.7fr_1fr_1fr_auto] gap-1.5 items-center">
+                  <Input
+                    className="h-8 text-xs"
+                    placeholder="Description"
+                    value={line.description}
+                    onChange={e => updateLine(idx, "description", e.target.value)}
+                  />
+                  <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <Select value={line.category} onValueChange={v => updateLine(idx, "category", v)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <Input
+                    className="h-8 text-xs"
+                    type="number"
+                    value={line.quantity}
+                    onChange={e => updateLine(idx, "quantity", e.target.value)}
+                  />
+                  <Input
+                    className="h-8 text-xs"
+                    type="number"
+                    placeholder="0.00"
+                    value={line.unit_cost}
+                    onChange={e => updateLine(idx, "unit_cost", e.target.value)}
+                  />
+                  <span className="text-sm font-semibold text-right pr-1">
+                    ${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeLine(idx)}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+                {/* Photo row — only show if line has a photo */}
+                {line.photo_url && (
+                  <div className="flex items-center gap-2 pl-1">
+                    <img src={line.photo_url} alt="" className="h-10 w-16 object-cover rounded border" />
+                    <button
+                      className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded border transition-colors ${line.show_photo !== false ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-border"}`}
+                      onClick={() => updateLine(idx, "show_photo", line.show_photo === false)}
+                      title="Toggle photo visibility on customer estimate"
+                    >
+                      {line.show_photo !== false ? <Image className="w-2.5 h-2.5" /> : <ImageOff className="w-2.5 h-2.5" />}
+                      {line.show_photo !== false ? "Show photo" : "Hide photo"}
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
             {lines.length === 0 && (
