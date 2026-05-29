@@ -11,6 +11,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Trash2, CheckCircle2, FileText, LayoutList, AlignJustify, AlertCircle, ImageOff, Image } from "lucide-react";
+import LineItemCategorySelect from "./LineItemCategorySelect";
 import { toast } from "sonner";
 import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
 
@@ -43,7 +44,7 @@ const INSTALL_LOCATIONS = [
 
 const blankLine = () => ({
   _id: Math.random().toString(36).slice(2),
-  category: "Material",
+  category: "All",
   description: "",
   install_location: "N/A",
   quantity: 1,
@@ -306,10 +307,10 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
                   </Select>
-                  <Select value={line.category} onValueChange={v => updateLine(idx, "category", v)}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <LineItemCategorySelect
+                    value={line.category}
+                    onChange={v => updateLine(idx, "category", v)}
+                  />
                   <Input
                     className="h-8 text-xs"
                     type="number"
