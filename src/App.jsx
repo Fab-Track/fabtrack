@@ -26,6 +26,7 @@ import EmployeeProfilePage from '@/pages/EmployeeProfilePage';
 import OnboardingSurveyPage from '@/pages/OnboardingSurveyPage';
 import Settings from '@/pages/Settings';
 import EstimatePage from '@/pages/EstimatePage';
+import EstimateView from '@/pages/EstimateView';
 import Reports from '@/pages/Reports';
 import Messages from '@/pages/Messages';
 import Conversations from '@/pages/Conversations';
@@ -59,6 +60,7 @@ const AuthenticatedApp = () => {
       <Route path="/kiosk" element={<ShopKiosk />} />
       <Route path="/lead" element={<LeadForm />} />
       <Route path="/onboarding" element={<OnboardingSurveyPage />} />
+      <Route path="/estimate-view/:estimateId" element={<EstimateView />} />
       
       {/* Main app with sidebar layout */}
       <Route element={<AppLayout />}>

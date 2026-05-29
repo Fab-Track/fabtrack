@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -11,6 +11,7 @@ const STATUS_COLORS = {
 };
 
 export default function EstimateCustomerView({ estimate, job, customer, businessInfo, onApprove, onRequestChanges }) {
+  const [approvalName, setApprovalName] = useState("");
   const lines = estimate?.line_items || [];
   const viewMode = estimate?.view_mode || "summary";
 
@@ -180,14 +181,27 @@ export default function EstimateCustomerView({ estimate, job, customer, business
           </div>
         )}
 
-        {/* Approval section */}
-        {estimate?.status !== "Approved" && onApprove && (
-          <div className="border-t pt-6 space-y-3">
-            <p className="text-sm text-muted-foreground">By approving this estimate, you agree to the scope and pricing described above.</p>
+        {/* Approval section — only shown when Sent (not Draft, not already Approved) */}
+        {estimate?.status === "Sent" && onApprove && (
+          <div className="border-t pt-6 space-y-4">
+            <div>
+              <p className="font-semibold text-sm mb-1">Approve This Estimate</p>
+              <p className="text-sm text-muted-foreground">By approving, you agree to the scope and pricing described above.</p>
+            </div>
+            <div className="space-y-2 max-w-xs">
+              <label className="text-xs text-muted-foreground font-medium">Your Name or Initials</label>
+              <input
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                placeholder="e.g. John Smith or J.S."
+                value={approvalName}
+                onChange={e => setApprovalName(e.target.value)}
+              />
+            </div>
             <div className="flex gap-3">
               <button
-                onClick={onApprove}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
+                onClick={() => approvalName.trim() && onApprove(approvalName.trim())}
+                disabled={!approvalName.trim()}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
               >
                 ✓ Approve Estimate
               </button>
@@ -208,6 +222,7 @@ export default function EstimateCustomerView({ estimate, job, customer, business
             <div>
               <p className="font-semibold text-sm">Approved</p>
               {estimate.customer_signature && <p className="text-xs text-muted-foreground">Signed by {estimate.customer_signature}</p>}
+              {estimate.approved_date && <p className="text-xs text-muted-foreground">{format(parseISO(estimate.approved_date), "MMM d, yyyy")}</p>}
             </div>
           </div>
         )}

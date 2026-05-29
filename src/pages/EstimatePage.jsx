@@ -539,37 +539,43 @@ export default function EstimatePage() {
                 </div>
               </div>
 
-              <Separator />
-
-              {/* Customer Approval */}
-              <div className="space-y-3">
-                <h3 className="font-semibold">Customer Approval</h3>
-                <p className="text-sm text-muted-foreground">Enter customer name/initials below to mark this estimate as approved.</p>
-                <div className="grid md:grid-cols-2 gap-4 max-w-lg">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Accepted By</Label>
-                    <Input
-                      placeholder="Customer name or initials"
-                      value={signature}
-                      onChange={e => { setSignature(e.target.value); if (e.target.value) setStatus("Approved"); }}
-                    />
+              {/* Customer Approval — only visible after Sent */}
+              {(status === "Sent" || status === "Approved") && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <h3 className="font-semibold">Customer Approval</h3>
+                    {status === "Approved" && signature ? (
+                      <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
+                        <span className="text-sm font-medium">Approved by {signature}{approvedDate ? ` on ${format(parseISO(approvedDate), "MMM d, yyyy")}` : ""}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm text-muted-foreground">Enter customer name/initials to record manual approval (phone, in-person, etc.).</p>
+                        <div className="grid md:grid-cols-2 gap-4 max-w-lg">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Accepted By</Label>
+                            <Input
+                              placeholder="Customer name or initials"
+                              value={signature}
+                              onChange={e => { setSignature(e.target.value); if (e.target.value) setStatus("Approved"); }}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Accepted Date</Label>
+                            <Input
+                              type="date"
+                              value={approvedDate}
+                              onChange={e => setApprovedDate(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Accepted Date</Label>
-                    <Input
-                      type="date"
-                      value={approvedDate}
-                      onChange={e => setApprovedDate(e.target.value)}
-                    />
-                  </div>
-                </div>
-                {signature && (
-                  <div className="flex items-center gap-1.5 text-emerald-600 text-sm">
-                    <CheckCircle2 className="w-4 h-4" />
-                    Approved by {signature}{approvedDate ? ` on ${format(parseISO(approvedDate), "MMM d, yyyy")}` : ""}
-                  </div>
-                )}
-              </div>
+                </>
+              )}
 
               <div className="h-16" />
             </div>
