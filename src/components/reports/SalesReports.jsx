@@ -66,8 +66,15 @@ export default function SalesReports() {
     return { category: cat, avgDays: avg !== null ? parseFloat(avg.toFixed(1)) : null, sampleSize: days.length };
   }).filter(d => d.avgDays !== null);
 
-  // ── Lead Outcomes ─────────────────────────────────────────────────────────
-  const closedLeads = jobs.filter(j => j.is_lead_closed || j.lead_outcome);
+  // ── Lead Outcomes (date-range filtered) ──────────────────────────────────
+  const allClosedLeads = jobs.filter(j => j.is_lead_closed || j.lead_outcome);
+  const closedLeads = allClosedLeads.filter(j => {
+    if (!range) return true;
+    const d = j.lead_closed_at ? parseISO(j.lead_closed_at) : (j.updated_date ? parseISO(j.updated_date) : null);
+    if (!d) return true;
+    return isWithinInterval(d, { start: range.start, end: range.end });
+  });
+
   const outcomeCounts = {
     "Unqualified Lead": 0,
     "Qualified — Not Interested": 0,
@@ -79,7 +86,7 @@ export default function SalesReports() {
       outcomeCounts[j.lead_outcome]++;
     }
   });
-  const outcomeChartData = Object.entries(outcomeCounts).map(([outcome, count]) => ({ outcome: outcome.replace("Qualified — ", ""), count, full: outcome }));
+  const outcomeChartData = Object.entries(outcomeCounts).map(([outcome, count]) => ({ outcome: outcome.replace("Qualified — ", ""), count }));
   const qualifiedWon = outcomeCounts["Qualified — Won"];
   const qualifiedLost = outcomeCounts["Qualified — Lost"];
   const qualifiedNotInterested = outcomeCounts["Qualified — Not Interested"];

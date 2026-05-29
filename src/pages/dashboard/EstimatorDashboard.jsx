@@ -7,6 +7,7 @@ import SalesFunnelEstimator from "@/components/dashboard/estimator/SalesFunnelEs
 import EstimatesAging from "@/components/dashboard/estimator/EstimatesAging";
 import RecentSalesActivity from "@/components/dashboard/estimator/RecentSalesActivity";
 import RevenueGoalWidget from "@/components/dashboard/estimator/RevenueGoalWidget";
+import LeadOutcomesRow from "@/components/dashboard/estimator/LeadOutcomesRow";
 
 export default function EstimatorDashboard() {
   const { data: jobs = [], isLoading } = useQuery({
@@ -42,6 +43,9 @@ export default function EstimatorDashboard() {
         <SalesFunnelEstimator jobs={jobs} />
         <RevenueGoalWidget jobs={jobs} />
       </div>
+
+      {/* Lead Outcomes */}
+      <LeadOutcomesRow jobs={jobs} />
 
       {/* Estimates aging — full width */}
       <EstimatesAging estimates={estimates} jobs={jobs} />
