@@ -17,6 +17,7 @@ import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
 import { useAuth } from "@/lib/AuthContext";
 import ProductServiceDropdown from "@/components/estimates/ProductServiceDropdown";
 import RailingInlineCalc from "@/components/estimates/RailingInlineCalc";
+import StaircaseInlineCalc from "@/components/estimates/StaircaseInlineCalc";
 import EstimateCustomerView from "@/components/estimates/EstimateCustomerView";
 import SendEstimatePanel from "@/components/estimates/SendEstimatePanel";
 
@@ -42,6 +43,8 @@ const blankLine = () => ({
   total: 0,
   _is_railing: false,
   _railing_style: null,
+  _is_staircase: false,
+  _staircase_type: null,
 });
 
 function calcLine(line) {
@@ -111,7 +114,7 @@ export default function EstimatePage() {
   useEffect(() => {
     if (existingEstimate) {
       setStatus(existingEstimate.status || "Draft");
-      setLines((existingEstimate.line_items || []).map(l => ({ ...l, _id: Math.random().toString(36).slice(2), _is_railing: false, _railing_style: null })));
+      setLines((existingEstimate.line_items || []).map(l => ({ ...l, _id: Math.random().toString(36).slice(2), _is_railing: false, _railing_style: null, _is_staircase: false, _staircase_type: null })));
       setMarkup(existingEstimate.markup_percent || 0);
       setOverhead(existingEstimate.overhead_percent || 0);
       setTax(existingEstimate.tax_percent || 0);
@@ -152,7 +155,7 @@ export default function EstimatePage() {
         estimate_number: estimateNumber,
         estimate_date: estimateDate,
         expiration_date: expirationDate,
-        line_items: lines.map(({ _id, _is_railing, _railing_style, ...rest }) => rest),
+        line_items: lines.map(({ _id, _is_railing, _railing_style, _is_staircase, _staircase_type, ...rest }) => rest),
         subtotal,
         markup_percent: markup,
         overhead_percent: overhead,
@@ -211,7 +214,21 @@ export default function EstimatePage() {
     setLines(prev => prev.filter((_, i) => i !== idx));
   }
 
+  const STAIRCASE_CALC_ITEMS = [
+    "Mono Stringer Staircase",
+    "Double Stringer Staircase — Steel Treads",
+    "Double Stringer Staircase — Concrete Treads",
+    "Spiral Staircase",
+  ];
+
+  function getStaircaseType(name) {
+    if (name.includes("Spiral")) return "spiral";
+    return "mono"; // covers mono and both double stringer types
+  }
+
   function handleProductSelect(idx, item) {
+    const isStaircaseCalc = STAIRCASE_CALC_ITEMS.some(n => item.name.includes(n.split("—")[0].trim()) || item.name === n);
+    const isStaircaseHandrail = item.name === "Staircase Handrail / Railing";
     setLines(prev => {
       const next = [...prev];
       next[idx] = calcLine({
@@ -220,8 +237,10 @@ export default function EstimatePage() {
         category: item.default_category || "Labor",
         unit: item.default_unit || "ls",
         unit_cost: item.default_unit_cost || 0,
-        _is_railing: !!item.is_railing,
-        _railing_style: item.is_railing ? item.name.replace(" Railing", "") : null,
+        _is_railing: !!item.is_railing || isStaircaseHandrail,
+        _railing_style: (item.is_railing || isStaircaseHandrail) ? item.name.replace(" Railing", "") : null,
+        _is_staircase: isStaircaseCalc,
+        _staircase_type: isStaircaseCalc ? getStaircaseType(item.name) : null,
       });
       return next;
     });
@@ -235,9 +254,17 @@ export default function EstimatePage() {
     });
   }
 
+  function handleStaircasePrice(idx, totalPrice, inputQty) {
+    setLines(prev => {
+      const next = [...prev];
+      next[idx] = calcLine({ ...next[idx], quantity: inputQty, unit_cost: totalPrice / (inputQty || 1) });
+      return next;
+    });
+  }
+
   const estimateForView = {
     ...(existingEstimate || {}),
-    status, line_items: lines.map(({ _id, _is_railing, _railing_style, ...r }) => r),
+    status, line_items: lines.map(({ _id, _is_railing, _railing_style, _is_staircase, _staircase_type, ...r }) => r),
     markup_percent: markup, overhead_percent: overhead, tax_percent: tax, total,
     notes, view_mode: viewMode, estimate_number: estimateNumber,
     estimate_date: estimateDate, expiration_date: expirationDate,
@@ -453,6 +480,16 @@ export default function EstimatePage() {
                           <RailingInlineCalc
                             styleName={line._railing_style}
                             onPriceChange={(total, lnft) => handleRailingPrice(idx, total, lnft)}
+                          />
+                        </div>
+                      )}
+
+                      {/* Inline Staircase Calculator */}
+                      {line._is_staircase && (
+                        <div className="ml-1 mr-8">
+                          <StaircaseInlineCalc
+                            staircaseType={line._staircase_type}
+                            onPriceChange={(total, qty) => handleStaircasePrice(idx, total, qty)}
                           />
                         </div>
                       )}

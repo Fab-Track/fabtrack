@@ -12,6 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Trash2, CheckCircle2, FileText, LayoutList, AlignJustify, AlertCircle, ImageOff, Image } from "lucide-react";
 import LineItemCategorySelect from "./LineItemCategorySelect";
+import RailingInlineCalc from "./RailingInlineCalc";
+import StaircaseInlineCalc from "./StaircaseInlineCalc";
+import ProductServiceDropdown from "./ProductServiceDropdown";
 import { toast } from "sonner";
 import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
 
