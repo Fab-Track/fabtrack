@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Wrench, FileText, CheckSquare } from "lucide-react";
 import JobScopeSection from "@/components/jobs/JobScopeSection";
+import JobMaterialsSection from "@/components/jobs/JobMaterialsSection";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 
@@ -115,6 +116,9 @@ export default function JobOverviewTab({ job }) {
       <div className="md:col-span-2">
         <JobScopeSection job={job} isFabricator={isFabricator} />
       </div>
+
+      {/* Materials — reserved inventory for this job */}
+      <JobMaterialsSection jobId={job.id} />
     </div>
   );
 }

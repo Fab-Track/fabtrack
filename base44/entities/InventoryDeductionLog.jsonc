@@ -1,0 +1,50 @@
+{
+  "name": "InventoryDeductionLog",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string"
+    },
+    "job_number": {
+      "type": "string"
+    },
+    "job_name": {
+      "type": "string"
+    },
+    "inventory_item_id": {
+      "type": "string"
+    },
+    "inventory_item_name": {
+      "type": "string"
+    },
+    "projected_quantity": {
+      "type": "number"
+    },
+    "actual_quantity": {
+      "type": "number"
+    },
+    "variance_pct": {
+      "type": "number",
+      "description": "Percentage difference between actual and projected"
+    },
+    "high_variance": {
+      "type": "boolean",
+      "default": false
+    },
+    "confirmed_by": {
+      "type": "string"
+    },
+    "confirmed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "note": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_id",
+    "inventory_item_id",
+    "actual_quantity"
+  ]
+}

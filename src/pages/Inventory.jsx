@@ -12,7 +12,8 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { Package, Plus, AlertTriangle, Pencil, Trash2 } from "lucide-react";
+import { Package, Plus, AlertTriangle, Pencil, Trash2, ClipboardCheck } from "lucide-react";
+import WeeklyReviewPanel from "@/components/inventory/WeeklyReviewPanel";
 
 const CATEGORIES = ["Steel", "Hardware", "Consumables", "Tools", "Other"];
 
@@ -29,11 +30,22 @@ export default function Inventory() {
   const [editId, setEditId] = useState(null);
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("All");
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["inventory"],
     queryFn: () => base44.entities.InventoryItem.list("-created_date", 200),
   });
+
+  const { data: reservations = [] } = useQuery({
+    queryKey: ["materialReservations"],
+    queryFn: () => base44.entities.MaterialReservation.filter({ status: "reserved" }),
+  });
+
+  // Compute reserved quantity per inventory item id
+  function getReserved(itemId) {
+    return reservations.filter(r => r.inventory_item_id === itemId).reduce((s, r) => s + (r.quantity || 0), 0);
+  }
 
   const save = useMutation({
     mutationFn: () =>
@@ -66,7 +78,12 @@ export default function Inventory() {
     return matchCat && matchSearch;
   });
 
-  const lowStock = items.filter(i => i.quantity_on_hand <= i.reorder_point && i.reorder_point > 0);
+  // Use available (on hand - reserved) for reorder alerts
+  const lowStock = items.filter(i => {
+    const reserved = getReserved(i.id);
+    const available = (i.quantity_on_hand || 0) - reserved;
+    return available <= i.reorder_point && i.reorder_point > 0;
+  });
 
   return (
     <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
@@ -75,16 +92,35 @@ export default function Inventory() {
           <h1 className="text-2xl font-bold tracking-tight">Inventory</h1>
           <p className="text-sm text-muted-foreground">{items.length} items tracked</p>
         </div>
-        <Button onClick={openNew} className="gap-2"><Plus className="w-4 h-4" /> Add Item</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setReviewOpen(true)} className="gap-2">
+            <ClipboardCheck className="w-4 h-4" /> Review & Deduct
+          </Button>
+          <Button onClick={openNew} className="gap-2"><Plus className="w-4 h-4" /> Add Item</Button>
+        </div>
       </div>
 
       {lowStock.length > 0 && (
-        <div className="mb-4 p-3 rounded-lg border border-warning/50 bg-warning/10 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
-          <p className="text-sm text-warning-foreground font-medium">
-            {lowStock.length} item{lowStock.length > 1 ? "s" : ""} below reorder point:&nbsp;
-            <span className="font-normal">{lowStock.map(i => i.name).join(", ")}</span>
-          </p>
+        <div className="mb-4 p-3 rounded-lg border border-warning/50 bg-warning/10 space-y-1">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
+            <p className="text-sm text-warning-foreground font-semibold">
+              {lowStock.length} item{lowStock.length > 1 ? "s" : ""} below reorder point
+            </p>
+          </div>
+          <ul className="ml-6 space-y-0.5">
+            {lowStock.map(i => {
+              const reserved = getReserved(i.id);
+              const available = (i.quantity_on_hand || 0) - reserved;
+              return (
+                <li key={i.id} className="text-xs text-warning-foreground">
+                  <span className="font-medium">{i.name}</span> — {i.quantity_on_hand} {i.unit} on hand
+                  {reserved > 0 ? `, ${reserved} ${i.unit} reserved — only ` : ", "}
+                  <span className="font-semibold">{available} {i.unit} available</span>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
 
@@ -111,14 +147,16 @@ export default function Inventory() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr>
-                {["Name / SKU", "Category", "Unit", "On Hand", "Reorder", "Unit Cost", "Location", ""].map(h => (
+                {["Name / SKU", "Category", "Unit", "On Hand", "Reserved", "Available", "Reorder", "Unit Cost", "Location", ""].map(h => (
                   <th key={h} className="text-left px-3 py-2.5 text-xs font-semibold text-muted-foreground">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map(item => {
-                const low = item.quantity_on_hand <= item.reorder_point && item.reorder_point > 0;
+                const reserved = getReserved(item.id);
+                const available = (item.quantity_on_hand || 0) - reserved;
+                const low = available <= item.reorder_point && item.reorder_point > 0;
                 return (
                   <tr key={item.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-3 py-2.5">
@@ -135,15 +173,27 @@ export default function Inventory() {
                           className="w-5 h-5 rounded text-xs border hover:bg-muted flex items-center justify-center"
                           onClick={() => adjustQty.mutate({ id: item.id, qty: Math.max(0, item.quantity_on_hand - 1) })}
                         >-</button>
-                        <span className={`w-8 text-center font-mono font-semibold text-sm ${low ? "text-destructive" : ""}`}>
+                        <span className="w-8 text-center font-mono font-semibold text-sm">
                           {item.quantity_on_hand}
                         </span>
                         <button
                           className="w-5 h-5 rounded text-xs border hover:bg-muted flex items-center justify-center"
                           onClick={() => adjustQty.mutate({ id: item.id, qty: item.quantity_on_hand + 1 })}
                         >+</button>
-                        {low && <AlertTriangle className="w-3.5 h-3.5 text-warning ml-1" />}
                       </div>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {reserved > 0 ? (
+                        <span className="font-mono text-sm text-amber-600 font-semibold">{reserved}</span>
+                      ) : (
+                        <span className="font-mono text-sm text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className={`font-mono text-sm font-semibold ${low ? "text-destructive" : ""}`}>
+                        {available}
+                      </span>
+                      {low && <AlertTriangle className="w-3.5 h-3.5 text-warning ml-1 inline" />}
                     </td>
                     <td className="px-3 py-2.5 text-muted-foreground">{item.reorder_point}</td>
                     <td className="px-3 py-2.5">${(item.unit_cost || 0).toFixed(2)}</td>
@@ -165,6 +215,8 @@ export default function Inventory() {
           </table>
         </div>
       )}
+
+      <WeeklyReviewPanel open={reviewOpen} onClose={() => setReviewOpen(false)} />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">

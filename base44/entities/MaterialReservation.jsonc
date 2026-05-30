@@ -1,0 +1,63 @@
+{
+  "name": "MaterialReservation",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string"
+    },
+    "job_number": {
+      "type": "string"
+    },
+    "job_name": {
+      "type": "string"
+    },
+    "estimate_id": {
+      "type": "string"
+    },
+    "inventory_item_id": {
+      "type": "string"
+    },
+    "inventory_item_name": {
+      "type": "string"
+    },
+    "inventory_item_sku": {
+      "type": "string"
+    },
+    "quantity": {
+      "type": "number",
+      "default": 0
+    },
+    "unit": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "projected",
+        "reserved",
+        "deducted"
+      ],
+      "default": "projected"
+    },
+    "reserved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "deducted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "deducted_by": {
+      "type": "string"
+    },
+    "actual_quantity": {
+      "type": "number",
+      "description": "Actual quantity used (filled in at deduction)"
+    }
+  },
+  "required": [
+    "job_id",
+    "inventory_item_id",
+    "quantity"
+  ]
+}

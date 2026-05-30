@@ -20,6 +20,7 @@ import RailingInlineCalc from "@/components/estimates/RailingInlineCalc";
 import StaircaseInlineCalc from "@/components/estimates/StaircaseInlineCalc";
 import EstimateCustomerView from "@/components/estimates/EstimateCustomerView";
 import SendEstimatePanel from "@/components/estimates/SendEstimatePanel";
+import ProjectedMaterialsSection from "@/components/estimates/ProjectedMaterialsSection";
 
 const CATEGORIES = ["Labor", "Material", "Equipment", "Sub-contractor", "Other"];
 const INSTALL_LOCATIONS = [
@@ -183,6 +184,31 @@ export default function EstimatePage() {
       if (status === "Approved" && prevStatus !== "Approved") {
         await base44.entities.Job.update(jobId, { estimate_total: total, customer_approval_status: "approved" });
         await autoMoveSalesStage({ ...job, estimate_total: total }, "Awaiting Deposit", `Estimate approved by ${signature}`, actorName);
+
+        // Create material reservations from projected materials
+        const { projectMaterials, matchProjectionToInventory } = await import("@/lib/materialProjections");
+        const allInventory = await base44.entities.InventoryItem.list("-created_date", 200);
+        const existingReservations = await base44.entities.MaterialReservation.filter({ status: "reserved" });
+        const projections = projectMaterials(lines);
+        for (const proj of projections) {
+          const { inventoryItem } = matchProjectionToInventory(proj.material, proj.qty, allInventory, existingReservations);
+          if (inventoryItem) {
+            await base44.entities.MaterialReservation.create({
+              job_id: jobId,
+              job_number: job?.job_number,
+              job_name: job?.job_name,
+              estimate_id: savedEstimate?.id || estimateId,
+              inventory_item_id: inventoryItem.id,
+              inventory_item_name: inventoryItem.name,
+              inventory_item_sku: inventoryItem.sku || "",
+              quantity: proj.qty,
+              unit: inventoryItem.unit || "lnft",
+              status: "reserved",
+              reserved_at: new Date().toISOString(),
+            });
+          }
+        }
+
         toast.success("Estimate approved — job moved to Awaiting Deposit");
       }
 
@@ -500,6 +526,9 @@ export default function EstimatePage() {
                   )}
                 </div>
               </div>
+
+              {/* Projected Materials — internal only */}
+              <ProjectedMaterialsSection lines={lines} />
 
               <Separator />
 
