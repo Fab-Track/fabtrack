@@ -63,60 +63,133 @@ function CategorySelect({ value, onChange, categories }) {
 }
 
 // ── Manage Categories modal ──────────────────────────────────────────────────
-function ManageCategoriesModal({ open, onClose, categories, catalog, onRename, onDelete }) {
+function ManageCategoriesModal({ open, onClose, categories, catalog, onRename, onDelete, onMoveItem, onCreateCategory }) {
   const [renaming, setRenaming] = useState(null); // { cat, value }
+  const [expandedCat, setExpandedCat] = useState(null);
+  const [addingNew, setAddingNew] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+
+  function saveNewCategory() {
+    const name = newCatName.trim();
+    if (!name) return;
+    onCreateCategory(name);
+    setNewCatName("");
+    setAddingNew(false);
+  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Manage Categories</DialogTitle>
         </DialogHeader>
-        <div className="space-y-2 max-h-96 overflow-y-auto">
+        <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
           {categories.map(cat => {
-            const count = catalog.filter(i => i.category === cat).length;
+            const items = catalog.filter(i => i.category === cat);
+            const count = items.length;
             const isRenaming = renaming?.cat === cat;
+            const isExpanded = expandedCat === cat;
             return (
-              <div key={cat} className="flex items-center gap-2 border rounded-lg px-3 py-2">
-                {isRenaming ? (
-                  <>
-                    <Input
-                      autoFocus
-                      className="h-7 text-sm flex-1"
-                      value={renaming.value}
-                      onChange={e => setRenaming(r => ({ ...r, value: e.target.value }))}
-                      onKeyDown={e => {
-                        if (e.key === "Enter") { onRename(cat, renaming.value); setRenaming(null); }
-                        if (e.key === "Escape") setRenaming(null);
-                      }}
-                    />
-                    <Button size="sm" className="h-7 px-2" onClick={() => { onRename(cat, renaming.value); setRenaming(null); }}><Check className="w-3 h-3" /></Button>
-                    <Button size="sm" variant="outline" className="h-7 px-2" onClick={() => setRenaming(null)}><X className="w-3 h-3" /></Button>
-                  </>
-                ) : (
-                  <>
-                    <span className="flex-1 text-sm font-medium">{cat}</span>
-                    <span className="text-xs text-muted-foreground">{count} item{count !== 1 ? "s" : ""}</span>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setRenaming({ cat, value: cat })}>
-                      <Pencil className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive"
-                      onClick={() => {
-                        if (count > 0) {
-                          toast.error(`Reassign the ${count} item${count !== 1 ? "s" : ""} in "${cat}" to another category before deleting.`);
-                        } else {
-                          onDelete(cat);
-                        }
-                      }}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </>
+              <div key={cat} className="border rounded-lg overflow-hidden">
+                <div className="flex items-center gap-2 px-3 py-2">
+                  {isRenaming ? (
+                    <>
+                      <Input
+                        autoFocus
+                        className="h-7 text-sm flex-1"
+                        value={renaming.value}
+                        onChange={e => setRenaming(r => ({ ...r, value: e.target.value }))}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") { onRename(cat, renaming.value); setRenaming(null); }
+                          if (e.key === "Escape") setRenaming(null);
+                        }}
+                      />
+                      <Button size="sm" className="h-7 px-2" onClick={() => { onRename(cat, renaming.value); setRenaming(null); }}><Check className="w-3 h-3" /></Button>
+                      <Button size="sm" variant="outline" className="h-7 px-2" onClick={() => setRenaming(null)}><X className="w-3 h-3" /></Button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="flex-1 text-sm font-medium">{cat}</span>
+                      <span className="text-xs text-muted-foreground">{count} item{count !== 1 ? "s" : ""}</span>
+                      {count > 0 && (
+                        <Button
+                          size="sm" variant="outline" className="h-7 text-xs px-2"
+                          onClick={() => setExpandedCat(isExpanded ? null : cat)}
+                        >
+                          {isExpanded ? "Hide Items" : "Manage Items"}
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setRenaming({ cat, value: cat })}>
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive"
+                        onClick={() => {
+                          if (count > 0) {
+                            toast.error("Move or remove all items in this category before deleting it.");
+                          } else {
+                            onDelete(cat);
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+
+                {/* Expanded items list */}
+                {isExpanded && (
+                  <div className="border-t bg-muted/20 divide-y">
+                    {items.map(item => (
+                      <div key={item.id} className="flex items-center gap-2 px-3 py-2">
+                        <span className="flex-1 text-sm truncate">{item.name}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">Move to:</span>
+                        <Select
+                          value=""
+                          onValueChange={newCat => {
+                            if (newCat) onMoveItem(item.id, newCat);
+                          }}
+                        >
+                          <SelectTrigger className="h-7 text-xs w-44">
+                            <SelectValue placeholder="Select category…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.filter(c => c !== cat).map(c => (
+                              <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             );
           })}
+
+          {/* Add new category row */}
+          {addingNew ? (
+            <div className="flex items-center gap-2 border rounded-lg px-3 py-2 border-primary/40 bg-primary/5">
+              <Input
+                autoFocus
+                className="h-7 text-sm flex-1"
+                placeholder="New category name…"
+                value={newCatName}
+                onChange={e => setNewCatName(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") saveNewCategory(); if (e.key === "Escape") { setAddingNew(false); setNewCatName(""); } }}
+              />
+              <Button size="sm" className="h-7 px-2" onClick={saveNewCategory}><Check className="w-3 h-3" /></Button>
+              <Button size="sm" variant="outline" className="h-7 px-2" onClick={() => { setAddingNew(false); setNewCatName(""); }}><X className="w-3 h-3" /></Button>
+            </div>
+          ) : (
+            <button
+              className="w-full text-left px-3 py-2 text-sm text-primary font-medium border border-dashed border-primary/40 rounded-lg hover:bg-primary/5 transition-colors"
+              onClick={() => setAddingNew(true)}
+            >
+              + New Category
+            </button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
@@ -253,15 +326,16 @@ export default function ServiceCatalogSection() {
   const [seeded, setSeeded] = useState(false);
   const [showInactive, setShowInactive] = useState(false);
   const [manageCatsOpen, setManageCatsOpen] = useState(false);
+  const [customCategories, setCustomCategories] = useState([]);
 
   const { data: catalog = [], isLoading } = useQuery({
     queryKey: ["serviceCatalog"],
     queryFn: () => base44.entities.ServiceCatalog.list("sort_order"),
   });
 
-  // Derive categories from DB (unique) merged with defaults
+  // Derive categories from DB (unique) merged with defaults and any newly created ones
   const dbCategories = [...new Set(catalog.map(i => i.category).filter(Boolean))];
-  const categories = [...new Set([...DEFAULT_CATEGORIES, ...dbCategories])];
+  const categories = [...new Set([...DEFAULT_CATEGORIES, ...dbCategories, ...customCategories])];
 
   // Seed defaults if empty
   useEffect(() => {
@@ -289,10 +363,29 @@ export default function ServiceCatalogSection() {
 
   // Rename category — update all items in that category
   async function handleRenameCategory(oldCat, newCat) {
+    const trimmed = newCat.trim();
+    if (!trimmed || trimmed === oldCat) return;
     const items = catalog.filter(i => i.category === oldCat);
-    await Promise.all(items.map(i => base44.entities.ServiceCatalog.update(i.id, { category: newCat })));
+    await Promise.all(items.map(i => base44.entities.ServiceCatalog.update(i.id, { category: trimmed })));
     qc.invalidateQueries({ queryKey: ["serviceCatalog"] });
-    toast.success(`Category renamed to "${newCat}"`);
+    toast.success(`Category renamed to "${trimmed}"`);
+  }
+
+  // Move a single item to a new category
+  async function handleMoveItem(itemId, newCat) {
+    await base44.entities.ServiceCatalog.update(itemId, { category: newCat });
+    qc.invalidateQueries({ queryKey: ["serviceCatalog"] });
+    toast.success(`Item moved to "${newCat}"`);
+  }
+
+  function handleCreateCategory(name) {
+    const trimmed = name.trim();
+    if (!trimmed || categories.includes(trimmed)) {
+      if (categories.includes(trimmed)) toast.error(`"${trimmed}" already exists.`);
+      return;
+    }
+    setCustomCategories(prev => [...prev, trimmed]);
+    toast.success(`Category "${trimmed}" created — assign items to it to make it permanent.`);
   }
 
   const visibleItems = catalog.filter(i => showInactive ? true : i.is_active !== false);
@@ -416,7 +509,12 @@ export default function ServiceCatalogSection() {
         categories={categories}
         catalog={catalog}
         onRename={handleRenameCategory}
-        onDelete={(cat) => toast.error(`Cannot delete "${cat}" — it is a built-in category.`)}
+        onDelete={(cat) => {
+          setCustomCategories(prev => prev.filter(c => c !== cat));
+          toast.success(`Category "${cat}" deleted.`);
+        }}
+        onMoveItem={handleMoveItem}
+        onCreateCategory={handleCreateCategory}
       />
     </div>
   );
