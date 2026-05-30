@@ -355,8 +355,9 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
           ) : (
             <>
               {/* Summary header */}
-              <div className="grid grid-cols-[2fr_1.5fr_1fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
+              <div className="grid gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1" style={{ gridTemplateColumns: "2fr 0.6fr 1.5fr 1fr auto" }}>
                 <span>Description</span>
+                <span className="text-right">Qty</span>
                 <span>Install Location</span>
                 <span className="text-right">Amount</span>
                 <span></span>
@@ -365,11 +366,13 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                 {lines.map((line, idx) => (
                   <div
                     key={line._id}
-                    className="grid grid-cols-[2fr_1.5fr_1fr_auto] gap-1.5 items-center py-2 px-1 rounded hover:bg-muted/50 cursor-pointer group"
+                    className="grid gap-1.5 items-center py-2 px-1 rounded hover:bg-muted/50 cursor-pointer group"
+                    style={{ gridTemplateColumns: "2fr 0.6fr 1.5fr 1fr auto" }}
                     onClick={() => setEditorView("detail")}
                     title="Click to switch to Detail view and edit"
                   >
                     <span className="text-sm truncate">{line.description || <span className="text-muted-foreground italic">No description</span>}</span>
+                    <span className="text-sm text-muted-foreground text-right">{line.quantity}</span>
                     <span className="text-xs text-muted-foreground truncate">{line.install_location !== "N/A" ? line.install_location : "—"}</span>
                     <span className="text-sm font-semibold text-right">
                       ${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
