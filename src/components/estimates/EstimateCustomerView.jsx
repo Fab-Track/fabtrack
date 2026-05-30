@@ -82,20 +82,16 @@ export default function EstimateCustomerView({ estimate, job, customer, business
           {viewMode === "summary" ? (
             <>
               <div className="grid text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 pb-1 border-b"
-                style={{ gridTemplateColumns: "3fr 1.5fr 0.7fr 1fr" }}>
+                style={{ gridTemplateColumns: "1fr auto" }}>
                 <span>Description</span>
-                <span>Location</span>
-                <span className="text-right">Qty / Unit</span>
                 <span className="text-right">Amount</span>
               </div>
               <div className="divide-y">
-                {displayLines.map((line, i) => (
+                {lines.map((line, i) => (
                   <div key={i}>
-                    <div className="py-2.5 grid text-sm" style={{ gridTemplateColumns: "3fr 1.5fr 0.7fr 1fr" }}>
+                    <div className="py-2.5 flex justify-between items-center text-sm">
                       <span>{line.description || "—"}</span>
-                      <span className="text-muted-foreground text-xs">{line.install_location !== "N/A" ? line.install_location : ""}</span>
-                      <span className="text-right text-muted-foreground text-xs">{line.quantity} {line.unit}</span>
-                      <span className="text-right font-medium">${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                      <span className="font-medium ml-4 shrink-0">${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                     </div>
                     {line.photo_url && line.show_photo !== false && (
                       <div className="pb-3">

@@ -80,7 +80,8 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
   });
   const [signature, setSignature] = useState(estimate?.customer_signature || "");
   const [collapsed, setCollapsed] = useState({});
-  const [viewMode, setViewMode] = useState(estimate?.view_mode || "summary");
+  const [editorView, setEditorView] = useState("detail"); // always start in detail for editing
+  const [viewMode, setViewMode] = useState(estimate?.view_mode || "summary"); // customer-facing saved mode
   const stylePhotoUrl = isNew ? prefillData?.stylePhotoUrl : estimate?.style_photo_url;
   const railingStyle = isNew ? prefillData?.style : estimate?.railing_style;
   const railingLnft = isNew ? prefillData?.lnft : estimate?.railing_lnft;
@@ -216,21 +217,30 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* Detail / Summary toggle */}
+          {/* Editor view toggle — local only, does not save */}
           <div className="flex items-center border rounded-md overflow-hidden h-8">
             <button
-              className={`px-2.5 h-full text-xs flex items-center gap-1 transition-colors ${viewMode === "summary" ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"}`}
-              onClick={() => setViewMode("summary")}
+              className={`px-2.5 h-full text-xs flex items-center gap-1 transition-colors ${editorView === "summary" ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"}`}
+              onClick={() => setEditorView("summary")}
             >
               <AlignJustify className="w-3 h-3" /> Summary
             </button>
             <button
-              className={`px-2.5 h-full text-xs flex items-center gap-1 transition-colors ${viewMode === "detail" ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"}`}
-              onClick={() => setViewMode("detail")}
+              className={`px-2.5 h-full text-xs flex items-center gap-1 transition-colors ${editorView === "detail" ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"}`}
+              onClick={() => setEditorView("detail")}
             >
               <LayoutList className="w-3 h-3" /> Detail
             </button>
           </div>
+          {/* Customer-facing view mode — saved with estimate */}
+          <button
+            onClick={() => setViewMode(v => v === "summary" ? "detail" : "summary")}
+            className="h-8 px-2.5 text-xs border rounded-md flex items-center gap-1.5 hover:bg-muted transition-colors text-muted-foreground"
+            title="Toggle what the customer sees"
+          >
+            <span className="text-[10px] uppercase tracking-wide font-medium opacity-60">Customer:</span>
+            <span className="font-semibold text-foreground">{viewMode === "summary" ? "Summary" : "Detail"}</span>
+          </button>
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -266,13 +276,6 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
           </div>
         )}
 
-        {/* Summary view banner */}
-        {viewMode === "summary" && (
-          <div className="mx-5 mt-4 mb-2 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
-            <span className="font-semibold">Summary View active</span> — Customer sees one line per item with description, install location, and total. Switch to Detail View to show full breakdown.
-          </div>
-        )}
-
         {/* Line Items */}
         <div className="p-5">
           <div className="flex items-center justify-between mb-3">
@@ -282,75 +285,107 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
             </Button>
           </div>
 
-          {/* Header row */}
-          <div className="grid grid-cols-[2fr_1.5fr_1fr_0.7fr_1fr_1fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
-            <span>Description</span>
-            <span>Install Location</span>
-            <span>Category</span>
-            <span>Qty</span>
-            <span>Unit Cost</span>
-            <span>Total</span>
-            <span></span>
-          </div>
-
-          <div className="space-y-2">
-            {lines.map((line, idx) => (
-              <div key={line._id} className="space-y-1">
-                <div className="grid grid-cols-[2fr_1.5fr_1fr_0.7fr_1fr_1fr_auto] gap-1.5 items-center">
-                  <Input
-                    className="h-8 text-xs"
-                    placeholder="Description"
-                    value={line.description}
-                    onChange={e => updateLine(idx, "description", e.target.value)}
-                  />
-                  <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <LineItemCategorySelect
-                    value={line.category}
-                    onChange={v => updateLine(idx, "category", v)}
-                  />
-                  <Input
-                    className="h-8 text-xs"
-                    type="number"
-                    value={line.quantity}
-                    onChange={e => updateLine(idx, "quantity", e.target.value)}
-                  />
-                  <Input
-                    className="h-8 text-xs"
-                    type="number"
-                    placeholder="0.00"
-                    value={line.unit_cost}
-                    onChange={e => updateLine(idx, "unit_cost", e.target.value)}
-                  />
-                  <span className="text-sm font-semibold text-right pr-1">
-                    ${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeLine(idx)}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-                {/* Photo row — only show if line has a photo */}
-                {line.photo_url && (
-                  <div className="flex items-center gap-2 pl-1">
-                    <img src={line.photo_url} alt="" className="h-10 w-16 object-cover rounded border" />
-                    <button
-                      className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded border transition-colors ${line.show_photo !== false ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-border"}`}
-                      onClick={() => updateLine(idx, "show_photo", line.show_photo === false)}
-                      title="Toggle photo visibility on customer estimate"
-                    >
-                      {line.show_photo !== false ? <Image className="w-2.5 h-2.5" /> : <ImageOff className="w-2.5 h-2.5" />}
-                      {line.show_photo !== false ? "Show photo" : "Hide photo"}
-                    </button>
-                  </div>
-                )}
+          {editorView === "detail" ? (
+            <>
+              {/* Detail header */}
+              <div className="grid grid-cols-[2fr_1.5fr_1fr_0.7fr_1fr_1fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
+                <span>Description</span>
+                <span>Install Location</span>
+                <span>Category</span>
+                <span>Qty</span>
+                <span>Unit Cost</span>
+                <span>Total</span>
+                <span></span>
               </div>
-            ))}
-            {lines.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-6">No line items yet. Add one above.</p>
-            )}
-          </div>
+              <div className="space-y-2">
+                {lines.map((line, idx) => (
+                  <div key={line._id} className="space-y-1">
+                    <div className="grid grid-cols-[2fr_1.5fr_1fr_0.7fr_1fr_1fr_auto] gap-1.5 items-center">
+                      <Input
+                        className="h-8 text-xs"
+                        placeholder="Description"
+                        value={line.description}
+                        onChange={e => updateLine(idx, "description", e.target.value)}
+                      />
+                      <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <LineItemCategorySelect
+                        value={line.category}
+                        onChange={v => updateLine(idx, "category", v)}
+                      />
+                      <Input
+                        className="h-8 text-xs"
+                        type="number"
+                        value={line.quantity}
+                        onChange={e => updateLine(idx, "quantity", e.target.value)}
+                      />
+                      <Input
+                        className="h-8 text-xs"
+                        type="number"
+                        placeholder="0.00"
+                        value={line.unit_cost}
+                        onChange={e => updateLine(idx, "unit_cost", e.target.value)}
+                      />
+                      <span className="text-sm font-semibold text-right pr-1">
+                        ${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeLine(idx)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                    {line.photo_url && (
+                      <div className="flex items-center gap-2 pl-1">
+                        <img src={line.photo_url} alt="" className="h-10 w-16 object-cover rounded border" />
+                        <button
+                          className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded border transition-colors ${line.show_photo !== false ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-border"}`}
+                          onClick={() => updateLine(idx, "show_photo", line.show_photo === false)}
+                          title="Toggle photo visibility on customer estimate"
+                        >
+                          {line.show_photo !== false ? <Image className="w-2.5 h-2.5" /> : <ImageOff className="w-2.5 h-2.5" />}
+                          {line.show_photo !== false ? "Show photo" : "Hide photo"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Summary header */}
+              <div className="grid grid-cols-[2fr_1.5fr_1fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
+                <span>Description</span>
+                <span>Install Location</span>
+                <span className="text-right">Amount</span>
+                <span></span>
+              </div>
+              <div className="space-y-1">
+                {lines.map((line, idx) => (
+                  <div
+                    key={line._id}
+                    className="grid grid-cols-[2fr_1.5fr_1fr_auto] gap-1.5 items-center py-2 px-1 rounded hover:bg-muted/50 cursor-pointer group"
+                    onClick={() => setEditorView("detail")}
+                    title="Click to switch to Detail view and edit"
+                  >
+                    <span className="text-sm truncate">{line.description || <span className="text-muted-foreground italic">No description</span>}</span>
+                    <span className="text-xs text-muted-foreground truncate">{line.install_location !== "N/A" ? line.install_location : "—"}</span>
+                    <span className="text-sm font-semibold text-right">
+                      ${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={e => { e.stopPropagation(); removeLine(idx); }}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {lines.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-6">No line items yet. Add one above.</p>
+          )}
         </div>
 
         <Separator />
