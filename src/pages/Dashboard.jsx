@@ -2,32 +2,37 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole, usePreviewRole } from "@/lib/PreviewRoleContext";
 import { useImpersonation } from "@/lib/ImpersonationContext";
+import DashboardGreeting from "@/components/dashboard/shared/DashboardGreeting";
 import OwnerDashboard from "./dashboard/OwnerDashboard";
 import ShopManagerDashboard from "./dashboard/ShopManagerDashboard";
 import FabricatorDashboard from "./dashboard/FabricatorDashboard";
 import EstimatorDashboard from "./dashboard/EstimatorDashboard";
+import AccountantDashboard from "./dashboard/AccountantDashboard";
+import InstallerDashboard from "./dashboard/InstallerDashboard";
+import DesignDashboard from "./dashboard/DesignDashboard";
 
-const ALL_VIEWS = [
+// Map role → dashboard component key
+function getDashboardForRole(role) {
+  const r = (role || "").toLowerCase();
+  if (["owner", "admin"].includes(r)) return "owner";
+  if (["shop_manager", "foreman"].includes(r)) return "shop";
+  if (r === "estimator") return "estimator";
+  if (r === "accountant") return "accountant";
+  if (r === "design_specialist") return "design";
+  if (["installer"].includes(r)) return "installer";
+  if (["welder", "fitter", "cutter", "grinder", "fabricator"].includes(r)) return "fabricator";
+  return "owner"; // default fallback
+}
+
+// Owner/admin can switch between views
+const OWNER_VIEWS = [
   { id: "owner",      label: "Command Center" },
-  { id: "shop",       label: "Shop Performance" },
-  { id: "fabricator", label: "My Work" },
+  { id: "shop",       label: "Shop" },
   { id: "estimator",  label: "Pipeline" },
+  { id: "accountant", label: "Finance" },
 ];
 
 const STORAGE_KEY = "fabtrack_dashboard_view";
-
-// Roles that can toggle between views (owner sees all 4)
-const OWNER_ROLES = ["owner", "admin"];
-
-function getDashboardForRole(role) {
-  const r = (role || "").toLowerCase();
-  if (OWNER_ROLES.includes(r)) return "owner";
-  if (r === "shop_manager" || r === "foreman") return "shop";
-  if (["welder", "fitter", "cutter", "installer", "grinder", "fabricator"].includes(r)) return "fabricator";
-  if (r === "estimator" || r === "accountant") return "estimator";
-  if (r === "design_specialist") return "owner";
-  return "owner";
-}
 
 function ViewSwitcher({ activeView, onChange, views }) {
   return (
@@ -49,13 +54,6 @@ function ViewSwitcher({ activeView, onChange, views }) {
   );
 }
 
-const VIEW_LABELS = {
-  owner:      "Command Center",
-  shop:       "Shop Performance",
-  fabricator: "My Work",
-  estimator:  "Pipeline",
-};
-
 export default function Dashboard() {
   const { user } = useAuth();
   const realRole = user?.role || "owner";
@@ -63,21 +61,15 @@ export default function Dashboard() {
   const { isPreviewing } = usePreviewRole();
   const { isImpersonating, impersonatedEmployee } = useImpersonation();
 
-  const isRealOwner = OWNER_ROLES.includes(realRole.toLowerCase());
-  const isEffectiveOwner = OWNER_ROLES.includes(effectiveRole.toLowerCase()) && !isPreviewing;
-
+  const isRealOwner = ["owner", "admin"].includes(realRole.toLowerCase());
   const defaultView = getDashboardForRole(effectiveRole);
 
   const [activeView, setActiveView] = useState(() => {
     if (!isRealOwner) return defaultView;
-    try {
-      return localStorage.getItem(STORAGE_KEY) || defaultView;
-    } catch {
-      return defaultView;
-    }
+    try { return localStorage.getItem(STORAGE_KEY) || defaultView; } catch { return defaultView; }
   });
 
-  // When preview role changes, reset the active view to match that role
+  // When preview role changes, reset view
   useEffect(() => {
     setActiveView(getDashboardForRole(effectiveRole));
   }, [effectiveRole]);
@@ -89,37 +81,42 @@ export default function Dashboard() {
     }
   };
 
-  // When impersonating, always show fabricator view regardless of their role (most employees are fab-type)
   const impersonationView = isImpersonating ? "fabricator" : null;
-
-  // Only real owner (not previewing, not impersonating) can switch views
   const canSwitchViews = isRealOwner && !isPreviewing && !isImpersonating;
   const displayView = impersonationView || (canSwitchViews ? activeView : defaultView);
-  const viewLabel = VIEW_LABELS[displayView] || "Dashboard";
 
-  // Owner sees only Command Center, Shop Performance, and Pipeline (no "My Work")
-  const ownerViews = isRealOwner ? ALL_VIEWS.filter(v => v.id !== "fabricator") : ALL_VIEWS;
+  const subtitleMap = {
+    owner: "Your business overview — revenue, pipeline, and urgent actions.",
+    shop: "Production status — what's in the shop and what's moving.",
+    estimator: "Sales pipeline — quotes, approvals, and follow-ups.",
+    accountant: "Financial overview — invoices, collections, and cash flow.",
+    design: "Drawing queue — what needs to be drafted and when.",
+    installer: "Your install schedule — what's next and what to bring.",
+    fabricator: "Your work — what to build and your performance.",
+  };
 
   return (
-    <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{viewLabel}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-          </p>
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
+        <DashboardGreeting user={user} subtitle={subtitleMap[displayView]} />
         {canSwitchViews && (
-          <ViewSwitcher activeView={activeView} onChange={handleViewChange} views={ownerViews} />
+          <div className="shrink-0">
+            <ViewSwitcher activeView={activeView} onChange={handleViewChange} views={OWNER_VIEWS} />
+          </div>
         )}
       </div>
 
       {/* Dashboard content */}
       {displayView === "owner"      && <OwnerDashboard />}
       {displayView === "shop"       && <ShopManagerDashboard />}
-      {displayView === "fabricator" && <FabricatorDashboard overrideEmployee={isImpersonating ? impersonatedEmployee : null} />}
       {displayView === "estimator"  && <EstimatorDashboard />}
+      {displayView === "accountant" && <AccountantDashboard />}
+      {displayView === "design"     && <DesignDashboard />}
+      {displayView === "installer"  && <InstallerDashboard />}
+      {displayView === "fabricator" && (
+        <FabricatorDashboard overrideEmployee={isImpersonating ? impersonatedEmployee : null} />
+      )}
     </div>
   );
 }
