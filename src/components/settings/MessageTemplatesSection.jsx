@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { DEFAULT_TEMPLATES, MERGE_FIELDS, resolveSampleData, smsSegmentCount } from "@/lib/commTemplates";
 import { SALES_STAGES, SHOP_STAGES, BILLING_STAGES } from "@/lib/pipelineHelpers";
 
-const ALL_STAGES = ["", ...SALES_STAGES, ...SHOP_STAGES, ...BILLING_STAGES];
+const ALL_STAGES = [null, ...SALES_STAGES, ...SHOP_STAGES, ...BILLING_STAGES];
 
 // Find the default template matching by name
 function getDefaultTemplate(name) {
@@ -115,10 +115,11 @@ function InlineEditor({ template, onSave, onCancel }) {
 
       <div>
         <Label className="text-xs">Stage Trigger (optional)</Label>
-        <Select value={form.stage_trigger || ""} onValueChange={v => setForm(p => ({ ...p, stage_trigger: v }))}>
+        <Select value={form.stage_trigger || "none"} onValueChange={v => setForm(p => ({ ...p, stage_trigger: v === "none" ? "" : v }))}>
           <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="No auto-queue" /></SelectTrigger>
           <SelectContent>
-            {ALL_STAGES.map(s => <SelectItem key={s} value={s}>{s || "— No trigger —"}</SelectItem>)}
+            <SelectItem value="none">— No trigger —</SelectItem>
+            {ALL_STAGES.filter(Boolean).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
