@@ -1,46 +1,58 @@
 import React, { useState } from "react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
-import FinancialReports from "@/components/reports/FinancialReports";
-import ProductionReports from "@/components/reports/ProductionReports";
-import SalesReports from "@/components/reports/SalesReports";
-import TeamReports from "@/components/reports/TeamReports";
+import OverviewReport from "@/components/reports/OverviewReport";
+import SalesReport from "@/components/reports/SalesReport";
+import FinancialReport from "@/components/reports/FinancialReport";
+import ProductionReport from "@/components/reports/ProductionReport";
+import CustomersReport from "@/components/reports/CustomersReport";
 
-const ROLE_TABS = {
-  admin:          ["financial", "production", "sales", "team"],
-  shop_manager:   ["financial", "production", "sales", "team"],
-  estimator:      ["financial", "sales"],
-  accountant:     ["financial"],
-  user:           ["financial", "production", "sales", "team"],
-};
+const ALL_TABS = [
+  { id: "overview",    label: "Overview",    roles: ["owner", "admin", "user"] },
+  { id: "sales",       label: "Sales",       roles: ["owner", "admin", "user", "estimator", "shop_manager"] },
+  { id: "financial",   label: "Financial",   roles: ["owner", "admin", "user", "accountant"] },
+  { id: "production",  label: "Production",  roles: ["owner", "admin", "user", "shop_manager"] },
+  { id: "customers",   label: "Customers",   roles: ["owner", "admin", "user", "estimator", "shop_manager"] },
+];
 
 export default function Reports() {
   const { user } = useAuth();
   const role = useEffectiveRole(user?.role || "user");
-  const allowedTabs = ROLE_TABS[role] || ROLE_TABS.user;
-  const [activeTab, setActiveTab] = useState(allowedTabs[0]);
+  const visibleTabs = ALL_TABS.filter(t => t.roles.includes(role));
+  const [activeTab, setActiveTab] = useState(visibleTabs[0]?.id || "overview");
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
       <div>
         <h1 className="text-2xl font-bold">Reports</h1>
-        <p className="text-sm text-muted-foreground mt-1">Deep data analysis, exports, and date-range filtering</p>
+        <p className="text-sm text-muted-foreground mt-1">Business performance dashboards, filterable by date range.</p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          {allowedTabs.includes("financial")   && <TabsTrigger value="financial">Financial</TabsTrigger>}
-          {allowedTabs.includes("production")  && <TabsTrigger value="production">Production</TabsTrigger>}
-          {allowedTabs.includes("sales")       && <TabsTrigger value="sales">Sales</TabsTrigger>}
-          {allowedTabs.includes("team")        && <TabsTrigger value="team">Team</TabsTrigger>}
-        </TabsList>
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b">
+        {visibleTabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              activeTab === tab.id
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-        <TabsContent value="financial"  className="mt-6"><FinancialReports /></TabsContent>
-        <TabsContent value="production" className="mt-6"><ProductionReports /></TabsContent>
-        <TabsContent value="sales"      className="mt-6"><SalesReports /></TabsContent>
-        <TabsContent value="team"       className="mt-6"><TeamReports /></TabsContent>
-      </Tabs>
+      {/* Tab content */}
+      <div>
+        {activeTab === "overview"   && <OverviewReport onTabChange={setActiveTab} />}
+        {activeTab === "sales"      && <SalesReport />}
+        {activeTab === "financial"  && <FinancialReport />}
+        {activeTab === "production" && <ProductionReport />}
+        {activeTab === "customers"  && <CustomersReport />}
+      </div>
     </div>
   );
 }

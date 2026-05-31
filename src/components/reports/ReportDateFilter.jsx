@@ -2,15 +2,17 @@ import React, { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subYears, parseISO } from "date-fns";
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subYears, subMonths, subQuarters, parseISO } from "date-fns";
 
 const PRESETS = [
-  { value: "this_week",    label: "This Week" },
-  { value: "this_month",   label: "This Month" },
-  { value: "this_quarter", label: "This Quarter" },
-  { value: "this_year",    label: "This Year" },
-  { value: "last_year",    label: "Last Year" },
-  { value: "custom",       label: "Custom Range" },
+  { value: "this_week",     label: "This Week" },
+  { value: "this_month",    label: "This Month" },
+  { value: "last_month",    label: "Last Month" },
+  { value: "this_quarter",  label: "This Quarter" },
+  { value: "last_quarter",  label: "Last Quarter" },
+  { value: "this_year",     label: "This Year" },
+  { value: "last_year",     label: "Last Year" },
+  { value: "custom",        label: "Custom Range" },
 ];
 
 function getRange(preset, customStart, customEnd) {
@@ -18,7 +20,9 @@ function getRange(preset, customStart, customEnd) {
   switch (preset) {
     case "this_week":    return { start: startOfWeek(now), end: endOfWeek(now) };
     case "this_month":   return { start: startOfMonth(now), end: endOfMonth(now) };
+    case "last_month":   return { start: startOfMonth(subMonths(now, 1)), end: endOfMonth(subMonths(now, 1)) };
     case "this_quarter": return { start: startOfQuarter(now), end: endOfQuarter(now) };
+    case "last_quarter": return { start: startOfQuarter(subQuarters(now, 1)), end: endOfQuarter(subQuarters(now, 1)) };
     case "this_year":    return { start: startOfYear(now), end: endOfYear(now) };
     case "last_year":    return { start: startOfYear(subYears(now, 1)), end: endOfYear(subYears(now, 1)) };
     case "custom": {
