@@ -96,6 +96,11 @@ export default function JobDocumentsTab({ job }) {
 
   // Already have a deposit invoice?
   const hasDepositInvoice = invoices.some(i => i.invoice_type === "Deposit");
+  const hasFinalInvoice   = invoices.some(i => i.invoice_type === "Final");
+  const allPaid = invoices.length > 0 && invoices.every(i => i.status === "Paid");
+  const totalInvoiced  = invoices.reduce((s, i) => s + (i.total || 0), 0);
+  const totalCollected = invoices.filter(i => i.status === "Paid" || i.status === "Partial").reduce((s, i) => s + (i.amount_paid || 0), 0);
+  const jobFullyPaid = allPaid && (totalInvoiced - totalCollected) <= 0;
 
   function openEstimate(est = null) {
     if (est?.id) {
@@ -156,6 +161,9 @@ export default function JobDocumentsTab({ job }) {
         invoices={invoices}
         changeOrders={changeOrders}
         onInvoiceClick={(inv) => openInvoice(inv)}
+        onNewEstimate={handleNewEstimateClick}
+        onCreateDepositInvoice={() => setNewInvoiceFlowOpen(true)}
+        onCreateFinalInvoice={() => setNewInvoiceFlowOpen(true)}
       />
 
       {/* ── ESTIMATES ─────────────────────────────────────────────── */}
@@ -203,18 +211,27 @@ export default function JobDocumentsTab({ job }) {
 
       {/* ── INVOICES ──────────────────────────────────────────────── */}
       <div>
-        <SectionHeader
-          icon={Receipt}
-          title="Invoices"
-          count={invoices.length}
-          onNew={() => setNewInvoiceFlowOpen(true)}
-          newLabel="New Invoice"
-        />
+        <div className="flex items-center justify-between py-3 border-b">
+          <div className="flex items-center gap-2">
+            <Receipt className="w-4 h-4 text-muted-foreground" />
+            <span className="font-semibold text-sm">Invoices</span>
+            <span className="text-xs text-muted-foreground">({invoices.length})</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {!jobFullyPaid ? (
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setNewInvoiceFlowOpen(true)}>
+                <Plus className="w-3 h-3" /> New Invoice
+              </Button>
+            ) : (
+              <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-muted-foreground" onClick={() => setNewInvoiceFlowOpen(true)}>
+                <Plus className="w-3 h-3" /> Add Invoice…
+              </Button>
+            )}
+          </div>
+        </div>
         {invoices.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground bg-muted/20 rounded-lg mt-2 text-sm">
-            {approvedEstimate && !hasDepositInvoice
-              ? "Estimate approved — open the estimate to create a deposit invoice."
-              : "No invoices yet."}
+            No invoices yet.
           </div>
         ) : (
           <div className="divide-y border rounded-lg mt-2 overflow-hidden">
