@@ -187,7 +187,10 @@ export default function JobDocumentsTab({ job }) {
                   )}
                   <Badge className={`text-xs ${EST_STATUS[est.status] || ""}`}>{est.status}</Badge>
                   {est.status === "Approved" && !hasDepositInvoice && (
-                    <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs">
+                    <Badge
+                      className="bg-emerald-600 text-white border border-emerald-700 text-xs cursor-pointer hover:bg-emerald-700 transition-colors"
+                      onClick={e => { e.stopPropagation(); setNewInvoiceFlowOpen(true); }}
+                    >
                       <Sparkles className="w-3 h-3 mr-1" /> Ready to Invoice
                     </Badge>
                   )}

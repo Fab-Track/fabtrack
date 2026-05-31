@@ -19,12 +19,21 @@ export default function QueuedMessageBanner({ job, customer }) {
     refetchInterval: 60000,
   });
 
+  const { data: fetchedCustomer } = useQuery({
+    queryKey: ["customer", job?.customer_id],
+    queryFn: () => base44.entities.Customer.filter({ id: job.customer_id }).then(r => r[0]),
+    enabled: !!job?.customer_id && !customer,
+  });
+
   if (!queued.length) return null;
 
   const msg = queued[0];
   const hoursOld = msg.queued_at ? differenceInHours(new Date(), parseISO(msg.queued_at)) : 0;
   const isStale = hoursOld >= 48;
-  const firstName = (customer?.name || job?.customer_name || "").split(" ")[0] || "Customer";
+  const resolvedCustomer = customer || fetchedCustomer;
+  const firstName = resolvedCustomer?.name
+    ? resolvedCustomer.name.split(" ")[0]
+    : job?.customer_name?.split(" ")[0] || null;
 
   async function dismiss() {
     await base44.entities.CommMessage.update(msg.id, { status: "dismissed" });
@@ -50,7 +59,9 @@ export default function QueuedMessageBanner({ job, customer }) {
               💬 Notify customer by text
             </p>
             <p className="text-xs text-muted-foreground truncate mt-0.5">
-              Send a text letting {firstName} know their estimate is ready to view.
+              {firstName
+                ? `Send a text letting ${firstName} know their estimate is ready to view.`
+                : "Send a text letting your customer know their estimate is ready to view."}
             </p>
             {isStale && (
               <p className="text-xs text-amber-600 mt-0.5 flex items-center gap-1">
