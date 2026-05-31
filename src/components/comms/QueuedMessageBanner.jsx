@@ -47,10 +47,10 @@ export default function QueuedMessageBanner({ job, customer }) {
           }
           <div className="min-w-0">
             <p className="text-sm font-medium text-foreground">
-              📨 Message ready to send to {firstName}
+              💬 Notify customer by text
             </p>
             <p className="text-xs text-muted-foreground truncate mt-0.5">
-              <span className="font-medium">{msg.template_name || "Message"}</span> · {msg.body?.slice(0, 80)}{msg.body?.length > 80 ? "…" : ""}
+              Send a text letting {firstName} know their estimate is ready to view.
             </p>
             {isStale && (
               <p className="text-xs text-amber-600 mt-0.5 flex items-center gap-1">
@@ -61,10 +61,10 @@ export default function QueuedMessageBanner({ job, customer }) {
         </div>
         <div className="flex gap-2 shrink-0">
           <Button size="sm" onClick={openComposer} className="gap-1.5 h-7 text-xs">
-            <Send className="w-3 h-3" /> Send Now
+            <Send className="w-3 h-3" /> Send Text
           </Button>
           <Button size="sm" variant="outline" onClick={openComposer} className="h-7 text-xs">
-            Edit & Send
+            Edit & Send Text
           </Button>
           <Button size="sm" variant="ghost" onClick={dismiss} className="h-7 text-xs px-2">
             <X className="w-3.5 h-3.5" />
