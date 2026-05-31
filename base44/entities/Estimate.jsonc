@@ -67,6 +67,11 @@
       "type": "number",
       "default": 0
     },
+    "discount_percent": {
+      "type": "number",
+      "default": 0,
+      "description": "Discount percentage applied before markup/overhead/tax"
+    },
     "markup_percent": {
       "type": "number",
       "default": 0

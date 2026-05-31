@@ -16,8 +16,11 @@ export default function EstimateCustomerView({ estimate, job, customer, business
   const viewMode = estimate?.view_mode || "summary";
 
   const subtotal = lines.reduce((s, l) => s + (l.total || 0), 0);
-  const markupAmt = subtotal * ((estimate?.markup_percent || 0) / 100);
-  const afterMarkup = subtotal + markupAmt;
+  const discountPct = estimate?.discount_percent || 0;
+  const discountAmt = subtotal * (discountPct / 100);
+  const afterDiscount = subtotal - discountAmt;
+  const markupAmt = afterDiscount * ((estimate?.markup_percent || 0) / 100);
+  const afterMarkup = afterDiscount + markupAmt;
   const overheadAmt = afterMarkup * ((estimate?.overhead_percent || 0) / 100);
   const afterOverhead = afterMarkup + overheadAmt;
   const taxAmt = afterOverhead * ((estimate?.tax_percent || 0) / 100);
@@ -147,6 +150,12 @@ export default function EstimateCustomerView({ estimate, job, customer, business
               <span>Subtotal</span>
               <span>${subtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
             </div>
+            {discountPct > 0 && (
+              <div className="flex justify-between text-red-600">
+                <span>Discount ({discountPct}%)</span>
+                <span>−${discountAmt.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+              </div>
+            )}
             {(estimate?.markup_percent || 0) > 0 && (
               <div className="flex justify-between text-muted-foreground">
                 <span>Markup ({estimate.markup_percent}%)</span>

@@ -122,17 +122,22 @@ export default function JobDocumentsTab({ job }) {
   }
 
   function handleNewInvoiceConfirm({ invoiceType, lineItems }) {
-    openInvoice(null, { invoice_type: invoiceType, line_items: lineItems });
+    openInvoice(null, {
+      invoice_type: invoiceType,
+      line_items: lineItems,
+      discount_percent: approvedEstimate?.discount_percent || 0,
+    });
   }
 
   function openCo(co = null) { setSelectedCo(co); setCoOpen(true); }
 
   // Called from EstimateEditor "Create Deposit Invoice" button
-  function handleCreateDepositInvoice({ lines, total, tax }) {
+  function handleCreateDepositInvoice({ lines, total, tax, discount_percent }) {
     const prefill = {
       invoice_type: "Deposit",
       line_items: lines.map(l => ({ ...l })),
       tax,
+      discount_percent: discount_percent || 0,
       deposit_modifier: "50%",
       due_days: 7,
       notes: "Thank you for choosing High Country Metal Works. This deposit invoice represents 50% of your approved project total. Work will begin upon receipt of deposit.",

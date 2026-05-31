@@ -118,6 +118,7 @@ export default function EstimatePage() {
       setLines((existingEstimate.line_items || []).map(l => ({ ...l, _id: Math.random().toString(36).slice(2), _is_railing: false, _railing_style: null, _is_staircase: false, _staircase_type: null })));
       setMarkup(existingEstimate.markup_percent || 0);
       setOverhead(existingEstimate.overhead_percent || 0);
+      setDiscount(existingEstimate.discount_percent || 0);
       setTax(existingEstimate.tax_percent || 0);
       setNotes(existingEstimate.notes || "");
       setInternalNotes(existingEstimate.internal_notes || "");
@@ -158,6 +159,7 @@ export default function EstimatePage() {
         expiration_date: expirationDate,
         line_items: lines.map(({ _id, _is_railing, _railing_style, _is_staircase, _staircase_type, ...rest }) => rest),
         subtotal,
+        discount_percent: discount,
         markup_percent: markup,
         overhead_percent: overhead,
         tax_percent: tax,
@@ -291,7 +293,7 @@ export default function EstimatePage() {
   const estimateForView = {
     ...(existingEstimate || {}),
     status, line_items: lines.map(({ _id, _is_railing, _railing_style, _is_staircase, _staircase_type, ...r }) => r),
-    markup_percent: markup, overhead_percent: overhead, tax_percent: tax, total,
+    discount_percent: discount, markup_percent: markup, overhead_percent: overhead, tax_percent: tax, total,
     notes, view_mode: viewMode, estimate_number: estimateNumber,
     estimate_date: estimateDate, expiration_date: expirationDate,
     customer_signature: signature,

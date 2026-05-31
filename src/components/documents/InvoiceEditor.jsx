@@ -44,6 +44,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
     if (prefill?.line_items) return prefill.line_items.map(l => ({ ...l, _id: Math.random().toString(36).slice(2) }));
     return (invoice?.line_items || []).map(l => ({ ...l, _id: Math.random().toString(36).slice(2) }));
   });
+  const [discount, setDiscount] = useState(prefill?.discount_percent ?? invoice?.discount_percent ?? 0);
   const [tax, setTax] = useState(prefill?.tax ?? invoice?.tax_percent ?? 0);
   const [depositModifier] = useState(prefill?.deposit_modifier || null); // "50%" label
   const [amountPaid, setAmountPaid] = useState(invoice?.amount_paid || 0);
@@ -64,8 +65,10 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
   const rawSubtotal = lines.reduce((s, l) => s + (l.total || 0), 0);
   // For deposit invoices created from estimate, apply 50% at summary level
   const subtotal = depositModifier === "50%" ? rawSubtotal * 0.5 : rawSubtotal;
-  const taxAmount = subtotal * (tax / 100);
-  const total = subtotal + taxAmount;
+  const discountAmt = subtotal * (discount / 100);
+  const afterDiscount = subtotal - discountAmt;
+  const taxAmount = afterDiscount * (tax / 100);
+  const total = afterDiscount + taxAmount;
   const balanceDue = total - (amountPaid || 0);
 
   // Already invoiced on this job (excluding this invoice)
@@ -108,6 +111,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
         status,
         line_items: lines.map(({ _id, ...r }) => r),
         subtotal,
+        discount_percent: discount,
         tax_percent: tax,
         tax_amount: taxAmount,
         total,
@@ -306,6 +310,10 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
           <div className="space-y-3">
             <h3 className="font-semibold text-sm">Payment</h3>
             <div className="flex items-center gap-3">
+              <Label className="w-32 text-xs shrink-0">Discount %</Label>
+              <Input type="number" className="h-8 w-24 text-xs" value={discount} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} />
+            </div>
+            <div className="flex items-center gap-3">
               <Label className="w-32 text-xs shrink-0">Tax %</Label>
               <Input type="number" className="h-8 w-24 text-xs" value={tax} onChange={e => setTax(parseFloat(e.target.value) || 0)} />
             </div>
@@ -317,6 +325,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
           <div className="space-y-1 text-sm">
             <h3 className="font-semibold text-sm mb-3">Summary</h3>
             <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span>${subtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></div>
+            {discount > 0 && <div className="flex justify-between text-red-600"><span>Discount ({discount}%)</span><span>−${discountAmt.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></div>}
             {tax > 0 && <div className="flex justify-between text-muted-foreground"><span>Tax ({tax}%)</span><span>+${taxAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></div>}
             {depositModifier === "50%" && (
             <div className="flex justify-between text-muted-foreground text-xs bg-amber-50 px-2 py-1 rounded">

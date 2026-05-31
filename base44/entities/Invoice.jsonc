@@ -4,7 +4,7 @@
   "properties": {
     "invoice_number": {
       "type": "string",
-      "description": "Auto-generated invoice number e.g. INV-2025-001"
+      "description": "Auto-generated invoice number e.g. INV-2026-0001"
     },
     "job_id": {
       "type": "string",
@@ -109,6 +109,11 @@
     "subtotal": {
       "type": "number",
       "default": 0
+    },
+    "discount_percent": {
+      "type": "number",
+      "default": 0,
+      "description": "Discount percentage applied before tax"
     },
     "tax_percent": {
       "type": "number",
