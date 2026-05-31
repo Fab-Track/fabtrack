@@ -96,7 +96,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
   const actorName = currentUser?.full_name || currentUser?.email || "Team Member";
 
   const save = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const payload = {
         job_id: job.id,
         job_number: job.job_number,
@@ -119,9 +119,22 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
         internal_notes: internalNotes,
         ...(depositModifier ? { deposit_modifier: depositModifier } : {}),
       };
-      return isNew
-        ? base44.entities.Invoice.create({ ...payload, view_mode: viewMode })
-        : base44.entities.Invoice.update(invoice.id, { ...payload, view_mode: viewMode });
+      if (isNew) {
+        // Auto-assign sequential invoice number
+        const existing = await base44.entities.Invoice.list("-created_date", 200);
+        const year = new Date().getFullYear();
+        const yearPrefix = `INV-${year}-`;
+        const maxNum = existing.reduce((max, inv) => {
+          if (inv.invoice_number?.startsWith(yearPrefix)) {
+            const n = parseInt(inv.invoice_number.slice(yearPrefix.length), 10);
+            return isNaN(n) ? max : Math.max(max, n);
+          }
+          return max;
+        }, 0);
+        payload.invoice_number = `${yearPrefix}${String(maxNum + 1).padStart(4, "0")}`;
+        return base44.entities.Invoice.create({ ...payload, view_mode: viewMode });
+      }
+      return base44.entities.Invoice.update(invoice.id, { ...payload, view_mode: viewMode });
     },
     onSuccess: async () => {
       const prevStatus = invoice?.status || "Unpaid";
@@ -149,7 +162,9 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
   });
 
   async function handleMoveToShop() {
-    const transition = buildStageTransition(job, "Shop", "New Jobs Landed — Needs Approval", "Deposit received — moved to Shop Flow");
+    // Use updated stage since autoMoveSalesStage already moved job to "Deposit Received / Sale Won"
+    const updatedJob = { ...job, pipeline_board: "Sales", stage: "Deposit Received / Sale Won" };
+    const transition = buildStageTransition(updatedJob, "Shop", "New Jobs Landed — Needs Approval", "Deposit received — moved to Shop Flow");
     await base44.entities.Job.update(job.id, transition);
     qc.invalidateQueries(["jobs"]);
     qc.invalidateQueries(["job", job.id]);

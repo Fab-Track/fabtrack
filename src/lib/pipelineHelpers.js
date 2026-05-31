@@ -116,6 +116,41 @@ export function daysInStage(job) {
   return differenceInDays(new Date(), d);
 }
 
+// ── Stage → legacy status mapping ─────────────────────────────────────────────
+function stageToStatus(toBoard, toStage) {
+  if (toBoard === "Billing") {
+    return toStage === "Paid / Closed" ? "Invoiced" : "Invoiced";
+  }
+  if (toBoard === "Shop") {
+    const shopMap = {
+      "New Jobs Landed — Needs Approval": "Approved",
+      "On Deck for Measure": "Approved",
+      "Ready for Measure": "Approved",
+      "Needs Drawing": "Approved",
+      "Drawing Needs Approval": "Approved",
+      "On Deck for Fabrication": "Fab Queue",
+      "Fabricate": "In Fabrication",
+      "Fabrication Complete — Needs Powder Coat": "Powder Coat",
+      "At Powder Coat": "Powder Coat",
+      "Ready for Install": "Install Scheduled",
+      "Install in Progress / Not Complete": "Install Scheduled",
+      "Install Complete": "Install Complete",
+    };
+    return shopMap[toStage] || "Approved";
+  }
+  // Sales board
+  const salesMap = {
+    "New Lead": "Estimate",
+    "Estimate in Progress": "Estimate",
+    "Estimate In Progress": "Estimate",
+    "Estimate Sent": "Estimate",
+    "Negotiation / In Review": "Estimate",
+    "Awaiting Deposit": "Approved",
+    "Deposit Received / Sale Won": "Approved",
+  };
+  return salesMap[toStage] || "Estimate";
+}
+
 // ── Move job to a new stage (returns update payload) ──────────────────────────
 export function buildStageTransition(job, toBoard, toStage, note = "") {
   const now = new Date().toISOString();
@@ -133,6 +168,7 @@ export function buildStageTransition(job, toBoard, toStage, note = "") {
     stage_entered_at: now,
     stage_history: [...(job.stage_history || []), historyEntry],
     last_activity_date: now,
+    status: stageToStatus(toBoard, toStage),
   };
 }
 
