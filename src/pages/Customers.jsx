@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import CustomerCommTab from "@/components/comms/CustomerCommTab";
 import MessageComposerModal from "@/components/comms/MessageComposerModal";
+import CustomerTransactionsTab from "@/components/customers/CustomerTransactionsTab";
 import { Link } from "react-router-dom";
 import { format, parseISO, isValid } from "date-fns";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -75,7 +76,7 @@ function TypeBadge({ type }) {
 function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
   const queryClient = useQueryClient();
   const [editingType, setEditingType] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview"); // overview | invoices | communications
+  const [activeTab, setActiveTab] = useState("overview"); // overview | invoices | transactions | communications
   const [composerOpen, setComposerOpen] = useState(false);
 
   const customerJobs = useMemo(() =>
@@ -121,7 +122,7 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
     },
   });
 
-  const invoicesToShow = activeTab === "invoices" ? unpaidInvoices : customerInvoices;
+  // invoicesToShow kept for backward compat — Outstanding tab uses unpaidInvoices directly
 
   return (
     <div>
@@ -267,6 +268,12 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
           )}
         </button>
         <button
+          onClick={() => setActiveTab("transactions")}
+          className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${activeTab === "transactions" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          Transactions
+        </button>
+        <button
           onClick={() => setActiveTab("communications")}
           className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${activeTab === "communications" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
         >
@@ -339,6 +346,14 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {activeTab === "transactions" && (
+        <CustomerTransactionsTab
+          customer={customer}
+          allInvoices={customerInvoices}
+          allJobs={customerJobs}
+        />
       )}
 
       {activeTab === "communications" && (

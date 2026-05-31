@@ -1,12 +1,13 @@
 import React, { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, parseISO } from "date-fns";
-import { Plus, FileText, FileDiff, Receipt, CheckCircle2, AlertCircle, Clock, Sparkles } from "lucide-react";
+import { Plus, FileText, FileDiff, Receipt, CheckCircle2, AlertCircle, Clock, Sparkles, RefreshCw, Archive } from "lucide-react";
 import InvoiceEditor from "@/components/documents/InvoiceEditor";
 import ChangeOrderEditor from "@/components/documents/ChangeOrderEditor";
 import JobFinancialSummary from "@/components/jobs/JobFinancialSummary";
@@ -114,6 +115,23 @@ export default function JobDocumentsTab({ job }) {
     navigate(`/jobs/${job.id}/estimates/new`);
   }
 
+  async function handleRequote(declinedEst) {
+    // Archive the declined estimate by marking it superseded, then open new estimate
+    await base44.entities.Estimate.update(declinedEst.id, {
+      status: "Rejected",
+      notes: (declinedEst.notes ? declinedEst.notes + "\n\n" : "") + "[Superseded — Requote created]",
+    });
+    qc.invalidateQueries({ queryKey: ["estimates", job.id] });
+    // Navigate to new estimate with prefilled line items via query param
+    const params = new URLSearchParams({ requoteFrom: declinedEst.id });
+    navigate(`/jobs/${job.id}/estimates/new?${params.toString()}`);
+  }
+
+  async function handleArchiveEstimate(est) {
+    await base44.entities.Estimate.update(est.id, { status: "Rejected" });
+    qc.invalidateQueries({ queryKey: ["estimates", job.id] });
+  }
+
   function handleRailingCalcGenerate({ lineItems, total, notes, stylePhotoUrl, style, lnft }) {
     setRailingCalcOpen(false);
     setRailingPromptOpen(false);
@@ -167,47 +185,116 @@ export default function JobDocumentsTab({ job }) {
       />
 
       {/* ── ESTIMATES ─────────────────────────────────────────────── */}
-      <div>
-        <SectionHeader icon={FileText} title="Estimates" count={estimates.length} onNew={handleNewEstimateClick} newLabel="New Estimate" />
-        {estimates.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground bg-muted/20 rounded-lg mt-2 text-sm">No estimates yet.</div>
-        ) : (
-          <div className="divide-y border rounded-lg mt-2 overflow-hidden">
-            {estimates.map(est => (
-              <div key={est.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 cursor-pointer" onClick={() => openEstimate(est)}>
-                <div className="flex items-center gap-3">
-                  {est.status === "Approved"
-                    ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                    : <FileText className="w-4 h-4 text-muted-foreground/40 shrink-0" />}
-                  <div>
-                    <p className="text-sm font-medium">Estimate #{est.id.slice(-6).toUpperCase()}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {est.approved_date
-                        ? `Approved ${format(parseISO(est.approved_date), "MMM d, yyyy")}`
-                        : est.created_date ? format(parseISO(est.created_date), "MMM d, yyyy") : "—"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-semibold text-sm">${(est.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                  {est.service_category && (
-                    <Badge variant="outline" className="text-xs border-blue-200 text-blue-700 bg-blue-50">{est.service_category}</Badge>
-                  )}
-                  <Badge className={`text-xs ${EST_STATUS[est.status] || ""}`}>{est.status}</Badge>
-                  {est.status === "Approved" && !hasDepositInvoice && (
-                    <Badge
-                      className="bg-emerald-600 text-white border border-emerald-700 text-xs cursor-pointer hover:bg-emerald-700 transition-colors"
-                      onClick={e => { e.stopPropagation(); setNewInvoiceFlowOpen(true); }}
-                    >
-                      <Sparkles className="w-3 h-3 mr-1" /> Ready to Invoice
-                    </Badge>
-                  )}
-                </div>
+      {(() => {
+        const primaryEst = estimates[0]; // One estimate per job
+        const hasEst = !!primaryEst;
+        const isApproved = primaryEst?.status === "Approved";
+        const isDeclined = primaryEst?.status === "Rejected";
+        const hasMultiple = estimates.length > 1;
+
+        return (
+          <div>
+            {/* Section header */}
+            <div className="flex items-center justify-between py-3 border-b">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-muted-foreground" />
+                <span className="font-semibold text-sm">Estimate</span>
+                {hasEst && (
+                  <Badge className={`text-xs ${EST_STATUS[primaryEst.status] || ""}`}>{primaryEst.status}</Badge>
+                )}
               </div>
-            ))}
+              <div className="flex items-center gap-2">
+                {!hasEst && (
+                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleNewEstimateClick}>
+                    <Plus className="w-3 h-3" /> New Estimate
+                  </Button>
+                )}
+                {isDeclined && (
+                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1 border-orange-300 text-orange-700 hover:bg-orange-50"
+                    onClick={() => handleRequote(primaryEst)}>
+                    <RefreshCw className="w-3 h-3" /> Requote
+                  </Button>
+                )}
+                {isApproved && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-xs text-muted-foreground px-2 py-1 rounded border border-dashed cursor-default">
+                          Use Change Orders to modify scope
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>Estimate is approved. Use Change Orders to modify scope.</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
+            </div>
+
+            {/* Multiple estimates warning banner */}
+            {hasMultiple && (
+              <div className="mt-2 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-yellow-600" />
+                <span>This job has multiple estimates. Archive unused estimates to clean up the billing record.</span>
+              </div>
+            )}
+
+            {!hasEst ? (
+              <div className="text-center py-6 text-muted-foreground bg-muted/20 rounded-lg mt-2 text-sm">No estimate yet.</div>
+            ) : (
+              <div className="divide-y border rounded-lg mt-2 overflow-hidden">
+                {estimates.map((est, idx) => {
+                  const isSuperseded = est.notes?.includes("[Superseded — Requote created]");
+                  return (
+                    <div key={est.id} className={`flex items-center justify-between px-4 py-3 hover:bg-muted/40 cursor-pointer ${isSuperseded ? "opacity-60" : ""}`}
+                      onClick={() => openEstimate(est)}>
+                      <div className="flex items-center gap-3">
+                        {est.status === "Approved"
+                          ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          : est.status === "Rejected"
+                          ? <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                          : <FileText className="w-4 h-4 text-muted-foreground/40 shrink-0" />}
+                        <div>
+                          <p className="text-sm font-medium">
+                            Estimate #{est.id.slice(-6).toUpperCase()}
+                            {isSuperseded && <span className="ml-2 text-xs text-muted-foreground italic">Declined — Superseded</span>}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {est.approved_date
+                              ? `Approved ${format(parseISO(est.approved_date), "MMM d, yyyy")}`
+                              : est.created_date ? format(parseISO(est.created_date), "MMM d, yyyy") : "—"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-semibold text-sm">${(est.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                        {est.service_category && (
+                          <Badge variant="outline" className="text-xs border-blue-200 text-blue-700 bg-blue-50 hidden md:flex">{est.service_category}</Badge>
+                        )}
+                        <Badge className={`text-xs ${EST_STATUS[est.status] || ""}`}>{est.status}</Badge>
+                        {est.status === "Approved" && !hasDepositInvoice && (
+                          <Badge
+                            className="bg-emerald-600 text-white border border-emerald-700 text-xs cursor-pointer hover:bg-emerald-700 transition-colors"
+                            onClick={e => { e.stopPropagation(); setNewInvoiceFlowOpen(true); }}
+                          >
+                            <Sparkles className="w-3 h-3 mr-1" /> Ready to Invoice
+                          </Badge>
+                        )}
+                        {/* Archive button on non-approved estimates when there are multiples */}
+                        {hasMultiple && est.status !== "Approved" && (
+                          <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={e => { e.stopPropagation(); handleArchiveEstimate(est); }}>
+                            <Archive className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        );
+      })()}
 
       {/* ── INVOICES ──────────────────────────────────────────────── */}
       <div>
