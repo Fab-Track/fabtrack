@@ -2,14 +2,13 @@
 // FabTrack Permissions Data
 // ─────────────────────────────────────────────────────────────────
 
-export const ROLES = ["shop_manager", "estimator", "design_specialist", "fabricator", "installer", "accountant"];
+export const ROLES = ["shop_manager", "estimator", "design_specialist", "fabricator", "accountant"];
 export const ROLE_LABELS = {
   owner: "Owner",
   shop_manager: "Shop Manager",
   estimator: "Estimator",
   design_specialist: "Design Specialist",
   fabricator: "Fabricator",
-  installer: "Installer",
   accountant: "Accountant",
 };
 
@@ -17,8 +16,7 @@ export const ROLE_SUMMARIES = {
   shop_manager: "Sees Job Board, Schedule, Shop Floor, Work Centers, Inventory",
   estimator: "Sees Estimates, Customers, Sales Pipeline, Invoices",
   design_specialist: "Sees Job Board, Schedule, Drawing Queue, Documents",
-  fabricator: "Sees assigned jobs, clocks in/out, Shop Floor, Work Centers",
-  installer: "Sees Install Schedule, Job Details, Materials Checklist",
+  fabricator: "Sees assigned jobs, clocks in/out, Shop Floor, Work Centers, install schedule and site details",
   accountant: "Sees Invoices, Financial Reports, Customer Balances",
 };
 
@@ -120,7 +118,7 @@ export const PERMISSION_GROUPS = [
       { id: "sched_own",      label: "View schedule (own assignments)" },
       { id: "sched_all",      label: "View schedule (all jobs)" },
       { id: "sched_edit",     label: "Create / edit schedule entries" },
-      { id: "sched_assign",   label: "Assign installers to jobs" },
+      { id: "sched_assign",   label: "Assign crew to jobs" },
     ],
   },
   {
@@ -262,29 +260,8 @@ export const DEFAULT_PERMISSIONS = {
     set_company: 0, set_users: 0, set_notif_shop: 0, set_notif_self: 3,
     set_templates: 0, set_integrations: 0, set_jobboard: 0, set_billing: 0, set_account: 3,
   },
+  // Fabricator = merged Fabricator + Installer (takes max of each permission)
   fabricator: {
-    dash_own: 3, dash_other: 0, messages: 1, reports_overview: 0, reports_sales: 0,
-    reports_financial: 0, reports_production: 0, reports_customers: 0,
-    jobs_view: 1, jobs_create: 0, jobs_edit: 0, jobs_delete: 0, jobs_move: 0,
-    jobs_costing: 0, jobs_contact: 0,
-    est_view: 0, est_create: 0, est_edit_draft: 0, est_edit_sent: 0, est_send: 0,
-    est_approve: 0, est_delete: 0,
-    inv_view: 0, inv_create: 0, inv_edit: 0, inv_send: 0, inv_paid: 0, inv_delete: 0,
-    co_view: 0, co_create: 0, co_edit: 0, co_send: 0, co_approve: 0, co_delete: 0,
-    cust_view_list: 0, cust_view_profile: 0, cust_view_financial: 0, cust_view_transactions: 0,
-    cust_create: 0, cust_edit: 0, cust_delete: 0,
-    docs_view: 1, docs_financial: 0, docs_create: 1, docs_delete: 0,
-    sched_own: 1, sched_all: 0, sched_edit: 0, sched_assign: 0,
-    shop_clock: 3, shop_live: 1, shop_manual: 0, shop_edit_time: 0, shop_log: 2,
-    score_own: 3, score_all: 0, score_detail: 3, score_notes: 0,
-    emp_list: 0, emp_profile: 0, emp_rates: 0, emp_edit: 0, emp_deactivate: 0,
-    inv_view_items: 1, inv_edit_items: 0, inv_delete_items: 0, inv_po: 0,
-    wc_view: 3, wc_edit: 0,
-    comm_send: 0, comm_all: 0, comm_own: 0, comm_templates: 0,
-    set_company: 0, set_users: 0, set_notif_shop: 0, set_notif_self: 3,
-    set_templates: 0, set_integrations: 0, set_jobboard: 0, set_billing: 0, set_account: 3,
-  },
-  installer: {
     dash_own: 3, dash_other: 0, messages: 1, reports_overview: 0, reports_sales: 0,
     reports_financial: 0, reports_production: 0, reports_customers: 0,
     jobs_view: 1, jobs_create: 0, jobs_edit: 0, jobs_delete: 0, jobs_move: 0,
@@ -297,11 +274,11 @@ export const DEFAULT_PERMISSIONS = {
     cust_create: 0, cust_edit: 0, cust_delete: 0,
     docs_view: 1, docs_financial: 0, docs_create: 1, docs_delete: 0,
     sched_own: 3, sched_all: 1, sched_edit: 0, sched_assign: 0,
-    shop_clock: 1, shop_live: 0, shop_manual: 0, shop_edit_time: 0, shop_log: 1,
-    score_own: 1, score_all: 0, score_detail: 1, score_notes: 0,
+    shop_clock: 3, shop_live: 1, shop_manual: 0, shop_edit_time: 0, shop_log: 2,
+    score_own: 3, score_all: 0, score_detail: 3, score_notes: 0,
     emp_list: 0, emp_profile: 0, emp_rates: 0, emp_edit: 0, emp_deactivate: 0,
     inv_view_items: 1, inv_edit_items: 0, inv_delete_items: 0, inv_po: 0,
-    wc_view: 0, wc_edit: 0,
+    wc_view: 3, wc_edit: 0,
     comm_send: 0, comm_all: 0, comm_own: 0, comm_templates: 0,
     set_company: 0, set_users: 0, set_notif_shop: 0, set_notif_self: 3,
     set_templates: 0, set_integrations: 0, set_jobboard: 0, set_billing: 0, set_account: 3,

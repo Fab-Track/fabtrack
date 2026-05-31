@@ -7,7 +7,7 @@ export const PREVIEW_ROLES = [
   { id: "estimator",        label: "Estimator",                dashboardView: "estimator" },
   { id: "design_specialist",label: "Design Specialist",        dashboardView: "owner" },
   { id: "fabricator",       label: "Fabricator",               dashboardView: "fabricator" },
-  { id: "installer",        label: "Installer",                dashboardView: "fabricator" },
+  { id: "installer",        label: "Fabricator",               dashboardView: "fabricator" },
   { id: "accountant",       label: "Accountant",               dashboardView: "estimator" },
 ];
 
@@ -17,7 +17,6 @@ export const PREVIEW_ROLE_OPTIONS = [
   { id: "estimator",         label: "Estimator" },
   { id: "design_specialist", label: "Design Specialist (Drawer)" },
   { id: "fabricator",        label: "Fabricator" },
-  { id: "installer",         label: "Installer" },
   { id: "accountant",        label: "Accountant" },
 ];
 

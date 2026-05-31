@@ -20,7 +20,7 @@
         "welder",
         "fitter",
         "cutter",
-        "installer",
+        "fabricator",
         "foreman",
         "admin",
         "grinder",
@@ -186,7 +186,7 @@
     },
     "assigned_comm_email": {
       "type": "string",
-      "description": "Assigned HCMW email address for outgoing email (e.g. connor@highcountrymetalworks.com)"
+      "description": "Assigned HCMW email address for outgoing email"
     },
     "gmail_connected": {
       "type": "boolean",

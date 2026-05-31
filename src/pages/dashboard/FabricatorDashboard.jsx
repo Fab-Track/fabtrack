@@ -9,6 +9,8 @@ import MyCurrentJob from "@/components/dashboard/fabricator/MyCurrentJob";
 import MyJobsThisWeek from "@/components/dashboard/fabricator/MyJobsThisWeek";
 import MyScoreBreakdown from "@/components/dashboard/fabricator/MyScoreBreakdown";
 import MyMonthComparison from "@/components/dashboard/fabricator/MyMonthComparison";
+import NextInstallCard from "@/components/dashboard/fabricator/NextInstallCard";
+import MyUpcomingInstalls from "@/components/dashboard/fabricator/MyUpcomingInstalls";
 
 export default function FabricatorDashboard({ overrideEmployee = null }) {
   const { user } = useAuth();
@@ -117,6 +119,12 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
         qcInspections={qcInspections}
         jobs={jobs}
       />
+
+      {/* Install widgets */}
+      <div className="grid lg:grid-cols-2 gap-4">
+        <NextInstallCard employee={myEmployee} jobs={jobs} />
+        <MyUpcomingInstalls employee={myEmployee} jobs={jobs} />
+      </div>
 
       {/* Score breakdown + month comparison side by side */}
       <div className="grid lg:grid-cols-2 gap-4">

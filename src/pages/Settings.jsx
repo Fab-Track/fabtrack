@@ -17,7 +17,7 @@ import { BookOpen, Activity, DollarSign, Image } from "lucide-react";
 const ALL_SECTIONS = [
   { id: "company",    label: "Company",             icon: Building2,       ownerOnly: true },
   { id: "users",      label: "Users & Roles",        icon: Users,           ownerOnly: true },
-  { id: "notifications", label: "Notifications",    icon: Bell,            roles: ["owner","admin","shop_manager","estimator","fabricator","installer","accountant"] },
+  { id: "notifications", label: "Notifications",    icon: Bell,            roles: ["owner","admin","shop_manager","estimator","fabricator","accountant"] },
   { id: "templates",  label: "Message Templates",    icon: MessageSquare,   roles: ["owner","admin","estimator"] },
   { id: "integrations", label: "Integrations",      icon: Plug,            ownerOnly: true },
   { id: "jobboard",   label: "Job Board",            icon: LayoutDashboard, roles: ["owner","admin","shop_manager"] },

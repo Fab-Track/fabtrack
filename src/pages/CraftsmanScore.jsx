@@ -51,7 +51,34 @@ export default function CraftsmanScore() {
       const reworkRate = empInspections.length
         ? Math.round((empInspections.filter(i => i.rework_required).length / empInspections.length) * 100)
         : null;
-      return { emp, avgScore, firstPassRate, reworkRate, count: empInspections.length };
+
+      // On-time install rate: jobs assigned to this employee that had an install date
+      const assignedInstalls = jobs.filter(j => {
+        const crew = j.assigned_crew_names || [];
+        return crew.includes(emp.name) && (j.promised_install_date || j.expected_install_date);
+      });
+      const completedInstalls = assignedInstalls.filter(j =>
+        j.stage === "Install Complete" || j.stage === "Invoiced" || j.status === "Install Complete" || j.status === "Invoiced"
+      );
+      let onTimeInstallRate = null;
+      if (completedInstalls.length > 0) {
+        const onTime = completedInstalls.filter(j => {
+          const scheduledDate = j.promised_install_date || j.expected_install_date;
+          if (!scheduledDate) return true;
+          // Check stage_history for when "Install Complete" was reached
+          const completedEntry = (j.stage_history || []).find(h =>
+            h.to_stage === "Install Complete" || h.to_stage === "Invoiced"
+          );
+          if (!completedEntry) return true; // no data = assume on time
+          const completedAt = new Date(completedEntry.timestamp);
+          const scheduled = new Date(scheduledDate);
+          scheduled.setHours(23, 59, 59);
+          return completedAt <= scheduled;
+        });
+        onTimeInstallRate = Math.round((onTime.length / completedInstalls.length) * 100);
+      }
+
+      return { emp, avgScore, firstPassRate, reworkRate, count: empInspections.length, onTimeInstallRate, installCount: assignedInstalls.length };
     })
     .sort((a, b) => (b.avgScore || -1) - (a.avgScore || -1));
 
@@ -125,7 +152,7 @@ export default function CraftsmanScore() {
 
         <TabsContent value="leaderboard">
           <div className="space-y-3">
-            {empStats.map(({ emp, avgScore, firstPassRate, reworkRate, count }, idx) => {
+            {empStats.map(({ emp, avgScore, firstPassRate, reworkRate, count, onTimeInstallRate, installCount }, idx) => {
               const tier = avgScore !== null ? getTier(avgScore) : getTier(-1);
               return (
                 <Card key={emp.id} className={`border ${avgScore !== null ? tier.bg : ""}`}>
@@ -180,6 +207,12 @@ export default function CraftsmanScore() {
                           <p className="text-muted-foreground">Rework</p>
                         </div>
                       )}
+                      <div className="text-center">
+                        <p className={`font-bold ${onTimeInstallRate === null ? "text-muted-foreground" : onTimeInstallRate >= 80 ? "text-emerald-600" : "text-amber-600"}`}>
+                          {onTimeInstallRate !== null ? `${onTimeInstallRate}%` : "—"}
+                        </p>
+                        <p className="text-muted-foreground">On-Time Install</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

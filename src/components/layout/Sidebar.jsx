@@ -67,8 +67,7 @@ const ROLE_NAV = {
   ],
   installer: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
-    { group: "WORK",        items: ["schedule"] },
-    { group: "SHOP",        items: ["shopFloor"] },
+    { group: "SHOP",        items: ["schedule", "shopFloor"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   accountant: [

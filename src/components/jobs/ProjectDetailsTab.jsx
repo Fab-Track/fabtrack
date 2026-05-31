@@ -9,7 +9,7 @@ import JobLevelSections from "@/components/jobs/JobLevelSections";
 import { useToast } from "@/components/ui/use-toast";
 
 const VIEW_OPTIONS = ["all", "designer", "installer"];
-const VIEW_LABELS = { all: "All Fields", designer: "Designer View", installer: "Installer View" };
+const VIEW_LABELS = { all: "All Fields", designer: "Designer View", installer: "Fabricator / Installer View" };
 const VIEW_COLORS = {
   all: "bg-muted text-muted-foreground",
   designer: "bg-blue-100 text-blue-700 border-blue-200",

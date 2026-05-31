@@ -16,7 +16,7 @@ import PermissionAuditLog from "./permissions/PermissionAuditLog";
 import RoleSummaryCard from "./permissions/RoleSummaryCard";
 import { ROLES as PERM_ROLES, ROLE_LABELS, DEFAULT_PERMISSIONS } from "@/lib/permissionsData";
 
-const ROLES = ["owner", "admin", "shop_manager", "estimator", "fabricator", "installer", "accountant", "design_specialist"];
+const ROLES = ["owner", "admin", "shop_manager", "estimator", "fabricator", "accountant", "design_specialist"];
 
 function statusBadge(status) {
   if (status === "active") return <Badge className="bg-green-100 text-green-700 text-[10px]">Active</Badge>;

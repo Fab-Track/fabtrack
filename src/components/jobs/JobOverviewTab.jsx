@@ -10,7 +10,7 @@ import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 export default function JobOverviewTab({ job }) {
   const { user } = useAuth();
   const effectiveRole = useEffectiveRole(user?.role || "admin");
-  const isFabricator = effectiveRole.toLowerCase() === "fabricator";
+  const isFabricator = ["fabricator", "installer"].includes(effectiveRole.toLowerCase());
 
   return (
     <div className="grid md:grid-cols-2 gap-4">

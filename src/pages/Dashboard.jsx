@@ -8,7 +8,6 @@ import ShopManagerDashboard from "./dashboard/ShopManagerDashboard";
 import FabricatorDashboard from "./dashboard/FabricatorDashboard";
 import EstimatorDashboard from "./dashboard/EstimatorDashboard";
 import AccountantDashboard from "./dashboard/AccountantDashboard";
-import InstallerDashboard from "./dashboard/InstallerDashboard";
 import DesignDashboard from "./dashboard/DesignDashboard";
 
 // Map role → dashboard component key
@@ -19,8 +18,7 @@ function getDashboardForRole(role) {
   if (r === "estimator") return "estimator";
   if (r === "accountant") return "accountant";
   if (r === "design_specialist") return "design";
-  if (["installer"].includes(r)) return "installer";
-  if (["welder", "fitter", "cutter", "grinder", "fabricator"].includes(r)) return "fabricator";
+  if (["welder", "fitter", "cutter", "grinder", "fabricator", "installer"].includes(r)) return "fabricator";
   return "owner"; // default fallback
 }
 
@@ -91,8 +89,7 @@ export default function Dashboard() {
     estimator: "Sales pipeline — quotes, approvals, and follow-ups.",
     accountant: "Financial overview — invoices, collections, and cash flow.",
     design: "Drawing queue — what needs to be drafted and when.",
-    installer: "Your install schedule — what's next and what to bring.",
-    fabricator: "Your work — what to build and your performance.",
+    fabricator: "Your work — what to build, your installs, and your performance.",
   };
 
   return (
@@ -113,7 +110,6 @@ export default function Dashboard() {
       {displayView === "estimator"  && <EstimatorDashboard />}
       {displayView === "accountant" && <AccountantDashboard />}
       {displayView === "design"     && <DesignDashboard />}
-      {displayView === "installer"  && <InstallerDashboard />}
       {displayView === "fabricator" && (
         <FabricatorDashboard overrideEmployee={isImpersonating ? impersonatedEmployee : null} />
       )}
