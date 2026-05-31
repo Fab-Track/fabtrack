@@ -8,20 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { UserPlus, Pencil, MailOpen } from "lucide-react";
+import { UserPlus, Pencil, MailOpen, Eye, Table2, Clock, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import PermissionsMatrix from "./permissions/PermissionsMatrix";
+import RolePreviewSection from "./permissions/RolePreviewSection";
+import PermissionAuditLog from "./permissions/PermissionAuditLog";
+import RoleSummaryCard from "./permissions/RoleSummaryCard";
+import { ROLES as PERM_ROLES, ROLE_LABELS, DEFAULT_PERMISSIONS } from "@/lib/permissionsData";
 
-const ROLES = ["owner", "admin", "shop_manager", "estimator", "fabricator", "installer", "accountant"];
-
-const ROLE_DESCRIPTIONS = {
-  owner: "Full access to everything, including billing and user management.",
-  admin: "Same as owner minus billing management.",
-  shop_manager: "Manages shop floor, job board, schedules, and work centers.",
-  estimator: "Creates and manages estimates, customers, and the sales pipeline.",
-  fabricator: "Views assigned jobs, logs time, and updates work center status.",
-  installer: "Views install schedule and job details for their assignments.",
-  accountant: "Views invoices, payments, and financial reports.",
-};
+const ROLES = ["owner", "admin", "shop_manager", "estimator", "fabricator", "installer", "accountant", "design_specialist"];
 
 function statusBadge(status) {
   if (status === "active") return <Badge className="bg-green-100 text-green-700 text-[10px]">Active</Badge>;
@@ -29,18 +24,35 @@ function statusBadge(status) {
   return <Badge variant="outline" className="text-[10px] text-muted-foreground">Deactivated</Badge>;
 }
 
+function loadPermissions() {
+  try {
+    const saved = localStorage.getItem("fabtrack_role_permissions");
+    return saved ? JSON.parse(saved) : { ...DEFAULT_PERMISSIONS };
+  } catch { return { ...DEFAULT_PERMISSIONS }; }
+}
+
+const TABS = [
+  { id: "users",   label: "Users",              icon: UserPlus },
+  { id: "matrix",  label: "Permissions Matrix", icon: Table2 },
+  { id: "preview", label: "Preview Role",        icon: Eye },
+  { id: "audit",   label: "Audit Log",           icon: Clock },
+];
+
 export default function UsersRolesSection() {
   const qc = useQueryClient();
+  const [tab, setTab] = useState("users");
   const [showInvite, setShowInvite] = useState(false);
   const [editUser, setEditUser] = useState(null);
   const [invite, setInvite] = useState({ first_name: "", last_name: "", email: "", role: "fabricator", phone: "" });
   const [inviting, setInviting] = useState(false);
-  const [showRoles, setShowRoles] = useState(false);
+  const [summaryRole, setSummaryRole] = useState(null);
 
   const { data: users = [] } = useQuery({
     queryKey: ["users"],
     queryFn: () => base44.entities.User.list(),
   });
+
+  const permissions = loadPermissions();
 
   async function handleInvite() {
     if (!invite.email || !invite.first_name) { toast.error("Name and email are required"); return; }
@@ -62,64 +74,97 @@ export default function UsersRolesSection() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h2 className="font-semibold text-base">Users & Roles</h2>
-          <p className="text-sm text-muted-foreground">Manage who has access to FabTrack and what they can do.</p>
+          <p className="text-sm text-muted-foreground">Manage users, permissions, and role access for FabTrack.</p>
         </div>
-        <Button size="sm" onClick={() => setShowInvite(true)} className="gap-1.5">
-          <UserPlus className="w-3.5 h-3.5" /> Invite User
-        </Button>
-      </div>
-
-      {/* Users table */}
-      <div className="border rounded-xl overflow-hidden">
-        <div className="grid grid-cols-[1fr_1.2fr_1fr_1fr_80px_100px] gap-2 px-4 py-2 bg-muted/30 border-b text-xs font-medium text-muted-foreground">
-          <span>Name</span><span>Email</span><span>Role</span><span>Phone</span><span>Status</span><span>Actions</span>
-        </div>
-        {users.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">No users yet.</p>
-        ) : (
-          <div className="divide-y">
-            {users.map(u => (
-              <div key={u.id} className="grid grid-cols-[1fr_1.2fr_1fr_1fr_80px_100px] gap-2 px-4 py-3 items-center text-sm">
-                <span className="font-medium truncate">{u.full_name || "—"}</span>
-                <span className="text-xs text-muted-foreground truncate">{u.email}</span>
-                <span className="text-xs capitalize">{u.role || "—"}</span>
-                <span className="text-xs text-muted-foreground">{u.phone || "—"}</span>
-                <span>{statusBadge(u.status || "active")}</span>
-                <div className="flex gap-1">
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditUser(u)} title="Edit">
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
-                  {u.status === "invited" && (
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Resend invite">
-                      <MailOpen className="w-3.5 h-3.5" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+        {tab === "users" && (
+          <Button size="sm" onClick={() => setShowInvite(true)} className="gap-1.5">
+            <UserPlus className="w-3.5 h-3.5" /> Invite User
+          </Button>
         )}
       </div>
 
-      {/* Role descriptions */}
-      <div>
-        <button className="text-xs text-muted-foreground underline hover:text-foreground" onClick={() => setShowRoles(p => !p)}>
-          {showRoles ? "Hide" : "Show"} role descriptions
-        </button>
-        {showRoles && (
-          <div className="mt-2 border rounded-xl divide-y text-sm">
-            {ROLES.map(r => (
-              <div key={r} className="px-4 py-2 flex gap-3">
-                <span className="font-medium capitalize w-28 shrink-0">{r.replace("_", " ")}</span>
-                <span className="text-muted-foreground">{ROLE_DESCRIPTIONS[r]}</span>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* Tab bar */}
+      <div className="flex border-b gap-0.5">
+        {TABS.map(t => {
+          const Icon = t.icon;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                tab === t.id
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {t.label}
+            </button>
+          );
+        })}
       </div>
+
+      {/* Users tab */}
+      {tab === "users" && (
+        <div className="space-y-4">
+          <div className="border rounded-xl overflow-hidden">
+            <div className="grid grid-cols-[1fr_1.2fr_1fr_1fr_80px_120px] gap-2 px-4 py-2 bg-muted/30 border-b text-xs font-medium text-muted-foreground">
+              <span>Name</span><span>Email</span><span>Role</span><span>Phone</span><span>Status</span><span>Actions</span>
+            </div>
+            {users.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No users yet.</p>
+            ) : (
+              <div className="divide-y">
+                {users.map(u => {
+                  const roleKey = (u.role || "").toLowerCase().replace(" ", "_");
+                  const userCount = users.filter(x => (x.role || "").toLowerCase() === u.role?.toLowerCase()).length;
+                  return (
+                    <div key={u.id} className="grid grid-cols-[1fr_1.2fr_1fr_1fr_80px_120px] gap-2 px-4 py-3 items-center text-sm">
+                      <span className="font-medium truncate">{u.full_name || "—"}</span>
+                      <span className="text-xs text-muted-foreground truncate">{u.email}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs capitalize">{(u.role || "—").replace("_", " ")}</span>
+                        {PERM_ROLES.includes(roleKey) && (
+                          <button
+                            onClick={() => setSummaryRole(roleKey)}
+                            className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5"
+                          >
+                            View <ChevronRight className="w-2.5 h-2.5" />
+                          </button>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground">{u.phone || "—"}</span>
+                      <span>{statusBadge(u.status || "active")}</span>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditUser(u)} title="Edit">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        {u.status === "invited" && (
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Resend invite">
+                            <MailOpen className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Matrix tab */}
+      {tab === "matrix" && <PermissionsMatrix />}
+
+      {/* Preview tab */}
+      {tab === "preview" && <RolePreviewSection />}
+
+      {/* Audit log tab */}
+      {tab === "audit" && <PermissionAuditLog />}
 
       {/* Invite modal */}
       <Dialog open={showInvite} onOpenChange={setShowInvite}>
@@ -146,7 +191,7 @@ export default function UsersRolesSection() {
                 <Select value={invite.role} onValueChange={v => setInvite(p => ({ ...p, role: v }))}>
                   <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {ROLES.map(r => <SelectItem key={r} value={r} className="capitalize">{r.replace("_", " ")}</SelectItem>)}
+                    {ROLES.map(r => <SelectItem key={r} value={r} className="capitalize">{r.replace(/_/g, " ")}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -165,6 +210,17 @@ export default function UsersRolesSection() {
       {/* Edit user sheet */}
       {editUser && (
         <EditUserSheet user={editUser} onClose={() => setEditUser(null)} onSave={handleSaveEdit} />
+      )}
+
+      {/* Role summary card */}
+      {summaryRole && (
+        <RoleSummaryCard
+          role={summaryRole}
+          permissions={permissions[summaryRole] || DEFAULT_PERMISSIONS[summaryRole] || {}}
+          userCount={users.filter(u => (u.role || "").toLowerCase() === summaryRole).length}
+          open={!!summaryRole}
+          onClose={() => setSummaryRole(null)}
+        />
       )}
     </div>
   );
@@ -186,7 +242,7 @@ function EditUserSheet({ user, onClose, onSave }) {
             <Select value={form.role} onValueChange={v => setForm(p => ({ ...p, role: v }))}>
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {ROLES.map(r => <SelectItem key={r} value={r} className="capitalize">{r.replace("_", " ")}</SelectItem>)}
+                {ROLES.map(r => <SelectItem key={r} value={r} className="capitalize">{r.replace(/_/g, " ")}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

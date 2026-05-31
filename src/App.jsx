@@ -30,6 +30,7 @@ import EstimateView from '@/pages/EstimateView';
 import Reports from '@/pages/Reports';
 import Messages from '@/pages/Messages';
 import Conversations from '@/pages/Conversations';
+import OnboardingWelcome from '@/pages/OnboardingWelcome';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -60,6 +61,7 @@ const AuthenticatedApp = () => {
       <Route path="/kiosk" element={<ShopKiosk />} />
       <Route path="/lead" element={<LeadForm />} />
       <Route path="/onboarding" element={<OnboardingSurveyPage />} />
+      <Route path="/welcome" element={<OnboardingWelcome />} />
       <Route path="/estimate-view/:estimateId" element={<EstimateView />} />
       
       {/* Main app with sidebar layout */}
