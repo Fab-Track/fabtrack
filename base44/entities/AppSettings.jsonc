@@ -1,0 +1,43 @@
+{
+  "name": "AppSettings",
+  "type": "object",
+  "properties": {
+    "setting_key": {
+      "type": "string",
+      "description": "Unique key for this settings record, e.g. gmail_system_sender"
+    },
+    "system_sender_email": {
+      "type": "string",
+      "description": "Connected system sender email address"
+    },
+    "system_sender_access_token": {
+      "type": "string",
+      "description": "OAuth access token for system sender \u2014 server-side only"
+    },
+    "system_sender_refresh_token": {
+      "type": "string",
+      "description": "OAuth refresh token for system sender \u2014 server-side only"
+    },
+    "system_sender_token_expiry": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the system sender access token expires"
+    },
+    "system_sender_status": {
+      "type": "string",
+      "enum": [
+        "connected",
+        "expired",
+        "disconnected"
+      ],
+      "default": "disconnected"
+    },
+    "system_sender_connected_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "setting_key"
+  ]
+}

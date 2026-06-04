@@ -206,6 +206,23 @@
         "disconnected"
       ],
       "description": "Current status of the Gmail OAuth token"
+    },
+    "gmail_connected_email": {
+      "type": "string",
+      "description": "The Gmail address that was authorized"
+    },
+    "gmail_access_token": {
+      "type": "string",
+      "description": "OAuth access token \u2014 server-side only, never exposed to frontend"
+    },
+    "gmail_refresh_token": {
+      "type": "string",
+      "description": "OAuth refresh token \u2014 server-side only, never exposed to frontend"
+    },
+    "gmail_token_expiry": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the access token expires"
     }
   },
   "required": [

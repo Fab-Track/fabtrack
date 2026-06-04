@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,9 +7,12 @@ import { Upload, CheckCircle2, Circle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import GmailUserConnectionCard from "./GmailUserConnectionCard";
 
 export default function MyAccountSection() {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const nameParts = (user?.full_name || "").split(" ");
   const [form, setForm] = useState({
     first_name: nameParts[0] || "",
@@ -20,7 +23,15 @@ export default function MyAccountSection() {
   });
   const [passwords, setPasswords] = useState({ current: "", next: "", confirm: "" });
   const [uploading, setUploading] = useState(false);
-  const gmailStatus = user?.gmail_token_status || "disconnected";
+
+  // Fetch the employee record that matches this user's email for Gmail status
+  const { data: employees = [], refetch: refetchEmployee } = useQuery({
+    queryKey: ["my-employee-record", user?.email],
+    queryFn: () => base44.entities.Employee.filter({ email: user?.email }),
+    enabled: !!user?.email,
+    staleTime: 15000,
+  });
+  const myEmployee = employees[0] || null;
 
   async function handlePhotoUpload(file) {
     setUploading(true);
@@ -85,21 +96,14 @@ export default function MyAccountSection() {
       </div>
 
       {/* Gmail connection */}
-      <div className="border rounded-xl p-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Gmail Connection</p>
-          {gmailStatus === "connected"
-            ? <Badge className="bg-green-100 text-green-700 gap-1"><CheckCircle2 className="w-3 h-3" />Connected</Badge>
-            : gmailStatus === "expired"
-              ? <Badge className="bg-yellow-100 text-yellow-700 gap-1"><RefreshCw className="w-3 h-3" />Expired</Badge>
-              : <Badge variant="outline" className="text-muted-foreground gap-1"><Circle className="w-3 h-3" />Not Connected</Badge>
-          }
+      {myEmployee && (
+        <GmailUserConnectionCard employee={myEmployee} onRefresh={() => refetchEmployee()} />
+      )}
+      {!myEmployee && (
+        <div className="border rounded-xl p-4 text-xs text-muted-foreground">
+          No employee record linked to your account email. Ask your admin to create one.
         </div>
-        <p className="text-xs text-muted-foreground">Connect your @highcountrymetalworks.com Gmail to send emails on behalf of your account.</p>
-        <Button size="sm" variant="outline" className="gap-1.5">
-          {gmailStatus === "expired" ? <><RefreshCw className="w-3.5 h-3.5" />Reconnect Gmail</> : <><CheckCircle2 className="w-3.5 h-3.5" />Connect Gmail</>}
-        </Button>
-      </div>
+      )}
 
       {/* Password change */}
       <div className="space-y-3 pt-2 border-t">

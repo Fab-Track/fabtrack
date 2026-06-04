@@ -1,0 +1,145 @@
+import React, { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, AlertCircle, Circle, RefreshCw, Unlink, ExternalLink, ShieldAlert } from "lucide-react";
+import { toast } from "sonner";
+import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
+
+const SYSTEM_EMAIL = "billing@highcountrymetalworks.com";
+
+function StatusBadge({ status }) {
+  if (status === "connected") return <Badge className="gap-1 bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="w-3 h-3" />Connected</Badge>;
+  if (status === "expired") return <Badge className="gap-1 bg-yellow-100 text-yellow-700 border-yellow-200"><AlertCircle className="w-3 h-3" />Expired</Badge>;
+  return <Badge variant="outline" className="gap-1 text-muted-foreground"><Circle className="w-3 h-3" />Not Connected</Badge>;
+}
+
+export default function GmailSystemSenderCard() {
+  const { user } = useAuth();
+  const isOwner = user?.role === "admin";
+  const [status, setStatus] = useState(null); // null = loading
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  async function fetchStatus() {
+    const res = await base44.functions.invoke("gmailGetStatus", {});
+    if (res.data?.system_sender) setStatus(res.data.system_sender);
+  }
+
+  useEffect(() => { fetchStatus(); }, []);
+
+  async function handleConnect() {
+    setConnecting(true);
+    const res = await base44.functions.invoke("gmailOAuthStart", { type: "system" });
+    setConnecting(false);
+    if (res.data?.error) { toast.error(res.data.error); return; }
+
+    const popup = window.open(res.data.auth_url, "_blank", "width=500,height=650");
+    const timer = setInterval(() => {
+      if (!popup || popup.closed) {
+        clearInterval(timer);
+        fetchStatus();
+      }
+    }, 800);
+
+    // Also listen for postMessage
+    function onMessage(e) {
+      if (e.data?.type === "gmail_oauth_success") {
+        toast.success(e.data.message);
+        fetchStatus();
+        window.removeEventListener("message", onMessage);
+      } else if (e.data?.type === "gmail_oauth_error") {
+        toast.error(e.data.message);
+        window.removeEventListener("message", onMessage);
+      }
+    }
+    window.addEventListener("message", onMessage);
+  }
+
+  async function handleDisconnect() {
+    setDisconnecting(true);
+    const res = await base44.functions.invoke("gmailDisconnect", { type: "system" });
+    setDisconnecting(false);
+    if (res.data?.ok) { toast.success("System sender disconnected."); fetchStatus(); }
+    else toast.error(res.data?.error || "Disconnect failed.");
+  }
+
+  const s = status;
+  const isConnected = s?.status === "connected";
+  const isExpired = s?.status === "expired";
+
+  return (
+    <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-4 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold">System Sender</span>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">billing@</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            All estimates and invoices are sent from <strong>{SYSTEM_EMAIL}</strong>
+          </p>
+        </div>
+        {s === null ? (
+          <div className="w-4 h-4 border-2 border-t-transparent border-primary rounded-full animate-spin mt-0.5" />
+        ) : (
+          <StatusBadge status={s.status} />
+        )}
+      </div>
+
+      {isExpired && (
+        <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg p-2.5 text-xs text-yellow-800">
+          <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          <span><strong>Action required:</strong> The billing email connection has expired. Estimate and invoice sending is blocked until reconnected.</span>
+        </div>
+      )}
+
+      {!isConnected && !isExpired && s !== null && (
+        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-xs text-amber-800">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          <span>Not connected. Estimates and invoices cannot be emailed until the system sender is connected.</span>
+        </div>
+      )}
+
+      {isConnected && s?.email && (
+        <p className="text-xs text-muted-foreground">
+          Connected as <strong>{s.email}</strong>
+          {s.connected_at && <> · {new Date(s.connected_at).toLocaleDateString()}</>}
+        </p>
+      )}
+
+      {isOwner ? (
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            size="sm"
+            variant={isExpired ? "destructive" : isConnected ? "outline" : "default"}
+            className="gap-1.5 h-8 text-xs"
+            onClick={handleConnect}
+            disabled={connecting}
+          >
+            {connecting ? (
+              <><span className="w-3 h-3 border-2 border-t-transparent border-current rounded-full animate-spin" />Connecting…</>
+            ) : isConnected ? (
+              <><RefreshCw className="w-3 h-3" />Reconnect</>
+            ) : (
+              <><ExternalLink className="w-3 h-3" />{isExpired ? "Reconnect System Email" : "Connect System Email"}</>
+            )}
+          </Button>
+          {isConnected && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="gap-1.5 h-8 text-xs text-muted-foreground"
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+            >
+              <Unlink className="w-3 h-3" />Disconnect
+            </Button>
+          )}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground italic">Only the owner can connect or disconnect the system sender.</p>
+      )}
+    </div>
+  );
+}
