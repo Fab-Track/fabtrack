@@ -30,15 +30,7 @@ function ConnectRow({ employee, onRefresh }) {
     const res = await base44.functions.invoke("gmailOAuthStart", { type: "user", employee_id: employee.id });
     setConnecting(false);
     if (res.data?.error) { toast.error(res.data.error); return; }
-    const popup = window.open(res.data.auth_url, "_blank", "width=500,height=650");
-    const timer = setInterval(() => {
-      if (!popup || popup.closed) { clearInterval(timer); onRefresh(); }
-    }, 800);
-    function onMsg(e) {
-      if (e.data?.type === "gmail_oauth_success") { toast.success(e.data.message); onRefresh(); window.removeEventListener("message", onMsg); }
-      else if (e.data?.type === "gmail_oauth_error") { toast.error(e.data.message); window.removeEventListener("message", onMsg); }
-    }
-    window.addEventListener("message", onMsg);
+    window.location.href = res.data.auth_url;
   }
 
   async function handleDisconnect() {

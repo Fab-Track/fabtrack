@@ -17,7 +17,7 @@ function StatusBadge({ status }) {
 export default function GmailSystemSenderCard() {
   const { user } = useAuth();
   const isOwner = user?.role === "admin";
-  const [status, setStatus] = useState(null); // null = loading
+  const [status, setStatus] = useState(null);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
@@ -26,34 +26,34 @@ export default function GmailSystemSenderCard() {
     if (res.data?.system_sender) setStatus(res.data.system_sender);
   }
 
-  useEffect(() => { fetchStatus(); }, []);
+  // On mount: check URL params for OAuth return result, then fetch status
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get("gmail_result");
+    const message = params.get("gmail_message");
+    const section = params.get("section");
+
+    if (result && section === "integrations") {
+      if (result === "success") toast.success(message || "Gmail connected successfully.");
+      else toast.error(message || "Gmail connection failed.");
+      // Clean up URL params without reloading
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete("gmail_result");
+      clean.searchParams.delete("gmail_message");
+      clean.searchParams.delete("section");
+      window.history.replaceState({}, "", clean.toString());
+    }
+
+    fetchStatus();
+  }, []);
 
   async function handleConnect() {
     setConnecting(true);
     const res = await base44.functions.invoke("gmailOAuthStart", { type: "system" });
     setConnecting(false);
     if (res.data?.error) { toast.error(res.data.error); return; }
-
-    const popup = window.open(res.data.auth_url, "_blank", "width=500,height=650");
-    const timer = setInterval(() => {
-      if (!popup || popup.closed) {
-        clearInterval(timer);
-        fetchStatus();
-      }
-    }, 800);
-
-    // Also listen for postMessage
-    function onMessage(e) {
-      if (e.data?.type === "gmail_oauth_success") {
-        toast.success(e.data.message);
-        fetchStatus();
-        window.removeEventListener("message", onMessage);
-      } else if (e.data?.type === "gmail_oauth_error") {
-        toast.error(e.data.message);
-        window.removeEventListener("message", onMessage);
-      }
-    }
-    window.addEventListener("message", onMessage);
+    // Full redirect — Google will return us to the app via the callback
+    window.location.href = res.data.auth_url;
   }
 
   async function handleDisconnect() {
@@ -118,7 +118,7 @@ export default function GmailSystemSenderCard() {
             disabled={connecting}
           >
             {connecting ? (
-              <><span className="w-3 h-3 border-2 border-t-transparent border-current rounded-full animate-spin" />Connecting…</>
+              <><span className="w-3 h-3 border-2 border-t-transparent border-current rounded-full animate-spin" />Redirecting…</>
             ) : isConnected ? (
               <><RefreshCw className="w-3 h-3" />Reconnect</>
             ) : (

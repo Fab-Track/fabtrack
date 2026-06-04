@@ -11,6 +11,26 @@ export default function GmailUserConnectionCard({ employee, onRefresh }) {
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
+  // On mount: check URL params for OAuth return result
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get("gmail_result");
+    const message = params.get("gmail_message");
+    const section = params.get("section");
+
+    if (result && section === "account") {
+      if (result === "success") toast.success(message || "Gmail connected successfully.");
+      else toast.error(message || "Gmail connection failed.");
+      // Clean up URL
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete("gmail_result");
+      clean.searchParams.delete("gmail_message");
+      clean.searchParams.delete("section");
+      window.history.replaceState({}, "", clean.toString());
+      onRefresh?.();
+    }
+  }, []);
+
   if (!employee) return null;
 
   const status = employee.gmail_token_status || "disconnected";
@@ -27,26 +47,8 @@ export default function GmailUserConnectionCard({ employee, onRefresh }) {
     const res = await base44.functions.invoke("gmailOAuthStart", { type: "user", employee_id: employee.id });
     setConnecting(false);
     if (res.data?.error) { toast.error(res.data.error); return; }
-
-    const popup = window.open(res.data.auth_url, "_blank", "width=500,height=650");
-    const timer = setInterval(() => {
-      if (!popup || popup.closed) {
-        clearInterval(timer);
-        onRefresh?.();
-      }
-    }, 800);
-
-    function onMessage(e) {
-      if (e.data?.type === "gmail_oauth_success") {
-        toast.success(e.data.message);
-        onRefresh?.();
-        window.removeEventListener("message", onMessage);
-      } else if (e.data?.type === "gmail_oauth_error") {
-        toast.error(e.data.message);
-        window.removeEventListener("message", onMessage);
-      }
-    }
-    window.addEventListener("message", onMessage);
+    // Full redirect — Google returns us to the app via the callback
+    window.location.href = res.data.auth_url;
   }
 
   async function handleDisconnect() {
@@ -98,7 +100,7 @@ export default function GmailUserConnectionCard({ employee, onRefresh }) {
             disabled={connecting || !hasEmail}
           >
             {connecting ? (
-              <><span className="w-3 h-3 border-2 border-t-transparent border-current rounded-full animate-spin" />Connecting…</>
+              <><span className="w-3 h-3 border-2 border-t-transparent border-current rounded-full animate-spin" />Redirecting…</>
             ) : isExpired ? (
               <><RefreshCw className="w-3 h-3" />Reconnect Gmail</>
             ) : (

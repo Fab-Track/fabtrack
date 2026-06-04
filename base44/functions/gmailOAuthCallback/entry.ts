@@ -2,7 +2,26 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const ALLOWED_DOMAIN = 'highcountrymetalworks.com';
 
-// Handles Google OAuth redirect. Exchanges code for tokens, validates domain, stores tokens.
+// The FabTrack app base URL — all redirects go here, never to the marketing site.
+const APP_BASE_URL = 'https://app.base44.com/apps/6a0386c06686afe23a4a4b70';
+
+// After OAuth, redirect back to the correct Settings page with result params.
+// System sender → /settings?section=integrations&gmail_result=...
+// Per-user      → /settings?section=account&gmail_result=...
+function buildReturnUrl(type, result, message) {
+  const section = type === 'system' ? 'integrations' : 'account';
+  const params = new URLSearchParams({
+    section,
+    gmail_result: result,       // "success" | "error"
+    gmail_message: message,
+  });
+  return `${APP_BASE_URL}?${params}`;
+}
+
+function redirectTo(url) {
+  return new Response(null, { status: 302, headers: { Location: url } });
+}
+
 Deno.serve(async (req) => {
   const url = new URL(req.url);
   const code = url.searchParams.get('code');
@@ -12,42 +31,25 @@ Deno.serve(async (req) => {
   const appId = Deno.env.get('BASE44_APP_ID');
   const redirectUri = `https://api.base44.com/api/apps/${appId}/functions/gmailOAuthCallback`;
 
-  // Close window HTML helper
-  function closeWindow(message, isError = false) {
-    const color = isError ? '#dc2626' : '#16a34a';
-    return new Response(`<!DOCTYPE html><html><body style="font-family:sans-serif;padding:2rem;text-align:center;">
-      <p style="color:${color};font-size:1rem;">${message}</p>
-      <script>
-        setTimeout(() => {
-          if (window.opener) {
-            window.opener.postMessage({ type: 'gmail_oauth_${isError ? 'error' : 'success'}', message: '${message.replace(/'/g, "\\'")}' }, '*');
-          }
-          window.close();
-        }, 1500);
-      </script>
-    </body></html>`, { headers: { 'Content-Type': 'text/html' } });
+  // Decode state early so we know which page to return to on error
+  let state = { type: 'system' };
+  if (stateB64) {
+    try { state = JSON.parse(atob(stateB64)); } catch { /* fallback to system */ }
   }
 
   if (errorParam) {
-    return closeWindow(`Authorization cancelled: ${errorParam}`, true);
+    return redirectTo(buildReturnUrl(state.type, 'error', `Authorization cancelled: ${errorParam}`));
   }
 
   if (!code || !stateB64) {
-    return closeWindow('Missing authorization code or state.', true);
-  }
-
-  let state;
-  try {
-    state = JSON.parse(atob(stateB64));
-  } catch {
-    return closeWindow('Invalid state parameter.', true);
+    return redirectTo(buildReturnUrl(state.type, 'error', 'Missing authorization code.'));
   }
 
   const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID');
   const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET');
 
   if (!clientId || !clientSecret) {
-    return closeWindow('OAuth credentials not configured on the server.', true);
+    return redirectTo(buildReturnUrl(state.type, 'error', 'OAuth credentials not configured on the server.'));
   }
 
   try {
@@ -66,7 +68,8 @@ Deno.serve(async (req) => {
 
     const tokens = await tokenRes.json();
     if (tokens.error) {
-      return closeWindow(`Token exchange failed: ${tokens.error_description || tokens.error}`, true);
+      return redirectTo(buildReturnUrl(state.type, 'error',
+        `Token exchange failed: ${tokens.error_description || tokens.error}`));
     }
 
     // Get the authorized email via userinfo
@@ -78,19 +81,14 @@ Deno.serve(async (req) => {
 
     // Validate domain
     if (!authorizedEmail.endsWith(`@${ALLOWED_DOMAIN}`)) {
-      return closeWindow(
-        `Only @${ALLOWED_DOMAIN} accounts can be connected. You authorized ${authorizedEmail} — please try again with your company account.`,
-        true
-      );
+      return redirectTo(buildReturnUrl(state.type, 'error',
+        `Only @${ALLOWED_DOMAIN} accounts can be connected. You used ${authorizedEmail} — please sign in with your company account.`));
     }
 
     const expiresAt = new Date(Date.now() + (tokens.expires_in || 3600) * 1000).toISOString();
-
-    // Use service role to store tokens
     const base44 = createClientFromRequest(req);
 
     if (state.type === 'system') {
-      // Store as app settings on a dedicated AppSettings record
       const existing = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'gmail_system_sender' });
       const tokenData = {
         setting_key: 'gmail_system_sender',
@@ -106,12 +104,13 @@ Deno.serve(async (req) => {
       } else {
         await base44.asServiceRole.entities.AppSettings.create(tokenData);
       }
-      return closeWindow(`System sender connected as ${authorizedEmail} ✓`);
-    } else {
-      // Per-user: update the Employee record matching the user
-      const empId = state.employee_id;
-      if (!empId) return closeWindow('No employee ID in state.', true);
+      return redirectTo(buildReturnUrl('system', 'success', `System sender connected as ${authorizedEmail}`));
 
+    } else {
+      const empId = state.employee_id;
+      if (!empId) {
+        return redirectTo(buildReturnUrl('user', 'error', 'No employee ID in state.'));
+      }
       await base44.asServiceRole.entities.Employee.update(empId, {
         gmail_connected: true,
         gmail_connected_at: new Date().toISOString(),
@@ -121,9 +120,10 @@ Deno.serve(async (req) => {
         gmail_refresh_token: tokens.refresh_token || null,
         gmail_token_expiry: expiresAt,
       });
-      return closeWindow(`Gmail connected as ${authorizedEmail} ✓`);
+      return redirectTo(buildReturnUrl('user', 'success', `Gmail connected as ${authorizedEmail}`));
     }
+
   } catch (err) {
-    return closeWindow(`Server error: ${err.message}`, true);
+    return redirectTo(buildReturnUrl(state.type, 'error', `Server error: ${err.message}`));
   }
 });
