@@ -132,42 +132,64 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
 
       {/* Header */}
       <div className="bg-card border rounded-xl p-5 mb-5">
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-xl font-bold">{customer.name}</h2>
-              {editingType ? (
-                <Select
-                  value={customer.type || ""}
-                  onValueChange={(v) => updateTypeMutation.mutate(v)}
-                  onOpenChange={(open) => { if (!open) setEditingType(false); }}
-                  defaultOpen
-                >
-                  <SelectTrigger className="h-7 w-44 text-xs">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CUSTOMER_TYPES.map(t => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <button onClick={() => setEditingType(true)} className="hover:opacity-70 transition-opacity">
-                  {customer.type ? <TypeBadge type={customer.type} /> : (
-                    <Badge variant="outline" className="text-[10px] text-muted-foreground border-dashed">+ Add Type</Badge>
-                  )}
-                </button>
+        {/* Name row */}
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <h2 className="text-xl font-bold">{customer.name}</h2>
+          {editingType ? (
+            <Select
+              value={customer.type || ""}
+              onValueChange={(v) => updateTypeMutation.mutate(v)}
+              onOpenChange={(open) => { if (!open) setEditingType(false); }}
+              defaultOpen
+            >
+              <SelectTrigger className="h-7 w-44 text-xs">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                {CUSTOMER_TYPES.map(t => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <button onClick={() => setEditingType(true)} className="hover:opacity-70 transition-opacity">
+              {customer.type ? <TypeBadge type={customer.type} /> : (
+                <Badge variant="outline" className="text-[10px] text-muted-foreground border-dashed">+ Add Type</Badge>
               )}
-            </div>
-            {customer.company && <p className="text-sm text-muted-foreground mt-0.5">{customer.company}</p>}
-          </div>
-          <div className="space-y-1 text-sm text-muted-foreground">
-            {customer.phone && <div className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />{customer.phone}</div>}
-            {customer.email && <div className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />{customer.email}</div>}
-            {customer.address && <div className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" />{customer.address}</div>}
-          </div>
+            </button>
+          )}
         </div>
+        {customer.company && <p className="text-sm text-muted-foreground mb-3">{customer.company}</p>}
+
+        {/* Info cells row — mirrors job header style */}
+        {(customer.phone || customer.email || customer.address) && (
+          <div className="flex items-start gap-5 flex-wrap mt-2 pt-2 border-t border-border">
+            {customer.phone && (
+              <div className="min-w-0">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5 flex items-center gap-1">
+                  <Phone className="w-3 h-3" />Phone
+                </p>
+                <p className="text-sm font-medium">{customer.phone}</p>
+              </div>
+            )}
+            {customer.email && (
+              <div className="min-w-0">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5 flex items-center gap-1">
+                  <Mail className="w-3 h-3" />Email
+                </p>
+                <p className="text-sm font-medium">{customer.email}</p>
+              </div>
+            )}
+            {customer.address && (
+              <div className="min-w-0">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5 flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />Billing Address
+                </p>
+                <p className="text-sm font-medium">{customer.address}</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Stats row */}
