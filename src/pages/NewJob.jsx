@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { generateJobNumber } from "@/lib/jobHelpers";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
@@ -17,18 +17,29 @@ export default function NewJob() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  // Read pre-filled customer from URL params (coming from Customer Profile page)
+  const urlParams = new URLSearchParams(window.location.search);
+  const prefilledCustomerId = urlParams.get("customer_id") || "";
+  const prefilledCustomerName = urlParams.get("customer_name") || "";
+
   const { data: customers = [] } = useQuery({
     queryKey: ["customers"],
     queryFn: () => base44.entities.Customer.list("-created_date", 100),
   });
 
+  // Find the pre-filled customer record to get site_address
+  const prefilledCustomer = useMemo(() =>
+    customers.find(c => c.id === prefilledCustomerId) || null,
+    [customers, prefilledCustomerId]
+  );
+
   const [form, setForm] = useState({
     job_number: generateJobNumber(),
     job_name: "",
-    customer_id: "",
-    customer_name: "",
+    customer_id: prefilledCustomerId,
+    customer_name: prefilledCustomerName,
     status: "Estimate",
-    site_address: "",
+    site_address: prefilledCustomer?.address || "",
     expected_install_date: "",
     customer_approval_status: "pending",
     last_activity_date: new Date().toISOString(),
@@ -76,7 +87,11 @@ export default function NewJob() {
           <CardContent className="space-y-4">
             <div>
               <Label className="text-xs">Job Number</Label>
-              <Input value={form.job_number} readOnly className="bg-muted font-mono text-sm" />
+              <Input
+                value={form.job_number}
+                onChange={e => updateField("job_number", e.target.value)}
+                className="font-mono text-sm"
+              />
             </div>
 
             <div>
@@ -92,11 +107,18 @@ export default function NewJob() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-xs">Customer</Label>
-                <CustomerCombobox
-                  customers={customers}
-                  value={form.customer_id}
-                  onChange={handleCustomerChange}
-                />
+                {prefilledCustomerId ? (
+                  <div className="flex items-center gap-2 h-9 px-3 rounded-md border border-input bg-muted text-sm">
+                    <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    <span className="font-medium">{prefilledCustomerName}</span>
+                  </div>
+                ) : (
+                  <CustomerCombobox
+                    customers={customers}
+                    value={form.customer_id}
+                    onChange={handleCustomerChange}
+                  />
+                )}
               </div>
               <div>
                 <Label className="text-xs">Expected Install Date</Label>
