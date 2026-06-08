@@ -5,9 +5,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { X, Send, Link, Check } from "lucide-react";
 import { toast } from "sonner";
+
+/** Resolve the billing email: billing contact if set and different, otherwise job contact, otherwise legacy email */
+function getBillingEmail(customer) {
+  if (!customer) return "";
+  const sameAsJob = customer.billing_same_as_job !== false;
+  if (sameAsJob) {
+    return customer.job_contact_email || customer.email || "";
+  }
+  return customer.billing_contact_email || customer.job_contact_email || customer.email || "";
+}
+
 export default function SendEstimatePanel({ estimate, job, customer, onClose, onSent }) {
   const firstName = customer?.name?.split(" ")[0] || customer?.name || "there";
-  const [to, setTo] = useState(customer?.email || "");
+  const [to, setTo] = useState(getBillingEmail(customer));
   const [subject, setSubject] = useState(`Your Estimate from High Country Metal Works — ${job?.job_name || ""}`);
   const [message, setMessage] = useState(`Hi ${firstName},\n\nPlease find your estimate attached. Let us know if you have any questions!\n\nThank you,\nHigh Country Metal Works`);
   const [copied, setCopied] = useState(false);
@@ -31,7 +42,7 @@ export default function SendEstimatePanel({ estimate, job, customer, onClose, on
   return (
     <div className="absolute inset-y-0 right-0 w-80 bg-background border-l shadow-xl flex flex-col z-10">
       <div className="flex items-center justify-between px-4 py-3 border-b">
-        <h3 className="font-semibold text-sm">Review & Send</h3>
+        <h3 className="font-semibold text-sm">Review &amp; Send</h3>
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
           <X className="w-4 h-4" />
         </button>

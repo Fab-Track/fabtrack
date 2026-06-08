@@ -37,6 +37,35 @@
     "notes": {
       "type": "string",
       "description": "Internal notes"
+    },
+    "job_contact_name": {
+      "type": "string",
+      "description": "Job contact full name"
+    },
+    "job_contact_email": {
+      "type": "string",
+      "description": "Job contact email"
+    },
+    "job_contact_phone": {
+      "type": "string",
+      "description": "Job contact phone"
+    },
+    "billing_contact_name": {
+      "type": "string",
+      "description": "Billing contact full name"
+    },
+    "billing_contact_email": {
+      "type": "string",
+      "description": "Billing contact email"
+    },
+    "billing_contact_phone": {
+      "type": "string",
+      "description": "Billing contact phone"
+    },
+    "billing_same_as_job": {
+      "type": "boolean",
+      "default": true,
+      "description": "If true, billing contact is the same as job contact"
     }
   },
   "required": [

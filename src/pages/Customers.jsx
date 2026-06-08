@@ -26,6 +26,7 @@ import OutstandingAgingCard from "@/components/customers/OutstandingAgingCard";
 import PaymentBehaviorCard from "@/components/customers/PaymentBehaviorCard";
 import QuickActionsBar from "@/components/customers/QuickActionsBar";
 import CustomerARSummaryBar from "@/components/customers/CustomerARSummaryBar";
+import CustomerContactsSection from "@/components/customers/CustomerContactsSection";
 
 const JOB_TYPE_COLORS = ["#3b82f6", "#f97316", "#a855f7", "#10b981", "#84cc16", "#ef4444"];
 
@@ -252,6 +253,9 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Contacts */}
+      <CustomerContactsSection customer={customer} onUpdated={onUpdated} />
 
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
