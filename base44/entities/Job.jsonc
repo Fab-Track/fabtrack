@@ -224,7 +224,8 @@
         "Unqualified Lead",
         "Qualified \u2014 Not Interested",
         "Qualified \u2014 Lost",
-        "Qualified \u2014 Won"
+        "Qualified \u2014 Won",
+        "Testing"
       ],
       "description": "Outcome of the sales lead"
     },

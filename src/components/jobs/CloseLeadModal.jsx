@@ -12,6 +12,7 @@ const OUTCOMES = [
   "Unqualified Lead",
   "Qualified — Not Interested",
   "Qualified — Lost",
+  "Testing",
 ];
 
 export default function CloseLeadModal({ open, onClose, job }) {
