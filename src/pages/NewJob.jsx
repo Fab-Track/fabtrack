@@ -11,6 +11,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import { Link } from "react-router-dom";
 import { generateJobNumber } from "@/lib/jobHelpers";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function NewJob() {
   const navigate = useNavigate();
@@ -105,6 +106,23 @@ export default function NewJob() {
                   onChange={e => updateField("expected_install_date", e.target.value)}
                 />
               </div>
+            </div>
+
+            <div>
+              <Label className="text-xs">Customer Type</Label>
+              <Select value={form.customer_type || ""} onValueChange={val => updateField("customer_type", val)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select customer type…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Homeowner">Homeowner</SelectItem>
+                  <SelectItem value="General Contractor">General Contractor</SelectItem>
+                  <SelectItem value="Builder / Developer">Builder / Developer</SelectItem>
+                  <SelectItem value="Commercial Business">Commercial Business</SelectItem>
+                  <SelectItem value="Subcontractor">Subcontractor</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>

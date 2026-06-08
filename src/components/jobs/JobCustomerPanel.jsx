@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Pencil, Mail, Phone, MapPin, UserX, UserSearch } from "lucide-react";
+import { Pencil, Mail, Phone, MapPin, UserX, UserSearch, Tag } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -142,8 +142,9 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
         </div>
 
         {/* Info cells — only show if customer record has data */}
-        {(displayEmail || displayPhone || displayAddress) && (
+        {(displayEmail || displayPhone || displayAddress || customer?.type) && (
           <div className="flex items-start gap-5 flex-wrap pl-2 border-l border-border">
+            {customer?.type && <InfoCell label="Type" icon={Tag} value={customer.type} />}
             {displayEmail && <InfoCell label="Email" icon={Mail} value={displayEmail} />}
             {displayPhone && <InfoCell label="Phone" icon={Phone} value={displayPhone} />}
             {displayAddress && <InfoCell label="Billing Address" icon={MapPin} value={displayAddress} />}
