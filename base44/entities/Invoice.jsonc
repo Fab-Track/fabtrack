@@ -59,6 +59,17 @@
       ],
       "default": "Unpaid"
     },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "Check",
+        "ACH",
+        "Credit Card",
+        "Stripe",
+        "QuickBooks Online (QBO)"
+      ],
+      "description": "Payment method used \u2014 required when status is Paid or Partial"
+    },
     "view_mode": {
       "type": "string",
       "enum": [

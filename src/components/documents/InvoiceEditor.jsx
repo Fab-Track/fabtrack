@@ -50,6 +50,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
   const [amountPaid, setAmountPaid] = useState(invoice?.amount_paid || 0);
   const [notes, setNotes] = useState(prefill?.notes || invoice?.notes || "");
   const [internalNotes, setInternalNotes] = useState(invoice?.internal_notes || "");
+  const [paymentMethod, setPaymentMethod] = useState(invoice?.payment_method || "");
   const [viewMode, setViewMode] = useState(invoice?.view_mode || "detail");
   const [issuedDate, setIssuedDate] = useState(invoice?.issued_date || new Date().toISOString().split("T")[0]);
   const [dueDate, setDueDate] = useState(() => {
@@ -96,7 +97,16 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
     setTax(est.tax_percent || 0);
   }
 
+  const requiresPaymentMethod = status === "Paid" || status === "Partial";
   const actorName = currentUser?.full_name || currentUser?.email || "Team Member";
+
+  function handleSave() {
+    if (requiresPaymentMethod && !paymentMethod) {
+      toast.error("Please select a Payment Method before saving.");
+      return;
+    }
+    save.mutate();
+  }
 
   const save = useMutation({
     mutationFn: async () => {
@@ -117,6 +127,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
         total,
         amount_paid: amountPaid,
         balance_due: balanceDue,
+        payment_method: requiresPaymentMethod ? paymentMethod : null,
         issued_date: issuedDate,
         due_date: dueDate,
         notes,
@@ -221,7 +232,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
               <LayoutList className="w-3 h-3" /> Detail
             </button>
           </div>
-          <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
+          <Button size="sm" onClick={handleSave} disabled={save.isPending}>
             {save.isPending ? "Saving…" : isNew ? "Create Invoice" : "Save Changes"}
           </Button>
           {onClose && <Button size="sm" variant="outline" onClick={onClose}>Close</Button>}
@@ -321,6 +332,23 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
               <Label className="w-32 text-xs shrink-0">Amount Paid</Label>
               <Input type="number" className="h-8 w-24 text-xs" value={amountPaid} onChange={e => setAmountPaid(parseFloat(e.target.value) || 0)} />
             </div>
+            {requiresPaymentMethod && (
+              <div className="flex items-center gap-3">
+                <Label className={`w-32 text-xs shrink-0 ${!paymentMethod ? "text-destructive font-semibold" : ""}`}>
+                  Payment Method <span className="text-destructive">*</span>
+                </Label>
+                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <SelectTrigger className={`h-8 w-44 text-xs ${!paymentMethod ? "border-destructive ring-1 ring-destructive" : ""}`}>
+                    <SelectValue placeholder="Select method…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["Check", "ACH", "Credit Card", "Stripe", "QuickBooks Online (QBO)"].map(m => (
+                      <SelectItem key={m} value={m} className="text-xs">{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <div className="space-y-1 text-sm">
             <h3 className="font-semibold text-sm mb-3">Summary</h3>
@@ -338,6 +366,11 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
             <div className={`flex justify-between font-bold ${balanceDue > 0 ? "text-destructive" : "text-emerald-600"}`}>
               <span>Balance Due</span><span>${balanceDue.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
             </div>
+            {paymentMethod && requiresPaymentMethod && (
+              <div className="flex justify-between text-xs text-muted-foreground pt-1 border-t mt-1">
+                <span>Payment via</span><span className="font-medium text-foreground">{paymentMethod}</span>
+              </div>
+            )}
           </div>
         </div>
 
