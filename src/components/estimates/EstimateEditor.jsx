@@ -11,14 +11,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Trash2, CheckCircle2, FileText, LayoutList, AlignJustify, AlertCircle, ImageOff, Image } from "lucide-react";
-import LineItemCategorySelect from "./LineItemCategorySelect";
-import RailingInlineCalc from "./RailingInlineCalc";
-import StaircaseInlineCalc from "./StaircaseInlineCalc";
-import ProductServiceDropdown from "./ProductServiceDropdown";
+import AddLineItemWizard from "./AddLineItemWizard";
 import { toast } from "sonner";
 import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
-
-const CATEGORIES = ["Labor", "Material", "Equipment", "Sub-contractor", "Other"];
 
 const INSTALL_LOCATIONS = [
   "Interior — Main Staircase",
@@ -83,6 +78,7 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
   });
   const [signature, setSignature] = useState(estimate?.customer_signature || "");
   const [collapsed, setCollapsed] = useState({});
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [editorView, setEditorView] = useState("detail"); // always start in detail for editing
   const [viewMode, setViewMode] = useState(estimate?.view_mode || "summary"); // customer-facing saved mode
   const stylePhotoUrl = isNew ? prefillData?.stylePhotoUrl : estimate?.style_photo_url;
@@ -179,7 +175,11 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
   });
 
   function addLine() {
-    setLines(prev => [...prev, blankLine()]);
+    setWizardOpen(true);
+  }
+
+  function handleWizardAdd(newLine) {
+    setLines(prev => [...prev, newLine]);
   }
 
   function updateLine(idx, field, value) {
@@ -291,10 +291,9 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
           {editorView === "detail" ? (
             <>
               {/* Detail header */}
-              <div className="grid grid-cols-[2fr_1.5fr_1fr_0.7fr_1fr_1fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
+              <div className="grid grid-cols-[2fr_1.5fr_0.7fr_1fr_1fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
                 <span>Description</span>
                 <span>Install Location</span>
-                <span>Category</span>
                 <span>Qty</span>
                 <span>Unit Cost</span>
                 <span>Total</span>
@@ -303,7 +302,7 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
               <div className="space-y-2">
                 {lines.map((line, idx) => (
                   <div key={line._id} className="space-y-1">
-                    <div className="grid grid-cols-[2fr_1.5fr_1fr_0.7fr_1fr_1fr_auto] gap-1.5 items-center">
+                    <div className="grid grid-cols-[2fr_1.5fr_0.7fr_1fr_1fr_auto] gap-1.5 items-center">
                       <Input
                         className="h-8 text-xs"
                         placeholder="Description"
@@ -314,10 +313,6 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                         <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
                       </Select>
-                      <LineItemCategorySelect
-                        value={line.category}
-                        onChange={v => updateLine(idx, "category", v)}
-                      />
                       <Input
                         className="h-8 text-xs"
                         type="number"
@@ -485,6 +480,12 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
           </div>
         </div>
       </div>
+
+      <AddLineItemWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onAdd={handleWizardAdd}
+      />
     </div>
   );
 }
