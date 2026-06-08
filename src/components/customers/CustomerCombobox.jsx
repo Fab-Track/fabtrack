@@ -6,13 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ChevronDown, Plus, Check, User } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // ── Quick-create modal ─────────────────────────────────────────────────────────
 function NewCustomerModal({ open, onClose, onCreated }) {
   const qc = useQueryClient();
   const [form, setForm] = useState({
     first_name: "", last_name: "", company: "",
-    phone: "", email: "", address: "",
+    phone: "", email: "", address: "", type: "",
   });
 
   const f = (field, val) => setForm(p => ({ ...p, [field]: val }));
@@ -26,12 +27,13 @@ function NewCustomerModal({ open, onClose, onCreated }) {
       phone: form.phone,
       email: form.email,
       address: form.address,
+      type: form.type || undefined,
     }),
     onSuccess: (newCustomer) => {
       qc.invalidateQueries({ queryKey: ["customers"] });
       onCreated(newCustomer);
       onClose();
-      setForm({ first_name: "", last_name: "", company: "", phone: "", email: "", address: "" });
+      setForm({ first_name: "", last_name: "", company: "", phone: "", email: "", address: "", type: "" });
     },
   });
 
@@ -71,6 +73,18 @@ function NewCustomerModal({ open, onClose, onCreated }) {
           <div>
             <Label className="text-xs">Address</Label>
             <Input value={form.address} onChange={e => f("address", e.target.value)} placeholder="123 Main St, City, State" />
+          </div>
+          <div>
+            <Label className="text-xs">Customer Type</Label>
+            <Select value={form.type} onValueChange={val => f("type", val)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select type…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Homeowner">Homeowner</SelectItem>
+                <SelectItem value="General Contractor">Contractor</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex gap-2 pt-1">
             <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>

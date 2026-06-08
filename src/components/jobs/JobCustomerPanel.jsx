@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Pencil, Mail, Phone, MapPin, UserX, UserSearch } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
@@ -27,7 +28,7 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", type: "" });
 
   // Fetch full customer record when we have a customer_id
   const { data: customer, refetch: refetchCustomer } = useQuery({
@@ -51,6 +52,7 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
         email: customer.email || "",
         phone: customer.phone || "",
         address: customer.address || "",
+        type: customer.type || "",
       });
     }
   }, [customer, sheetOpen]);
@@ -64,6 +66,7 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
       email: form.email,
       phone: form.phone,
       address: form.address,
+      type: form.type || undefined,
     });
     // Also update denormalized name on the job if name changed
     if (form.name !== customer.name) {
@@ -184,6 +187,18 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
             <div>
               <Label className="text-xs">Billing Address</Label>
               <Input value={form.address} onChange={e => f("address", e.target.value)} placeholder="123 Main St, City, State" />
+            </div>
+            <div>
+              <Label className="text-xs">Customer Type</Label>
+              <Select value={form.type} onValueChange={val => f("type", val)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Homeowner">Homeowner</SelectItem>
+                  <SelectItem value="General Contractor">Contractor</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex gap-2 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setSheetOpen(false)}>
