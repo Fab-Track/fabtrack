@@ -37,7 +37,12 @@ const INSTALL_LOCATIONS = [
   "N/A",
 ];
 
-// Determine which calculator to show based on category/item
+// Step constants
+const STEP_CATEGORY = 0;
+const STEP_STYLE = 1;
+const STEP_PRICING = 2;   // calculator OR manual price entry
+const STEP_LOCATION = 3;
+
 function getCalculatorType(category, item) {
   const cat = (category || "").toLowerCase();
   const name = (item?.name || "").toLowerCase();
@@ -49,11 +54,10 @@ function getCalculatorType(category, item) {
   return null;
 }
 
-// Step indicator
-function StepDots({ step, total }) {
+function StepDots({ step }) {
   return (
     <div className="flex items-center gap-1.5 justify-center py-1">
-      {Array.from({ length: total }).map((_, i) => (
+      {[0, 1, 2, 3].map(i => (
         <div
           key={i}
           className={`rounded-full transition-all ${i === step ? "w-5 h-2 bg-primary" : i < step ? "w-2 h-2 bg-primary/40" : "w-2 h-2 bg-muted"}`}
@@ -63,12 +67,21 @@ function StepDots({ step, total }) {
   );
 }
 
+const STEP_TITLES = {
+  [STEP_CATEGORY]: "Choose Category",
+  [STEP_STYLE]: "Choose Service Type",
+  [STEP_PRICING]: "Pricing",
+  [STEP_LOCATION]: "Install Location",
+};
+
 export default function AddLineItemWizard({ open, onClose, onAdd }) {
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(STEP_CATEGORY);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [customDescription, setCustomDescription] = useState("");
   const [isCustom, setIsCustom] = useState(false);
+  const [description, setDescription] = useState("");
+  const [unitCost, setUnitCost] = useState("");
+  const [quantity, setQuantity] = useState("1");
   const [calcPrice, setCalcPrice] = useState(null);
   const [calcQty, setCalcQty] = useState(null);
   const [installLocation, setInstallLocation] = useState("");
@@ -78,7 +91,7 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
     queryFn: () => base44.entities.ServiceCatalog.filter({ is_active: true }),
   });
 
-  // Derive unique categories in sort_order
+  // Unique categories sorted by sort_order
   const categories = [...new Set(
     catalog
       .slice()
@@ -95,11 +108,13 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
   const hasCalculator = !!calcType;
 
   function reset() {
-    setStep(0);
+    setStep(STEP_CATEGORY);
     setSelectedCategory(null);
     setSelectedItem(null);
-    setCustomDescription("");
     setIsCustom(false);
+    setDescription("");
+    setUnitCost("");
+    setQuantity("1");
     setCalcPrice(null);
     setCalcQty(null);
     setInstallLocation("");
@@ -114,24 +129,27 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
     setSelectedCategory(cat);
     setSelectedItem(null);
     setIsCustom(false);
-    setStep(1);
+    setStep(STEP_STYLE);
   }
 
   function handleSelectItem(item) {
     setSelectedItem(item);
     setIsCustom(false);
-    setCustomDescription(item.default_description || item.name);
+    setDescription(item.default_description || item.name || "");
+    setUnitCost(item.default_unit_price ? String(item.default_unit_price) : "");
+    setQuantity("1");
     setCalcPrice(null);
     setCalcQty(null);
-    // If has calculator → go to step 2 (calc), else jump to step 3 (install location)
-    setStep(getCalculatorType(selectedCategory, item) ? 2 : 3);
+    setStep(STEP_PRICING);
   }
 
   function handleSelectCustom() {
     setSelectedItem(null);
     setIsCustom(true);
-    setCustomDescription("");
-    setStep(3); // No calculator for custom items
+    setDescription("");
+    setUnitCost("");
+    setQuantity("1");
+    setStep(STEP_PRICING);
   }
 
   function handleCalcPriceChange(price, qty) {
@@ -140,50 +158,49 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
   }
 
   function handleFinish() {
-    const description = isCustom ? customDescription : (selectedItem?.default_description || selectedItem?.name || customDescription);
-    const unitCost = calcPrice || selectedItem?.default_unit_price || 0;
-    const qty = calcQty || 1;
-    const unit = selectedItem?.unit || "ls";
+    const finalUnitCost = hasCalculator ? (calcPrice || 0) : (parseFloat(unitCost) || 0);
+    const finalQty = hasCalculator ? (calcQty || 1) : (parseFloat(quantity) || 1);
 
     onAdd({
       _id: Math.random().toString(36).slice(2),
       category: selectedCategory || "Other",
-      description,
+      description: description || selectedItem?.name || "",
       install_location: installLocation || "N/A",
-      quantity: qty,
-      unit,
-      unit_cost: unitCost,
-      total: qty * unitCost,
+      quantity: finalQty,
+      unit: selectedItem?.unit || "ls",
+      unit_cost: finalUnitCost,
+      total: finalQty * finalUnitCost,
       photo_url: selectedItem?.photo_url || null,
       show_photo: true,
     });
     handleClose();
   }
 
-  const totalSteps = hasCalculator || (selectedItem && getCalculatorType(selectedCategory, selectedItem)) ? 4 : 3;
-  // Effective total steps: 0=category, 1=style, 2=calc (if applicable), 3=location
-  // We always show 4 dots when a calculator is involved, 3 otherwise
-  const effectiveTotalSteps = step <= 1 ? 4 : (hasCalculator ? 4 : 3);
+  const canProceedFromPricing = hasCalculator
+    ? calcPrice != null && calcPrice > 0
+    : (parseFloat(unitCost) || 0) > 0 || isCustom; // allow $0 custom items if description filled
+
+  const canFinish = installLocation.length > 0 &&
+    (isCustom ? description.trim().length > 0 : true);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base">
-            {step === 0 && "Add Line Item — Choose Category"}
-            {step === 1 && `Add Line Item — Choose Style`}
-            {step === 2 && `Add Line Item — Calculator`}
-            {step === 3 && "Add Line Item — Install Location"}
+            Add Line Item — {STEP_TITLES[step]}
           </DialogTitle>
         </DialogHeader>
 
-        <StepDots step={step} total={4} />
+        <StepDots step={step} />
 
         {/* ── Step 0: Category ── */}
-        {step === 0 && (
+        {step === STEP_CATEGORY && (
           <div className="space-y-2 py-2">
             {categories.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-6">No categories found. Add items in Settings → Service Catalog.</p>
+              <p className="text-sm text-muted-foreground text-center py-6">
+                No categories found. Add items in Settings → Service Catalog.
+              </p>
             )}
             <div className="grid grid-cols-2 gap-2">
               {categories.map(cat => (
@@ -194,7 +211,7 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
                 >
                   <p className="font-semibold text-sm group-hover:text-primary">{cat}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {catalog.filter(i => i.category === cat).length} styles
+                    {catalog.filter(i => i.category === cat).length} service types
                   </p>
                 </button>
               ))}
@@ -202,10 +219,12 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
           </div>
         )}
 
-        {/* ── Step 1: Style/Description ── */}
-        {step === 1 && (
+        {/* ── Step 1: Service Type ── */}
+        {step === STEP_STYLE && (
           <div className="space-y-2 py-2">
-            <p className="text-xs text-muted-foreground mb-3">Category: <strong>{selectedCategory}</strong></p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Category: <strong>{selectedCategory}</strong>
+            </p>
             <div className="space-y-1.5">
               {itemsForCategory.map(item => (
                 <button
@@ -220,75 +239,117 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
                     <p className="font-semibold text-sm group-hover:text-primary">{item.name}</p>
                     {item.default_unit_price > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        ${item.default_unit_price.toLocaleString()} / {item.unit}
+                        ${item.default_unit_price.toLocaleString()} / {item.unit || "ls"}
                         {item.is_railing && <span className="ml-1 text-blue-600">· Railing calc</span>}
                       </p>
+                    )}
+                    {item.default_description && (
+                      <p className="text-xs text-muted-foreground italic truncate">{item.default_description}</p>
                     )}
                   </div>
                 </button>
               ))}
 
-              {/* Custom option */}
               <button
                 onClick={handleSelectCustom}
                 className="w-full text-left px-4 py-3 rounded-lg border border-dashed border-muted-foreground/40 hover:border-primary hover:bg-primary/5 transition-all flex items-center gap-2 text-muted-foreground hover:text-primary"
               >
                 <PenLine className="w-4 h-4 shrink-0" />
-                <span className="text-sm font-medium">Custom — enter description manually</span>
+                <span className="text-sm font-medium">Custom — enter manually</span>
               </button>
             </div>
 
             <div className="pt-2">
-              <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground" onClick={() => setStep(0)}>
+              <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground" onClick={() => setStep(STEP_CATEGORY)}>
                 <ChevronLeft className="w-3.5 h-3.5" /> Back
               </Button>
             </div>
           </div>
         )}
 
-        {/* ── Step 2: Calculator ── */}
-        {step === 2 && (
+        {/* ── Step 2: Pricing ── */}
+        {step === STEP_PRICING && (
           <div className="space-y-3 py-2">
+            {/* Description field — always shown, editable */}
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Style: <strong>{selectedItem?.name}</strong></p>
-              {(customDescription || selectedItem?.name) && (
-                <div className="mb-3">
-                  <Label className="text-xs text-muted-foreground">Description (pre-filled, editable)</Label>
-                  <Input
-                    className="h-8 text-xs mt-1"
-                    value={customDescription}
-                    onChange={e => setCustomDescription(e.target.value)}
-                  />
-                </div>
-              )}
+              <Label className="text-xs font-medium">
+                Description {isCustom && <span className="text-destructive">*</span>}
+              </Label>
+              <Input
+                className="h-8 text-sm mt-1"
+                placeholder={isCustom ? "Enter line item description…" : "Auto-filled from service type"}
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                autoFocus={isCustom}
+              />
             </div>
 
-            {calcType === "railing" && (
-              <RailingInlineCalc
-                styleName={selectedItem?.name}
-                onPriceChange={handleCalcPriceChange}
-                defaultExpanded={true}
-              />
-            )}
-            {(calcType === "staircase" || calcType === "staircase_spiral") && (
-              <StaircaseInlineCalc
-                staircaseType={calcType === "staircase_spiral" ? "spiral" : "mono"}
-                onPriceChange={handleCalcPriceChange}
-                defaultExpanded={true}
-              />
+            {/* Calculator for railing / staircase */}
+            {hasCalculator && (
+              <>
+                {calcType === "railing" && (
+                  <RailingInlineCalc
+                    styleName={selectedItem?.name}
+                    onPriceChange={handleCalcPriceChange}
+                    defaultExpanded={true}
+                  />
+                )}
+                {(calcType === "staircase" || calcType === "staircase_spiral") && (
+                  <StaircaseInlineCalc
+                    staircaseType={calcType === "staircase_spiral" ? "spiral" : "mono"}
+                    onPriceChange={handleCalcPriceChange}
+                    defaultExpanded={true}
+                  />
+                )}
+                {calcPrice != null && calcPrice > 0 && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-sm text-emerald-800 font-semibold">
+                    Calculated total: ${calcPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                  </div>
+                )}
+              </>
             )}
 
-            {calcPrice != null && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-sm text-emerald-800 font-semibold">
-                Calculated total: ${calcPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+            {/* Manual price entry for non-calculator items */}
+            {!hasCalculator && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs font-medium">Unit Cost ($)</Label>
+                  <Input
+                    className="h-8 text-sm mt-1"
+                    type="number"
+                    placeholder="0.00"
+                    value={unitCost}
+                    onChange={e => setUnitCost(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-medium">Quantity</Label>
+                  <Input
+                    className="h-8 text-sm mt-1"
+                    type="number"
+                    placeholder="1"
+                    value={quantity}
+                    onChange={e => setQuantity(e.target.value)}
+                  />
+                </div>
+                {(parseFloat(unitCost) || 0) > 0 && (parseFloat(quantity) || 0) > 0 && (
+                  <div className="col-span-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-sm text-emerald-800 font-semibold">
+                    Line total: ${((parseFloat(unitCost) || 0) * (parseFloat(quantity) || 1)).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                  </div>
+                )}
               </div>
             )}
 
             <div className="flex items-center justify-between pt-1">
-              <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground" onClick={() => setStep(1)}>
+              <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground" onClick={() => setStep(STEP_STYLE)}>
                 <ChevronLeft className="w-3.5 h-3.5" /> Back
               </Button>
-              <Button size="sm" className="gap-1" onClick={() => setStep(3)} disabled={!calcPrice}>
+              <Button
+                size="sm"
+                className="gap-1"
+                onClick={() => setStep(STEP_LOCATION)}
+                disabled={hasCalculator ? !canProceedFromPricing : (!description.trim() && isCustom)}
+              >
                 Next — Install Location <ChevronRight className="w-3.5 h-3.5" />
               </Button>
             </div>
@@ -296,30 +357,21 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
         )}
 
         {/* ── Step 3: Install Location ── */}
-        {step === 3 && (
+        {step === STEP_LOCATION && (
           <div className="space-y-4 py-2">
-            {isCustom && (
-              <div>
-                <Label className="text-xs font-medium">Description <span className="text-destructive">*</span></Label>
-                <Input
-                  className="mt-1 text-sm"
-                  placeholder="Enter line item description…"
-                  value={customDescription}
-                  onChange={e => setCustomDescription(e.target.value)}
-                  autoFocus
-                />
-              </div>
-            )}
-
-            {!isCustom && selectedItem && (
-              <div className="bg-muted/40 rounded-lg px-3 py-2 text-sm">
-                <span className="text-muted-foreground text-xs">Item:</span>{" "}
-                <span className="font-medium">{selectedItem.name}</span>
-                {calcPrice != null && (
-                  <span className="ml-2 text-xs text-muted-foreground">· ${calcPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
-                )}
-              </div>
-            )}
+            {/* Summary of what's being added */}
+            <div className="bg-muted/40 rounded-lg px-3 py-2.5 space-y-0.5">
+              <p className="text-xs text-muted-foreground">Adding to estimate</p>
+              <p className="text-sm font-semibold">{description || selectedItem?.name || "Custom item"}</p>
+              <p className="text-xs text-muted-foreground">
+                {selectedCategory}{selectedItem ? ` — ${selectedItem.name}` : ""}
+                {hasCalculator && calcPrice
+                  ? ` · $${calcPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })}`
+                  : unitCost
+                    ? ` · $${(parseFloat(unitCost) * parseFloat(quantity || 1)).toLocaleString("en-US", { maximumFractionDigits: 0 })}`
+                    : ""}
+              </p>
+            </div>
 
             <div>
               <Label className="text-sm font-semibold">
@@ -341,7 +393,7 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
             <div className="flex items-center justify-between pt-1">
               <Button
                 variant="ghost" size="sm" className="gap-1 text-muted-foreground"
-                onClick={() => setStep(hasCalculator ? 2 : 1)}
+                onClick={() => setStep(STEP_PRICING)}
               >
                 <ChevronLeft className="w-3.5 h-3.5" /> Back
               </Button>
@@ -349,7 +401,7 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
                 size="sm"
                 className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                 onClick={handleFinish}
-                disabled={!installLocation || (isCustom && !customDescription.trim())}
+                disabled={!canFinish}
               >
                 <Check className="w-3.5 h-3.5" /> Add to Estimate
               </Button>
