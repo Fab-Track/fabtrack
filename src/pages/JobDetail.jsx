@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { STATUS_COLORS, getJobHealth, getHealthDot } from "@/lib/jobHelpers";
 import { format, parseISO } from "date-fns";
 import { ArrowLeft, CalendarDays, MapPin, Paintbrush, Send, MoreHorizontal, Trash2 } from "lucide-react";
+import JobCustomerPanel from "@/components/jobs/JobCustomerPanel";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import DeleteJobModal from "@/components/jobs/DeleteJobModal";
 
@@ -53,7 +54,7 @@ export default function JobDetail() {
 
   const jobId = window.location.pathname.split("/jobs/")[1]?.split("?")[0];
 
-  const { data: job, isLoading } = useQuery({
+  const { data: job, isLoading, refetch: refetchJob } = useQuery({
     queryKey: ["job", jobId],
     queryFn: async () => {
       const jobs = await base44.entities.Job.filter({ id: jobId });
@@ -139,22 +140,7 @@ export default function JobDetail() {
               )}
             </div>
             <h1 className="text-xl font-bold">{job.job_name}</h1>
-            {/* Prominent customer display */}
-            {job.customer_name && (
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="text-xs font-medium text-muted-foreground">Customer:</span>
-                {job.customer_id ? (
-                  <Link
-                    to={`/customers?id=${job.customer_id}`}
-                    className="text-sm font-semibold text-accent hover:underline"
-                  >
-                    {job.customer_name}
-                  </Link>
-                ) : (
-                  <span className="text-sm font-semibold">{job.customer_name}</span>
-                )}
-              </div>
-            )}
+            <JobCustomerPanel job={job} onJobUpdated={refetchJob} />
           </div>
           <div className="flex flex-col items-end gap-3">
             {/* Action buttons row */}
