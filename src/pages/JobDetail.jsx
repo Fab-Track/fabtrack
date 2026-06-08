@@ -263,7 +263,7 @@ export default function JobDetail() {
         )}
         {!isAccountant && (
           <TabsContent value="project-details">
-            <ProjectDetailsTab job={job} />
+            <ProjectDetailsTab job={job} userRole={effectiveRole} />
           </TabsContent>
         )}
         {!isAccountant && (

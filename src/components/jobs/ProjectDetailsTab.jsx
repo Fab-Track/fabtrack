@@ -8,13 +8,12 @@ import ProductInstanceCard from "@/components/products/ProductInstanceCard";
 import JobLevelSections from "@/components/jobs/JobLevelSections";
 import { useToast } from "@/components/ui/use-toast";
 
-const VIEW_OPTIONS = ["all", "designer", "installer"];
-const VIEW_LABELS = { all: "All Fields", designer: "Designer View", installer: "Fabricator / Installer View" };
-const VIEW_COLORS = {
-  all: "bg-muted text-muted-foreground",
-  designer: "bg-blue-100 text-blue-700 border-blue-200",
-  installer: "bg-orange-100 text-orange-700 border-orange-200",
-};
+function getViewFilter(role) {
+  const r = (role || "").toLowerCase();
+  if (r === "fabricator" || r === "installer") return "installer";
+  if (r === "design_specialist") return "designer";
+  return "all";
+}
 
 function countByType(instances) {
   const counts = {};
@@ -29,12 +28,12 @@ function makeLabel(type, counts) {
   return `${type} #${n}`;
 }
 
-export default function ProjectDetailsTab({ job }) {
+export default function ProjectDetailsTab({ job, userRole }) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [instances, setInstances] = useState(job.product_instances || []);
   const [jobLevelData, setJobLevelData] = useState(job.job_level_data || {});
-  const [viewFilter, setViewFilter] = useState("all");
+  const viewFilter = getViewFilter(userRole);
   const [dirty, setDirty] = useState(false);
 
   const saveMutation = useMutation({
@@ -91,18 +90,7 @@ export default function ProjectDetailsTab({ job }) {
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5">
-          {VIEW_OPTIONS.map(v => (
-            <button
-              key={v}
-              onClick={() => setViewFilter(v)}
-              className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${viewFilter === v ? VIEW_COLORS[v] + " border-current" : "border-transparent text-muted-foreground hover:bg-muted"}`}
-            >
-              {VIEW_LABELS[v]}
-            </button>
-          ))}
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <div className="flex items-center gap-2">
           {dirty && (
             <Button
