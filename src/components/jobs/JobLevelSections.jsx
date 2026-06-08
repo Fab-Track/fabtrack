@@ -4,10 +4,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Printer, Upload, CheckCircle2, ImageIcon, ChevronDown, ChevronRight } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { Printer, ChevronDown, ChevronRight } from "lucide-react";
 import { JOB_MATERIALS_CHECKLIST } from "@/lib/productConfigs";
-import { format } from "date-fns";
 
 // ─── Site Access ─────────────────────────────────────────────────────────────
 function SiteAccessSection({ data, onChange }) {
@@ -136,115 +134,16 @@ function MaterialsChecklistSection({ job, data, onChange }) {
   );
 }
 
-// ─── Site Photos ──────────────────────────────────────────────────────────────
-function SitePhotosSection({ photos = {}, onChange }) {
-  const [open, setOpen] = useState(true);
-  const [uploading, setUploading] = useState({ before: false, after: false });
-
-  const beforePhotos = photos.before || [];
-  const afterPhotos = photos.after || [];
-
-  const handleUpload = async (e, bucket) => {
-    const files = Array.from(e.target.files);
-    if (!files.length) return;
-    setUploading(u => ({ ...u, [bucket]: true }));
-    const uploaded = [];
-    for (const file of files) {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      uploaded.push({ url: file_url, uploaded_at: new Date().toISOString() });
-    }
-    const existing = bucket === "before" ? beforePhotos : afterPhotos;
-    onChange(bucket, [...existing, ...uploaded]);
-    setUploading(u => ({ ...u, [bucket]: false }));
-    e.target.value = "";
-  };
-
-  const hasAfterPhotos = afterPhotos.length > 0;
-
-  return (
-    <div className="rounded-xl border border-border bg-card">
-      <button onClick={() => setOpen(o => !o)} className="flex items-center gap-2 px-4 py-3 w-full text-left">
-        {open ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
-        <span className="font-semibold text-sm">Site Photos</span>
-        <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border font-medium">Job-Level</span>
-        <div className="ml-auto">
-          {hasAfterPhotos ? (
-            <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 font-medium">
-              <CheckCircle2 className="w-3 h-3" /> Install documented
-            </span>
-          ) : (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border font-medium">
-              Pending install photos
-            </span>
-          )}
-        </div>
-      </button>
-      {open && (
-        <div className="border-t px-4 pb-4 pt-3 space-y-5">
-          {/* Before / Measure Photos */}
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Before / Measure Photos</p>
-            <p className="text-xs text-muted-foreground mb-2">Measure visit photos — upload before fabrication begins</p>
-            <PhotoGrid photos={beforePhotos} />
-            <label className="mt-2 inline-flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground hover:text-foreground border rounded-md px-3 py-1.5 hover:bg-muted transition-colors">
-              <Upload className="w-3.5 h-3.5" />
-              {uploading.before ? "Uploading..." : "Upload Photos"}
-              <input type="file" accept="image/*" multiple className="hidden" disabled={uploading.before} onChange={e => handleUpload(e, "before")} />
-            </label>
-          </div>
-
-          {/* After / Install Photos */}
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">After / Install Photos</p>
-            <p className="text-xs text-muted-foreground mb-2">Install completion photos — upload when job is complete</p>
-            <PhotoGrid photos={afterPhotos} />
-            <label className="mt-2 inline-flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground hover:text-foreground border rounded-md px-3 py-1.5 hover:bg-muted transition-colors">
-              <Upload className="w-3.5 h-3.5" />
-              {uploading.after ? "Uploading..." : "Upload Photos"}
-              <input type="file" accept="image/*" multiple className="hidden" disabled={uploading.after} onChange={e => handleUpload(e, "after")} />
-            </label>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function PhotoGrid({ photos }) {
-  if (!photos.length) return (
-    <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
-      <ImageIcon className="w-4 h-4" /> No photos yet
-    </div>
-  );
-  return (
-    <div className="flex flex-wrap gap-2">
-      {photos.map((p, i) => (
-        <div key={i} className="relative group">
-          <img src={p.url} alt="" className="w-20 h-20 object-cover rounded-lg border" />
-          {p.uploaded_at && (
-            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] text-center px-1 py-0.5 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
-              {format(new Date(p.uploaded_at), "MMM d, h:mm a")}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ─── Main export ─────────────────────────────────────────────────────────────
 export default function JobLevelSections({ job, data, onChangeField, viewFilter }) {
   const showSiteAccess = viewFilter === "all" || viewFilter === "installer";
   const showMaterials = viewFilter === "all" || viewFilter === "installer";
-  const showPhotos = true; // visible in all views
 
   const siteAccessData = data.site_access || {};
   const materialsData = data.materials || {};
-  const photosData = data.site_photos || {};
 
   const handleSiteAccess = (key, val) => onChangeField("site_access", { ...siteAccessData, [key]: val });
   const handleMaterials = (key, val) => onChangeField("materials", { ...materialsData, [key]: val });
-  const handlePhotos = (bucket, val) => onChangeField("site_photos", { ...photosData, [bucket]: val });
 
   return (
     <div className="space-y-3 mt-2">
@@ -256,9 +155,6 @@ export default function JobLevelSections({ job, data, onChangeField, viewFilter 
           )}
           {showMaterials && (
             <MaterialsChecklistSection job={job} data={materialsData} onChange={handleMaterials} />
-          )}
-          {showPhotos && (
-            <SitePhotosSection photos={photosData} onChange={handlePhotos} />
           )}
         </div>
       </div>
