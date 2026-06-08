@@ -12,8 +12,9 @@ import { Separator } from "@/components/ui/separator";
 import {
   Plus, Search, Phone, Mail, MapPin, Building2,
   DollarSign, Briefcase, TrendingUp, ArrowLeft,
-  ChevronRight, ArrowUpDown, Send
+  ChevronRight, ArrowUpDown, Send, Pencil
 } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import CustomerCommTab from "@/components/comms/CustomerCommTab";
 import MessageComposerModal from "@/components/comms/MessageComposerModal";
 import CustomerTransactionsTab from "@/components/customers/CustomerTransactionsTab";
@@ -76,8 +77,11 @@ function TypeBadge({ type }) {
 function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
   const queryClient = useQueryClient();
   const [editingType, setEditingType] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview"); // overview | invoices | transactions | communications
+  const [activeTab, setActiveTab] = useState("overview");
   const [composerOpen, setComposerOpen] = useState(false);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ name: customer.name || "", phone: customer.phone || "", email: customer.email || "", address: customer.address || "" });
+  const [editSaving, setEditSaving] = useState(false);
 
   const customerJobs = useMemo(() =>
     allJobs.filter(j => j.customer_id === customer.id || j.customer_name === customer.name)
@@ -122,6 +126,20 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
     },
   });
 
+  async function handleEditSave() {
+    setEditSaving(true);
+    const updated = await base44.entities.Customer.update(customer.id, {
+      name: editForm.name,
+      phone: editForm.phone,
+      email: editForm.email,
+      address: editForm.address,
+    });
+    queryClient.invalidateQueries({ queryKey: ["customers"] });
+    onUpdated({ ...customer, ...editForm });
+    setEditSaving(false);
+    setEditSheetOpen(false);
+  }
+
   // invoicesToShow kept for backward compat — Outstanding tab uses unpaidInvoices directly
 
   return (
@@ -163,7 +181,7 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
 
         {/* Info cells row — mirrors job header style */}
         {(customer.phone || customer.email || customer.address) && (
-          <div className="flex items-start gap-5 flex-wrap mt-2 pt-2 border-t border-border">
+          <div className="flex items-center gap-5 flex-wrap mt-2 pt-2 border-t border-border">
             {customer.phone && (
               <div className="min-w-0">
                 <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5 flex items-center gap-1">
@@ -188,9 +206,52 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
                 <p className="text-sm font-medium">{customer.address}</p>
               </div>
             )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1 ml-auto"
+              onClick={() => { setEditForm({ name: customer.name || "", phone: customer.phone || "", email: customer.email || "", address: customer.address || "" }); setEditSheetOpen(true); }}
+            >
+              <Pencil className="w-3 h-3" /> Edit
+            </Button>
           </div>
         )}
       </div>
+
+      {/* Edit slide-out panel */}
+      <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-sm">
+          <SheetHeader className="mb-4">
+            <SheetTitle className="flex items-center gap-2">
+              <Pencil className="w-4 h-4" /> Edit Customer
+            </SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs">Name</Label>
+              <Input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} placeholder="Customer name" />
+            </div>
+            <div>
+              <Label className="text-xs">Phone</Label>
+              <Input value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} placeholder="(555) 123-4567" />
+            </div>
+            <div>
+              <Label className="text-xs">Email</Label>
+              <Input type="email" value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} placeholder="email@example.com" />
+            </div>
+            <div>
+              <Label className="text-xs">Billing Address</Label>
+              <Input value={editForm.address} onChange={e => setEditForm(p => ({ ...p, address: e.target.value }))} placeholder="123 Main St, City, State" />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setEditSheetOpen(false)}>Cancel</Button>
+              <Button className="flex-1" onClick={handleEditSave} disabled={editSaving || !editForm.name.trim()}>
+                {editSaving ? "Saving…" : "Save"}
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
