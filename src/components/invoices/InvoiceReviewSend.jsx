@@ -46,16 +46,47 @@ function buildDefaultSubject({ invoice, invoiceLabel, job }) {
   return `${label} ${invNum}${jobName ? ` — ${jobName}` : ""}`;
 }
 
-// PDF generation from invoice data
+// PDF generation from invoice data — fully paginated
 function generateInvoicePDF({ invoice, job, customer, lines, subtotal, discountPct, discountAmt, tax, taxAmount, total, amountPaid, balanceDue, notes, viewMode, issuedDate, dueDate, invoiceLabel, status, contractText }) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
   const pageW = 215.9;
+  const pageH = 279.4; // letter height in mm
   const margin = 18;
   const contentW = pageW - margin * 2;
+  const BOTTOM_MARGIN = 20; // reserved at bottom of each page
+  const usableBottom = pageH - BOTTOM_MARGIN;
+  const LINE_H = 5.5; // baseline line height for body text
+
+  const invNum = invoice?.invoice_number || "DRAFT";
+
+  // ── Continuation header drawn at top of pages 2+ ──────────────
+  function drawContinuationHeader() {
+    doc.setFillColor(34, 47, 62);
+    doc.rect(0, 0, pageW, 14, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text("High Country Metal Works", margin, 9);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(200, 210, 220);
+    doc.text(`${invNum}${invoiceLabel ? "  ·  " + invoiceLabel : ""}  — continued`, pageW - margin, 9, { align: "right" });
+  }
+
+  // ── Page break helper ─────────────────────────────────────────
+  // neededSpace: how many mm we need before breaking
+  function checkBreak(neededSpace = LINE_H) {
+    if (y + neededSpace > usableBottom) {
+      doc.addPage();
+      drawContinuationHeader();
+      y = 22; // below the continuation header
+    }
+  }
+
   let y = 0;
 
-  // ── Header block ──────────────────────────────────────────────
-  doc.setFillColor(34, 47, 62); // primary dark
+  // ── Page 1 main header ────────────────────────────────────────
+  doc.setFillColor(34, 47, 62);
   doc.rect(0, 0, pageW, 38, "F");
 
   doc.setTextColor(255, 255, 255);
@@ -63,14 +94,11 @@ function generateInvoicePDF({ invoice, job, customer, lines, subtotal, discountP
   doc.setFont("helvetica", "bold");
   doc.text("High Country Metal Works", margin, 16);
 
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(200, 210, 220);
-
-  // Right-align invoice info
-  const invNum = invoice?.invoice_number || "DRAFT";
-  doc.setFontSize(8);
   doc.text("INVOICE", pageW - margin, 11, { align: "right" });
+
   doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(255, 255, 255);
@@ -83,7 +111,6 @@ function generateInvoicePDF({ invoice, job, customer, lines, subtotal, discountP
     doc.text(invoiceLabel, pageW - margin, 25, { align: "right" });
   }
 
-  // Status badge text
   doc.setFontSize(8);
   doc.setTextColor(240, 240, 240);
   doc.text(status || "Unpaid", pageW - margin, 32, { align: "right" });
@@ -104,16 +131,18 @@ function generateInvoicePDF({ invoice, job, customer, lines, subtotal, discountP
   doc.setFontSize(9.5);
   doc.setTextColor(30, 40, 50);
 
-  // Bill to info
+  const billStartY = y;
+
   doc.setFont("helvetica", "bold");
   doc.text(customer?.name || job?.customer_name || "—", margin, y);
   doc.setFont("helvetica", "normal");
-  if (customer?.email) { y += 5; doc.setFontSize(8.5); doc.setTextColor(80, 90, 100); doc.text(customer.email, margin, y); }
+  doc.setFontSize(8.5);
+  doc.setTextColor(80, 90, 100);
+  if (customer?.email) { y += 5; doc.text(customer.email, margin, y); }
   if (customer?.phone) { y += 4.5; doc.text(customer.phone, margin, y); }
   if (customer?.address) { y += 4.5; doc.text(customer.address, margin, y); }
 
-  // Right: job details
-  let ry = 55;
+  let ry = billStartY;
   doc.setFontSize(8.5);
   doc.setTextColor(80, 90, 100);
   if (job?.job_name) { doc.text(`Job: ${job.job_name}`, rightColX, ry); ry += 5; }
@@ -137,7 +166,6 @@ function generateInvoicePDF({ invoice, job, customer, lines, subtotal, discountP
   // ── Line items header ─────────────────────────────────────────
   doc.setFillColor(245, 247, 249);
   doc.rect(margin, y - 3, contentW, 8, "F");
-
   doc.setFontSize(7.5);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(100, 110, 120);
@@ -152,7 +180,6 @@ function generateInvoicePDF({ invoice, job, customer, lines, subtotal, discountP
     doc.text("UNIT COST", margin + contentW * 0.76, y + 2, { align: "right" });
     doc.text("AMOUNT", pageW - margin - 2, y + 2, { align: "right" });
   }
-
   y += 10;
 
   // ── Line items ────────────────────────────────────────────────
@@ -160,17 +187,16 @@ function generateInvoicePDF({ invoice, job, customer, lines, subtotal, discountP
   doc.setFontSize(9);
 
   lines.forEach((line, idx) => {
-    if (y > 240) {
-      doc.addPage();
-      y = 20;
-    }
-    if (idx % 2 === 1) {
-      doc.setFillColor(249, 250, 251);
-      doc.rect(margin, y - 3, contentW, 7, "F");
-    }
-    doc.setTextColor(30, 40, 50);
     const desc = line.description || "—";
     const descLines = doc.splitTextToSize(desc, contentW * 0.55);
+    const rowH = descLines.length > 1 ? descLines.length * LINE_H + 2 : 7;
+    checkBreak(rowH);
+
+    if (idx % 2 === 1) {
+      doc.setFillColor(249, 250, 251);
+      doc.rect(margin, y - 3, contentW, rowH, "F");
+    }
+    doc.setTextColor(30, 40, 50);
     doc.text(descLines, margin + 2, y);
 
     if (viewMode === "summary") {
@@ -185,11 +211,12 @@ function generateInvoicePDF({ invoice, job, customer, lines, subtotal, discountP
       doc.setTextColor(30, 40, 50);
       doc.text(`$${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`, pageW - margin - 2, y, { align: "right" });
     }
-    y += descLines.length > 1 ? descLines.length * 5 + 2 : 7;
+    y += rowH;
   });
 
-  y += 4;
+  checkBreak(10);
   doc.setDrawColor(220, 225, 230);
+  doc.setLineWidth(0.3);
   doc.line(margin, y, pageW - margin, y);
   y += 6;
 
@@ -198,7 +225,7 @@ function generateInvoicePDF({ invoice, job, customer, lines, subtotal, discountP
   const totalsValX = pageW - margin - 2;
 
   function totalsRow(label, value, bold = false, color = null) {
-    if (y > 250) { doc.addPage(); y = 20; }
+    checkBreak(7);
     if (color) doc.setTextColor(...color);
     else doc.setTextColor(80, 90, 100);
     doc.setFontSize(9);
@@ -212,6 +239,7 @@ function generateInvoicePDF({ invoice, job, customer, lines, subtotal, discountP
   if (discountPct > 0) totalsRow(`Discount (${discountPct}%)`, `−$${discountAmt.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, false, [180, 50, 50]);
   if (tax > 0) totalsRow(`Tax (${tax}%)`, `+$${taxAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}`);
 
+  checkBreak(10);
   doc.setDrawColor(180, 185, 195);
   doc.line(totalsX, y, totalsValX, y);
   y += 4;
@@ -224,14 +252,15 @@ function generateInvoicePDF({ invoice, job, customer, lines, subtotal, discountP
     totalsRow("Balance Due", `$${balanceDue.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, true, bdColor);
   }
 
-  y += 6;
+  y += 8;
 
   // ── Customer Notes ────────────────────────────────────────────
   if (notes) {
-    if (y > 230) { doc.addPage(); y = 20; }
-    doc.setFillColor(248, 249, 250);
     const noteLines = doc.splitTextToSize(notes, contentW - 8);
-    const noteH = noteLines.length * 5 + 10;
+    const noteH = noteLines.length * LINE_H + 14;
+    checkBreak(noteH);
+
+    doc.setFillColor(248, 249, 250);
     doc.rect(margin, y, contentW, noteH, "F");
     doc.setFontSize(7.5);
     doc.setFont("helvetica", "bold");
@@ -244,19 +273,26 @@ function generateInvoicePDF({ invoice, job, customer, lines, subtotal, discountP
     y += noteH + 8;
   }
 
-  // ── Payment Terms ─────────────────────────────────────────────
-  if (y > 220) { doc.addPage(); y = 20; }
+  // ── Payment Terms — rendered line-by-line for proper pagination ─
+  checkBreak(14);
   doc.setFontSize(7.5);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(100, 110, 120);
   doc.text("PAYMENT TERMS", margin, y);
-  y += 5;
+  y += 6;
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(80, 90, 100);
+
   const termsText = contractText || DEFAULT_PAYMENT_TERMS;
+  // Split into paragraph blocks first, then wrap each
   const termsLines = doc.splitTextToSize(termsText, contentW);
-  doc.text(termsLines, margin, y);
+  termsLines.forEach(line => {
+    checkBreak(LINE_H + 1);
+    doc.text(line, margin, y);
+    y += LINE_H;
+  });
 
   const filename = `${invoice?.invoice_number || "Invoice"}_${job?.job_name?.replace(/\s+/g, "_") || "HCMW"}.pdf`;
   doc.save(filename);
