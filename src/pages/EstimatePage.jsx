@@ -111,6 +111,12 @@ export default function EstimatePage() {
     enabled: !!jobId,
   });
 
+  const { data: contractSettings = [] } = useQuery({
+    queryKey: ["appSettings", "estimate_settings"],
+    queryFn: () => base44.entities.AppSettings.filter({ setting_key: "estimate_settings" }),
+  });
+  const contractText = contractSettings[0]?.estimate_contract_text || null;
+
   // Populate form from existing estimate
   useEffect(() => {
     if (existingEstimate) {
@@ -658,6 +664,7 @@ export default function EstimatePage() {
                   job={job}
                   customer={customer}
                   businessInfo={{ address: "High Country Metal Works", phone: "" }}
+                  contractText={contractText}
                 />
               </div>
               {sendPanelOpen && (

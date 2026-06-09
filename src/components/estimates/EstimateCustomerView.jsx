@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -30,8 +30,6 @@ By signing this estimate, you ("Customer") agree to authorize High Country Metal
 export default function EstimateCustomerView({ estimate, job, customer, businessInfo, onApprove, onRequestChanges, contractText }) {
   const [showAcceptFlow, setShowAcceptFlow] = useState(false);
   const [typedName, setTypedName] = useState("");
-  const [hasScrolled, setHasScrolled] = useState(false);
-  const contractRef = useRef(null);
 
   const lines = estimate?.line_items || [];
   const viewMode = estimate?.view_mode || "summary";
@@ -48,13 +46,6 @@ export default function EstimateCustomerView({ estimate, job, customer, business
   const total = afterOverhead + taxAmt;
 
   const contractBody = contractText || DEFAULT_CONTRACT;
-
-  function handleContractScroll(e) {
-    const el = e.target;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
-      setHasScrolled(true);
-    }
-  }
 
   function handleSubmit() {
     if (!typedName.trim()) return;
@@ -221,115 +212,151 @@ export default function EstimateCustomerView({ estimate, job, customer, business
           </div>
         )}
 
-        {/* ── Accept / Approval section ─────────────────────────────── */}
-        {estimate?.status === "Sent" && onApprove && !showAcceptFlow && (
-          <div className="border-t pt-6">
-            <button
-              onClick={() => setShowAcceptFlow(true)}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-3 rounded-lg transition-colors"
-            >
-              ✓ Accept Estimate
-            </button>
-            {onRequestChanges && (
-              <button
-                onClick={onRequestChanges}
-                className="mt-2 w-full px-4 border border-input bg-white text-sm rounded-lg py-2.5 hover:bg-muted transition-colors"
-              >
-                Request Changes
-              </button>
-            )}
+        <Separator />
+
+        {/* ── Terms & Conditions — always visible ──────────────────── */}
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Terms &amp; Conditions</p>
+          <div className="border rounded-lg p-4 bg-muted/10 text-xs leading-relaxed whitespace-pre-wrap font-mono text-foreground">
+            {contractBody}
           </div>
-        )}
+        </div>
 
-        {estimate?.status === "Sent" && onApprove && showAcceptFlow && (
-          <div className="border-t pt-6 space-y-5">
-            <div>
-              <p className="font-semibold text-sm mb-1">Review & Sign Agreement</p>
-              <p className="text-xs text-muted-foreground">Please read the full contract below, then type your full name to sign.</p>
-            </div>
+        <Separator />
 
-            {/* Scrollable contract block */}
-            <div className="relative">
-              <div
-                ref={contractRef}
-                onScroll={handleContractScroll}
-                className="h-64 overflow-y-auto border rounded-lg p-4 bg-muted/20 text-xs leading-relaxed whitespace-pre-wrap font-mono text-foreground"
-              >
-                {contractBody}
+        {/* ── Signature Block ───────────────────────────────────────── */}
+
+        {/* STATUS: Approved — show read-only signed record */}
+        {estimate?.status === "Approved" && (
+          <div className="space-y-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Signature &amp; Authorization</p>
+            <div className="border rounded-lg p-5 bg-emerald-50 border-emerald-200 space-y-4">
+              <div className="flex items-center gap-2 text-emerald-700">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span className="text-sm font-semibold">Estimate Accepted &amp; Signed</span>
               </div>
-              {!hasScrolled && (
-                <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-background/80 to-transparent rounded-b-lg flex items-end justify-center pb-1 pointer-events-none">
-                  <span className="text-[10px] text-muted-foreground">Scroll to read full agreement ↓</span>
-                </div>
-              )}
-            </div>
-
-            {!hasScrolled && (
-              <p className="text-xs text-amber-600 font-medium">Please scroll through the entire agreement before signing.</p>
-            )}
-
-            {/* Signature fields */}
-            <div className="space-y-4 max-w-sm">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Digital Signature</label>
-                <input
-                  disabled={!hasScrolled}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-40 disabled:cursor-not-allowed"
-                  placeholder="Type your full legal name to sign"
-                  value={typedName}
-                  onChange={e => setTypedName(e.target.value)}
-                />
-              </div>
-              {typedName.trim() && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Printed Name</label>
-                  <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted/30 px-3 text-sm text-foreground font-medium">
-                    {typedName.trim()}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Digital Signature</p>
+                  <div className="border-b-2 border-foreground pb-1 min-h-[2rem] flex items-end">
+                    <span className="text-base italic font-medium">{estimate.customer_signature || estimate.customer_printed_name || "—"}</span>
                   </div>
                 </div>
-              )}
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={handleSubmit}
-                disabled={!typedName.trim() || !hasScrolled}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
-              >
-                ✓ I Agree & Accept This Estimate
-              </button>
-              <button
-                onClick={() => setShowAcceptFlow(false)}
-                className="px-4 border border-input bg-white text-sm rounded-lg hover:bg-muted transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-
-        {estimate?.status === "Approved" && (
-          <div className="border-t pt-4 flex items-start gap-3 text-emerald-700">
-            <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold text-sm">Estimate Approved</p>
-              {estimate.customer_printed_name && (
-                <p className="text-xs text-muted-foreground">Signed by: <span className="font-medium">{estimate.customer_printed_name}</span></p>
-              )}
-              {!estimate.customer_printed_name && estimate.customer_signature && (
-                <p className="text-xs text-muted-foreground">Signed by {estimate.customer_signature}</p>
-              )}
-              {estimate.approved_at
-                ? <p className="text-xs text-muted-foreground">{format(parseISO(estimate.approved_at), "MMM d, yyyy 'at' h:mm a")}</p>
-                : estimate.approved_date
-                ? <p className="text-xs text-muted-foreground">{format(parseISO(estimate.approved_date), "MMM d, yyyy")}</p>
-                : null}
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Printed Name</p>
+                  <div className="border-b-2 border-foreground pb-1 min-h-[2rem] flex items-end">
+                    <span className="text-sm font-medium">{estimate.customer_printed_name || estimate.customer_signature || "—"}</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Date Signed</p>
+                <p className="text-sm">
+                  {estimate.approved_at
+                    ? format(parseISO(estimate.approved_at), "MMMM d, yyyy 'at' h:mm a")
+                    : estimate.approved_date
+                    ? format(parseISO(estimate.approved_date), "MMMM d, yyyy")
+                    : "—"}
+                </p>
+              </div>
               {estimate.approval_method && (
-                <p className="text-xs text-muted-foreground">Method: {estimate.approval_method}</p>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Approval Method</p>
+                  <p className="text-sm">{estimate.approval_method}</p>
+                </div>
               )}
             </div>
           </div>
         )}
+
+        {/* STATUS: Not yet approved — blank signature lines (printable) + optional live accept flow */}
+        {estimate?.status !== "Approved" && (
+          <div className="space-y-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Signature &amp; Authorization</p>
+
+            {/* Live Accept flow (web only, when onApprove provided and status is Sent) */}
+            {estimate?.status === "Sent" && onApprove && !showAcceptFlow && (
+              <div className="space-y-2">
+                <button
+                  onClick={() => setShowAcceptFlow(true)}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-3 rounded-lg transition-colors"
+                >
+                  ✓ Accept Estimate
+                </button>
+                {onRequestChanges && (
+                  <button
+                    onClick={onRequestChanges}
+                    className="w-full px-4 border border-input bg-white text-sm rounded-lg py-2.5 hover:bg-muted transition-colors"
+                  >
+                    Request Changes
+                  </button>
+                )}
+              </div>
+            )}
+
+            {estimate?.status === "Sent" && onApprove && showAcceptFlow && (
+              <div className="space-y-4">
+                <div>
+                  <p className="font-semibold text-sm mb-1">Sign Agreement</p>
+                  <p className="text-xs text-muted-foreground">Please scroll through the Terms &amp; Conditions above, then type your full name to sign.</p>
+                </div>
+                <div className="space-y-4 max-w-sm">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Digital Signature</label>
+                    <input
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      placeholder="Type your full legal name to sign"
+                      value={typedName}
+                      onChange={e => setTypedName(e.target.value)}
+                    />
+                  </div>
+                  {typedName.trim() && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Printed Name</label>
+                      <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted/30 px-3 text-sm font-medium">
+                        {typedName.trim()}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!typedName.trim()}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
+                  >
+                    ✓ I Agree &amp; Accept This Estimate
+                  </button>
+                  <button
+                    onClick={() => setShowAcceptFlow(false)}
+                    className="px-4 border border-input bg-white text-sm rounded-lg hover:bg-muted transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Blank printable signature lines (shown when no live accept flow active) */}
+            {!(estimate?.status === "Sent" && onApprove && showAcceptFlow) && (
+              <div className="grid grid-cols-2 gap-6 pt-2">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-6">Customer Signature</p>
+                  <div className="border-b-2 border-foreground" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-6">Printed Name</p>
+                  <div className="border-b-2 border-foreground" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-6">Date</p>
+                  <div className="border-b-2 border-foreground" />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   );
