@@ -3,41 +3,95 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { X, Send, Link, Check } from "lucide-react";
+import { X, Send, Link, Check, Mail, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import { base44 } from "@/api/base44Client";
 
-/** Resolve the billing email: billing contact if set and different, otherwise job contact, otherwise legacy email */
 function getBillingEmail(customer) {
   if (!customer) return "";
   const sameAsJob = customer.billing_same_as_job !== false;
-  if (sameAsJob) {
-    return customer.job_contact_email || customer.email || "";
-  }
+  if (sameAsJob) return customer.job_contact_email || customer.email || "";
   return customer.billing_contact_email || customer.job_contact_email || customer.email || "";
 }
 
+function getPhone(customer) {
+  return customer?.job_contact_phone || customer?.phone || "";
+}
+
+function getShareableLink(estimateId) {
+  return `${window.location.origin}/estimate-view/${estimateId}`;
+}
+
+const METHODS = ["email", "text", "both"];
+
 export default function SendEstimatePanel({ estimate, job, customer, onClose, onSent }) {
   const firstName = customer?.name?.split(" ")[0] || customer?.name || "there";
+  const link = getShareableLink(estimate?.id);
+
+  // Email fields
   const [to, setTo] = useState(getBillingEmail(customer));
   const [subject, setSubject] = useState(`Your Estimate from High Country Metal Works — ${job?.job_name || ""}`);
-  const [message, setMessage] = useState(`Hi ${firstName},\n\nPlease find your estimate attached. Let us know if you have any questions!\n\nThank you,\nHigh Country Metal Works`);
-  const [copied, setCopied] = useState(false);
+  const [message, setMessage] = useState(
+    `Hi ${firstName},\n\nPlease find your estimate attached. Let us know if you have any questions!\n\nThank you,\nHigh Country Metal Works`
+  );
 
-  function handleSend() {
-    const body = `${message}\n\n---\nEstimate Total: $${(estimate?.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
-    const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(mailtoUrl, "_blank");
-    onSent?.(to);
-    toast.success(`Email draft opened for ${to}`);
-  }
+  // SMS fields
+  const estimateNum = estimate?.job_number ? `EST-${estimate.job_number}` : `EST-${estimate?.id?.slice(-6).toUpperCase()}`;
+  const [phone, setPhone] = useState(getPhone(customer));
+  const [smsBody, setSmsBody] = useState(
+    `Hi ${firstName}, your estimate ${estimateNum} from High Country Metal Works is ready to view here: ${link}`
+  );
+
+  // Send method
+  const [method, setMethod] = useState("email");
+  const [copied, setCopied] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  const showEmail = method === "email" || method === "both";
+  const showText = method === "text" || method === "both";
 
   function handleCopyLink() {
-    const link = `${window.location.origin}/estimate-view/${estimate?.id}`;
     navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     toast.success("Link copied to clipboard");
   }
+
+  async function handleSend() {
+    setSending(true);
+    try {
+      if (showEmail) {
+        const body = `${message}\n\n---\nEstimate Total: $${(estimate?.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+        const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.open(mailtoUrl, "_blank");
+      }
+
+      if (showText) {
+        await base44.functions.invoke("sendCustomerMessage", {
+          channel: "SMS",
+          to_phone: phone,
+          body: smsBody,
+          job_id: job?.id,
+          job_number: job?.job_number,
+          job_name: job?.job_name,
+          customer_id: customer?.id,
+          customer_name: customer?.name,
+        });
+      }
+
+      onSent?.(to);
+
+      if (showEmail && showText) toast.success("Email draft opened and text message sent");
+      else if (showEmail) toast.success(`Email draft opened for ${to}`);
+      else toast.success(`Text message sent to ${phone}`);
+    } catch (err) {
+      toast.error(`Failed to send: ${err.message}`);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const canSend = (showEmail && to) || (showText && phone);
 
   return (
     <div className="absolute inset-y-0 right-0 w-80 bg-background border-l shadow-xl flex flex-col z-10">
@@ -47,24 +101,62 @@ export default function SendEstimatePanel({ estimate, job, customer, onClose, on
           <X className="w-4 h-4" />
         </button>
       </div>
+
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Send via toggle */}
         <div className="space-y-1.5">
-          <Label className="text-xs">To</Label>
-          <Input className="h-8 text-xs" value={to} onChange={e => setTo(e.target.value)} placeholder="customer@email.com" />
+          <Label className="text-xs">Send via</Label>
+          <div className="flex rounded-md border overflow-hidden">
+            {METHODS.map((m) => (
+              <button
+                key={m}
+                onClick={() => setMethod(m)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium transition-colors
+                  ${method === m ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+              >
+                {m === "email" && <Mail className="w-3 h-3" />}
+                {m === "text" && <MessageSquare className="w-3 h-3" />}
+                {m === "both" && <><Mail className="w-3 h-3" /><span>+</span><MessageSquare className="w-3 h-3" /></>}
+                {m === "email" ? "Email" : m === "text" ? "Text" : "Both"}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Subject</Label>
-          <Input className="h-8 text-xs" value={subject} onChange={e => setSubject(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Message</Label>
-          <Textarea
-            rows={6}
-            className="text-xs resize-none"
-            value={message}
-            onChange={e => setMessage(e.target.value)}
-          />
-        </div>
+
+        {/* Email fields */}
+        {showEmail && (
+          <>
+            <div className="space-y-1.5">
+              <Label className="text-xs">To</Label>
+              <Input className="h-8 text-xs" value={to} onChange={e => setTo(e.target.value)} placeholder="customer@email.com" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Subject</Label>
+              <Input className="h-8 text-xs" value={subject} onChange={e => setSubject(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Message</Label>
+              <Textarea rows={5} className="text-xs resize-none" value={message} onChange={e => setMessage(e.target.value)} />
+            </div>
+          </>
+        )}
+
+        {/* SMS fields */}
+        {showText && (
+          <>
+            {showEmail && <div className="border-t pt-2" />}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Mobile Phone</Label>
+              <Input className="h-8 text-xs" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 (555) 000-0000" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Text Message</Label>
+              <Textarea rows={4} className="text-xs resize-none" value={smsBody} onChange={e => setSmsBody(e.target.value)} />
+            </div>
+          </>
+        )}
+
+        {/* Copy link */}
         <div className="pt-1">
           <button
             onClick={handleCopyLink}
@@ -75,10 +167,11 @@ export default function SendEstimatePanel({ estimate, job, customer, onClose, on
           </button>
         </div>
       </div>
+
       <div className="p-4 border-t">
-        <Button className="w-full gap-2" onClick={handleSend} disabled={!to}>
+        <Button className="w-full gap-2" onClick={handleSend} disabled={!canSend || sending}>
           <Send className="w-3.5 h-3.5" />
-          Send Estimate
+          {sending ? "Sending…" : "Send Estimate"}
         </Button>
       </div>
     </div>
