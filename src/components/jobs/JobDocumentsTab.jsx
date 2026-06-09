@@ -467,7 +467,7 @@ export default function JobDocumentsTab({ job }) {
 
       {/* ── Invoice Dialog ────────────────────────────────────────── */}
       <Dialog open={invoiceOpen} onOpenChange={setInvoiceOpen}>
-        <DialogContent className="max-w-4xl h-[85vh] p-0 flex flex-col overflow-hidden">
+        <DialogContent className="max-w-6xl h-[90vh] p-0 flex flex-col overflow-hidden">
           <InvoiceEditor
             invoice={selectedInvoice}
             job={job}

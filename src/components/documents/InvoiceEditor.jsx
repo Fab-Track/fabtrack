@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, AlignJustify, LayoutList } from "lucide-react";
+import { Trash2, AlignJustify, LayoutList, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import InvoiceCustomerView from "@/components/invoices/InvoiceCustomerView";
+import InvoiceReviewSend from "@/components/invoices/InvoiceReviewSend";
 
 const LABEL_STYLES = {
   "Deposit Invoice (50%)":  "bg-blue-100 text-blue-800 border-blue-200",
@@ -37,6 +38,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
   const isNew = !invoice?.id;
   const [shopPrompt, setShopPrompt] = useState(false);
   const [activeTab, setActiveTab] = useState("edit");
+  const [showReviewSend, setShowReviewSend] = useState(false);
 
   const { data: contractSettings = [] } = useQuery({
     queryKey: ["appSettings", "estimate_settings"],
@@ -104,12 +106,23 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
 
   const requiresPaymentMethod = status === "Paid" || status === "Partial";
   const actorName = currentUser?.full_name || currentUser?.email || "Team Member";
+  const [afterSaveAction, setAfterSaveAction] = useState(null); // "close" | "review"
 
   function handleSave() {
     if (requiresPaymentMethod && !paymentMethod) {
       toast.error("Please select a Payment Method before saving.");
       return;
     }
+    setAfterSaveAction("close");
+    save.mutate();
+  }
+
+  function handleReviewAndSend() {
+    if (requiresPaymentMethod && !paymentMethod) {
+      toast.error("Please select a Payment Method before saving.");
+      return;
+    }
+    setAfterSaveAction("review");
     save.mutate();
   }
 
@@ -175,7 +188,12 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
 
       qc.invalidateQueries(["invoices", job.id]);
       qc.invalidateQueries(["job", job.id]);
-      onClose?.();
+
+      if (afterSaveAction === "review") {
+        setShowReviewSend(true);
+      } else {
+        onClose?.();
+      }
     },
   });
 
@@ -197,6 +215,40 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
   }
 
   const approvedEstimates = estimates.filter(e => e.status === "Approved");
+
+  // Derived values for the review/send screen
+  const reviewProps = {
+    invoice, job, customer, lines,
+    subtotal, discountPct: discount, discountAmt, tax, taxAmount,
+    total, amountPaid, balanceDue, notes,
+    viewMode, issuedDate, dueDate, invoiceLabel, status, contractText,
+  };
+
+  if (showReviewSend) {
+    return (
+      <div className="flex flex-col h-full">
+        <InvoiceReviewSend
+          {...reviewProps}
+          onBack={() => setShowReviewSend(false)}
+        />
+        {/* Keep the shop prompt alive */}
+        <AlertDialog open={shopPrompt} onOpenChange={setShopPrompt}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Deposit received for {job.job_name}</AlertDialogTitle>
+              <AlertDialogDescription>
+                The deposit invoice is marked paid. Move this job to the Shop Flow board under "New Jobs Landed — Needs Approval"?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleStayInSales}>Keep in Sales Flow</AlertDialogCancel>
+              <AlertDialogAction onClick={handleMoveToShop}>Yes, Move to Shop</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -242,8 +294,12 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
                   <LayoutList className="w-3 h-3" /> Detail
                 </button>
               </div>
-              <Button size="sm" onClick={handleSave} disabled={save.isPending}>
-                {save.isPending ? "Saving…" : isNew ? "Create Invoice" : "Save Changes"}
+              <Button size="sm" variant="outline" onClick={handleSave} disabled={save.isPending}>
+                {save.isPending && afterSaveAction === "close" ? "Saving…" : "Save"}
+              </Button>
+              <Button size="sm" onClick={handleReviewAndSend} disabled={save.isPending} className="gap-1.5">
+                <Send className="w-3.5 h-3.5" />
+                {save.isPending && afterSaveAction === "review" ? "Saving…" : "Review & Send"}
               </Button>
             </>
           )}
