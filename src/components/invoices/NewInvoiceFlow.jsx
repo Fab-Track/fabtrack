@@ -173,7 +173,17 @@ export default function NewInvoiceFlow({ open, onClose, approvedEstimate, approv
       });
     });
 
-    onConfirm({ invoiceType, lineItems });
+    // Derive a permanent label based on type and selection
+    let invoice_label = "Final Invoice";
+    if (invoiceType === "Deposit") invoice_label = "Deposit Invoice (50%)";
+    else if (invoiceType === "Progress") invoice_label = "Progress Invoice";
+    else if (invoiceType === "Final") {
+      // If all lines come from COs only, label as Change Order Invoice
+      const hasEstLines = Object.values(estSelected).some(v => v.checked);
+      invoice_label = hasEstLines ? "Final Invoice" : "Change Order Invoice";
+    }
+
+    onConfirm({ invoiceType, lineItems, invoice_label });
     handleClose();
   }
 

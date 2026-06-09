@@ -8,6 +8,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, AlignJustify, LayoutList } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+
+const LABEL_STYLES = {
+  "Deposit Invoice (50%)":  "bg-blue-100 text-blue-800 border-blue-200",
+  "Full Invoice (100%)":    "bg-violet-100 text-violet-800 border-violet-200",
+  "Final Invoice":          "bg-emerald-100 text-emerald-800 border-emerald-200",
+  "Progress Invoice":       "bg-amber-100 text-amber-800 border-amber-200",
+  "Change Order Invoice":   "bg-orange-100 text-orange-800 border-orange-200",
+};
 import { toast } from "sonner";
 import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
 import { buildStageTransition } from "@/lib/pipelineHelpers";
@@ -39,6 +48,8 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
 
   // prefill is set when creating from an approved estimate (deposit) or final invoice
   const [invoiceType, setInvoiceType] = useState(prefill?.invoice_type || invoice?.invoice_type || "Final");
+  // invoice_label is set at creation and never changed afterward
+  const invoiceLabel = invoice?.invoice_label || prefill?.invoice_label || null;
   const [status, setStatus] = useState(invoice?.status || "Unpaid");
   const [lines, setLines] = useState(() => {
     if (prefill?.line_items) return prefill.line_items.map(l => ({ ...l, _id: Math.random().toString(36).slice(2) }));
@@ -147,6 +158,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
           return max;
         }, 0);
         payload.invoice_number = `${yearPrefix}${String(maxNum + 1).padStart(4, "0")}`;
+        if (prefill?.invoice_label) payload.invoice_label = prefill.invoice_label;
         return base44.entities.Invoice.create({ ...payload, view_mode: viewMode });
       }
       return base44.entities.Invoice.update(invoice.id, { ...payload, view_mode: viewMode });
@@ -200,9 +212,16 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
     <div className="flex flex-col h-full">
       {/* Toolbar */}
       <div className="flex items-center justify-between px-5 py-3 border-b bg-muted/30 shrink-0 gap-3 flex-wrap">
-        <div>
-          <p className="text-xs text-muted-foreground font-mono">{job.job_number}</p>
-          <h2 className="font-semibold text-sm">{job.job_name}</h2>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div>
+            <p className="text-xs text-muted-foreground font-mono">{job.job_number}</p>
+            <h2 className="font-semibold text-sm">{job.job_name}</h2>
+          </div>
+          {invoiceLabel && (
+            <Badge className={`text-xs border ${LABEL_STYLES[invoiceLabel] || "bg-muted text-muted-foreground"}`}>
+              {invoiceLabel}
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Select value={invoiceType} onValueChange={setInvoiceType}>

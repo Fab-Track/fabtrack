@@ -49,6 +49,17 @@
       ],
       "default": "Final"
     },
+    "invoice_label": {
+      "type": "string",
+      "enum": [
+        "Deposit Invoice (50%)",
+        "Full Invoice (100%)",
+        "Final Invoice",
+        "Progress Invoice",
+        "Change Order Invoice"
+      ],
+      "description": "Human-readable invoice label \u2014 set at creation and never changed"
+    },
     "status": {
       "type": "string",
       "enum": [

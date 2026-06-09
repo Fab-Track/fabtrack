@@ -29,6 +29,14 @@ const INV_STATUS = {
   Overdue: "bg-red-100 text-red-800",
 };
 
+const INV_LABEL_STYLES = {
+  "Deposit Invoice (50%)":  "bg-blue-100 text-blue-800 border-blue-200",
+  "Full Invoice (100%)":    "bg-violet-100 text-violet-800 border-violet-200",
+  "Final Invoice":          "bg-emerald-100 text-emerald-800 border-emerald-200",
+  "Progress Invoice":       "bg-amber-100 text-amber-800 border-amber-200",
+  "Change Order Invoice":   "bg-orange-100 text-orange-800 border-orange-200",
+};
+
 const CO_STATUS = {
   Draft:    "bg-muted text-muted-foreground",
   Sent:     "bg-blue-100 text-blue-800",
@@ -144,9 +152,10 @@ export default function JobDocumentsTab({ job }) {
     setInvoiceOpen(true);
   }
 
-  function handleNewInvoiceConfirm({ invoiceType, lineItems }) {
+  function handleNewInvoiceConfirm({ invoiceType, lineItems, invoice_label }) {
     openInvoice(null, {
       invoice_type: invoiceType,
+      invoice_label,
       line_items: lineItems,
       discount_percent: approvedEstimate?.discount_percent || 0,
     });
@@ -158,6 +167,7 @@ export default function JobDocumentsTab({ job }) {
   function handleCreateDepositInvoice({ lines, total, tax, discount_percent }) {
     const prefill = {
       invoice_type: "Deposit",
+      invoice_label: "Deposit Invoice (50%)",
       line_items: lines.map(l => ({ ...l })),
       tax,
       discount_percent: discount_percent || 0,
@@ -343,6 +353,11 @@ export default function JobDocumentsTab({ job }) {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="font-semibold text-sm">${(inv.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                  {inv.invoice_label && (
+                    <Badge className={`text-xs border hidden md:inline-flex ${INV_LABEL_STYLES[inv.invoice_label] || "bg-muted text-muted-foreground"}`}>
+                      {inv.invoice_label}
+                    </Badge>
+                  )}
                   <Badge className={`text-xs ${INV_STATUS[inv.status] || ""}`}>{inv.status}</Badge>
                 </div>
               </div>
