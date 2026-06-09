@@ -102,6 +102,12 @@ export default function JobDocumentsTab({ job }) {
     queryFn: () => base44.entities.ChangeOrder.filter({ job_id: job.id }),
   });
 
+  const { data: customer } = useQuery({
+    queryKey: ["customer", job.customer_id],
+    queryFn: () => base44.entities.Customer.filter({ id: job.customer_id }).then(r => r[0] || null),
+    enabled: !!job.customer_id,
+  });
+
   const approvedEstimate = estimates.find(e => e.status === "Approved");
   const approvedEstimateTotal = approvedEstimate?.total || job.estimate_total || 0;
   const approvedCOs = changeOrders.filter(co => co.status === "Approved");
@@ -465,6 +471,7 @@ export default function JobDocumentsTab({ job }) {
           <InvoiceEditor
             invoice={selectedInvoice}
             job={job}
+            customer={customer}
             jobInvoices={invoices}
             estimates={estimates}
             changeOrders={changeOrders}
