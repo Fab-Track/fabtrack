@@ -79,7 +79,8 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
   const [signature, setSignature] = useState(estimate?.customer_signature || "");
   const [approvalMethod, setApprovalMethod] = useState(estimate?.approval_method || "");
   const [collapsed, setCollapsed] = useState({});
-  const isLocked = (estimate?.status === "Approved") || (status === "Approved" && !!estimate?.id);
+  // Only lock editing when the estimate is already saved as Approved in the DB
+  const isLocked = estimate?.status === "Approved" && !!estimate?.id;
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editorView, setEditorView] = useState("detail"); // always start in detail for editing
   const [viewMode, setViewMode] = useState(estimate?.view_mode || "summary"); // customer-facing saved mode
