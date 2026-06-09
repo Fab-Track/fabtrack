@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { format, parseISO, isValid, differenceInCalendarDays, addDays } from "date-fns";
@@ -8,19 +9,80 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertTriangle, CalendarDays, Check, ChevronDown, ChevronUp,
-  Info, RefreshCw, Trash2, CheckCircle2, Clock, Circle,
+  Info, RefreshCw, Trash2, CheckCircle2, Clock, Circle, X,
 } from "lucide-react";
 
-// ─── Phase Detail Popup ────────────────────────────────────────────────────────
-function PhasePopup({ phase, onClose, onMarkComplete, onMarkUpcoming }) {
+// ─── Portal Popup ──────────────────────────────────────────────────────────────
+// Renders at document.body level so it's never clipped by overflow:hidden ancestors.
+// Smart positioning: flips left/right and up/down based on available screen space.
+function PhasePopup({ phase, anchorRect, onClose, onMarkComplete, onMarkUpcoming }) {
+  const popupRef = useRef();
   const colors = getPhaseColors(phase.color);
+  const [style, setStyle] = useState({ opacity: 0, top: 0, left: 0 });
+
+  // Compute position after render so we know the popup's own dimensions
+  useEffect(() => {
+    const popup = popupRef.current;
+    if (!popup || !anchorRect) return;
+    const popW = popup.offsetWidth;
+    const popH = popup.offsetHeight;
+    const margin = 8;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // On mobile (narrow screens), center horizontally, position below/above bar
+    if (vw < 640) {
+      const centeredLeft = Math.max(margin, (vw - popW) / 2);
+      let top = anchorRect.bottom + margin;
+      if (top + popH > vh - margin) top = anchorRect.top - popH - margin;
+      setStyle({ opacity: 1, top, left: centeredLeft, position: "fixed" });
+      return;
+    }
+
+    // Desktop: try right of bar, flip left if overflow
+    let left = anchorRect.left;
+    if (left + popW > vw - margin) {
+      left = anchorRect.right - popW;
+    }
+    left = Math.max(margin, left);
+
+    // Try below bar, flip above if overflow
+    let top = anchorRect.bottom + margin;
+    if (top + popH > vh - margin) {
+      top = anchorRect.top - popH - margin;
+    }
+    top = Math.max(margin, top);
+
+    setStyle({ opacity: 1, top, left, position: "fixed" });
+  }, [anchorRect]);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (popupRef.current && !popupRef.current.contains(e.target)) onClose();
+    };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
+  }, [onClose]);
+
   const start = parseISO(phase.startDate);
   const end = parseISO(phase.endDate);
-  return (
-    <div className="absolute z-50 w-72 bg-card border rounded-xl shadow-xl p-4 top-8 left-0">
+
+  return createPortal(
+    <div
+      ref={popupRef}
+      style={{ ...style, zIndex: 9999, width: "min(288px, calc(100vw - 16px))" }}
+      className="bg-card border rounded-xl shadow-2xl p-4 transition-opacity duration-100"
+    >
       <div className="flex items-start justify-between mb-2">
         <div className={`text-sm font-semibold ${colors.text}`}>{phase.name}</div>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-0.5 rounded">
+          <X className="w-3.5 h-3.5" />
+        </button>
       </div>
       <div className="space-y-1.5 text-sm">
         <div className="flex justify-between">
@@ -44,16 +106,17 @@ function PhasePopup({ phase, onClose, onMarkComplete, onMarkUpcoming }) {
       </div>
       <div className="mt-3 pt-3 border-t">
         {phase.status !== "complete" ? (
-          <Button size="sm" className="w-full h-7 text-xs" onClick={onMarkComplete}>
+          <Button size="sm" className="w-full h-8 text-xs" onClick={onMarkComplete}>
             <CheckCircle2 className="w-3 h-3 mr-1" /> Mark Complete
           </Button>
         ) : (
-          <Button size="sm" variant="outline" className="w-full h-7 text-xs" onClick={onMarkUpcoming}>
+          <Button size="sm" variant="outline" className="w-full h-8 text-xs" onClick={onMarkUpcoming}>
             <RefreshCw className="w-3 h-3 mr-1" /> Mark Upcoming
           </Button>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -64,15 +127,11 @@ function StatusBadge({ status }) {
 }
 
 // ─── Gantt Bar Row ─────────────────────────────────────────────────────────────
-function GanttBar({ phase, timelineStart, totalDays, onPhaseUpdate, readOnly = false }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef();
+const LABEL_W = 140; // px — label column width
 
-  useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+function GanttBar({ phase, timelineStart, totalDays, onPhaseUpdate, readOnly = false }) {
+  const [anchorRect, setAnchorRect] = useState(null);
+  const barRef = useRef();
 
   const start = parseISO(phase.startDate);
   const end = parseISO(phase.endDate);
@@ -84,40 +143,54 @@ function GanttBar({ phase, timelineStart, totalDays, onPhaseUpdate, readOnly = f
   const isPast = phase.status === "complete";
   const isActive = phase.status === "in_progress";
 
+  const handleClick = () => {
+    if (readOnly) return;
+    if (anchorRect) { setAnchorRect(null); return; }
+    const rect = barRef.current?.getBoundingClientRect();
+    if (rect) setAnchorRect(rect);
+  };
+
   return (
-    <div className="relative flex items-center h-9 group">
-      {/* Label */}
-      <div className="w-44 shrink-0 text-xs text-muted-foreground truncate pr-2 flex items-center gap-1">
-        {isPast ? <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" /> : isActive ? <Clock className="w-3 h-3 text-blue-500 shrink-0" /> : <Circle className="w-3 h-3 text-muted-foreground/40 shrink-0" />}
-        {phase.name}
+    <div className="flex items-center h-10 group">
+      {/* Sticky label */}
+      <div
+        style={{ width: LABEL_W, minWidth: LABEL_W }}
+        className="shrink-0 text-xs text-muted-foreground truncate pr-2 flex items-center gap-1 sticky left-0 bg-muted/20 z-10"
+      >
+        {isPast
+          ? <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+          : isActive
+            ? <Clock className="w-3 h-3 text-blue-500 shrink-0" />
+            : <Circle className="w-3 h-3 text-muted-foreground/40 shrink-0" />}
+        <span className="truncate">{phase.name}</span>
       </div>
 
       {/* Bar track */}
-      <div className="flex-1 relative h-6">
+      <div className="flex-1 relative h-7 min-w-0">
         <div
-          ref={ref}
+          ref={barRef}
           style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
-          className={`absolute h-full rounded-md cursor-pointer flex items-center px-2 overflow-hidden transition-opacity
-            ${colors.bg} ${isPast ? "opacity-40" : isActive ? "opacity-100 ring-1 ring-offset-1 ring-current" : "opacity-80"}
-            hover:opacity-100`}
-          onClick={() => setOpen(v => !v)}
+          className={`absolute h-full rounded-md flex items-center px-2 overflow-hidden transition-opacity
+            ${colors.bg}
+            ${isPast ? "opacity-40" : isActive ? "opacity-100 ring-1 ring-offset-1 ring-current" : "opacity-80"}
+            ${!readOnly ? "cursor-pointer hover:opacity-100 active:scale-[0.98]" : "cursor-default"}`}
+          onClick={handleClick}
         >
-          <span className="text-white text-[10px] font-medium truncate whitespace-nowrap">
+          <span className="text-white text-[10px] font-medium truncate whitespace-nowrap select-none">
             {format(start, "MMM d")} – {format(end, "MMM d")}
           </span>
         </div>
-
-        {open && !readOnly && (
-          <div style={{ left: `${leftPct}%` }} className="absolute top-8 z-50">
-            <PhasePopup
-              phase={phase}
-              onClose={() => setOpen(false)}
-              onMarkComplete={() => { onPhaseUpdate(phase.name, "complete"); setOpen(false); }}
-              onMarkUpcoming={() => { onPhaseUpdate(phase.name, "upcoming"); setOpen(false); }}
-            />
-          </div>
-        )}
       </div>
+
+      {anchorRect && !readOnly && (
+        <PhasePopup
+          phase={phase}
+          anchorRect={anchorRect}
+          onClose={() => setAnchorRect(null)}
+          onMarkComplete={() => { onPhaseUpdate(phase.name, "complete"); setAnchorRect(null); }}
+          onMarkUpcoming={() => { onPhaseUpdate(phase.name, "upcoming"); setAnchorRect(null); }}
+        />
+      )}
     </div>
   );
 }
@@ -128,7 +201,7 @@ export default function ProductionSchedule({ job, readOnly = false }) {
   const [promisedDate, setPromisedDate] = useState(job.promised_install_date || "");
   const [preview, setPreview] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [confirmAction, setConfirmAction] = useState(null); // "replace" | "remove"
+  const [confirmAction, setConfirmAction] = useState(null);
   const queryClient = useQueryClient();
 
   const saveJobMutation = useMutation({
@@ -142,11 +215,10 @@ export default function ProductionSchedule({ job, readOnly = false }) {
     setPromisedDate(val);
     if (!val) {
       setPreview(null);
-      if (existingSchedule) setShowConfirm(true), setConfirmAction("remove");
+      if (existingSchedule) { setShowConfirm(true); setConfirmAction("remove"); }
       return;
     }
-    const result = generateSchedule(val);
-    setPreview(result);
+    setPreview(generateSchedule(val));
     setShowConfirm(false);
   }
 
@@ -195,7 +267,6 @@ export default function ProductionSchedule({ job, readOnly = false }) {
     });
   }
 
-  // Build timeline range
   const phasesToShow = preview?.phases || job.schedule_phases;
   let timelineStart = null, timelineEnd = null, totalDays = 0;
   if (phasesToShow?.length > 0) {
@@ -205,14 +276,16 @@ export default function ProductionSchedule({ job, readOnly = false }) {
   }
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const todayPct = timelineStart ? Math.min(100, Math.max(0, (differenceInCalendarDays(today, timelineStart) / totalDays) * 100)) : null;
+  const todayPct = timelineStart
+    ? Math.min(100, Math.max(0, (differenceInCalendarDays(today, timelineStart) / totalDays) * 100))
+    : null;
 
   return (
     <div className="border rounded-xl bg-card overflow-hidden mt-4">
       {/* Header */}
       <button
         onClick={() => setExpanded(v => !v)}
-        className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-muted/30 transition-colors"
+        className="w-full flex items-center justify-between px-4 md:px-5 py-3.5 hover:bg-muted/30 transition-colors"
       >
         <div className="flex items-center gap-2">
           <CalendarDays className="w-4 h-4 text-muted-foreground" />
@@ -227,38 +300,32 @@ export default function ProductionSchedule({ job, readOnly = false }) {
       </button>
 
       {expanded && (
-        <div className="px-5 pb-5 border-t">
-          {/* Date input — hidden for read-only (fabricator) */}
+        <div className="px-4 md:px-5 pb-5 border-t">
+          {/* Date input */}
           {!readOnly && (
-            <div className="flex items-center gap-3 mt-4 mb-3">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3 mt-4 mb-3">
               <div className="flex-1">
                 <label className="text-xs font-medium text-muted-foreground block mb-1.5">Promised Install Date</label>
                 <Input
                   type="date"
                   value={promisedDate}
                   onChange={e => handleDateChange(e.target.value)}
-                  className="h-9 text-sm max-w-xs"
+                  className="h-10 text-sm w-full sm:max-w-xs"
                 />
               </div>
               {preview && (
-                <div className="flex gap-2 items-end">
-                  <Button
-                    size="sm"
-                    className="h-9"
-                    onClick={handleConfirmSchedule}
-                    disabled={saveJobMutation.isPending}
-                  >
-                    <Check className="w-3.5 h-3.5 mr-1.5" />
-                    Confirm & Save Schedule
+                <div className="flex gap-2">
+                  <Button size="sm" className="h-10 flex-1 sm:flex-none" onClick={handleConfirmSchedule} disabled={saveJobMutation.isPending}>
+                    <Check className="w-3.5 h-3.5 mr-1.5" />Confirm & Save
                   </Button>
-                  <Button size="sm" variant="ghost" className="h-9" onClick={() => setPreview(null)}>Cancel</Button>
+                  <Button size="sm" variant="ghost" className="h-10" onClick={() => setPreview(null)}>Cancel</Button>
                 </div>
               )}
               {existingSchedule && !preview && (
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-9 text-destructive border-destructive/40 hover:bg-destructive/10"
+                  className="h-10 text-destructive border-destructive/40 hover:bg-destructive/10"
                   onClick={() => { setShowConfirm(true); setConfirmAction("remove"); }}
                 >
                   <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Remove Schedule
@@ -267,15 +334,13 @@ export default function ProductionSchedule({ job, readOnly = false }) {
             </div>
           )}
 
-          {/* Weekend bump notice */}
+          {/* Notices */}
           {preview?.wasBumped && (
             <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-800 text-xs rounded-lg px-3 py-2 mb-3">
               <Info className="w-3.5 h-3.5 shrink-0" />
               Date was on a weekend — bumped to Monday {format(parseISO(preview.bumpedDate), "MMM d, yyyy")}.
             </div>
           )}
-
-          {/* Tight timeline warning */}
           {preview?.isTight && (
             <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg px-3 py-2 mb-3">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
@@ -283,12 +348,12 @@ export default function ProductionSchedule({ job, readOnly = false }) {
             </div>
           )}
 
-          {/* Replace/Remove confirm dialog */}
+          {/* Confirm dialog */}
           {showConfirm && (
             <div className="bg-muted/60 border rounded-lg p-4 mb-4 space-y-3">
               {confirmAction === "replace" && (
                 <>
-                  <p className="text-sm font-medium">A schedule already exists for this job. Replace it or keep both?</p>
+                  <p className="text-sm font-medium">A schedule already exists for this job. Replace it?</p>
                   <div className="flex gap-2">
                     <Button size="sm" onClick={doSave}>Replace Schedule</Button>
                     <Button size="sm" variant="outline" onClick={() => setShowConfirm(false)}>Keep Existing</Button>
@@ -311,37 +376,44 @@ export default function ProductionSchedule({ job, readOnly = false }) {
           {phasesToShow?.length > 0 && timelineStart && (
             <div>
               <div className="text-xs text-muted-foreground mb-2">
-                {preview ? "Preview — not yet saved" : `Schedule: ${format(timelineStart, "MMM d")} – ${format(timelineEnd, "MMM d, yyyy")}`}
+                {preview
+                  ? "Preview — not yet saved"
+                  : `Schedule: ${format(timelineStart, "MMM d")} – ${format(timelineEnd, "MMM d, yyyy")}`}
               </div>
 
-              {/* Header dates */}
-              <div className="ml-44 flex text-[10px] text-muted-foreground mb-1 relative">
-                <span className="absolute left-0">{format(timelineStart, "MMM d")}</span>
-                <span className="absolute right-0">{format(timelineEnd, "MMM d")}</span>
-              </div>
-
-              {/* Bars */}
-              <div className="relative border rounded-lg bg-muted/20 px-3 py-2 overflow-hidden">
-                {/* Today line */}
-                {todayPct !== null && todayPct >= 0 && todayPct <= 100 && (
-                  <div
-                    className="absolute top-0 bottom-0 w-px bg-red-500/70 z-10 pointer-events-none"
-                    style={{ left: `calc(${todayPct}% + 176px)` }}
-                  >
-                    <div className="absolute -top-0 -translate-x-1/2 bg-red-500 text-white text-[9px] px-1 rounded">today</div>
+              {/* Scrollable Gantt wrapper */}
+              <div className="overflow-x-auto -mx-1 px-1">
+                <div style={{ minWidth: 480 }}>
+                  {/* Header dates */}
+                  <div style={{ paddingLeft: LABEL_W }} className="flex text-[10px] text-muted-foreground mb-1 relative">
+                    <span className="absolute left-0" style={{ left: LABEL_W }}>{format(timelineStart, "MMM d")}</span>
+                    <span className="absolute right-0">{format(timelineEnd, "MMM d")}</span>
                   </div>
-                )}
 
-                {phasesToShow.map((phase) => (
-                  <GanttBar
-                    key={phase.name}
-                    phase={phase}
-                    timelineStart={timelineStart}
-                    totalDays={totalDays}
-                    onPhaseUpdate={handlePhaseUpdate}
-                    readOnly={readOnly}
-                  />
-                ))}
+                  {/* Bars container */}
+                  <div className="relative border rounded-lg bg-muted/20 px-0 py-1 overflow-hidden">
+                    {/* Today line */}
+                    {todayPct !== null && todayPct >= 0 && todayPct <= 100 && (
+                      <div
+                        className="absolute top-0 bottom-0 w-px bg-red-500/70 z-10 pointer-events-none"
+                        style={{ left: `calc(${todayPct}% + ${LABEL_W}px)` }}
+                      >
+                        <div className="absolute top-0 -translate-x-1/2 bg-red-500 text-white text-[9px] px-1 rounded">today</div>
+                      </div>
+                    )}
+
+                    {phasesToShow.map((phase) => (
+                      <GanttBar
+                        key={phase.name}
+                        phase={phase}
+                        timelineStart={timelineStart}
+                        totalDays={totalDays}
+                        onPhaseUpdate={handlePhaseUpdate}
+                        readOnly={readOnly}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Legend */}
@@ -362,7 +434,9 @@ export default function ProductionSchedule({ job, readOnly = false }) {
 
           {!phasesToShow?.length && !preview && (
             <div className="text-sm text-muted-foreground text-center py-6 bg-muted/20 rounded-lg">
-              {readOnly ? "No production schedule has been created for this job yet." : "Set a Promised Install Date above to auto-generate a production schedule."}
+              {readOnly
+                ? "No production schedule has been created for this job yet."
+                : "Set a Promised Install Date above to auto-generate a production schedule."}
             </div>
           )}
         </div>
