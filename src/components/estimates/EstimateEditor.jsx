@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, CheckCircle2, FileText, LayoutList, AlignJustify, AlertCircle, ImageOff, Image } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, FileText, LayoutList, AlignJustify, AlertCircle, ImageOff, Image, Lock } from "lucide-react";
 import AddLineItemWizard from "./AddLineItemWizard";
 import { toast } from "sonner";
 import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
@@ -77,7 +77,9 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
     return estimate?.notes || "";
   });
   const [signature, setSignature] = useState(estimate?.customer_signature || "");
+  const [approvalMethod, setApprovalMethod] = useState(estimate?.approval_method || "");
   const [collapsed, setCollapsed] = useState({});
+  const isLocked = (estimate?.status === "Approved") || (status === "Approved" && !!estimate?.id);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editorView, setEditorView] = useState("detail"); // always start in detail for editing
   const [viewMode, setViewMode] = useState(estimate?.view_mode || "summary"); // customer-facing saved mode
@@ -115,7 +117,13 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
         view_mode: viewMode,
         ...(stylePhotoUrl ? { style_photo_url: stylePhotoUrl } : {}),
         ...(railingStyle ? { railing_style: railingStyle, railing_lnft: railingLnft } : {}),
-        ...(status === "Approved" ? { approved_date: new Date().toISOString().split("T")[0] } : {}),
+        ...(status === "Approved" ? {
+          approved_date: new Date().toISOString().split("T")[0],
+          approved_at: estimate?.approved_at || new Date().toISOString(),
+          approval_method: approvalMethod || estimate?.approval_method,
+          approved_by_name: estimate?.approved_by_name || actorName,
+          approved_by_id: estimate?.approved_by_id || currentUser?.id,
+        } : {}),
       };
       return isNew
         ? base44.entities.Estimate.create(payload)
@@ -159,12 +167,20 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
         const moved = await autoMoveSalesStage(
           { ...job, ...estUpdate },
           "Awaiting Deposit",
-          `Estimate approved by ${signature} — job auto-moved to Awaiting Deposit`,
+          `Estimate approved by ${signature || actorName} — job auto-moved to Awaiting Deposit`,
           actorName
         );
         if (moved) {
           toast("Estimate approved — job moved to Awaiting Deposit");
         }
+        // Fire in-app notification
+        await base44.entities.Notification.create({
+          title: "Estimate Approved",
+          body: `Estimate for ${job.job_name || job.job_number} has been approved${approvalMethod ? ` (${approvalMethod})` : ""}.`,
+          type: "info",
+          link: `/jobs/${job.id}`,
+          target_roles: ["owner", "admin", "estimator"],
+        });
       }
 
       qc.invalidateQueries(["estimates"]);
@@ -244,14 +260,21 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
             <span className="text-[10px] uppercase tracking-wide font-medium opacity-60">Customer:</span>
             <span className="font-semibold text-foreground">{viewMode === "summary" ? "Summary" : "Detail"}</span>
           </button>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {["Draft", "Sent", "Approved", "Rejected"].map(s => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {isLocked && estimate?.id ? (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-700">
+              <Lock className="w-3 h-3" />
+              <span className="text-xs font-semibold">Approved — Locked</span>
+            </div>
+          ) : (
+            <Select value={status} onValueChange={(v) => { setStatus(v); if (v !== "Approved") setApprovalMethod(""); }}>
+              <SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {["Draft", "Sent", "Approved", "Rejected"].map(s => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
             {save.isPending ? "Saving…" : isNew ? "Create Estimate" : "Save Changes"}
           </Button>
@@ -271,6 +294,43 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        {/* Internal approval audit — shown when manually setting to Approved */}
+        {status === "Approved" && !estimate?.approved_at && (
+          <div className="mx-5 mt-4 p-4 rounded-lg border border-emerald-200 bg-emerald-50 space-y-3">
+            <p className="text-sm font-semibold text-emerald-800">Internal Approval Override</p>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-emerald-700">How was this approved? <span className="text-red-500">*</span></Label>
+              <Select value={approvalMethod} onValueChange={setApprovalMethod}>
+                <SelectTrigger className="h-8 text-xs bg-white border-emerald-300">
+                  <SelectValue placeholder="Select approval method…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Customer Signed">Customer Signed</SelectItem>
+                  <SelectItem value="Verbal Approval">Verbal Approval</SelectItem>
+                  <SelectItem value="Email Approval">Email Approval</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-emerald-600">
+              Will be recorded as approved by <span className="font-semibold">{actorName}</span> at {new Date().toLocaleString()}.
+            </p>
+          </div>
+        )}
+
+        {/* Approval audit trail — shown when already approved */}
+        {estimate?.approved_at && estimate?.status === "Approved" && (
+          <div className="mx-5 mt-4 p-3 rounded-lg border border-emerald-200 bg-emerald-50 flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            <div className="text-xs text-emerald-800 space-y-0.5">
+              <p className="font-semibold">Approved — Locked</p>
+              {estimate.approval_method && <p>Method: {estimate.approval_method}</p>}
+              {estimate.approved_by_name && <p>Approved by: {estimate.approved_by_name}</p>}
+              {estimate.customer_printed_name && <p>Customer signature: {estimate.customer_printed_name}</p>}
+              <p>{new Date(estimate.approved_at).toLocaleString()}</p>
+            </div>
+          </div>
+        )}
+
         {/* Style Photo */}
         {stylePhotoUrl && (
           <div className="px-5 pt-4">
@@ -283,9 +343,15 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
         <div className="p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm">Line Items</h3>
-            <Button size="sm" variant="outline" className="gap-1 h-8 text-xs" onClick={addLine}>
-              <Plus className="w-3.5 h-3.5" /> Add Line
-            </Button>
+            {isLocked && estimate?.id ? (
+              <div className="flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded">
+                <Lock className="w-3 h-3" /> Locked — use Change Orders to modify
+              </div>
+            ) : (
+              <Button size="sm" variant="outline" className="gap-1 h-8 text-xs" onClick={addLine}>
+                <Plus className="w-3.5 h-3.5" /> Add Line
+              </Button>
+            )}
           </div>
 
           {editorView === "detail" ? (
@@ -308,8 +374,9 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                         placeholder="Description"
                         value={line.description}
                         onChange={e => updateLine(idx, "description", e.target.value)}
+                        disabled={isLocked && !!estimate?.id}
                       />
-                      <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)}>
+                      <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)} disabled={isLocked && !!estimate?.id}>
                         <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
                       </Select>
@@ -318,6 +385,7 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                         type="number"
                         value={line.quantity}
                         onChange={e => updateLine(idx, "quantity", e.target.value)}
+                        disabled={isLocked && !!estimate?.id}
                       />
                       <Input
                         className="h-8 text-xs"
@@ -325,13 +393,17 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                         placeholder="0.00"
                         value={line.unit_cost}
                         onChange={e => updateLine(idx, "unit_cost", e.target.value)}
+                        disabled={isLocked && !!estimate?.id}
                       />
                       <span className="text-sm font-semibold text-right pr-1">
                         ${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeLine(idx)}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      {!(isLocked && !!estimate?.id) && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeLine(idx)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                      {(isLocked && !!estimate?.id) && <span className="w-7" />}
                     </div>
                     {line.photo_url && (
                       <div className="flex items-center gap-2 pl-1">
@@ -375,9 +447,12 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                     <span className="text-sm font-semibold text-right">
                       ${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={e => { e.stopPropagation(); removeLine(idx); }}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                    {!(isLocked && !!estimate?.id) && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={e => { e.stopPropagation(); removeLine(idx); }}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                    {(isLocked && !!estimate?.id) && <span className="w-7" />}
                   </div>
                 ))}
               </div>

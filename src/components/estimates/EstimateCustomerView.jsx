@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { CheckCircle2, Lock } from "lucide-react";
 
 const STATUS_COLORS = {
   Draft: "bg-muted text-muted-foreground",
@@ -10,8 +11,28 @@ const STATUS_COLORS = {
   Rejected: "bg-red-100 text-red-800",
 };
 
-export default function EstimateCustomerView({ estimate, job, customer, businessInfo, onApprove, onRequestChanges }) {
-  const [approvalName, setApprovalName] = useState("");
+const DEFAULT_CONTRACT = `TERMS AND CONDITIONS
+
+By signing this estimate, you ("Customer") agree to authorize High Country Metal Works ("Company") to proceed with the scope of work described above at the agreed-upon price.
+
+1. SCOPE OF WORK — Work is limited to the items described in this estimate. Any changes must be submitted as a written Change Order and approved by both parties before additional work begins.
+
+2. PAYMENT TERMS — A 50% deposit is due before fabrication begins. The remaining 50% balance is due upon project completion, before or at the time of installation.
+
+3. MATERIALS — All materials will be sourced and fabricated by the Company. Substitutions may occur if materials are unavailable, with equivalent quality maintained.
+
+4. TIMELINE — Project timelines are estimates only. The Company is not liable for delays caused by supply chain issues, weather, or circumstances outside our control.
+
+5. WARRANTIES — The Company warrants all workmanship for one (1) year from the date of installation. Material warranties are subject to manufacturer terms.
+
+6. APPROVAL — Your digital signature below constitutes a legally binding agreement to the terms above and authorizes the Company to begin work upon receipt of the required deposit.`;
+
+export default function EstimateCustomerView({ estimate, job, customer, businessInfo, onApprove, onRequestChanges, contractText }) {
+  const [showAcceptFlow, setShowAcceptFlow] = useState(false);
+  const [typedName, setTypedName] = useState("");
+  const [hasScrolled, setHasScrolled] = useState(false);
+  const contractRef = useRef(null);
+
   const lines = estimate?.line_items || [];
   const viewMode = estimate?.view_mode || "summary";
 
@@ -26,9 +47,19 @@ export default function EstimateCustomerView({ estimate, job, customer, business
   const taxAmt = afterOverhead * ((estimate?.tax_percent || 0) / 100);
   const total = afterOverhead + taxAmt;
 
-  // Summary view: one row per line item — description, qty/unit, location, total (no unit cost)
-  // Detail view: full breakdown with qty, unit cost, total
-  const displayLines = lines;
+  const contractBody = contractText || DEFAULT_CONTRACT;
+
+  function handleContractScroll(e) {
+    const el = e.target;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
+      setHasScrolled(true);
+    }
+  }
+
+  function handleSubmit() {
+    if (!typedName.trim()) return;
+    onApprove(typedName.trim());
+  }
 
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-xl border shadow-sm overflow-hidden">
@@ -120,7 +151,7 @@ export default function EstimateCustomerView({ estimate, job, customer, business
                 <span className="text-right">Amount</span>
               </div>
               <div className="divide-y">
-                {displayLines.map((line, i) => (
+                {lines.map((line, i) => (
                   <div key={i}>
                     <div className="py-2.5 grid text-sm" style={{ gridTemplateColumns: "3fr 1.5fr 0.7fr 1fr 1fr" }}>
                       <span>{line.description || "—"}</span>
@@ -190,48 +221,112 @@ export default function EstimateCustomerView({ estimate, job, customer, business
           </div>
         )}
 
-        {/* Approval section — only shown when Sent (not Draft, not already Approved) */}
-        {estimate?.status === "Sent" && onApprove && (
-          <div className="border-t pt-6 space-y-4">
+        {/* ── Accept / Approval section ─────────────────────────────── */}
+        {estimate?.status === "Sent" && onApprove && !showAcceptFlow && (
+          <div className="border-t pt-6">
+            <button
+              onClick={() => setShowAcceptFlow(true)}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-3 rounded-lg transition-colors"
+            >
+              ✓ Accept Estimate
+            </button>
+            {onRequestChanges && (
+              <button
+                onClick={onRequestChanges}
+                className="mt-2 w-full px-4 border border-input bg-white text-sm rounded-lg py-2.5 hover:bg-muted transition-colors"
+              >
+                Request Changes
+              </button>
+            )}
+          </div>
+        )}
+
+        {estimate?.status === "Sent" && onApprove && showAcceptFlow && (
+          <div className="border-t pt-6 space-y-5">
             <div>
-              <p className="font-semibold text-sm mb-1">Approve This Estimate</p>
-              <p className="text-sm text-muted-foreground">By approving, you agree to the scope and pricing described above.</p>
+              <p className="font-semibold text-sm mb-1">Review & Sign Agreement</p>
+              <p className="text-xs text-muted-foreground">Please read the full contract below, then type your full name to sign.</p>
             </div>
-            <div className="space-y-2 max-w-xs">
-              <label className="text-xs text-muted-foreground font-medium">Your Name or Initials</label>
-              <input
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder="e.g. John Smith or J.S."
-                value={approvalName}
-                onChange={e => setApprovalName(e.target.value)}
-              />
+
+            {/* Scrollable contract block */}
+            <div className="relative">
+              <div
+                ref={contractRef}
+                onScroll={handleContractScroll}
+                className="h-64 overflow-y-auto border rounded-lg p-4 bg-muted/20 text-xs leading-relaxed whitespace-pre-wrap font-mono text-foreground"
+              >
+                {contractBody}
+              </div>
+              {!hasScrolled && (
+                <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-background/80 to-transparent rounded-b-lg flex items-end justify-center pb-1 pointer-events-none">
+                  <span className="text-[10px] text-muted-foreground">Scroll to read full agreement ↓</span>
+                </div>
+              )}
             </div>
+
+            {!hasScrolled && (
+              <p className="text-xs text-amber-600 font-medium">Please scroll through the entire agreement before signing.</p>
+            )}
+
+            {/* Signature fields */}
+            <div className="space-y-4 max-w-sm">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Digital Signature</label>
+                <input
+                  disabled={!hasScrolled}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-40 disabled:cursor-not-allowed"
+                  placeholder="Type your full legal name to sign"
+                  value={typedName}
+                  onChange={e => setTypedName(e.target.value)}
+                />
+              </div>
+              {typedName.trim() && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Printed Name</label>
+                  <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted/30 px-3 text-sm text-foreground font-medium">
+                    {typedName.trim()}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-3">
               <button
-                onClick={() => approvalName.trim() && onApprove(approvalName.trim())}
-                disabled={!approvalName.trim()}
+                onClick={handleSubmit}
+                disabled={!typedName.trim() || !hasScrolled}
                 className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
               >
-                ✓ Approve Estimate
+                ✓ I Agree & Accept This Estimate
               </button>
-              {onRequestChanges && (
-                <button
-                  onClick={onRequestChanges}
-                  className="px-4 border border-input bg-white text-sm rounded-lg hover:bg-muted transition-colors"
-                >
-                  Request Changes
-                </button>
-              )}
+              <button
+                onClick={() => setShowAcceptFlow(false)}
+                className="px-4 border border-input bg-white text-sm rounded-lg hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         )}
+
         {estimate?.status === "Approved" && (
-          <div className="border-t pt-4 flex items-center gap-2 text-emerald-700">
-            <span className="text-lg">✓</span>
+          <div className="border-t pt-4 flex items-start gap-3 text-emerald-700">
+            <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-sm">Approved</p>
-              {estimate.customer_signature && <p className="text-xs text-muted-foreground">Signed by {estimate.customer_signature}</p>}
-              {estimate.approved_date && <p className="text-xs text-muted-foreground">{format(parseISO(estimate.approved_date), "MMM d, yyyy")}</p>}
+              <p className="font-semibold text-sm">Estimate Approved</p>
+              {estimate.customer_printed_name && (
+                <p className="text-xs text-muted-foreground">Signed by: <span className="font-medium">{estimate.customer_printed_name}</span></p>
+              )}
+              {!estimate.customer_printed_name && estimate.customer_signature && (
+                <p className="text-xs text-muted-foreground">Signed by {estimate.customer_signature}</p>
+              )}
+              {estimate.approved_at
+                ? <p className="text-xs text-muted-foreground">{format(parseISO(estimate.approved_at), "MMM d, yyyy 'at' h:mm a")}</p>
+                : estimate.approved_date
+                ? <p className="text-xs text-muted-foreground">{format(parseISO(estimate.approved_date), "MMM d, yyyy")}</p>
+                : null}
+              {estimate.approval_method && (
+                <p className="text-xs text-muted-foreground">Method: {estimate.approval_method}</p>
+              )}
             </div>
           </div>
         )}

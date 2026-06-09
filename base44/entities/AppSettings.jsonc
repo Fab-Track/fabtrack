@@ -4,24 +4,20 @@
   "properties": {
     "setting_key": {
       "type": "string",
-      "description": "Unique key for this settings record, e.g. gmail_system_sender"
+      "description": "Unique key for this settings record"
     },
     "system_sender_email": {
-      "type": "string",
-      "description": "Connected system sender email address"
+      "type": "string"
     },
     "system_sender_access_token": {
-      "type": "string",
-      "description": "OAuth access token for system sender \u2014 server-side only"
+      "type": "string"
     },
     "system_sender_refresh_token": {
-      "type": "string",
-      "description": "OAuth refresh token for system sender \u2014 server-side only"
+      "type": "string"
     },
     "system_sender_token_expiry": {
       "type": "string",
-      "format": "date-time",
-      "description": "When the system sender access token expires"
+      "format": "date-time"
     },
     "system_sender_status": {
       "type": "string",
@@ -35,6 +31,15 @@
     "system_sender_connected_at": {
       "type": "string",
       "format": "date-time"
+    },
+    "estimate_contract_text": {
+      "type": "string",
+      "description": "Contract/terms language shown to customers before they sign the estimate"
+    },
+    "estimate_approval_email_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, send an email notification when an estimate is approved"
     }
   },
   "required": [

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, parseISO } from "date-fns";
-import { Plus, FileText, FileDiff, Receipt, CheckCircle2, AlertCircle, Clock, Sparkles, RefreshCw, Archive } from "lucide-react";
+import { Plus, FileText, FileDiff, Receipt, CheckCircle2, AlertCircle, Clock, Sparkles, RefreshCw, Archive, X } from "lucide-react";
 import InvoiceEditor from "@/components/documents/InvoiceEditor";
 import ChangeOrderEditor from "@/components/documents/ChangeOrderEditor";
 import JobFinancialSummary from "@/components/jobs/JobFinancialSummary";
@@ -83,6 +83,9 @@ export default function JobDocumentsTab({ job }) {
   const [invoicePrefill, setInvoicePrefill] = useState(null);
   const [railingPromptOpen, setRailingPromptOpen] = useState(false);
   const [railingCalcOpen, setRailingCalcOpen] = useState(false);
+  const [invoiceBannerDismissed, setInvoiceBannerDismissed] = useState(
+    () => !!localStorage.getItem(`inv-banner-dismissed-${job.id}`)
+  );
 
   const { data: estimates = [] } = useQuery({
     queryKey: ["estimates", job.id],
@@ -180,8 +183,35 @@ export default function JobDocumentsTab({ job }) {
 
 
 
+  function dismissInvoiceBanner() {
+    localStorage.setItem(`inv-banner-dismissed-${job.id}`, "1");
+    setInvoiceBannerDismissed(true);
+  }
+
   return (
     <div className="space-y-6">
+
+      {/* Post-approval invoice prompt banner */}
+      {approvedEstimate && !invoiceBannerDismissed && invoices.length === 0 && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-lg border border-emerald-200 bg-emerald-50">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="text-sm text-emerald-800 font-medium">
+              This estimate has been approved — Ready to create an invoice?
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button size="sm" className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+              onClick={() => setNewInvoiceFlowOpen(true)}>
+              <Receipt className="w-3 h-3" /> Create Invoice
+            </Button>
+            <button onClick={dismissInvoiceBanner} className="text-emerald-600 hover:text-emerald-800 p-1 rounded transition-colors" title="Dismiss">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Financial Summary — always visible */}
       <JobFinancialSummary
         job={job}

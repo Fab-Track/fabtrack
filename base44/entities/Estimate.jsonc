@@ -90,8 +90,7 @@
     },
     "discount_percent": {
       "type": "number",
-      "default": 0,
-      "description": "Discount percentage applied before markup/overhead/tax"
+      "default": 0
     },
     "markup_percent": {
       "type": "number",
@@ -113,9 +112,35 @@
       "type": "string",
       "format": "date"
     },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Exact timestamp of approval"
+    },
     "customer_signature": {
       "type": "string",
-      "description": "Customer name/initials for approval"
+      "description": "Customer typed full name (digital signature)"
+    },
+    "customer_printed_name": {
+      "type": "string",
+      "description": "Printed name from customer approval form"
+    },
+    "approval_method": {
+      "type": "string",
+      "enum": [
+        "Customer Signed",
+        "Verbal Approval",
+        "Email Approval"
+      ],
+      "description": "How the estimate was approved (internal override)"
+    },
+    "approved_by_name": {
+      "type": "string",
+      "description": "Full name of internal user who approved (manual override)"
+    },
+    "approved_by_id": {
+      "type": "string",
+      "description": "User ID of internal approver"
     },
     "notes": {
       "type": "string"
@@ -129,20 +154,16 @@
         "summary",
         "detail"
       ],
-      "default": "summary",
-      "description": "Whether to show full line-item breakdown or summary view to customer"
+      "default": "summary"
     },
     "style_photo_url": {
-      "type": "string",
-      "description": "Auto-attached style photo URL from Railing Calculator"
+      "type": "string"
     },
     "railing_style": {
-      "type": "string",
-      "description": "Railing style used in calculator"
+      "type": "string"
     },
     "railing_lnft": {
-      "type": "number",
-      "description": "Linear feet from railing calculator"
+      "type": "number"
     }
   },
   "required": [

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { Building2, Users, Bell, MessageSquare, Plug, LayoutDashboard, CreditCard, User } from "lucide-react";
+import { Building2, Users, Bell, MessageSquare, Plug, LayoutDashboard, CreditCard, User, ClipboardList } from "lucide-react";
 import CompanySection from "@/components/settings/CompanySection";
 import UsersRolesSection from "@/components/settings/UsersRolesSection";
 import NotificationsSection from "@/components/settings/NotificationsSection";
@@ -22,6 +22,7 @@ const ALL_SECTIONS = [
   { id: "integrations", label: "Integrations",      icon: Plug,            ownerOnly: true },
   { id: "jobboard",   label: "Job Board",            icon: LayoutDashboard, roles: ["owner","admin","shop_manager"] },
   { id: "catalog",    label: "Service Catalog",      icon: BookOpen,        ownerOnly: true },
+  { id: "contracts",  label: "Estimate Contracts",   icon: ClipboardList,   ownerOnly: true },
   { id: "styles",     label: "Style Library",        icon: Image,           ownerOnly: true },
   { id: "materials",  label: "Materials",            icon: DollarSign,      ownerOnly: true },
   { id: "billing",    label: "Billing",              icon: CreditCard,      ownerOnly: true },
@@ -32,6 +33,7 @@ const ALL_SECTIONS = [
 // Style & Materials sub-sections (kept from old settings page)
 import StyleLibrarySection from "@/components/settings/StyleLibrarySection";
 import MaterialsPriceSection from "@/components/settings/MaterialsPriceSection";
+import EstimateContractSection from "@/components/settings/EstimateContractSection";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -56,6 +58,7 @@ export default function Settings() {
       case "integrations": return <IntegrationsSection />;
       case "jobboard":     return <JobBoardSettingsSection />;
       case "catalog":      return <ServiceCatalogSection />;
+      case "contracts":    return <EstimateContractSection />;
       case "styles":       return <StyleLibrarySection />;
       case "materials":    return <MaterialsPriceSection />;
       case "billing":      return <BillingSection />;

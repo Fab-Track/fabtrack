@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -28,13 +28,24 @@ export default function EstimateView() {
     enabled: !!job?.customer_id,
   });
 
+  const { data: contractSettings = [] } = useQuery({
+    queryKey: ["appSettings", "estimate_settings"],
+    queryFn: () => base44.entities.AppSettings.filter({ setting_key: "estimate_settings" }),
+  });
+  const contractText = contractSettings[0]?.estimate_contract_text || null;
+
   const approve = useMutation({
-    mutationFn: (customerName) =>
-      base44.entities.Estimate.update(estimateId, {
+    mutationFn: (customerName) => {
+      const now = new Date().toISOString();
+      return base44.entities.Estimate.update(estimateId, {
         status: "Approved",
         customer_signature: customerName,
-        approved_date: new Date().toISOString().split("T")[0],
-      }),
+        customer_printed_name: customerName,
+        approved_date: now.split("T")[0],
+        approved_at: now,
+        approval_method: "Customer Signed",
+      });
+    },
     onSuccess: async (_, customerName) => {
       // Update job and trigger pipeline move
       if (job) {
@@ -81,6 +92,7 @@ export default function EstimateView() {
         customer={customer}
         businessInfo={{ address: "High Country Metal Works", phone: "" }}
         onApprove={(name) => approve.mutate(name)}
+        contractText={contractText}
       />
       {approve.isPending && (
         <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
