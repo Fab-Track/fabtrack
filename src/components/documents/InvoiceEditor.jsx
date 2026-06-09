@@ -281,7 +281,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
             <div className="flex gap-2 flex-wrap">
               {approvedEstimates.map(est => (
                 <Button key={est.id} size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => importFromEstimate(est)}>
-                  Import Est #{est.id.slice(-4)} (${(est.total || 0).toLocaleString()})
+                  Import {est.estimate_number || `EST-${est.id.slice(-4)}`} (${(est.total || 0).toLocaleString()})
                 </Button>
               ))}
             </div>

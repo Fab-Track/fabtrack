@@ -265,8 +265,8 @@ export default function JobDocumentsTab({ job }) {
                           : <FileText className="w-4 h-4 text-muted-foreground/40 shrink-0" />}
                         <div>
                           <p className="text-sm font-medium">
-                            Estimate #{est.id.slice(-6).toUpperCase()}
-                            {isSuperseded && <span className="ml-2 text-xs text-muted-foreground italic">Declined — Superseded</span>}
+                           {est.estimate_number || `EST-${est.id.slice(-6).toUpperCase()}`}
+                           {isSuperseded && <span className="ml-2 text-xs text-muted-foreground italic">Declined — Superseded</span>}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {est.approved_date

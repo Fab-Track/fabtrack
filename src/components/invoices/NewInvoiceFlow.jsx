@@ -261,7 +261,7 @@ export default function NewInvoiceFlow({ open, onClose, approvedEstimate, approv
                   <div className="px-6 py-2 bg-muted/20 flex items-center gap-2 shrink-0">
                     <FileText className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Approved Estimate — Est #{approvedEstimate.id?.slice(-6).toUpperCase()}
+                     Approved Estimate — {approvedEstimate.estimate_number || `EST-${approvedEstimate.id?.slice(-6).toUpperCase()}`}
                     </span>
                   </div>
                   {/* Table header */}
