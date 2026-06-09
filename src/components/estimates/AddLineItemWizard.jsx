@@ -172,6 +172,15 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
       total: finalQty * finalUnitCost,
       photo_url: selectedItem?.photo_url || null,
       show_photo: true,
+      // Material projection flags — required by projectMaterials()
+      ...(calcType === "railing" ? {
+        _is_railing: true,
+        _railing_style: selectedItem?.name || null,
+      } : {}),
+      ...(calcType === "staircase" || calcType === "staircase_spiral" ? {
+        _is_staircase: true,
+        _staircase_type: calcType === "staircase_spiral" ? "spiral" : "mono",
+      } : {}),
     });
     handleClose();
   }
