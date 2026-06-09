@@ -99,8 +99,16 @@ export default function JobDetail() {
   }
 
   const health = getJobHealth(job);
-  // Re-check canDelete after job is loaded
   const canDeleteJob = isOwner || (isEstimator && job?.stage && ["New Lead", "Estimate In Progress"].includes(job?.stage));
+
+  const isShopRole = ["fabricator", "design_specialist"].includes(effectiveRole.toLowerCase());
+
+  // Fabricator / Design Specialist see only these tabs in this order
+  const SHOP_TABS = ["overview", "schedule", "project-details", "attachments", "messages", "shop-log"];
+  // All other roles see all tabs in this order
+  const ALL_TABS = ["overview", "schedule", "project-details", "attachments", "messages", "shop-log", "documents", "costing", "communications", "history"];
+
+  const visibleTabs = isShopRole ? SHOP_TABS : ALL_TABS;
 
   return (
     <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
@@ -199,10 +207,9 @@ export default function JobDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="overview">
-        <TabsList className="mb-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          {!isFabricator && <TabsTrigger value="documents">Documents</TabsTrigger>}
-          {!isFabricator && !isAccountant && (
+        <TabsList className="mb-4 flex-wrap h-auto gap-1">
+          {visibleTabs.includes("overview") && <TabsTrigger value="overview">Overview</TabsTrigger>}
+          {visibleTabs.includes("schedule") && (
             <TabsTrigger value="schedule">
               Schedule
               {job.schedule_phases?.length > 0 && (
@@ -210,10 +217,7 @@ export default function JobDetail() {
               )}
             </TabsTrigger>
           )}
-          {!isAccountant && <TabsTrigger value="shop-log">Shop Log</TabsTrigger>}
-          {!isFabricator && <TabsTrigger value="costing">Costing</TabsTrigger>}
-          {!isAccountant && <TabsTrigger value="attachments">Attachments</TabsTrigger>}
-          {!isAccountant && (
+          {visibleTabs.includes("project-details") && (
             <TabsTrigger value="project-details">
               Project Details
               {job.product_instances?.length > 0 && (
@@ -221,7 +225,13 @@ export default function JobDetail() {
               )}
             </TabsTrigger>
           )}
-          {!isAccountant && (
+          {visibleTabs.includes("attachments") && <TabsTrigger value="attachments">Attachments</TabsTrigger>}
+          {visibleTabs.includes("messages") && <TabsTrigger value="messages">Messages</TabsTrigger>}
+          {visibleTabs.includes("shop-log") && <TabsTrigger value="shop-log">Shop Log</TabsTrigger>}
+          {visibleTabs.includes("documents") && <TabsTrigger value="documents">Documents</TabsTrigger>}
+          {visibleTabs.includes("costing") && <TabsTrigger value="costing">Costing</TabsTrigger>}
+          {visibleTabs.includes("communications") && <TabsTrigger value="communications">Communications</TabsTrigger>}
+          {visibleTabs.includes("history") && (
             <TabsTrigger value="history">
               History
               {job.stage_history?.length > 0 && (
@@ -229,56 +239,18 @@ export default function JobDetail() {
               )}
             </TabsTrigger>
           )}
-          <TabsTrigger value="messages">Messages</TabsTrigger>
-          {!isFabricator && <TabsTrigger value="communications">Communications</TabsTrigger>}
         </TabsList>
 
-        <TabsContent value="overview">
-          <JobOverviewTab job={job} />
-        </TabsContent>
-        {!isFabricator && (
-          <TabsContent value="documents">
-            <JobDocumentsTab job={job} />
-          </TabsContent>
-        )}
-        {!isFabricator && !isAccountant && (
-          <TabsContent value="schedule">
-            <ProductionSchedule job={job} readOnly={isFabricator} />
-          </TabsContent>
-        )}
-        {!isAccountant && (
-          <TabsContent value="shop-log">
-            <JobShopLogTab timeEntries={timeEntries} job={job} />
-          </TabsContent>
-        )}
-        {!isFabricator && (
-          <TabsContent value="costing">
-            <JobCostingTab job={job} timeEntries={timeEntries} purchaseOrders={purchaseOrders} employees={employees} />
-          </TabsContent>
-        )}
-        {!isAccountant && (
-          <TabsContent value="attachments">
-            <JobAttachmentsTab job={job} />
-          </TabsContent>
-        )}
-        {!isAccountant && (
-          <TabsContent value="project-details">
-            <ProjectDetailsTab job={job} userRole={effectiveRole} />
-          </TabsContent>
-        )}
-        {!isAccountant && (
-          <TabsContent value="history">
-            <JobHistoryTab job={job} />
-          </TabsContent>
-        )}
-        <TabsContent value="messages">
-          <JobMessagesTab job={job} />
-        </TabsContent>
-        {!isFabricator && (
-          <TabsContent value="communications">
-            <JobCommunicationsTab job={job} />
-          </TabsContent>
-        )}
+        <TabsContent value="overview"><JobOverviewTab job={job} /></TabsContent>
+        <TabsContent value="schedule"><ProductionSchedule job={job} readOnly={isShopRole} /></TabsContent>
+        <TabsContent value="project-details"><ProjectDetailsTab job={job} userRole={effectiveRole} /></TabsContent>
+        <TabsContent value="attachments"><JobAttachmentsTab job={job} /></TabsContent>
+        <TabsContent value="messages"><JobMessagesTab job={job} /></TabsContent>
+        <TabsContent value="shop-log"><JobShopLogTab timeEntries={timeEntries} job={job} /></TabsContent>
+        <TabsContent value="documents"><JobDocumentsTab job={job} /></TabsContent>
+        <TabsContent value="costing"><JobCostingTab job={job} timeEntries={timeEntries} purchaseOrders={purchaseOrders} employees={employees} /></TabsContent>
+        <TabsContent value="communications"><JobCommunicationsTab job={job} /></TabsContent>
+        <TabsContent value="history"><JobHistoryTab job={job} /></TabsContent>
       </Tabs>
 
       <MessageComposerModal
