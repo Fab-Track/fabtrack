@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, AlignJustify, LayoutList } from "lucide-react";
+import { Trash2, AlignJustify, LayoutList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const LABEL_STYLES = {
@@ -27,15 +27,6 @@ import {
 
 const GROUPS = ["Materials", "Labor", "Hardware", "Other"];
 
-const blankLine = () => ({
-  _id: Math.random().toString(36).slice(2),
-  group: "Labor",
-  description: "",
-  quantity: 1,
-  unit: "ea",
-  unit_cost: 0,
-  total: 0,
-});
 
 function calcLine(line) {
   return { ...line, total: (line.quantity || 0) * (line.unit_cost || 0) };
@@ -304,9 +295,6 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
         <div className="p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm">Line Items</h3>
-            <Button size="sm" variant="outline" className="gap-1 h-8 text-xs" onClick={() => setLines(p => [...p, blankLine()])}>
-              <Plus className="w-3.5 h-3.5" /> Add Line
-            </Button>
           </div>
 
           <div className="grid grid-cols-[1fr_1.5fr_0.8fr_0.7fr_0.9fr_0.9fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
