@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { UserPlus, Pencil, MailOpen, Eye, Table2, Clock, ChevronRight } from "lucide-react";
+import { UserPlus, Pencil, MailOpen, Eye, Table2, Clock, ChevronRight, Ban, CheckCircle2, RefreshCw } from "lucide-react";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import PermissionsMatrix from "./permissions/PermissionsMatrix";
 import RolePreviewSection from "./permissions/RolePreviewSection";
@@ -19,9 +20,10 @@ import { ROLES as PERM_ROLES, ROLE_LABELS, DEFAULT_PERMISSIONS } from "@/lib/per
 const ROLES = ["owner", "admin", "shop_manager", "estimator", "fabricator", "accountant", "design_specialist"];
 
 function statusBadge(status) {
-  if (status === "active") return <Badge className="bg-green-100 text-green-700 text-[10px]">Active</Badge>;
-  if (status === "invited") return <Badge className="bg-yellow-100 text-yellow-700 text-[10px]">Invited</Badge>;
-  return <Badge variant="outline" className="text-[10px] text-muted-foreground">Deactivated</Badge>;
+  if (status === "active") return <Badge className="bg-green-100 text-green-700 text-xs border-0">Active</Badge>;
+  if (status === "invited") return <Badge className="bg-yellow-100 text-yellow-700 text-xs border-0">Invited</Badge>;
+  if (status === "locked") return <Badge className="bg-red-100 text-red-700 text-xs border-0">Locked</Badge>;
+  return <Badge variant="outline" className="text-xs text-muted-foreground">Deactivated</Badge>;
 }
 
 function loadPermissions() {
@@ -72,6 +74,25 @@ export default function UsersRolesSection() {
     setEditUser(null);
   }
 
+  async function handleToggleActivation(u) {
+    const isDeactivated = u.account_status === "deactivated";
+    await base44.entities.User.update(u.id, {
+      account_status: isDeactivated ? "active" : "deactivated",
+    });
+    toast.success(isDeactivated ? "Account reactivated" : "Account deactivated");
+    qc.invalidateQueries({ queryKey: ["users"] });
+  }
+
+  async function handleUnlock(u) {
+    await base44.entities.User.update(u.id, {
+      account_status: "active",
+      failed_login_count: 0,
+      locked_until: null,
+    });
+    toast.success("Account unlocked");
+    qc.invalidateQueries({ queryKey: ["users"] });
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -110,49 +131,81 @@ export default function UsersRolesSection() {
       {/* Users tab */}
       {tab === "users" && (
         <div className="space-y-4">
-          <div className="border rounded-xl overflow-hidden">
-            <div className="grid grid-cols-[1fr_1.2fr_1fr_1fr_80px_120px] gap-2 px-4 py-2 bg-muted/30 border-b text-xs font-medium text-muted-foreground">
-              <span>Name</span><span>Email</span><span>Role</span><span>Phone</span><span>Status</span><span>Actions</span>
-            </div>
-            {users.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No users yet.</p>
-            ) : (
-              <div className="divide-y">
-                {users.map(u => {
-                  const roleKey = (u.role || "").toLowerCase().replace(" ", "_");
-                  const userCount = users.filter(x => (x.role || "").toLowerCase() === u.role?.toLowerCase()).length;
+          {/* Mobile-friendly overflow scroll */}
+          <div className="border rounded-xl overflow-x-auto">
+            <table className="w-full text-sm min-w-[700px]">
+              <thead>
+                <tr className="bg-muted/30 border-b text-xs text-muted-foreground">
+                  <th className="px-4 py-2 text-left font-medium">Name</th>
+                  <th className="px-4 py-2 text-left font-medium">Email</th>
+                  <th className="px-4 py-2 text-left font-medium">Role</th>
+                  <th className="px-4 py-2 text-left font-medium">Last Login</th>
+                  <th className="px-4 py-2 text-left font-medium">Status</th>
+                  <th className="px-4 py-2 text-left font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {users.length === 0 ? (
+                  <tr><td colSpan={6} className="text-center py-8 text-muted-foreground text-sm">No users yet.</td></tr>
+                ) : users.map(u => {
+                  const roleKey = (u.role || "").toLowerCase().replace(/ /g, "_");
+                  const status = u.account_status || "active";
+                  const isDeactivated = status === "deactivated";
+                  const isLocked = status === "locked";
                   return (
-                    <div key={u.id} className="grid grid-cols-[1fr_1.2fr_1fr_1fr_80px_120px] gap-2 px-4 py-3 items-center text-sm">
-                      <span className="font-medium truncate">{u.full_name || "—"}</span>
-                      <span className="text-xs text-muted-foreground truncate">{u.email}</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs capitalize">{(u.role || "—").replace("_", " ")}</span>
-                        {PERM_ROLES.includes(roleKey) && (
-                          <button
-                            onClick={() => setSummaryRole(roleKey)}
-                            className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5"
-                          >
-                            View <ChevronRight className="w-2.5 h-2.5" />
-                          </button>
-                        )}
-                      </div>
-                      <span className="text-xs text-muted-foreground">{u.phone || "—"}</span>
-                      <span>{statusBadge(u.status || "active")}</span>
-                      <div className="flex gap-1">
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditUser(u)} title="Edit">
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        {u.status === "invited" && (
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Resend invite">
-                            <MailOpen className="w-3.5 h-3.5" />
+                    <tr key={u.id} className={`${isDeactivated ? "opacity-50" : ""}`}>
+                      <td className="px-4 py-3 font-medium">{u.full_name || "—"}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{u.email}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs capitalize">{(u.role || "—").replace(/_/g, " ")}</span>
+                          {PERM_ROLES.includes(roleKey) && (
+                            <button onClick={() => setSummaryRole(roleKey)} className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5">
+                              View <ChevronRight className="w-2.5 h-2.5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {u.last_login_at
+                          ? format(new Date(u.last_login_at), "MMM d, yyyy h:mm a")
+                          : <span className="italic">Never</span>}
+                      </td>
+                      <td className="px-4 py-3">{statusBadge(status)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditUser(u)} title="Edit role">
+                            <Pencil className="w-3.5 h-3.5" />
                           </Button>
-                        )}
-                      </div>
-                    </div>
+                          {status === "invited" && (
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Resend invite" onClick={async () => {
+                              await base44.users.inviteUser(u.email, u.role);
+                              toast.success("Invite resent");
+                            }}>
+                              <RefreshCw className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          {isLocked && (
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-amber-600" title="Unlock account" onClick={() => handleUnlock(u)}>
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className={`h-7 w-7 p-0 ${isDeactivated ? "text-green-600" : "text-muted-foreground hover:text-destructive"}`}
+                            title={isDeactivated ? "Reactivate" : "Deactivate"}
+                            onClick={() => handleToggleActivation(u)}
+                          >
+                            {isDeactivated ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Ban className="w-3.5 h-3.5" />}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
                   );
                 })}
-              </div>
-            )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

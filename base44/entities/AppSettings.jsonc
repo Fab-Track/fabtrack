@@ -40,6 +40,24 @@
       "type": "boolean",
       "default": false,
       "description": "If true, send an email notification when an estimate is approved"
+    },
+    "session_timeout_mobile_hours": {
+      "type": "number",
+      "default": 8,
+      "description": "Session timeout in hours for mobile devices"
+    },
+    "session_timeout_desktop_hours": {
+      "type": "number",
+      "default": 4,
+      "description": "Session timeout in hours for desktop browsers"
+    },
+    "require_2fa_roles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Roles that are required to have 2FA enabled",
+      "default": []
     }
   },
   "required": [

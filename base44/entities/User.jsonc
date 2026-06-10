@@ -1,17 +1,66 @@
 {
+  "name": "User",
+  "type": "object",
   "properties": {
     "role": {
       "type": "string",
       "description": "The role of the user in the app",
       "enum": [
+        "owner",
         "admin",
-        "user"
+        "shop_manager",
+        "estimator",
+        "fabricator",
+        "installer",
+        "accountant",
+        "design_specialist"
       ]
+    },
+    "account_status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "invited",
+        "locked",
+        "deactivated"
+      ],
+      "default": "active",
+      "description": "Current account status"
+    },
+    "last_login_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the last successful login"
+    },
+    "failed_login_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Consecutive failed login attempts"
+    },
+    "locked_until": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Account locked until this time after too many failed attempts"
+    },
+    "two_fa_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether 2FA is enabled for this user"
+    },
+    "two_fa_method": {
+      "type": "string",
+      "enum": [
+        "email",
+        "sms"
+      ],
+      "description": "Preferred 2FA delivery method"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Phone number for SMS 2FA"
     }
   },
   "required": [
     "role"
-  ],
-  "name": "User",
-  "type": "object"
+  ]
 }

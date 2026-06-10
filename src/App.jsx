@@ -33,6 +33,9 @@ const Reports          = lazy(() => import('@/pages/Reports'));
 const Messages         = lazy(() => import('@/pages/Messages'));
 const Conversations    = lazy(() => import('@/pages/Conversations'));
 const OnboardingWelcome = lazy(() => import('@/pages/OnboardingWelcome'));
+const Login            = lazy(() => import('@/pages/Login'));
+const ForgotPassword   = lazy(() => import('@/pages/ForgotPassword'));
+const ResetPassword    = lazy(() => import('@/pages/ResetPassword'));
 
 // Minimal fallback shown while a lazy chunk loads
 function PageLoader() {
@@ -85,6 +88,11 @@ const AuthenticatedApp = () => {
     <Suspense fallback={<PageLoader />}>
     <AnimatedRoutes>
     <Routes>
+      {/* Auth pages */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
       {/* Public pages - no sidebar */}
       <Route path="/kiosk" element={<ShopKiosk />} />
       <Route path="/lead" element={<LeadForm />} />

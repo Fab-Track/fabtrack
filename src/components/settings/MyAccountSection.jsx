@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Upload, CheckCircle2, Circle, RefreshCw, Trash2 } from "lucide-react";
+import { Upload, CheckCircle2, Circle, RefreshCw, Trash2, Eye, EyeOff } from "lucide-react";
+import PasswordStrengthIndicator from "@/components/auth/PasswordStrengthIndicator";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -28,6 +29,7 @@ export default function MyAccountSection() {
   });
   const [passwords, setPasswords] = useState({ current: "", next: "", confirm: "" });
   const [uploading, setUploading] = useState(false);
+  const [showNewPwd, setShowNewPwd] = useState(false);
 
   // Fetch the employee record that matches this user's email for Gmail status
   const { data: employees = [], refetch: refetchEmployee } = useQuery({
@@ -117,17 +119,34 @@ export default function MyAccountSection() {
           <Label className="text-xs">Current Password</Label>
           <Input className="h-8" type="password" value={passwords.current} onChange={e => setPasswords(p => ({ ...p, current: e.target.value }))} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs">New Password</Label>
-            <Input className="h-8" type="password" value={passwords.next} onChange={e => setPasswords(p => ({ ...p, next: e.target.value }))} />
+        <div className="space-y-1">
+          <Label className="text-xs">New Password</Label>
+          <div className="relative">
+            <Input
+              className="h-8 pr-9"
+              type={showNewPwd ? "text" : "password"}
+              value={passwords.next}
+              onChange={e => setPasswords(p => ({ ...p, next: e.target.value }))}
+              placeholder="Min 8 chars, uppercase, number, special"
+            />
+            <button
+              type="button"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+              onClick={() => setShowNewPwd(v => !v)}
+            >
+              {showNewPwd ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            </button>
           </div>
-          <div>
-            <Label className="text-xs">Confirm Password</Label>
-            <Input className="h-8" type="password" value={passwords.confirm} onChange={e => setPasswords(p => ({ ...p, confirm: e.target.value }))} />
-          </div>
+          <PasswordStrengthIndicator password={passwords.next} />
         </div>
-        <Button size="sm" variant="outline" onClick={() => toast.info("Password change requires re-authentication")}>
+        <div>
+          <Label className="text-xs">Confirm New Password</Label>
+          <Input className="h-8" type="password" value={passwords.confirm} onChange={e => setPasswords(p => ({ ...p, confirm: e.target.value }))} />
+          {passwords.confirm && passwords.next !== passwords.confirm && (
+            <p className="text-xs text-destructive mt-1">Passwords do not match</p>
+          )}
+        </div>
+        <Button size="sm" variant="outline" onClick={() => toast.info("Password change requires re-authentication — please use Forgot Password from the login screen.")}>
           Update Password
         </Button>
       </div>

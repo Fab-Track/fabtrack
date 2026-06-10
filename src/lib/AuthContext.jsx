@@ -1,7 +1,12 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
+
+// Detect mobile
+function isMobile() {
+  return /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+}
 
 const AuthContext = createContext();
 
@@ -12,7 +17,8 @@ export const AuthProvider = ({ children }) => {
   const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
   const [authError, setAuthError] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
+  const [appPublicSettings, setAppPublicSettings] = useState(null);
+  const inactivityTimer = useRef(null);
 
   useEffect(() => {
     checkAppState();
@@ -113,6 +119,36 @@ export const AuthProvider = ({ children }) => {
       }
     }
   };
+
+  // Session timeout enforcement
+  const startInactivityTimer = useCallback((timeoutHours) => {
+    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    const ms = timeoutHours * 60 * 60 * 1000;
+    inactivityTimer.current = setTimeout(() => {
+      base44.auth.logout('/login');
+    }, ms);
+  }, []);
+
+  const resetInactivityTimer = useCallback(() => {
+    if (!isAuthenticated) return;
+    const mobile = isMobile();
+    // Read from localStorage where SecuritySection saves it
+    const mobileH = Number(localStorage.getItem("fabtrack_mobile_timeout_hours") || 8);
+    const desktopH = Number(localStorage.getItem("fabtrack_desktop_timeout_hours") || 4);
+    startInactivityTimer(mobile ? mobileH : desktopH);
+  }, [isAuthenticated, startInactivityTimer]);
+
+  // Attach activity listeners when authenticated
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    resetInactivityTimer();
+    const events = ["mousemove", "keydown", "touchstart", "click", "scroll"];
+    events.forEach(ev => window.addEventListener(ev, resetInactivityTimer, { passive: true }));
+    return () => {
+      events.forEach(ev => window.removeEventListener(ev, resetInactivityTimer));
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    };
+  }, [isAuthenticated, resetInactivityTimer]);
 
   const logout = (shouldRedirect = true) => {
     setUser(null);

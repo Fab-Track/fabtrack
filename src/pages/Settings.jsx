@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { Building2, Users, Bell, MessageSquare, Plug, LayoutDashboard, CreditCard, User, ClipboardList } from "lucide-react";
+import { Building2, Users, Bell, MessageSquare, Plug, LayoutDashboard, CreditCard, User, ClipboardList, Shield } from "lucide-react";
 import CompanySection from "@/components/settings/CompanySection";
 import UsersRolesSection from "@/components/settings/UsersRolesSection";
 import NotificationsSection from "@/components/settings/NotificationsSection";
@@ -25,6 +25,7 @@ const ALL_SECTIONS = [
   { id: "contracts",  label: "Estimate Contracts",   icon: ClipboardList,   ownerOnly: true },
   { id: "styles",     label: "Style Library",        icon: Image,           ownerOnly: true },
   { id: "materials",  label: "Materials",            icon: DollarSign,      ownerOnly: true },
+  { id: "security",   label: "Security",             icon: Shield,          ownerOnly: true },
   { id: "billing",    label: "Billing",              icon: CreditCard,      ownerOnly: true },
   { id: "activity",   label: "Activity Log",         icon: Activity,        ownerOnly: true },
   { id: "account",    label: "My Account",           icon: User,            roles: ["owner","admin","shop_manager","estimator","fabricator","installer","accountant"] },
@@ -34,6 +35,7 @@ const ALL_SECTIONS = [
 import StyleLibrarySection from "@/components/settings/StyleLibrarySection";
 import MaterialsPriceSection from "@/components/settings/MaterialsPriceSection";
 import EstimateContractSection from "@/components/settings/EstimateContractSection";
+import SecuritySection from "@/components/settings/SecuritySection";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -62,6 +64,7 @@ export default function Settings() {
       case "styles":       return <StyleLibrarySection />;
       case "materials":    return <MaterialsPriceSection />;
       case "billing":      return <BillingSection />;
+      case "security":     return <SecuritySection />;
       case "activity":     return <AdminActivityLogSection />;
       case "account":      return <MyAccountSection />;
       default:             return null;
