@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Lock, Mail, AlertCircle, Chrome, ShieldCheck } from "lucide-react";
 import PasswordStrengthIndicator from "@/components/auth/PasswordStrengthIndicator";
 
-function PasswordInput({ value, onChange, placeholder = "Password", id }) {
+function PasswordInput({ value, onChange, placeholder = "Password", id, autoComplete = "new-password" }) {
   const [show, setShow] = useState(false);
   return (
     <div className="relative">
@@ -17,7 +17,7 @@ function PasswordInput({ value, onChange, placeholder = "Password", id }) {
         onChange={onChange}
         placeholder={placeholder}
         className="pr-10"
-        autoComplete="new-password"
+        autoComplete={autoComplete}
       />
       <button
         type="button"
@@ -38,9 +38,11 @@ function meetsRequirements(pw) {
     /[^A-Za-z0-9]/.test(pw);
 }
 
-// Step 1: Email entry + OTP request
-function StepEmail({ onOtpSent }) {
+// Step 1: Email + Password registration
+function StepRegister({ onOtpSent }) {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -48,23 +50,24 @@ function StepEmail({ onOtpSent }) {
     e.preventDefault();
     setError("");
     if (!email) { setError("Email address is required."); return; }
+    if (!meetsRequirements(password)) {
+      setError("Password does not meet the security requirements.");
+      return;
+    }
+    if (password !== confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
     setLoading(true);
     try {
-      // Register triggers OTP to be sent — user was already invited so their email exists
-      await base44.auth.register({ email, password: crypto.randomUUID() + "Aa1!" });
+      await base44.auth.register({ email, password });
       onOtpSent(email);
     } catch (err) {
       const msg = (err?.message || "").toLowerCase();
-      // If "already exists" the user was already invited — still send OTP via resend
       if (msg.includes("already") || msg.includes("exists")) {
-        try {
-          await base44.auth.resendOtp(email);
-          onOtpSent(email);
-        } catch {
-          setError("Could not send a verification code. Please contact your admin.");
-        }
+        setError("An account with this email already exists. Try signing in instead.");
       } else {
-        setError("Could not find an invitation for this email. Contact your admin.");
+        setError("Could not create account. Contact your admin to receive an invitation.");
       }
     }
     setLoading(false);
@@ -73,7 +76,7 @@ function StepEmail({ onOtpSent }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-1.5">
-        <Label htmlFor="reg-email" className="text-sm">Your work email address</Label>
+        <Label htmlFor="reg-email" className="text-sm">Work email address</Label>
         <div className="relative">
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
@@ -87,19 +90,32 @@ function StepEmail({ onOtpSent }) {
           />
         </div>
       </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="reg-pw" className="text-sm">Password</Label>
+        <PasswordInput id="reg-pw" value={password} onChange={e => setPassword(e.target.value)} />
+        <PasswordStrengthIndicator password={password} />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="reg-confirm" className="text-sm">Confirm password</Label>
+        <PasswordInput id="reg-confirm" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Confirm password" />
+      </div>
+
       {error && (
         <div className="flex items-start gap-2 rounded-md bg-destructive/10 text-destructive px-3 py-2 text-sm">
           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
           <span>{error}</span>
         </div>
       )}
+
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? (
           <span className="flex items-center gap-2">
             <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-            Sending code…
+            Creating account…
           </span>
-        ) : "Send Verification Code"}
+        ) : "Create Account"}
       </Button>
     </form>
   );
@@ -119,9 +135,9 @@ function StepOtp({ email, onVerified, onBack }) {
     setLoading(true);
     try {
       const res = await base44.auth.verifyOtp({ email, otpCode: otp });
-      // Store token temporarily but DO NOT redirect yet — must set password first
       const token = res?.access_token || res?.data?.access_token;
-      onVerified(token);
+      base44.auth.setToken(token);
+      window.location.href = "/";
     } catch {
       setError("Invalid or expired code. Please try again.");
     }
@@ -130,14 +146,14 @@ function StepOtp({ email, onVerified, onBack }) {
 
   async function handleResend() {
     setResending(true);
-    await base44.auth.resendOtp(email);
+    try { await base44.auth.resendOtp(email); } catch {}
     setResending(false);
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        We sent a verification code to <strong>{email}</strong>. Enter it below.
+        We sent a verification code to <strong>{email}</strong>. Enter it below to verify your email.
       </p>
       <div className="space-y-1.5">
         <Label htmlFor="otp" className="text-sm">Verification code</Label>
@@ -165,7 +181,7 @@ function StepOtp({ email, onVerified, onBack }) {
             <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
             Verifying…
           </span>
-        ) : "Verify Code"}
+        ) : "Verify & Sign In"}
       </Button>
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <button type="button" onClick={onBack} className="hover:underline">← Back</button>
@@ -177,89 +193,9 @@ function StepOtp({ email, onVerified, onBack }) {
   );
 }
 
-// Step 3: Set password
-function StepSetPassword({ email, token, onComplete }) {
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError("");
-    if (!meetsRequirements(password)) {
-      setError("Password does not meet the requirements below.");
-      return;
-    }
-    if (password !== confirm) {
-      setError("Passwords do not match.");
-      return;
-    }
-    setLoading(true);
-    try {
-      // Use the reset-password flow to set the permanent password using the OTP token
-      await base44.auth.resetPassword({ resetToken: token, newPassword: password });
-      onComplete(email);
-    } catch (err) {
-      setError(err?.message || "Failed to set password. Please try again.");
-    }
-    setLoading(false);
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Create a secure password for <strong>{email}</strong>.
-      </p>
-      <div className="space-y-1.5">
-        <Label htmlFor="new-pw" className="text-sm">New password</Label>
-        <PasswordInput id="new-pw" value={password} onChange={e => setPassword(e.target.value)} />
-        <PasswordStrengthIndicator password={password} />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="confirm-pw" className="text-sm">Confirm password</Label>
-        <PasswordInput id="confirm-pw" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Confirm password" />
-      </div>
-      {error && (
-        <div className="flex items-start gap-2 rounded-md bg-destructive/10 text-destructive px-3 py-2 text-sm">
-          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? (
-          <span className="flex items-center gap-2">
-            <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-            Saving…
-          </span>
-        ) : "Create Account"}
-      </Button>
-    </form>
-  );
-}
-
-// Step 4: Done — redirect to login
-function StepDone({ email }) {
-  return (
-    <div className="text-center space-y-4">
-      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 text-green-600 mb-2">
-        <ShieldCheck className="w-6 h-6" />
-      </div>
-      <h2 className="text-lg font-semibold">Account set up!</h2>
-      <p className="text-sm text-muted-foreground">
-        Your password has been created. Sign in with <strong>{email}</strong> to access FabTrack.
-      </p>
-      <Button className="w-full" onClick={() => { window.location.href = "/login"; }}>
-        Go to Sign In
-      </Button>
-    </div>
-  );
-}
-
 export default function Register() {
-  const [step, setStep] = useState("email"); // email | otp | password | done
+  const [step, setStep] = useState("register"); // register | otp
   const [email, setEmail] = useState("");
-  const [otpToken, setOtpToken] = useState("");
 
   function handleSSO(provider) {
     base44.auth.loginWithProvider(provider, "/");
@@ -274,54 +210,51 @@ export default function Register() {
             <Lock className="w-6 h-6" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">FabTrack</h1>
-          <p className="text-sm text-muted-foreground">Set up your account</p>
+          <p className="text-sm text-muted-foreground">
+            {step === "register" ? "Create your account" : "Verify your email"}
+          </p>
         </div>
 
-        {step !== "done" && (
+        {step === "register" && (
           <>
-            {/* Google SSO */}
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() => handleSSO("google")}
-            >
-              <Chrome className="w-4 h-4" />
-              Continue with Google
-            </Button>
+            {/* SSO */}
+            <div className="space-y-2">
+              <Button type="button" variant="outline" className="w-full gap-2" onClick={() => handleSSO("google")}>
+                <Chrome className="w-4 h-4" />
+                Continue with Google
+              </Button>
+              <Button type="button" variant="outline" className="w-full gap-2" onClick={() => handleSSO("microsoft")}>
+                <svg className="w-4 h-4" viewBox="0 0 23 23" fill="none">
+                  <rect x="1" y="1" width="10" height="10" fill="#F35325"/>
+                  <rect x="12" y="1" width="10" height="10" fill="#81BC06"/>
+                  <rect x="1" y="12" width="10" height="10" fill="#05A6F0"/>
+                  <rect x="12" y="12" width="10" height="10" fill="#FFBA08"/>
+                </svg>
+                Continue with Microsoft
+              </Button>
+            </div>
 
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-border" />
-              <span className="text-xs text-muted-foreground">or set up with email</span>
+              <span className="text-xs text-muted-foreground">or register with email</span>
               <div className="flex-1 h-px bg-border" />
             </div>
+
+            <StepRegister onOtpSent={(e) => { setEmail(e); setStep("otp"); }} />
+
+            <p className="text-center text-xs text-muted-foreground">
+              Already have an account?{" "}
+              <a href="/login" className="text-primary hover:underline font-medium">Sign in</a>
+            </p>
           </>
         )}
 
-        {step === "email" && (
-          <StepEmail onOtpSent={(e) => { setEmail(e); setStep("otp"); }} />
-        )}
         {step === "otp" && (
           <StepOtp
             email={email}
-            onVerified={(token) => { setOtpToken(token); setStep("password"); }}
-            onBack={() => setStep("email")}
+            onVerified={() => {}}
+            onBack={() => setStep("register")}
           />
-        )}
-        {step === "password" && (
-          <StepSetPassword
-            email={email}
-            token={otpToken}
-            onComplete={() => setStep("done")}
-          />
-        )}
-        {step === "done" && <StepDone email={email} />}
-
-        {step !== "done" && (
-          <p className="text-center text-xs text-muted-foreground">
-            Already have an account?{" "}
-            <a href="/login" className="text-primary hover:underline font-medium">Sign in</a>
-          </p>
         )}
       </div>
     </div>
