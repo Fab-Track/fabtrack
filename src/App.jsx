@@ -65,6 +65,15 @@ function AnimatedRoutes({ children }) {
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
+  // Render register page immediately — no auth check needed
+  if (window.location.pathname === "/register") {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Register />
+      </Suspense>
+    );
+  }
+
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
