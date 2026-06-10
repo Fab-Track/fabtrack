@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { PreviewRoleProvider } from '@/lib/PreviewRoleContext';
@@ -32,6 +32,21 @@ import Messages from '@/pages/Messages';
 import Conversations from '@/pages/Conversations';
 import OnboardingWelcome from '@/pages/OnboardingWelcome';
 
+// Wraps routes with a CSS slide transition keyed to the top-level path segment
+function AnimatedRoutes({ children }) {
+  const location = useLocation();
+  const key = location.pathname.split("/")[1] || "home";
+  return (
+    <div
+      key={key}
+      className="animate-slide-in"
+      style={{ animationDuration: "180ms", animationFillMode: "both" }}
+    >
+      {children}
+    </div>
+  );
+}
+
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
@@ -56,6 +71,7 @@ const AuthenticatedApp = () => {
   }
 
   return (
+    <AnimatedRoutes>
     <Routes>
       {/* Public pages - no sidebar */}
       <Route path="/kiosk" element={<ShopKiosk />} />
@@ -87,6 +103,7 @@ const AuthenticatedApp = () => {
 
       <Route path="*" element={<PageNotFound />} />
     </Routes>
+    </AnimatedRoutes>
   );
 };
 

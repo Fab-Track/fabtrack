@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import usePullToRefresh from "@/hooks/usePullToRefresh";
+import PullToRefreshIndicator from "@/components/ui/PullToRefreshIndicator";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -45,9 +47,13 @@ export default function JobBoard() {
     setActiveBoard(getDefaultBoard(effectiveRole));
   }, [effectiveRole]);
 
-  const { data: jobs = [], isLoading } = useQuery({
+  const { data: jobs = [], isLoading, refetch: refetchJobs } = useQuery({
     queryKey: ["jobs"],
     queryFn: () => base44.entities.Job.list("-created_date", 500),
+  });
+
+  const { containerRef: pullRef, isPulling, pullDistance } = usePullToRefresh({
+    onRefresh: () => refetchJobs(),
   });
 
   const allowedBoards = getBoardsForRole(effectiveRole);
@@ -80,7 +86,8 @@ export default function JobBoard() {
   }
 
   return (
-    <div className="p-3 md:p-6 h-[calc(100vh-3.5rem)] md:h-screen flex flex-col">
+    <div ref={pullRef} className="p-3 md:p-6 h-[calc(100vh-3.5rem)] md:h-screen flex flex-col relative">
+      <PullToRefreshIndicator pullDistance={pullDistance} isPulling={isPulling} />
       {/* Header */}
       <div className="flex items-center justify-between mb-3 shrink-0 flex-wrap gap-2">
         <div className="flex items-center gap-3">

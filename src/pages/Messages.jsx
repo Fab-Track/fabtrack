@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import usePullToRefresh from "@/hooks/usePullToRefresh";
+import PullToRefreshIndicator from "@/components/ui/PullToRefreshIndicator";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { canAccessChannel } from "@/lib/messagingHelpers";
@@ -10,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Messages() {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [mobileView, setMobileView] = useState("list"); // "list" | "thread"
   const [showArchived, setShowArchived] = useState(false);
@@ -20,7 +23,7 @@ export default function Messages() {
     base44.functions.invoke("ensurePermanentChannels", {}).catch(() => {});
   }, []);
 
-  const { data: channels = [], isLoading } = useQuery({
+  const { data: channels = [], isLoading, refetch: refetchChannels } = useQuery({
     queryKey: ["channels"],
     queryFn: () => base44.entities.MessageChannel.list("sort_order", 200),
     refetchInterval: 15000,
@@ -56,6 +59,11 @@ export default function Messages() {
     if (unread > 0) unreadCounts[ch.id] = unread;
   });
 
+  const { containerRef: pullRef, isPulling, pullDistance } = usePullToRefresh({
+    onRefresh: () => qc.invalidateQueries({ queryKey: ["channels"] }),
+    enabled: mobileView === "list",
+  });
+
   const handleSelectChannel = (ch) => {
     setSelectedChannel(ch);
     setMobileView("thread");
@@ -73,11 +81,12 @@ export default function Messages() {
   return (
     <div className="h-[calc(100vh-56px)] md:h-screen flex overflow-hidden">
       {/* Left panel — channel list */}
-      <div className={`
+      <div ref={pullRef} className={`
         ${mobileView === "thread" ? "hidden" : "flex"} md:flex
         w-full md:w-72 lg:w-80 flex-col shrink-0
-        border-r bg-card
+        border-r bg-card relative
       `}>
+        <PullToRefreshIndicator pullDistance={pullDistance} isPulling={isPulling} />
         <ChannelList
           channels={channels}
           memberships={memberships}

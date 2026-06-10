@@ -3,12 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Upload, CheckCircle2, Circle, RefreshCw } from "lucide-react";
+import { Upload, CheckCircle2, Circle, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import GmailUserConnectionCard from "./GmailUserConnectionCard";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function MyAccountSection() {
   const { user } = useAuth();
@@ -128,6 +133,42 @@ export default function MyAccountSection() {
       </div>
 
       <Button onClick={handleSave} className="w-full sm:w-auto">Save Changes</Button>
+
+      {/* Delete Account */}
+      <div className="space-y-2 pt-4 border-t border-destructive/20">
+        <h3 className="text-sm font-semibold text-destructive">Danger Zone</h3>
+        <p className="text-xs text-muted-foreground">
+          Permanently delete your account and all associated data. This action cannot be undone.
+        </p>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="sm" className="gap-1.5">
+              <Trash2 className="w-3.5 h-3.5" /> Delete Account
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete your FabTrack account and all data associated with it —
+                including your profile, settings, and activity history. <strong>This cannot be undone.</strong>
+                {" "}If you need access removed, contact your workspace admin instead.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => {
+                  toast.error("Account deletion must be completed by a workspace admin. Please contact support.");
+                }}
+              >
+                Yes, Delete My Account
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </div>
   );
 }

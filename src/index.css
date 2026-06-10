@@ -92,11 +92,31 @@
   }
 }
 
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@layer utilities {
+  .animate-slide-in {
+    animation-name: slide-in;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground font-inter;
+    overscroll-behavior: none;
+  }
+
+  /* iOS: prevent callout menus and text selection on interactive elements */
+  button, a, [role="button"],
+  .badge, nav, [data-radix-collection-item] {
+    -webkit-touch-callout: none;
+    user-select: none;
+    -webkit-user-select: none;
   }
 }

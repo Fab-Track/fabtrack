@@ -143,77 +143,92 @@ export default function Inventory() {
           <p className="text-muted-foreground">No inventory items yet.</p>
         </div>
       ) : (
-        <div className="rounded-xl border overflow-hidden overflow-x-auto">
-          <table className="w-full text-sm" style={{ minWidth: 700 }}>
-            <thead className="bg-muted/50">
-              <tr>
-                {["Name / SKU", "Category", "Unit", "On Hand", "Reserved", "Available", "Reorder", "Unit Cost", "Location", ""].map(h => (
-                  <th key={h} className="text-left px-3 py-2.5 text-xs font-semibold text-muted-foreground">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.map(item => {
-                const reserved = getReserved(item.id);
-                const available = (item.quantity_on_hand || 0) - reserved;
-                const low = available <= item.reorder_point && item.reorder_point > 0;
-                return (
-                  <tr key={item.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-3 py-2.5">
-                      <p className="font-medium">{item.name}</p>
+        <>
+          {/* Mobile: card layout */}
+          <div className="md:hidden space-y-2">
+            {filtered.map(item => {
+              const reserved = getReserved(item.id);
+              const available = (item.quantity_on_hand || 0) - reserved;
+              const low = available <= item.reorder_point && item.reorder_point > 0;
+              return (
+                <div key={item.id} className="rounded-xl border bg-card p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-sm">{item.name}</p>
                       {item.sku && <p className="text-xs text-muted-foreground font-mono">{item.sku}</p>}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <Badge variant="outline" className="text-xs">{item.category}</Badge>
-                    </td>
-                    <td className="px-3 py-2.5 text-muted-foreground">{item.unit}</td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-1">
-                        <button
-                          className="w-5 h-5 rounded text-xs border hover:bg-muted flex items-center justify-center"
-                          onClick={() => adjustQty.mutate({ id: item.id, qty: Math.max(0, item.quantity_on_hand - 1) })}
-                        >-</button>
-                        <span className="w-8 text-center font-mono font-semibold text-sm">
-                          {item.quantity_on_hand}
-                        </span>
-                        <button
-                          className="w-5 h-5 rounded text-xs border hover:bg-muted flex items-center justify-center"
-                          onClick={() => adjustQty.mutate({ id: item.id, qty: item.quantity_on_hand + 1 })}
-                        >+</button>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      {reserved > 0 ? (
-                        <span className="font-mono text-sm text-amber-600 font-semibold">{reserved}</span>
-                      ) : (
-                        <span className="font-mono text-sm text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <span className={`font-mono text-sm font-semibold ${low ? "text-destructive" : ""}`}>
-                        {available}
-                      </span>
-                      {low && <AlertTriangle className="w-3.5 h-3.5 text-warning ml-1 inline" />}
-                    </td>
-                    <td className="px-3 py-2.5 text-muted-foreground">{item.reorder_point}</td>
-                    <td className="px-3 py-2.5">${(item.unit_cost || 0).toFixed(2)}</td>
-                    <td className="px-3 py-2.5 text-muted-foreground text-xs">{item.location}</td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex gap-1 justify-end">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)}>
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => del.mutate(item.id)}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)}><Pencil className="w-3.5 h-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => del.mutate(item.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                    <span><span className="text-muted-foreground">Cat: </span><Badge variant="outline" className="text-[10px]">{item.category}</Badge></span>
+                    <span><span className="text-muted-foreground">Cost: </span>${(item.unit_cost || 0).toFixed(2)}/{item.unit}</span>
+                    {item.location && <span><span className="text-muted-foreground">Bin: </span>{item.location}</span>}
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1">
+                      <button className="w-7 h-7 rounded border hover:bg-muted flex items-center justify-center font-bold" onClick={() => adjustQty.mutate({ id: item.id, qty: Math.max(0, item.quantity_on_hand - 1) })}>−</button>
+                      <span className="w-8 text-center font-mono font-semibold">{item.quantity_on_hand}</span>
+                      <button className="w-7 h-7 rounded border hover:bg-muted flex items-center justify-center font-bold" onClick={() => adjustQty.mutate({ id: item.id, qty: item.quantity_on_hand + 1 })}>+</button>
+                      <span className="text-xs text-muted-foreground ml-1">{item.unit}</span>
+                    </div>
+                    {reserved > 0 && <span className="text-xs text-amber-600 font-semibold">{reserved} reserved</span>}
+                    <span className={`text-xs font-semibold ${low ? "text-destructive" : "text-muted-foreground"}`}>
+                      {available} avail {low && <AlertTriangle className="w-3 h-3 inline" />}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop: table layout */}
+          <div className="hidden md:block rounded-xl border overflow-hidden overflow-x-auto">
+            <table className="w-full text-sm" style={{ minWidth: 700 }}>
+              <thead className="bg-muted/50">
+                <tr>
+                  {["Name / SKU", "Category", "Unit", "On Hand", "Reserved", "Available", "Reorder", "Unit Cost", "Location", ""].map(h => (
+                    <th key={h} className="text-left px-3 py-2.5 text-xs font-semibold text-muted-foreground">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.map(item => {
+                  const reserved = getReserved(item.id);
+                  const available = (item.quantity_on_hand || 0) - reserved;
+                  const low = available <= item.reorder_point && item.reorder_point > 0;
+                  return (
+                    <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-3 py-2.5"><p className="font-medium">{item.name}</p>{item.sku && <p className="text-xs text-muted-foreground font-mono">{item.sku}</p>}</td>
+                      <td className="px-3 py-2.5"><Badge variant="outline" className="text-xs">{item.category}</Badge></td>
+                      <td className="px-3 py-2.5 text-muted-foreground">{item.unit}</td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-1">
+                          <button className="w-5 h-5 rounded text-xs border hover:bg-muted flex items-center justify-center" onClick={() => adjustQty.mutate({ id: item.id, qty: Math.max(0, item.quantity_on_hand - 1) })}>-</button>
+                          <span className="w-8 text-center font-mono font-semibold text-sm">{item.quantity_on_hand}</span>
+                          <button className="w-5 h-5 rounded text-xs border hover:bg-muted flex items-center justify-center" onClick={() => adjustQty.mutate({ id: item.id, qty: item.quantity_on_hand + 1 })}>+</button>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5">{reserved > 0 ? <span className="font-mono text-sm text-amber-600 font-semibold">{reserved}</span> : <span className="font-mono text-sm text-muted-foreground">—</span>}</td>
+                      <td className="px-3 py-2.5"><span className={`font-mono text-sm font-semibold ${low ? "text-destructive" : ""}`}>{available}</span>{low && <AlertTriangle className="w-3.5 h-3.5 text-warning ml-1 inline" />}</td>
+                      <td className="px-3 py-2.5 text-muted-foreground">{item.reorder_point}</td>
+                      <td className="px-3 py-2.5">${(item.unit_cost || 0).toFixed(2)}</td>
+                      <td className="px-3 py-2.5 text-muted-foreground text-xs">{item.location}</td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex gap-1 justify-end">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)}><Pencil className="w-3.5 h-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => del.mutate(item.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <WeeklyReviewPanel open={reviewOpen} onClose={() => setReviewOpen(false)} />
