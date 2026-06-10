@@ -21,6 +21,7 @@
       "enum": [
         "active",
         "invited",
+        "pending_setup",
         "locked",
         "deactivated"
       ],

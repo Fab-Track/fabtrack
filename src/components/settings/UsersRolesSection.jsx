@@ -22,6 +22,7 @@ const ROLES = ["owner", "admin", "shop_manager", "estimator", "fabricator", "acc
 function statusBadge(status) {
   if (status === "active") return <Badge className="bg-green-100 text-green-700 text-xs border-0">Active</Badge>;
   if (status === "invited") return <Badge className="bg-yellow-100 text-yellow-700 text-xs border-0">Invited</Badge>;
+  if (status === "pending_setup") return <Badge className="bg-blue-100 text-blue-700 text-xs border-0">Pending Setup</Badge>;
   if (status === "locked") return <Badge className="bg-red-100 text-red-700 text-xs border-0">Locked</Badge>;
   return <Badge variant="outline" className="text-xs text-muted-foreground">Deactivated</Badge>;
 }

@@ -34,6 +34,7 @@ const Messages         = lazy(() => import('@/pages/Messages'));
 const Conversations    = lazy(() => import('@/pages/Conversations'));
 const OnboardingWelcome = lazy(() => import('@/pages/OnboardingWelcome'));
 const Login            = lazy(() => import('@/pages/Login'));
+const Register         = lazy(() => import('@/pages/Register'));
 const ForgotPassword   = lazy(() => import('@/pages/ForgotPassword'));
 const ResetPassword    = lazy(() => import('@/pages/ResetPassword'));
 
@@ -90,6 +91,7 @@ const AuthenticatedApp = () => {
     <Routes>
       {/* Auth pages */}
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
