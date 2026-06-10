@@ -547,14 +547,14 @@ export default function Customers() {
 
   return (
     <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
           <p className="text-sm text-muted-foreground">{customers.length} contacts</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm"><Plus className="w-4 h-4 mr-1.5" />Add Customer</Button>
+            <Button size="sm"><Plus className="w-4 h-4 mr-1.5" /><span className="hidden sm:inline">Add Customer</span><span className="sm:hidden">Add</span></Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>New Customer</DialogTitle></DialogHeader>
@@ -609,7 +609,7 @@ export default function Customers() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-4">
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative flex-1 min-w-[160px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Search customers..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>

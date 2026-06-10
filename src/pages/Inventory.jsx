@@ -87,16 +87,16 @@ export default function Inventory() {
 
   return (
     <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Inventory</h1>
           <p className="text-sm text-muted-foreground">{items.length} items tracked</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setReviewOpen(true)} className="gap-2">
-            <ClipboardCheck className="w-4 h-4" /> Review & Deduct
+            <ClipboardCheck className="w-4 h-4" /><span className="hidden sm:inline">Review &amp; Deduct</span><span className="sm:hidden">Review</span>
           </Button>
-          <Button onClick={openNew} className="gap-2"><Plus className="w-4 h-4" /> Add Item</Button>
+          <Button onClick={openNew} className="gap-2"><Plus className="w-4 h-4" /><span className="hidden sm:inline">Add Item</span><span className="sm:hidden">Add</span></Button>
         </div>
       </div>
 
@@ -124,8 +124,8 @@ export default function Inventory() {
         </div>
       )}
 
-      <div className="flex gap-3 mb-4">
-        <Input placeholder="Search items..." value={search} onChange={e => setSearch(e.target.value)} className="max-w-xs" />
+      <div className="flex flex-wrap gap-3 mb-4">
+      <Input placeholder="Search items..." value={search} onChange={e => setSearch(e.target.value)} className="flex-1 min-w-[160px] max-w-xs" />
         <Select value={catFilter} onValueChange={setCatFilter}>
           <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -143,8 +143,8 @@ export default function Inventory() {
           <p className="text-muted-foreground">No inventory items yet.</p>
         </div>
       ) : (
-        <div className="rounded-xl border overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="rounded-xl border overflow-hidden overflow-x-auto">
+          <table className="w-full text-sm" style={{ minWidth: 700 }}>
             <thead className="bg-muted/50">
               <tr>
                 {["Name / SKU", "Category", "Unit", "On Hand", "Reserved", "Available", "Reorder", "Unit Cost", "Location", ""].map(h => (

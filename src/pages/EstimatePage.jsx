@@ -468,70 +468,74 @@ export default function EstimatePage() {
                   </div>
                 )}
 
-                {/* Column headers */}
-                <div className="grid gap-1.5 text-xs text-muted-foreground font-medium mb-2 px-1"
-                  style={{ gridTemplateColumns: "2.5fr 1.5fr 1fr 0.6fr 1fr 1fr auto" }}>
-                  <span>Description</span>
-                  <span>Install Location</span>
-                  <span>Category</span>
-                  <span>Qty</span>
-                  <span>Unit Cost</span>
-                  <span>Amount</span>
-                  <span></span>
-                </div>
+                <div className="overflow-x-auto -mx-2 px-2">
+                  <div style={{ minWidth: 620 }}>
+                    {/* Column headers */}
+                    <div className="grid gap-1.5 text-xs text-muted-foreground font-medium mb-2 px-1"
+                      style={{ gridTemplateColumns: "2.5fr 1.5fr 1fr 0.6fr 1fr 1fr auto" }}>
+                      <span>Description</span>
+                      <span>Install Location</span>
+                      <span>Category</span>
+                      <span>Qty</span>
+                      <span>Unit Cost</span>
+                      <span>Amount</span>
+                      <span></span>
+                    </div>
 
-                <div className="space-y-1">
-                  {lines.map((line, idx) => (
-                    <div key={line._id}>
-                      <div className="grid gap-1.5 items-center"
-                        style={{ gridTemplateColumns: "2.5fr 1.5fr 1fr 0.6fr 1fr 1fr auto" }}>
-                        <ProductServiceDropdown
-                          value={line.description}
-                          onChange={v => updateLine(idx, "description", v)}
-                          onSelect={item => handleProductSelect(idx, item)}
-                        />
-                        <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
-                        </Select>
-                        <Select value={line.category || "Labor"} onValueChange={v => updateLine(idx, "category", v)}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}</SelectContent>
-                        </Select>
-                        <Input className="h-8 text-xs" type="number" value={line.quantity} onChange={e => updateLine(idx, "quantity", e.target.value)} />
-                        <Input className="h-8 text-xs" type="number" placeholder="0.00" value={line.unit_cost} onChange={e => updateLine(idx, "unit_cost", e.target.value)} />
-                        <span className="text-sm font-semibold text-right pr-1">
-                          ${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeLine(idx)}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
+                    <div className="space-y-1">
+                      {lines.map((line, idx) => (
+                        <div key={line._id}>
+                          <div className="grid gap-1.5 items-center"
+                            style={{ gridTemplateColumns: "2.5fr 1.5fr 1fr 0.6fr 1fr 1fr auto" }}>
+                            <ProductServiceDropdown
+                              value={line.description}
+                              onChange={v => updateLine(idx, "description", v)}
+                              onSelect={item => handleProductSelect(idx, item)}
+                            />
+                            <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)}>
+                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
+                            </Select>
+                            <Select value={line.category || "Labor"} onValueChange={v => updateLine(idx, "category", v)}>
+                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}</SelectContent>
+                            </Select>
+                            <Input className="h-8 text-xs" type="number" value={line.quantity} onChange={e => updateLine(idx, "quantity", e.target.value)} />
+                            <Input className="h-8 text-xs" type="number" placeholder="0.00" value={line.unit_cost} onChange={e => updateLine(idx, "unit_cost", e.target.value)} />
+                            <span className="text-sm font-semibold text-right pr-1">
+                              ${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeLine(idx)}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
 
-                      {/* Inline Railing Calculator */}
-                      {line._is_railing && (
-                        <div className="ml-1 mr-8">
-                          <RailingInlineCalc
-                            styleName={line._railing_style}
-                            onPriceChange={(total, lnft) => handleRailingPrice(idx, total, lnft)}
-                          />
+                          {/* Inline Railing Calculator */}
+                          {line._is_railing && (
+                            <div className="ml-1 mr-8">
+                              <RailingInlineCalc
+                                styleName={line._railing_style}
+                                onPriceChange={(total, lnft) => handleRailingPrice(idx, total, lnft)}
+                              />
+                            </div>
+                          )}
+
+                          {/* Inline Staircase Calculator */}
+                          {line._is_staircase && (
+                            <div className="ml-1 mr-8">
+                              <StaircaseInlineCalc
+                                staircaseType={line._staircase_type}
+                                onPriceChange={(total, qty) => handleStaircasePrice(idx, total, qty)}
+                              />
+                            </div>
+                          )}
                         </div>
-                      )}
-
-                      {/* Inline Staircase Calculator */}
-                      {line._is_staircase && (
-                        <div className="ml-1 mr-8">
-                          <StaircaseInlineCalc
-                            staircaseType={line._staircase_type}
-                            onPriceChange={(total, qty) => handleStaircasePrice(idx, total, qty)}
-                          />
-                        </div>
+                      ))}
+                      {lines.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-8">No line items yet. Click "Add Line Item" to start.</p>
                       )}
                     </div>
-                  ))}
-                  {lines.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-8">No line items yet. Click "Add Line Item" to start.</p>
-                  )}
+                  </div>
                 </div>
               </div>
 
