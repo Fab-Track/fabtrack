@@ -59,7 +59,9 @@ export default function UsersRolesSection() {
   async function handleInvite() {
     if (!invite.email || !invite.first_name) { toast.error("Name and email are required"); return; }
     setInviting(true);
-    await base44.users.inviteUser(invite.email, invite.role);
+    // Platform only accepts "user" or "admin"; custom roles are stored on the User entity separately
+    const platformRole = invite.role === "owner" || invite.role === "admin" ? "admin" : "user";
+    await base44.users.inviteUser(invite.email, platformRole);
     toast.success(`Invite sent to ${invite.email}`);
     setInviting(false);
     setShowInvite(false);
@@ -179,7 +181,8 @@ export default function UsersRolesSection() {
                           </Button>
                           {status === "invited" && (
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Resend invite" onClick={async () => {
-                              await base44.users.inviteUser(u.email, u.role);
+                              const platformRole = u.role === "owner" || u.role === "admin" ? "admin" : "user";
+                              await base44.users.inviteUser(u.email, platformRole);
                               toast.success("Invite resent");
                             }}>
                               <RefreshCw className="w-3.5 h-3.5" />
