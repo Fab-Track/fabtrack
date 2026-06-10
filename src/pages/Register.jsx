@@ -40,6 +40,7 @@ function meetsRequirements(pw) {
 
 // Step 1: Email + Password registration
 function StepRegister({ onOtpSent }) {
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -49,6 +50,7 @@ function StepRegister({ onOtpSent }) {
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    if (!fullName.trim()) { setError("Full name is required."); return; }
     if (!email) { setError("Email address is required."); return; }
     if (!meetsRequirements(password)) {
       setError("Password does not meet the security requirements.");
@@ -60,7 +62,7 @@ function StepRegister({ onOtpSent }) {
     }
     setLoading(true);
     try {
-      await base44.auth.register({ email, password });
+      await base44.auth.register({ email, password, full_name: fullName.trim() });
       onOtpSent(email);
     } catch (err) {
       const msg = (err?.message || "").toLowerCase();
@@ -75,6 +77,18 @@ function StepRegister({ onOtpSent }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-1.5">
+        <Label htmlFor="reg-name" className="text-sm">Full name</Label>
+        <Input
+          id="reg-name"
+          type="text"
+          autoComplete="name"
+          value={fullName}
+          onChange={e => setFullName(e.target.value)}
+          placeholder="Jane Smith"
+        />
+      </div>
+
       <div className="space-y-1.5">
         <Label htmlFor="reg-email" className="text-sm">Work email address</Label>
         <div className="relative">

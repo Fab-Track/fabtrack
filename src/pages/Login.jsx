@@ -155,7 +155,7 @@ export default function Login() {
 
         <p className="text-center text-xs text-muted-foreground">
           Don't have an account?{" "}
-          <span className="font-medium">Contact your admin to receive an invitation.</span>
+          <a href="/register" className="text-primary hover:underline font-medium">Sign up</a>
         </p>
       </div>
     </div>
