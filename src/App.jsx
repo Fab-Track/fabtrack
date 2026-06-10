@@ -1,3 +1,4 @@
+import React, { lazy, Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -7,30 +8,40 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { PreviewRoleProvider } from '@/lib/PreviewRoleContext';
 import { ImpersonationProvider } from '@/lib/ImpersonationContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
-
 import AppLayout from '@/components/layout/AppLayout';
-import Dashboard from '@/pages/Dashboard';
-import JobBoard from '@/pages/JobBoard';
-import JobDetail from '@/pages/JobDetail';
-import NewJob from '@/pages/NewJob';
-import WorkCenters from '@/pages/WorkCenters';
-import ShopKiosk from '@/pages/ShopKiosk';
-import Schedule from '@/pages/Schedule';
-import Customers from '@/pages/Customers';
-import Inventory from '@/pages/Inventory';
-import CraftsmanScore from '@/pages/CraftsmanScore';
-import Employees from '@/pages/Employees.jsx';
-import Documents from '@/pages/Documents';
-import LeadForm from '@/pages/LeadForm';
-import EmployeeProfilePage from '@/pages/EmployeeProfilePage';
-import OnboardingSurveyPage from '@/pages/OnboardingSurveyPage';
-import Settings from '@/pages/Settings';
-import EstimatePage from '@/pages/EstimatePage';
-import EstimateView from '@/pages/EstimateView';
-import Reports from '@/pages/Reports';
-import Messages from '@/pages/Messages';
-import Conversations from '@/pages/Conversations';
-import OnboardingWelcome from '@/pages/OnboardingWelcome';
+
+// Lazy-loaded pages for better initial load performance
+const Dashboard        = lazy(() => import('@/pages/Dashboard'));
+const JobBoard         = lazy(() => import('@/pages/JobBoard'));
+const JobDetail        = lazy(() => import('@/pages/JobDetail'));
+const NewJob           = lazy(() => import('@/pages/NewJob'));
+const WorkCenters      = lazy(() => import('@/pages/WorkCenters'));
+const ShopKiosk        = lazy(() => import('@/pages/ShopKiosk'));
+const Schedule         = lazy(() => import('@/pages/Schedule'));
+const Customers        = lazy(() => import('@/pages/Customers'));
+const Inventory        = lazy(() => import('@/pages/Inventory'));
+const CraftsmanScore   = lazy(() => import('@/pages/CraftsmanScore'));
+const Employees        = lazy(() => import('@/pages/Employees'));
+const Documents        = lazy(() => import('@/pages/Documents'));
+const LeadForm         = lazy(() => import('@/pages/LeadForm'));
+const EmployeeProfilePage  = lazy(() => import('@/pages/EmployeeProfilePage'));
+const OnboardingSurveyPage = lazy(() => import('@/pages/OnboardingSurveyPage'));
+const Settings         = lazy(() => import('@/pages/Settings'));
+const EstimatePage     = lazy(() => import('@/pages/EstimatePage'));
+const EstimateView     = lazy(() => import('@/pages/EstimateView'));
+const Reports          = lazy(() => import('@/pages/Reports'));
+const Messages         = lazy(() => import('@/pages/Messages'));
+const Conversations    = lazy(() => import('@/pages/Conversations'));
+const OnboardingWelcome = lazy(() => import('@/pages/OnboardingWelcome'));
+
+// Minimal fallback shown while a lazy chunk loads
+function PageLoader() {
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-background">
+      <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
+    </div>
+  );
+}
 
 // Wraps routes with a CSS slide transition keyed to the top-level path segment
 function AnimatedRoutes({ children }) {
@@ -71,6 +82,7 @@ const AuthenticatedApp = () => {
   }
 
   return (
+    <Suspense fallback={<PageLoader />}>
     <AnimatedRoutes>
     <Routes>
       {/* Public pages - no sidebar */}
@@ -104,6 +116,7 @@ const AuthenticatedApp = () => {
       <Route path="*" element={<PageNotFound />} />
     </Routes>
     </AnimatedRoutes>
+    </Suspense>
   );
 };
 
