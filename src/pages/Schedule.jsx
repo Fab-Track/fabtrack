@@ -133,7 +133,7 @@ export default function Schedule() {
   };
 
   return (
-    <div className="p-4 md:p-6 flex flex-col h-screen overflow-hidden">
+    <div className="p-3 md:p-6 flex flex-col" style={{ height: "calc(100vh - 3.5rem)", minHeight: 0 }}>
       <ScheduleToolbar
         zoom={zoom}
         onZoomChange={handleZoomChange}

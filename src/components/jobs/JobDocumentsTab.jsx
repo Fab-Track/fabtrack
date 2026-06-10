@@ -467,7 +467,7 @@ export default function JobDocumentsTab({ job }) {
 
       {/* ── Invoice Dialog ────────────────────────────────────────── */}
       <Dialog open={invoiceOpen} onOpenChange={setInvoiceOpen}>
-        <DialogContent className="max-w-6xl h-[90vh] p-0 flex flex-col overflow-hidden">
+        <DialogContent className="w-[96vw] max-w-6xl h-[90vh] p-0 flex flex-col overflow-hidden">
           <InvoiceEditor
             invoice={selectedInvoice}
             job={job}
@@ -484,7 +484,7 @@ export default function JobDocumentsTab({ job }) {
 
       {/* ── Change Order Dialog ───────────────────────────────────── */}
       <Dialog open={coOpen} onOpenChange={setCoOpen}>
-        <DialogContent className="max-w-3xl h-[80vh] p-0 flex flex-col overflow-hidden">
+        <DialogContent className="w-[96vw] max-w-3xl h-[90vh] p-0 flex flex-col overflow-hidden">
           <ChangeOrderEditor
             changeOrder={selectedCo}
             job={job}

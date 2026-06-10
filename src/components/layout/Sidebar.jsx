@@ -267,7 +267,7 @@ export default function Sidebar() {
     <>
       {/* ── Mobile top header ── */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-sidebar z-50 flex items-center px-4 border-b border-sidebar-border">
-        <button onClick={() => setMobileOpen(true)} className="text-white">
+        <button onClick={() => setMobileOpen(true)} className="text-white min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2">
           <Menu className="w-5 h-5" />
         </button>
         <div className="flex items-center gap-2 ml-3">
@@ -313,7 +313,7 @@ function MobileBottomBar({ items }) {
   const location = useLocation();
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-sidebar border-t border-sidebar-border flex">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-sidebar border-t border-sidebar-border flex safe-area-bottom" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
       {items.map((item) => {
         const isActive = item.path === "/"
           ? location.pathname === "/"
@@ -323,7 +323,7 @@ function MobileBottomBar({ items }) {
             key={item.path}
             to={item.path}
             className={cn(
-              "flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-[10px] font-medium transition-colors",
+              "flex-1 flex flex-col items-center justify-center min-h-[56px] gap-0.5 text-[10px] font-medium transition-colors",
               isActive
                 ? "text-sidebar-primary"
                 : "text-sidebar-foreground/50 hover:text-sidebar-foreground"

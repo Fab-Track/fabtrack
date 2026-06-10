@@ -216,27 +216,27 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-5 py-3 border-b bg-muted/30 shrink-0">
-        <div className="flex items-center gap-4">
-          <div>
-            <p className="text-xs text-muted-foreground font-mono">{job.job_number}</p>
-            <h2 className="font-semibold text-sm">{job.job_name}</h2>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Select value={serviceCategory} onValueChange={setServiceCategory}>
-              <SelectTrigger className={`h-8 text-xs w-44 ${!serviceCategory ? "border-amber-400 bg-amber-50" : ""}`}>
-                <SelectValue placeholder="Service Category…" />
-              </SelectTrigger>
-              <SelectContent>
-                {["Railing","Staircase","Structural","Gate","Planter Box","Wall Wrap","Awning","Other / Custom"].map(c => (
-                  <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {!serviceCategory && <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" title="Required for Sent status" />}
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b bg-muted/30 shrink-0 gap-2">
+      <div className="flex items-center gap-3 flex-wrap">
+        <div>
+          <p className="text-xs text-muted-foreground font-mono">{job.job_number}</p>
+          <h2 className="font-semibold text-sm">{job.job_name}</h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <Select value={serviceCategory} onValueChange={setServiceCategory}>
+            <SelectTrigger className={`h-9 text-xs w-44 ${!serviceCategory ? "border-amber-400 bg-amber-50" : ""}`}>
+              <SelectValue placeholder="Service Category…" />
+            </SelectTrigger>
+            <SelectContent>
+              {["Railing","Staircase","Structural","Gate","Planter Box","Wall Wrap","Awning","Other / Custom"].map(c => (
+                <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {!serviceCategory && <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" title="Required for Sent status" />}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
           {/* Editor view toggle — local only, does not save */}
           <div className="flex items-center border rounded-md overflow-hidden h-8">
             <button
@@ -357,7 +357,9 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
 
           {editorView === "detail" ? (
             <>
-              {/* Detail header */}
+              {/* Detail — horizontally scrollable on mobile */}
+              <div className="overflow-x-auto -mx-1 px-1">
+              <div style={{ minWidth: 540 }}>
               <div className="grid grid-cols-[2fr_1.5fr_0.7fr_1fr_1fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
                 <span>Description</span>
                 <span>Install Location</span>
@@ -422,6 +424,8 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                   </div>
                 ))}
               </div>
+              </div>{/* minWidth wrapper */}
+              </div>{/* overflow-x-auto */}
             </>
           ) : (
             <>

@@ -399,6 +399,8 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold text-sm">Line Items</h3>
               </div>
+              <div className="overflow-x-auto -mx-1 px-1">
+              <div style={{ minWidth: 560 }}>
               <div className="grid grid-cols-[1fr_1.5fr_0.8fr_0.7fr_0.9fr_0.9fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
                 <span>Group</span><span>Description</span><span>Qty</span><span>Unit</span><span>Unit Cost</span><span>Total</span><span></span>
               </div>
@@ -420,6 +422,8 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
                   </div>
                 ))}
                 {lines.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">No line items yet.</p>}
+              </div>
+              </div>
               </div>
             </div>
 

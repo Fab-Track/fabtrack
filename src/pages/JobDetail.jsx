@@ -207,10 +207,12 @@ export default function JobDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="overview">
-        <TabsList className="mb-4 flex-wrap h-auto gap-1">
-          {visibleTabs.includes("overview") && <TabsTrigger value="overview">Overview</TabsTrigger>}
+        <TabsList className="mb-4 h-auto gap-1 flex flex-nowrap overflow-x-auto w-full justify-start"
+          style={{ scrollbarWidth: "none" }}
+        >
+          {visibleTabs.includes("overview") && <TabsTrigger value="overview" className="shrink-0">Overview</TabsTrigger>}
           {visibleTabs.includes("schedule") && (
-            <TabsTrigger value="schedule">
+            <TabsTrigger value="schedule" className="shrink-0">
               Schedule
               {job.schedule_phases?.length > 0 && (
                 <span className="ml-1.5 text-[10px] bg-accent text-accent-foreground rounded-full px-1.5">●</span>
@@ -218,21 +220,21 @@ export default function JobDetail() {
             </TabsTrigger>
           )}
           {visibleTabs.includes("project-details") && (
-            <TabsTrigger value="project-details">
-              Project Details
+            <TabsTrigger value="project-details" className="shrink-0">
+              Details
               {job.product_instances?.length > 0 && (
                 <span className="ml-1.5 text-[10px] bg-accent text-accent-foreground rounded-full px-1.5">{job.product_instances.length}</span>
               )}
             </TabsTrigger>
           )}
-          {visibleTabs.includes("attachments") && <TabsTrigger value="attachments">Attachments</TabsTrigger>}
-          {visibleTabs.includes("messages") && <TabsTrigger value="messages">Messages</TabsTrigger>}
-          {visibleTabs.includes("shop-log") && <TabsTrigger value="shop-log">Shop Log</TabsTrigger>}
-          {visibleTabs.includes("documents") && <TabsTrigger value="documents">Documents</TabsTrigger>}
-          {visibleTabs.includes("costing") && <TabsTrigger value="costing">Costing</TabsTrigger>}
-          {visibleTabs.includes("communications") && <TabsTrigger value="communications">Communications</TabsTrigger>}
+          {visibleTabs.includes("attachments") && <TabsTrigger value="attachments" className="shrink-0">Attachments</TabsTrigger>}
+          {visibleTabs.includes("messages") && <TabsTrigger value="messages" className="shrink-0">Messages</TabsTrigger>}
+          {visibleTabs.includes("shop-log") && <TabsTrigger value="shop-log" className="shrink-0">Shop Log</TabsTrigger>}
+          {visibleTabs.includes("documents") && <TabsTrigger value="documents" className="shrink-0">Documents</TabsTrigger>}
+          {visibleTabs.includes("costing") && <TabsTrigger value="costing" className="shrink-0">Costing</TabsTrigger>}
+          {visibleTabs.includes("communications") && <TabsTrigger value="communications" className="shrink-0">Comms</TabsTrigger>}
           {visibleTabs.includes("history") && (
-            <TabsTrigger value="history">
+            <TabsTrigger value="history" className="shrink-0">
               History
               {job.stage_history?.length > 0 && (
                 <span className="ml-1.5 text-[10px] bg-muted text-muted-foreground rounded-full px-1.5">{job.stage_history.length}</span>

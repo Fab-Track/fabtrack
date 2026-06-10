@@ -80,12 +80,12 @@ export default function JobBoard() {
   }
 
   return (
-    <div className="p-4 md:p-6 h-[calc(100vh-3.5rem)] md:h-screen flex flex-col">
+    <div className="p-3 md:p-6 h-[calc(100vh-3.5rem)] md:h-screen flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 shrink-0 flex-wrap gap-2">
+      <div className="flex items-center justify-between mb-3 shrink-0 flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Job Board</h1>
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight">Job Board</h1>
             <p className="text-sm text-muted-foreground">{jobs.length} total jobs</p>
           </div>
         </div>
@@ -132,7 +132,7 @@ export default function JobBoard() {
       </div>
 
       {/* Board Tabs */}
-      <div className="flex items-center gap-1 mb-4 shrink-0 border-b pb-0">
+      <div className="flex items-center gap-1 mb-3 shrink-0 border-b pb-0 overflow-x-auto">
         {allowedBoards.map(board => {
           const Icon = BOARD_ICONS[board];
           const isActive = activeBoard === board;
@@ -141,7 +141,7 @@ export default function JobBoard() {
             <button
               key={board}
               onClick={() => setActiveBoard(board)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px ${
+              className={`flex items-center gap-1.5 px-3 md:px-4 py-2.5 text-xs md:text-sm font-medium border-b-2 transition-all -mb-px whitespace-nowrap min-h-[44px] ${
                 isActive
                   ? `border-primary text-foreground ${BOARD_COLORS[board]}`
                   : "border-transparent text-muted-foreground hover:text-foreground"
