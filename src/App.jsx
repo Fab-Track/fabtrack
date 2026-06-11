@@ -65,13 +65,19 @@ function AnimatedRoutes({ children }) {
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
-  // Render register page immediately — no auth check needed
-  if (window.location.pathname === "/register") {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <Register />
-      </Suspense>
-    );
+  // Render auth pages immediately — no auth check needed
+  const publicPath = window.location.pathname;
+  if (publicPath === "/register") {
+    return <Suspense fallback={<PageLoader />}><Register /></Suspense>;
+  }
+  if (publicPath === "/login") {
+    return <Suspense fallback={<PageLoader />}><Login /></Suspense>;
+  }
+  if (publicPath === "/forgot-password") {
+    return <Suspense fallback={<PageLoader />}><ForgotPassword /></Suspense>;
+  }
+  if (publicPath === "/reset-password") {
+    return <Suspense fallback={<PageLoader />}><ResetPassword /></Suspense>;
   }
 
   if (isLoadingPublicSettings || isLoadingAuth) {
