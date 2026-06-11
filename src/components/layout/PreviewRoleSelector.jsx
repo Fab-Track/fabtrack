@@ -118,38 +118,7 @@ export default function PreviewRoleSelector({ collapsed }) {
             ))}
           </div>
 
-          {/* Employee Impersonation Section */}
-          {userCanImpersonate && impersonatableEmployees.length > 0 && (
-            <>
-              <div className="px-3 py-2 border-t border-border">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                  <UserCheck className="w-3 h-3" /> View as Employee
-                </p>
-              </div>
-              <div className="py-1 max-h-48 overflow-y-auto">
-                {impersonatableEmployees.map(emp => (
-                  <button
-                    key={emp.id}
-                    onClick={() => handleImpersonate(emp)}
-                    className={cn(
-                      "w-full flex items-center justify-between px-3 py-2 text-sm transition-colors hover:bg-muted",
-                      isImpersonating && impersonatedEmployee?.id === emp.id
-                        ? "bg-amber-50 text-amber-700 font-semibold"
-                        : "text-foreground"
-                    )}
-                  >
-                    <div className="text-left">
-                      <p className="font-medium">{emp.name}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{emp.role?.replace(/_/g, " ")}</p>
-                    </div>
-                    {isImpersonating && impersonatedEmployee?.id === emp.id && (
-                      <ChevronRight className="w-3.5 h-3.5 text-amber-600" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+
 
           {isActive && (
             <div className="px-3 py-2 border-t border-border">
