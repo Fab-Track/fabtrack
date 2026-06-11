@@ -50,10 +50,44 @@ export default function MyAccountSection() {
   }
 
   async function handleSave() {
+    const full_name = [form.first_name.trim(), form.last_name.trim()].filter(Boolean).join(" ");
     await base44.auth.updateMe({
+      full_name,
       phone: form.phone,
     });
+    qc.invalidateQueries();
     toast.success("Account updated");
+  }
+
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwError, setPwError] = useState("");
+
+  function meetsRequirements(pw) {
+    return pw.length >= 8 && /[A-Z]/.test(pw) && /[0-9]/.test(pw) && /[^A-Za-z0-9]/.test(pw);
+  }
+
+  async function handleChangePassword() {
+    setPwError("");
+    if (!passwords.current) { setPwError("Enter your current password."); return; }
+    if (!meetsRequirements(passwords.next)) {
+      setPwError("New password must be at least 8 characters and include an uppercase letter, a number, and a special character.");
+      return;
+    }
+    if (passwords.next !== passwords.confirm) { setPwError("New passwords do not match."); return; }
+    setPwLoading(true);
+    try {
+      await base44.auth.changePassword({ current_password: passwords.current, new_password: passwords.next });
+      setPasswords({ current: "", next: "", confirm: "" });
+      toast.success("Password updated successfully");
+    } catch (err) {
+      const msg = (err?.message || "").toLowerCase();
+      if (msg.includes("incorrect") || msg.includes("wrong") || msg.includes("invalid") || msg.includes("current")) {
+        setPwError("Current password is incorrect.");
+      } else {
+        setPwError(err?.message || "Failed to update password. Please try again.");
+      }
+    }
+    setPwLoading(false);
   }
 
   return (
@@ -146,8 +180,11 @@ export default function MyAccountSection() {
             <p className="text-xs text-destructive mt-1">Passwords do not match</p>
           )}
         </div>
-        <Button size="sm" variant="outline" onClick={() => toast.info("Password change requires re-authentication — please use Forgot Password from the login screen.")}>
-          Update Password
+        {pwError && (
+          <p className="text-xs text-destructive">{pwError}</p>
+        )}
+        <Button size="sm" variant="outline" onClick={handleChangePassword} disabled={pwLoading}>
+          {pwLoading ? <><span className="w-3 h-3 border-2 border-t-transparent border-primary rounded-full animate-spin mr-1.5" />Updating…</> : "Update Password"}
         </Button>
       </div>
 
