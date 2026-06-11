@@ -32,20 +32,25 @@ export default function MyAccountSection() {
   const [uploading, setUploading] = useState(false);
   const [showNewPwd, setShowNewPwd] = useState(false);
 
-  // Fetch the employee record — first try email match, fall back to created_by_id
+  // Fetch the employee record — try email match, then name match
   const { data: employees = [], refetch: refetchEmployee } = useQuery({
-    queryKey: ["my-employee-record", user?.email, user?.id],
+    queryKey: ["my-employee-record", user?.email, user?.full_name],
     queryFn: async () => {
       if (user?.email) {
         const byEmail = await base44.entities.Employee.filter({ email: user.email });
         if (byEmail.length > 0) return byEmail;
+        // Also try personal_email field
+        const byPersonalEmail = await base44.entities.Employee.filter({ personal_email: user.email });
+        if (byPersonalEmail.length > 0) return byPersonalEmail;
       }
-      if (user?.id) {
-        return await base44.entities.Employee.filter({ created_by_id: user.id });
+      // Fall back: match by full name
+      if (user?.full_name) {
+        const byName = await base44.entities.Employee.filter({ name: user.full_name });
+        if (byName.length > 0) return byName;
       }
       return [];
     },
-    enabled: !!(user?.email || user?.id),
+    enabled: !!(user?.email || user?.full_name),
     staleTime: 15000,
   });
   const myEmployee = employees[0] || null;
@@ -146,16 +151,24 @@ export default function MyAccountSection() {
         <Input className="h-8" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="+1..." />
       </div>
 
-      {/* Employee profile link */}
-      {myEmployee && (
-        <div className="flex items-center justify-between border rounded-lg p-3 bg-muted/30">
-          <div>
-            <p className="text-sm font-medium">{myEmployee.name}</p>
-            <p className="text-xs text-muted-foreground capitalize">{myEmployee.role?.replace(/_/g, " ")} · {myEmployee.work_center_primary || "—"}</p>
+      {/* Employee Profile Card — prominent link to full profile */}
+      {myEmployee ? (
+        <div className="border rounded-xl p-4 bg-primary/5 border-primary/20">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-0.5">Employee Profile</p>
+              <p className="text-sm font-medium">{myEmployee.name}</p>
+              <p className="text-xs text-muted-foreground capitalize">{myEmployee.role?.replace(/_/g, " ")}{myEmployee.work_center_primary ? ` · ${myEmployee.work_center_primary}` : ""}</p>
+            </div>
+            <Link to={`/employees/${myEmployee.id}`}>
+              <Button size="sm">View My Full Profile</Button>
+            </Link>
           </div>
-          <Link to={`/employees/${myEmployee.id}`}>
-            <Button size="sm" variant="outline">View My Profile</Button>
-          </Link>
+          <p className="text-xs text-muted-foreground mt-2">View and edit your personal info, culture, goals, and more.</p>
+        </div>
+      ) : (
+        <div className="border rounded-xl p-4 bg-muted/30 text-xs text-muted-foreground">
+          No employee profile linked to your account. Ask your admin to add your email (<strong>{user?.email}</strong>) to your employee record.
         </div>
       )}
 

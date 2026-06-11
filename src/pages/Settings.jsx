@@ -28,7 +28,7 @@ const ALL_SECTIONS = [
   { id: "security",   label: "Security",             icon: Shield,          ownerOnly: true },
   { id: "billing",    label: "Billing",              icon: CreditCard,      ownerOnly: true },
   { id: "activity",   label: "Activity Log",         icon: Activity,        ownerOnly: true },
-  { id: "account",    label: "My Account",           icon: User,            roles: ["owner","admin","shop_manager","estimator","fabricator","installer","accountant"] },
+  { id: "account",    label: "My Account",           icon: User,            roles: ["owner","admin","shop_manager","estimator","fabricator","installer","accountant","design_specialist","user"] },
 ];
 
 // Style & Materials sub-sections (kept from old settings page)
