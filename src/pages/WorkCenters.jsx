@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,11 +10,21 @@ import { CalendarDays, Clock, Paintbrush, Users } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Link } from "react-router-dom";
 import { getJobHealth, getHealthBorder } from "@/lib/jobHelpers";
+import ClockWidget from "@/components/timetracking/ClockWidget";
+import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 
 const WORK_CENTERS = ["Cut", "Fit", "Weld", "Grind", "Powder Coat", "Install"];
 
 export default function WorkCenters() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("Cut");
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ["employees"],
+    queryFn: () => base44.entities.Employee.list("-created_date", 100),
+  });
+
+  const myEmployee = employees.find(e => e.email === user?.email) || null;
 
   const { data: jobs = [] } = useQuery({
     queryKey: ["jobs"],
@@ -21,9 +32,19 @@ export default function WorkCenters() {
   });
 
   const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries"],
-    queryFn: () => base44.entities.TimeEntry.list("-created_date", 500),
+    queryKey: ["timeEntries", "all"],
+    queryFn: () => base44.entities.TimeEntry.list("-clock_in", 500),
   });
+
+  const { data: activeEntries = [] } = useQuery({
+    queryKey: ["timeEntries", "active"],
+    queryFn: () => base44.entities.TimeEntry.filter({ is_active: true }),
+    refetchInterval: 15000,
+  });
+
+  const myActiveEntry = myEmployee
+    ? activeEntries.find(e => e.employee_id === myEmployee.id) || null
+    : null;
 
   // For this simplified view, show jobs that are in fabrication-related statuses
   const fabJobs = jobs.filter(j => 
@@ -33,9 +54,17 @@ export default function WorkCenters() {
   return (
     <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Work Centers</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Shop Floor</h1>
         <p className="text-sm text-muted-foreground">{fabJobs.length} jobs in production</p>
       </div>
+
+      {/* Clock-in panel for shop employees */}
+      {myEmployee && (
+        <div className="mb-6 grid md:grid-cols-2 gap-4">
+          <ClockWidget employee={myEmployee} activeEntry={myActiveEntry} />
+          <HoursStatsRow employee={myEmployee} timeEntries={timeEntries} activeEntry={myActiveEntry} />
+        </div>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-4 flex-wrap h-auto">

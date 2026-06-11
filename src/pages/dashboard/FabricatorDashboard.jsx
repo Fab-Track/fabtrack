@@ -11,6 +11,8 @@ import MyScoreBreakdown from "@/components/dashboard/fabricator/MyScoreBreakdown
 import MyMonthComparison from "@/components/dashboard/fabricator/MyMonthComparison";
 import NextInstallCard from "@/components/dashboard/fabricator/NextInstallCard";
 import MyUpcomingInstalls from "@/components/dashboard/fabricator/MyUpcomingInstalls";
+import ClockWidget from "@/components/timetracking/ClockWidget";
+import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 
 export default function FabricatorDashboard({ overrideEmployee = null }) {
   const { user } = useAuth();
@@ -93,6 +95,18 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
 
   return (
     <div className="space-y-6">
+      {/* Clock In/Out + Hours — top priority for shop employees */}
+      {myEmployee && (
+        <div className="space-y-3">
+          <ClockWidget employee={myEmployee} activeEntry={myActiveEntry} />
+          <HoursStatsRow
+            employee={myEmployee}
+            timeEntries={allTimeEntries}
+            activeEntry={myActiveEntry}
+          />
+        </div>
+      )}
+
       {/* Large stat cards — activeElapsedSeconds keeps hours live */}
       <FabricatorStatsRow
         employee={myEmployee}

@@ -12,7 +12,7 @@
     },
     "job_id": {
       "type": "string",
-      "description": "Job ID"
+      "description": "Job ID (optional for shift-level entries)"
     },
     "job_number": {
       "type": "string",
@@ -28,9 +28,20 @@
         "Powder Coat",
         "Install",
         "Demo",
-        "Design"
+        "Design",
+        "General"
       ],
       "description": "Work center"
+    },
+    "entry_type": {
+      "type": "string",
+      "enum": [
+        "shift",
+        "break",
+        "lunch"
+      ],
+      "default": "shift",
+      "description": "shift = work time, break/lunch = unpaid time off"
     },
     "clock_in": {
       "type": "string",
@@ -44,26 +55,68 @@
     },
     "duration_hours": {
       "type": "number",
-      "description": "Duration in hours"
+      "description": "Gross duration in hours (clock_out - clock_in)"
+    },
+    "net_hours": {
+      "type": "number",
+      "description": "Worked hours after subtracting unpaid breaks/lunch"
+    },
+    "break_minutes": {
+      "type": "number",
+      "default": 0,
+      "description": "Total unpaid break/lunch minutes for this shift"
     },
     "is_active": {
       "type": "boolean",
       "default": true,
-      "description": "Currently clocked in"
+      "description": "Currently clocked in / break ongoing"
+    },
+    "is_on_break": {
+      "type": "boolean",
+      "default": false,
+      "description": "Shift is paused for break/lunch"
+    },
+    "break_start": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When current break started"
     },
     "is_manual": {
       "type": "boolean",
       "default": false,
-      "description": "Manually entered by foreman/owner"
+      "description": "Manually entered or edited by admin"
+    },
+    "edited_by": {
+      "type": "string",
+      "description": "User ID of last editor (admin only)"
+    },
+    "edited_by_name": {
+      "type": "string",
+      "description": "Name of last editor"
+    },
+    "edited_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "edit_reason": {
+      "type": "string",
+      "description": "Reason for admin edit"
     },
     "notes": {
       "type": "string",
       "description": "Notes"
+    },
+    "workweek_start": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO date of the Monday (or configured start) of the workweek this entry belongs to"
+    },
+    "pay_period_label": {
+      "type": "string",
+      "description": "e.g. 2026-06-01_2026-06-15"
     }
   },
   "required": [
-    "employee_id",
-    "job_id",
-    "work_center"
+    "employee_id"
   ]
 }

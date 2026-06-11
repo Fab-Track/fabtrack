@@ -1,0 +1,57 @@
+{
+  "name": "TimeAuditLog",
+  "type": "object",
+  "properties": {
+    "time_entry_id": {
+      "type": "string"
+    },
+    "employee_id": {
+      "type": "string"
+    },
+    "employee_name": {
+      "type": "string"
+    },
+    "changed_by_id": {
+      "type": "string"
+    },
+    "changed_by_name": {
+      "type": "string"
+    },
+    "changed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "field_changed": {
+      "type": "string",
+      "description": "Which field(s) were changed"
+    },
+    "old_value": {
+      "type": "string"
+    },
+    "new_value": {
+      "type": "string"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "clock_in",
+        "clock_out",
+        "break_start",
+        "break_end",
+        "admin_edit",
+        "admin_create",
+        "admin_delete"
+      ],
+      "description": "Type of change"
+    }
+  },
+  "required": [
+    "time_entry_id",
+    "employee_id",
+    "changed_by_id",
+    "action"
+  ]
+}

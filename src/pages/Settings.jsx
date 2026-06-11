@@ -11,7 +11,7 @@ import BillingSection from "@/components/settings/BillingSection";
 import MyAccountSection from "@/components/settings/MyAccountSection";
 import ServiceCatalogSection from "@/components/settings/ServiceCatalogSection";
 import AdminActivityLogSection from "@/components/settings/AdminActivityLogSection";
-import { BookOpen, Activity, DollarSign, Image } from "lucide-react";
+import { BookOpen, Activity, DollarSign, Image, Timer } from "lucide-react";
 
 // All settings nav items — visibility controlled per role below
 const ALL_SECTIONS = [
@@ -25,6 +25,7 @@ const ALL_SECTIONS = [
   { id: "contracts",  label: "Estimate Contracts",   icon: ClipboardList,   ownerOnly: true },
   { id: "styles",     label: "Style Library",        icon: Image,           ownerOnly: true },
   { id: "materials",  label: "Materials",            icon: DollarSign,      ownerOnly: true },
+  { id: "payroll_settings", label: "Payroll",        icon: Timer,           ownerOnly: true },
   { id: "security",   label: "Security",             icon: Shield,          ownerOnly: true },
   { id: "billing",    label: "Billing",              icon: CreditCard,      ownerOnly: true },
   { id: "activity",   label: "Activity Log",         icon: Activity,        ownerOnly: true },
@@ -36,6 +37,7 @@ import StyleLibrarySection from "@/components/settings/StyleLibrarySection";
 import MaterialsPriceSection from "@/components/settings/MaterialsPriceSection";
 import EstimateContractSection from "@/components/settings/EstimateContractSection";
 import SecuritySection from "@/components/settings/SecuritySection";
+import PayrollSettingsSection from "@/components/settings/PayrollSettingsSection";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -64,6 +66,7 @@ export default function Settings() {
       case "styles":       return <StyleLibrarySection />;
       case "materials":    return <MaterialsPriceSection />;
       case "billing":      return <BillingSection />;
+      case "payroll_settings": return <PayrollSettingsSection />;
       case "security":     return <SecuritySection />;
       case "activity":     return <AdminActivityLogSection />;
       case "account":      return <MyAccountSection />;

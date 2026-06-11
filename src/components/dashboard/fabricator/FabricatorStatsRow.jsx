@@ -1,5 +1,6 @@
 import React from "react";
-import { startOfDay, startOfWeek, parseISO } from "date-fns";
+import { startOfDay, startOfWeek, endOfDay, parseISO } from "date-fns";
+import { getCurrentPayPeriod, formatHours } from "@/lib/timeTrackingHelpers";
 
 function StatCard({ label, value, subtext, valueColor = "text-foreground" }) {
   return (
@@ -17,19 +18,27 @@ export default function FabricatorStatsRow({ employee, timeEntries, activeEntry,
   const now = new Date();
   const todayStart = startOfDay(now);
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+  const pp = getCurrentPayPeriod();
 
-  // Completed entries for this employee only
-  const myCompleted = (timeEntries || []).filter(e => e.employee_id === employee?.id && !e.is_active);
+  // Completed shift entries for this employee only
+  const myCompleted = (timeEntries || []).filter(
+    e => e.employee_id === employee?.id && !e.is_active && (e.entry_type === "shift" || !e.entry_type)
+  );
 
   // Completed hours today
   const completedToday = myCompleted
     .filter(e => e.clock_in && parseISO(e.clock_in) >= todayStart)
-    .reduce((s, e) => s + (e.duration_hours || 0), 0);
+    .reduce((s, e) => s + (e.net_hours ?? e.duration_hours ?? 0), 0);
 
   // Completed hours this week
   const completedWeek = myCompleted
     .filter(e => e.clock_in && parseISO(e.clock_in) >= weekStart)
-    .reduce((s, e) => s + (e.duration_hours || 0), 0);
+    .reduce((s, e) => s + (e.net_hours ?? e.duration_hours ?? 0), 0);
+
+  // Completed hours this pay period
+  const completedPP = myCompleted
+    .filter(e => e.clock_in && parseISO(e.clock_in) >= pp.start && parseISO(e.clock_in) <= endOfDay(pp.end))
+    .reduce((s, e) => s + (e.net_hours ?? e.duration_hours ?? 0), 0);
 
   // Add active session elapsed time (if this is my active entry)
   const isMyActive = activeEntry && activeEntry.employee_id === employee?.id;
@@ -37,6 +46,7 @@ export default function FabricatorStatsRow({ employee, timeEntries, activeEntry,
 
   const hoursToday = completedToday + (isMyActive && activeEntry.clock_in && parseISO(activeEntry.clock_in) >= todayStart ? activeHours : 0);
   const hoursWeek  = completedWeek  + (isMyActive && activeEntry.clock_in && parseISO(activeEntry.clock_in) >= weekStart  ? activeHours : 0);
+  const hoursPP    = completedPP    + (isMyActive && activeEntry.clock_in && parseISO(activeEntry.clock_in) >= pp.start    ? activeHours : 0);
 
   // QC score
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -67,24 +77,24 @@ export default function FabricatorStatsRow({ employee, timeEntries, activeEntry,
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <StatCard
         label="My Hours Today"
-        value={hoursToday.toFixed(1)}
-        subtext={isMyActive ? "includes active session" : "hours logged"}
+        value={formatHours(hoursToday)}
+        subtext={isMyActive ? "live" : "logged"}
       />
       <StatCard
-        label="My Hours This Week"
-        value={hoursWeek.toFixed(1)}
-        subtext={isMyActive ? "includes active session" : "hours logged"}
+        label="This Week"
+        value={formatHours(hoursWeek)}
+        subtext={hoursWeek >= 40 ? "⚠ OT" : "logged"}
+      />
+      <StatCard
+        label="Pay Period"
+        value={formatHours(hoursPP)}
+        subtext={pp.label}
       />
       <StatCard
         label="My Craftsman Score"
         value={avgScore !== null ? avgScore : "—"}
         subtext="30-day rolling avg / 100"
         valueColor={scoreColor}
-      />
-      <StatCard
-        label="My Active Jobs"
-        value={weekJobIds.size}
-        subtext="jobs this week"
       />
     </div>
   );

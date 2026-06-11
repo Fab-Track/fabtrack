@@ -38,26 +38,27 @@
     },
     "estimate_approval_email_enabled": {
       "type": "boolean",
-      "default": false,
-      "description": "If true, send an email notification when an estimate is approved"
+      "default": false
     },
     "session_timeout_mobile_hours": {
       "type": "number",
-      "default": 8,
-      "description": "Session timeout in hours for mobile devices"
+      "default": 8
     },
     "session_timeout_desktop_hours": {
       "type": "number",
-      "default": 4,
-      "description": "Session timeout in hours for desktop browsers"
+      "default": 4
     },
     "require_2fa_roles": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "Roles that are required to have 2FA enabled",
       "default": []
+    },
+    "payroll_workweek_start_day": {
+      "type": "number",
+      "default": 1,
+      "description": "Day the workweek starts: 0=Sunday, 1=Monday (FLSA default)"
     }
   },
   "required": [

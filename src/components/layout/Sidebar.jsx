@@ -30,6 +30,8 @@ const ALL_ITEMS = {
   shopFloor:      { label: "Shop Floor",       icon: Clock,           path: "/kiosk" },
   craftsmanScore: { label: "Craftsman Score",  icon: Trophy,          path: "/craftsman" },
   employees:      { label: "Employees",        icon: Building2,       path: "/employees" },
+  myTimesheet:    { label: "My Timesheet",     icon: Clock,           path: "/my-timesheet" },
+  payroll:        { label: "Time & Payroll",   icon: Clock,           path: "/admin-payroll" },
   settings:       { label: "Settings",         icon: Settings,        path: "/settings" },
 };
 
@@ -40,6 +42,7 @@ const ROLE_NAV = {
     { group: "SALES",       items: ["jobBoard", "customers", "conversations", "documents"] },
     { group: "OPERATIONS",  items: ["reports", "schedule", "workCenters", "inventory"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
+    { group: "PAYROLL",     items: ["payroll"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   shop_manager: [
@@ -47,6 +50,7 @@ const ROLE_NAV = {
     { group: "OPERATIONS",  items: ["jobBoard", "reports", "schedule", "workCenters", "inventory"] },
     { group: "SALES",       items: ["conversations"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
+    { group: "PAYROLL",     items: ["payroll"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   estimator: [
@@ -64,12 +68,14 @@ const ROLE_NAV = {
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "JOBS",        items: ["jobBoard"] },
     { group: "SHOP",        items: ["schedule", "shopFloor"] },
+    { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   installer: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "JOBS",        items: ["jobBoard"] },
     { group: "SHOP",        items: ["schedule", "shopFloor"] },
+    { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   accountant: [
@@ -78,12 +84,27 @@ const ROLE_NAV = {
     { group: "FINANCE",     items: ["documents", "customers", "conversations", "reports"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
+  welder: [
+    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
+    { group: "SHOP",        items: ["shopFloor"] },
+    { group: "TIME",        items: ["myTimesheet"] },
+    { group: "ACCOUNT",     items: ["settings"] },
+  ],
+  foreman: [
+    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
+    { group: "OPERATIONS",  items: ["schedule", "workCenters"] },
+    { group: "SHOP",        items: ["shopFloor", "employees"] },
+    { group: "PAYROLL",     items: ["payroll"] },
+    { group: "TIME",        items: ["myTimesheet"] },
+    { group: "ACCOUNT",     items: ["settings"] },
+  ],
   // fallback for any unrecognized role — same as admin
   user: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "SALES",       items: ["jobBoard", "customers", "conversations", "documents"] },
     { group: "OPERATIONS",  items: ["reports", "schedule", "workCenters", "inventory"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
+    { group: "PAYROLL",     items: ["payroll"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
 };

@@ -29,6 +29,8 @@ const OnboardingSurveyPage = lazy(() => import('@/pages/OnboardingSurveyPage'));
 const Settings         = lazy(() => import('@/pages/Settings'));
 const EstimatePage     = lazy(() => import('@/pages/EstimatePage'));
 const EstimateView     = lazy(() => import('@/pages/EstimateView'));
+const MyTimesheet      = lazy(() => import('@/pages/MyTimesheet'));
+const AdminPayroll     = lazy(() => import('@/pages/AdminPayroll'));
 const Reports          = lazy(() => import('@/pages/Reports'));
 const Messages         = lazy(() => import('@/pages/Messages'));
 const Conversations    = lazy(() => import('@/pages/Conversations'));
@@ -136,6 +138,8 @@ const AuthenticatedApp = () => {
         <Route path="/employees/:id" element={<EmployeeProfilePage />} />
         <Route path="/documents" element={<Documents />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/my-timesheet" element={<MyTimesheet />} />
+        <Route path="/admin-payroll" element={<AdminPayroll />} />
       </Route>
 
       <Route path="*" element={<PageNotFound />} />
