@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { UserPlus, Pencil, MailOpen, Eye, Table2, Clock, ChevronRight, Ban, CheckCircle2, RefreshCw } from "lucide-react";
+import { UserPlus, Pencil, MailOpen, Eye, Table2, Clock, ChevronRight, Ban, CheckCircle2, RefreshCw, KeyRound } from "lucide-react";
+import { useAuth } from "@/lib/AuthContext";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import PermissionsMatrix from "./permissions/PermissionsMatrix";
@@ -43,6 +44,8 @@ const TABS = [
 
 export default function UsersRolesSection() {
   const qc = useQueryClient();
+  const { user: currentUser } = useAuth();
+  const isAdminOrOwner = ["admin", "owner"].includes((currentUser?.role || "").toLowerCase());
   const [tab, setTab] = useState("users");
   const [showInvite, setShowInvite] = useState(false);
   const [editUser, setEditUser] = useState(null);
@@ -94,6 +97,11 @@ export default function UsersRolesSection() {
     });
     toast.success("Account unlocked");
     qc.invalidateQueries({ queryKey: ["users"] });
+  }
+
+  async function handlePasswordReset(u) {
+    await base44.auth.sendPasswordResetEmail(u.email);
+    toast.success(`Password reset email sent to ${u.email}`);
   }
 
   return (
@@ -192,6 +200,17 @@ export default function UsersRolesSection() {
                           {isLocked && (
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-amber-600" title="Unlock account" onClick={() => handleUnlock(u)}>
                               <CheckCircle2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          {isAdminOrOwner && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-blue-600"
+                              title="Send password reset email"
+                              onClick={() => handlePasswordReset(u)}
+                            >
+                              <KeyRound className="w-3.5 h-3.5" />
                             </Button>
                           )}
                           <Button

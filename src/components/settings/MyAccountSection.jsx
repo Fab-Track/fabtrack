@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function MyAccountSection() {
-  const { user } = useAuth();
+  const { user, checkUserAuth } = useAuth();
   const qc = useQueryClient();
   const nameParts = (user?.full_name || "").split(" ");
   const [form, setForm] = useState({
@@ -28,29 +28,33 @@ export default function MyAccountSection() {
     phone: user?.phone || "",
     photo_url: user?.profile_photo_url || "",
   });
+  const [saving, setSaving] = useState(false);
   const [passwords, setPasswords] = useState({ current: "", next: "", confirm: "" });
   const [uploading, setUploading] = useState(false);
   const [showNewPwd, setShowNewPwd] = useState(false);
 
-  // Fetch the employee record — try email match, then name match
+  // Fetch the employee record — try email, personal_email, name, then created_by_id
   const { data: employees = [], refetch: refetchEmployee } = useQuery({
-    queryKey: ["my-employee-record", user?.email, user?.full_name],
+    queryKey: ["my-employee-record", user?.id, user?.email, user?.full_name],
     queryFn: async () => {
       if (user?.email) {
         const byEmail = await base44.entities.Employee.filter({ email: user.email });
         if (byEmail.length > 0) return byEmail;
-        // Also try personal_email field
         const byPersonalEmail = await base44.entities.Employee.filter({ personal_email: user.email });
         if (byPersonalEmail.length > 0) return byPersonalEmail;
       }
-      // Fall back: match by full name
       if (user?.full_name) {
         const byName = await base44.entities.Employee.filter({ name: user.full_name });
         if (byName.length > 0) return byName;
       }
+      // Final fallback: created_by_id matches user id
+      if (user?.id) {
+        const byCreator = await base44.entities.Employee.filter({ created_by_id: user.id });
+        if (byCreator.length > 0) return byCreator;
+      }
       return [];
     },
-    enabled: !!(user?.email || user?.full_name),
+    enabled: !!(user?.id || user?.email || user?.full_name),
     staleTime: 15000,
   });
   const myEmployee = employees[0] || null;
@@ -65,13 +69,18 @@ export default function MyAccountSection() {
   }
 
   async function handleSave() {
-    const full_name = [form.first_name.trim(), form.last_name.trim()].filter(Boolean).join(" ");
-    await base44.auth.updateMe({
-      full_name,
-      phone: form.phone,
-    });
-    qc.invalidateQueries();
-    toast.success("Account updated");
+    setSaving(true);
+    try {
+      const full_name = [form.first_name.trim(), form.last_name.trim()].filter(Boolean).join(" ");
+      await base44.auth.updateMe({ full_name, phone: form.phone });
+      qc.invalidateQueries();
+      // Refresh the auth context so the name updates everywhere
+      if (typeof checkUserAuth === "function") await checkUserAuth();
+      toast.success("Account updated successfully");
+    } catch (err) {
+      toast.error(err?.message || "Failed to save changes. Please try again.");
+    }
+    setSaving(false);
   }
 
   const [pwLoading, setPwLoading] = useState(false);
@@ -219,7 +228,9 @@ export default function MyAccountSection() {
         </Button>
       </div>
 
-      <Button onClick={handleSave} className="w-full sm:w-auto">Save Changes</Button>
+      <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
+        {saving ? <><span className="w-3 h-3 border-2 border-t-transparent border-primary-foreground rounded-full animate-spin mr-1.5" />Saving…</> : "Save Changes"}
+      </Button>
 
       {/* Log Out */}
       <div className="pt-2 border-t">
