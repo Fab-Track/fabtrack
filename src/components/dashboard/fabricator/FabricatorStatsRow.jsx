@@ -20,9 +20,13 @@ export default function FabricatorStatsRow({ employee, timeEntries, activeEntry,
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
   const pp = getCurrentPayPeriod();
 
-  // Completed shift entries for this employee only
+  // Payroll hours: completed master clock entries only (no job_id)
   const myCompleted = (timeEntries || []).filter(
-    e => e.employee_id === employee?.id && !e.is_active && (e.entry_type === "shift" || !e.entry_type)
+    e =>
+      e.employee_id === employee?.id &&
+      !e.is_active &&
+      (e.entry_type === "shift" || !e.entry_type) &&
+      !e.job_id
   );
 
   // Completed hours today

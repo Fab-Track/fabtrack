@@ -22,9 +22,13 @@ export default function HoursStatsRow({ employee, timeEntries = [], activeEntry 
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
   const pp = getCurrentPayPeriod();
 
-  // Completed entries only (not active)
+  // Payroll hours: completed master clock entries only (no job_id = payroll clock)
   const completed = timeEntries.filter(
-    e => e.employee_id === employee?.id && !e.is_active && (e.entry_type === "shift" || !e.entry_type)
+    e =>
+      e.employee_id === employee?.id &&
+      !e.is_active &&
+      (e.entry_type === "shift" || !e.entry_type) &&
+      !e.job_id   // master clock only — job entries don't count toward payroll
   );
 
   const isMyActive = activeEntry?.employee_id === employee?.id;

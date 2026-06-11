@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Clock, LogIn, UtensilsCrossed, ArrowRightLeft } from "lucide-react";
+import { LogOut, Clock, LogIn, UtensilsCrossed, ArrowRightLeft, Wrench, AlertTriangle } from "lucide-react";
 import { parseISO, startOfDay, differenceInSeconds } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
@@ -64,7 +64,7 @@ function ActiveJobRow({ entry, allTimeEntries, jobs = [], onClockOut, isPending 
   );
 }
 
-export default function MyCurrentJob({ activeEntries = [], activeElapsedSeconds = 0, allTimeEntries, jobs = [] }) {
+export default function MyCurrentJob({ activeEntries = [], activeElapsedSeconds = 0, allTimeEntries, jobs = [], masterEntry = null }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -107,28 +107,41 @@ export default function MyCurrentJob({ activeEntries = [], activeElapsedSeconds 
 
   if (activeEntries.length === 0) {
     return (
-      <div className="bg-card border rounded-xl p-6">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">My Current Job</h3>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
-          <p className="text-muted-foreground text-lg">Not currently clocked in</p>
-          <Button variant="outline" onClick={() => navigate("/kiosk")} className="gap-2">
-            <LogIn className="w-4 h-4" />
-            Go to Shop Floor
-          </Button>
+      <div className="bg-card border rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <Wrench className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Job Clock · Shop Floor</h3>
         </div>
+        <p className="text-xs text-muted-foreground mb-4">Track which job you're working on — for job costing only, not payroll</p>
+        {!masterEntry ? (
+          <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            Clock in for the day first before clocking into a job.
+          </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-2">
+            <p className="text-muted-foreground">Not clocked into any job</p>
+            <Button variant="outline" onClick={() => navigate("/kiosk")} className="gap-2 min-h-[44px]">
+              <LogIn className="w-4 h-4" />
+              Clock Into a Job
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="bg-card border-2 border-accent rounded-xl p-6">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="bg-card border-2 border-accent/40 rounded-xl p-6">
+      <div className="flex items-center gap-2 mb-1">
+        <Wrench className="w-4 h-4 text-accent" />
         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Currently Clocked In</h3>
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Job Clock · Shop Floor</h3>
         {activeEntries.length > 1 && (
           <Badge className="bg-green-100 text-green-700 border-green-200 ml-1">{activeEntries.length} active</Badge>
         )}
       </div>
+      <p className="text-xs text-muted-foreground mb-3">Job costing only — does not affect payroll hours</p>
 
       {/* List of active jobs */}
       <div className="divide-y">

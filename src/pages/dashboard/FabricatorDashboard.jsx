@@ -11,7 +11,7 @@ import MyScoreBreakdown from "@/components/dashboard/fabricator/MyScoreBreakdown
 import MyMonthComparison from "@/components/dashboard/fabricator/MyMonthComparison";
 import NextInstallCard from "@/components/dashboard/fabricator/NextInstallCard";
 import MyUpcomingInstalls from "@/components/dashboard/fabricator/MyUpcomingInstalls";
-import ClockWidget from "@/components/timetracking/ClockWidget";
+import MasterClockCard from "@/components/timetracking/MasterClockCard";
 import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 
 export default function FabricatorDashboard({ overrideEmployee = null }) {
@@ -52,11 +52,19 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
     ? (employees.find(e => e.id === overrideEmployee.id) || overrideEmployee)
     : (employees.find(e => e.email === user?.email) || null);
 
-  // All active entries for this employee (supports multiple simultaneous clock-ins)
+  // All active entries for this employee
   const myActiveEntries = myEmployee
     ? activeEntries.filter(e => e.employee_id === myEmployee.id)
     : [];
-  const myActiveEntry = myActiveEntries[0] || null;
+
+  // Master/payroll clock = active shift entry with NO job_id
+  const masterEntry = myActiveEntries.find(e => !e.job_id) || null;
+
+  // Job-level clock entries = active shift entries WITH a job_id (shop floor)
+  const jobActiveEntries = myActiveEntries.filter(e => !!e.job_id);
+
+  // For backwards compat with components that expect a single activeEntry
+  const myActiveEntry = masterEntry;
 
   // Real-time subscription to TimeEntry changes — invalidates queries instantly
   useEffect(() => {
@@ -66,20 +74,20 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
     return unsubscribe;
   }, [queryClient]);
 
-  // Live 1-second ticker for the active session elapsed time
+  // Live 1-second ticker — based on master (payroll) entry
   useEffect(() => {
-    if (!myActiveEntry?.clock_in) {
+    if (!masterEntry?.clock_in) {
       setActiveElapsedSeconds(0);
       return;
     }
     const tick = () => {
-      const secs = differenceInSeconds(new Date(), parseISO(myActiveEntry.clock_in));
+      const secs = differenceInSeconds(new Date(), parseISO(masterEntry.clock_in));
       setActiveElapsedSeconds(Math.max(0, secs));
     };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [myActiveEntry?.clock_in]);
+  }, [masterEntry?.clock_in]);
 
   if (isLoading) {
     return (
@@ -95,33 +103,34 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
 
   return (
     <div className="space-y-6">
-      {/* Clock In/Out + Hours — top priority for shop employees */}
+      {/* ── MASTER / PAYROLL CLOCK ── top of dashboard */}
       {myEmployee && (
         <div className="space-y-3">
-          <ClockWidget employee={myEmployee} activeEntry={myActiveEntry} />
+          <MasterClockCard employee={myEmployee} masterEntry={masterEntry} />
           <HoursStatsRow
             employee={myEmployee}
             timeEntries={allTimeEntries}
-            activeEntry={myActiveEntry}
+            activeEntry={masterEntry}
           />
         </div>
       )}
 
-      {/* Large stat cards — activeElapsedSeconds keeps hours live */}
+      {/* Large stat cards */}
       <FabricatorStatsRow
         employee={myEmployee}
         timeEntries={allTimeEntries}
-        activeEntry={myActiveEntry}
+        activeEntry={masterEntry}
         activeElapsedSeconds={activeElapsedSeconds}
         qcInspections={qcInspections}
       />
 
-      {/* Current job clock-out widget */}
+      {/* ── JOB CLOCK (Shop Floor / job costing only) ── */}
       <MyCurrentJob
-        activeEntries={myActiveEntries}
+        activeEntries={jobActiveEntries}
         activeElapsedSeconds={activeElapsedSeconds}
         allTimeEntries={allTimeEntries}
         jobs={jobs}
+        masterEntry={masterEntry}
       />
 
       {/* Jobs this week */}
