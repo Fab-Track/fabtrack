@@ -52,9 +52,10 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
     ? (employees.find(e => e.id === overrideEmployee.id) || overrideEmployee)
     : (employees.find(e => e.email === user?.email) || null);
 
-  // All active entries for this employee
-  const myActiveEntries = myEmployee
-    ? activeEntries.filter(e => e.employee_id === myEmployee.id)
+  // All active entries for this employee (fall back to user.id if no Employee record)
+  const myId = myEmployee?.id || user?.id;
+  const myActiveEntries = myId
+    ? activeEntries.filter(e => e.employee_id === myId)
     : [];
 
   // Master/payroll clock = active shift entry with NO job_id
@@ -103,17 +104,20 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
 
   return (
     <div className="space-y-6">
-      {/* ── MASTER / PAYROLL CLOCK ── top of dashboard */}
-      {myEmployee && (
-        <div className="space-y-3">
-          <MasterClockCard employee={myEmployee} masterEntry={masterEntry} />
+      {/* ── MASTER / PAYROLL CLOCK ── top of dashboard, always visible */}
+      <div className="space-y-3">
+        <MasterClockCard
+          employee={myEmployee || { id: user?.id, name: user?.full_name, work_center_primary: "General" }}
+          masterEntry={masterEntry}
+        />
+        {myEmployee && (
           <HoursStatsRow
             employee={myEmployee}
             timeEntries={allTimeEntries}
             activeEntry={masterEntry}
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Large stat cards */}
       <FabricatorStatsRow
