@@ -56,10 +56,22 @@ export function canAccessChannel(channel, userRole, userId, userEmail) {
     return false;
   }
 
-  // Job channels — owner/admin/shop_manager see all
-  if (["admin", "owner", "shop_manager"].includes(userRole)) return true;
+  // DM channels — user must be in member_ids
+  if (channel.channel_type === "dm") {
+    if (channel.member_ids?.includes(userId)) return true;
+    if (channel.member_ids?.includes(userEmail)) return true;
+    return false;
+  }
 
-  // Others: check member_ids
+  // Job channels — all active team roles see all job channels
+  if (channel.channel_type === "job") {
+    if (["admin", "owner", "shop_manager", "fabricator", "installer", "estimator", "design_specialist", "accountant"].includes(userRole)) return true;
+    if (channel.member_ids?.includes(userId)) return true;
+    if (channel.member_ids?.includes(userEmail)) return true;
+    return false;
+  }
+
+  // Fallback: check member_ids
   if (channel.member_ids?.includes(userId)) return true;
   if (channel.member_ids?.includes(userEmail)) return true;
   return false;

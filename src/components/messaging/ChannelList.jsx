@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import { Hash, Pin, Briefcase, Search, Plus, Archive, ChevronRight } from "lucide-react";
+import { Hash, Pin, Briefcase, Search, Plus, Archive, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { canAccessChannel, formatMessageTime } from "@/lib/messagingHelpers";
-import { formatDistanceToNow, parseISO } from "date-fns";
 
 export default function ChannelList({
   channels,
@@ -34,13 +33,16 @@ export default function ChannelList({
     : visible;
 
   const teamChannels = filtered.filter(c => c.channel_type === "team").sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+  const dmChannels = filtered.filter(c => c.channel_type === "dm").sort((a, b) => {
+    const aTime = a.last_message_at || a.created_date || "";
+    const bTime = b.last_message_at || b.created_date || "";
+    return bTime.localeCompare(aTime);
+  });
   const jobChannels = filtered.filter(c => c.channel_type === "job").sort((a, b) => {
     const aTime = a.last_message_at || a.created_date || "";
     const bTime = b.last_message_at || b.created_date || "";
     return bTime.localeCompare(aTime);
   });
-
-  const canManage = ["admin", "owner", "shop_manager"].includes(userRole);
 
   return (
     <div className="flex flex-col h-full bg-card border-r">
@@ -48,15 +50,13 @@ export default function ChannelList({
       <div className="px-4 pt-4 pb-2 border-b shrink-0">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-sm text-foreground">Messages</h2>
-          {canManage && (
-            <button
-              onClick={onNewChannel}
-              className="p-1 rounded hover:bg-muted transition-colors"
-              aria-label="New channel"
-            >
-              <Plus className="w-4 h-4 text-muted-foreground" />
-            </button>
-          )}
+          <button
+            onClick={onNewChannel}
+            className="p-1 rounded hover:bg-muted transition-colors"
+            aria-label="New message"
+          >
+            <Plus className="w-4 h-4 text-muted-foreground" />
+          </button>
         </div>
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -83,6 +83,22 @@ export default function ChannelList({
             isSelected={ch.id === selectedId}
             unread={unreadCounts[ch.id] || 0}
             onClick={() => onSelect(ch)}
+          />
+        ))}
+
+        {/* Direct Messages */}
+        <SectionHeader label="Direct Messages" className="mt-2" />
+        {dmChannels.length === 0 && (
+          <p className="text-xs text-muted-foreground px-4 py-2">No direct messages yet</p>
+        )}
+        {dmChannels.map(ch => (
+          <ChannelRow
+            key={ch.id}
+            channel={ch}
+            isSelected={ch.id === selectedId}
+            unread={unreadCounts[ch.id] || 0}
+            onClick={() => onSelect(ch)}
+            currentUserId={userId}
           />
         ))}
 
@@ -125,9 +141,20 @@ function SectionHeader({ label, className }) {
   );
 }
 
-function ChannelRow({ channel, isSelected, unread, onClick }) {
+function ChannelRow({ channel, isSelected, unread, onClick, currentUserId }) {
   const isPermanent = channel.is_permanent;
   const isArchived = channel.is_archived;
+  const isDm = channel.channel_type === "dm";
+
+  // For DM channels, show the other person's name
+  let displayName = channel.display_name;
+  if (isDm && channel.description) {
+    try {
+      const parsed = JSON.parse(channel.description);
+      const other = parsed.participants?.find(p => p.id !== currentUserId);
+      if (other?.name) displayName = other.name;
+    } catch {}
+  }
 
   return (
     <button
@@ -138,7 +165,9 @@ function ChannelRow({ channel, isSelected, unread, onClick }) {
       )}
     >
       <div className="shrink-0 mt-0.5 relative">
-        {channel.channel_type === "job" ? (
+        {isDm ? (
+          <MessageCircle className="w-3.5 h-3.5 text-muted-foreground" />
+        ) : channel.channel_type === "job" ? (
           <Briefcase className="w-3.5 h-3.5 text-muted-foreground" />
         ) : (
           <Hash className="w-3.5 h-3.5 text-muted-foreground" />
@@ -154,7 +183,7 @@ function ChannelRow({ channel, isSelected, unread, onClick }) {
             isSelected ? "text-foreground" : "text-foreground/80",
             isArchived && "opacity-50"
           )}>
-            {channel.display_name}
+            {displayName}
           </span>
           <div className="flex items-center gap-1 shrink-0">
             {channel.last_message_at && (

@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { canAccessChannel } from "@/lib/messagingHelpers";
 import ChannelList from "@/components/messaging/ChannelList";
 import MessageThread from "@/components/messaging/MessageThread";
-import NewChannelDialog from "@/components/messaging/NewChannelDialog";
+import NewMessageDialog from "@/components/messaging/NewMessageDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Messages() {
@@ -114,9 +114,10 @@ export default function Messages() {
       </div>
 
       {showNewChannel && (
-        <NewChannelDialog
+        <NewMessageDialog
           onClose={() => setShowNewChannel(false)}
           onCreated={handleSelectChannel}
+          currentUser={user}
         />
       )}
     </div>
