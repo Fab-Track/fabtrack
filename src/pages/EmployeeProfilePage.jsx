@@ -89,8 +89,8 @@ export default function EmployeeProfilePage() {
   const initials = employee.name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0,2) || "?";
   const tenure = tenureString(employee.start_date);
 
-  // Tab visibility by role
-  const showWorkInfo = canManageHR;
+  // Tab visibility — all tabs visible to own profile or HR managers
+  const showWorkInfo = canManageHR || isOwnProfile;
   const showDisciplinary = canManageHR || isOwnProfile;
   const showDocuments = canManageHR || isOwnProfile;
   const showGoalsReviews = canManageHR || isOwnProfile;
@@ -159,6 +159,9 @@ export default function EmployeeProfilePage() {
         {showWorkInfo && (
           <TabsContent value="work">
             <EmployeeWorkInfoTab employee={employee} canEdit={isOwner} canSeeRate={isOwner} />
+            {!canManageHR && isOwnProfile && (
+              <p className="text-xs text-muted-foreground mt-4 italic">This section is managed by your admin.</p>
+            )}
           </TabsContent>
         )}
 
@@ -168,7 +171,7 @@ export default function EmployeeProfilePage() {
 
         {showGoalsReviews && (
           <TabsContent value="goals">
-            <EmployeeGoalsReviewsTab employee={employee} currentUser={user} canManage={canManageHR} />
+            <EmployeeGoalsReviewsTab employee={employee} currentUser={user} canManage={canManageHR} isOwnProfile={isOwnProfile} />
           </TabsContent>
         )}
 

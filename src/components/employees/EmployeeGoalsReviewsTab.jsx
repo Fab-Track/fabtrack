@@ -52,7 +52,7 @@ function GoalForm({ employeeId, employeeName, initial, onSave, onCancel }) {
   );
 }
 
-export default function EmployeeGoalsReviewsTab({ employee, currentUser, canManage }) {
+export default function EmployeeGoalsReviewsTab({ employee, currentUser, canManage, isOwnProfile }) {
   const qc = useQueryClient();
   const [goalDialog, setGoalDialog] = useState(false);
   const [editingGoal, setEditingGoal] = useState(null);
@@ -77,7 +77,6 @@ export default function EmployeeGoalsReviewsTab({ employee, currentUser, canMana
     qc.invalidateQueries({ queryKey: ["reviews", employee.id] });
   };
 
-  const isOwnProfile = currentUser?.email === employee.email;
   const activeGoals = goals.filter(g => g.status === "Active");
 
   return (
@@ -86,7 +85,7 @@ export default function EmployeeGoalsReviewsTab({ employee, currentUser, canMana
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold flex items-center gap-2"><Target className="w-4 h-4" />Goals <span className="text-xs text-muted-foreground font-normal">({activeGoals.length} active)</span></h3>
-          {canManage && <Button size="sm" variant="outline" onClick={() => { setEditingGoal(null); setGoalDialog(true); }}><Plus className="w-3.5 h-3.5 mr-1" />New Goal</Button>}
+          {(canManage || isOwnProfile) && <Button size="sm" variant="outline" onClick={() => { setEditingGoal(null); setGoalDialog(true); }}><Plus className="w-3.5 h-3.5 mr-1" />New Goal</Button>}
         </div>
         {goals.length === 0 ? <p className="text-sm text-muted-foreground py-4 text-center">No goals yet.</p> : (
           <div className="space-y-2">
@@ -101,7 +100,7 @@ export default function EmployeeGoalsReviewsTab({ employee, currentUser, canMana
                   {g.description && <p className="text-xs text-muted-foreground mt-1">{g.description}</p>}
                   {g.target_date && <p className="text-xs text-muted-foreground mt-0.5">Target: {format(parseISO(g.target_date), "MMM d, yyyy")}</p>}
                 </div>
-                {canManage && <Button size="sm" variant="ghost" className="text-xs" onClick={() => { setEditingGoal(g); setGoalDialog(true); }}>Edit</Button>}
+                {(canManage || isOwnProfile) && <Button size="sm" variant="ghost" className="text-xs" onClick={() => { setEditingGoal(g); setGoalDialog(true); }}>Edit</Button>}
               </div>
             ))}
           </div>

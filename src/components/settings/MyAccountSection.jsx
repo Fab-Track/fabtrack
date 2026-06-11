@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,11 +32,20 @@ export default function MyAccountSection() {
   const [uploading, setUploading] = useState(false);
   const [showNewPwd, setShowNewPwd] = useState(false);
 
-  // Fetch the employee record that matches this user's email for Gmail status
+  // Fetch the employee record — first try email match, fall back to created_by_id
   const { data: employees = [], refetch: refetchEmployee } = useQuery({
-    queryKey: ["my-employee-record", user?.email],
-    queryFn: () => base44.entities.Employee.filter({ email: user?.email }),
-    enabled: !!user?.email,
+    queryKey: ["my-employee-record", user?.email, user?.id],
+    queryFn: async () => {
+      if (user?.email) {
+        const byEmail = await base44.entities.Employee.filter({ email: user.email });
+        if (byEmail.length > 0) return byEmail;
+      }
+      if (user?.id) {
+        return await base44.entities.Employee.filter({ created_by_id: user.id });
+      }
+      return [];
+    },
+    enabled: !!(user?.email || user?.id),
     staleTime: 15000,
   });
   const myEmployee = employees[0] || null;
@@ -136,14 +146,22 @@ export default function MyAccountSection() {
         <Input className="h-8" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="+1..." />
       </div>
 
+      {/* Employee profile link */}
+      {myEmployee && (
+        <div className="flex items-center justify-between border rounded-lg p-3 bg-muted/30">
+          <div>
+            <p className="text-sm font-medium">{myEmployee.name}</p>
+            <p className="text-xs text-muted-foreground capitalize">{myEmployee.role?.replace(/_/g, " ")} · {myEmployee.work_center_primary || "—"}</p>
+          </div>
+          <Link to={`/employees/${myEmployee.id}`}>
+            <Button size="sm" variant="outline">View My Profile</Button>
+          </Link>
+        </div>
+      )}
+
       {/* Gmail connection */}
       {myEmployee && (
         <GmailUserConnectionCard employee={myEmployee} onRefresh={() => refetchEmployee()} />
-      )}
-      {!myEmployee && (
-        <div className="border rounded-xl p-4 text-xs text-muted-foreground">
-          No employee record linked to your account email. Ask your admin to create one.
-        </div>
       )}
 
       {/* Password change */}
