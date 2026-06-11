@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Kanban, Wrench, Clock,
   FileText, CalendarDays, Users, Package,
   Trophy, ChevronLeft, ChevronRight,
-  Building2, Settings, Menu, X, BarChart2, MessageCircle, MessagesSquare
+  Building2, Settings, Menu, X, BarChart2, MessageCircle, MessagesSquare, LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -246,10 +246,18 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Preview Role + Collapse — desktop only */}
+      {/* Preview Role + Collapse + Logout — desktop only */}
       <div className="hidden md:block px-2 py-3 border-t border-sidebar-border space-y-1">
         <NotificationBell collapsed={collapsed} />
         {userCanImpersonate && <PreviewRoleSelector collapsed={collapsed} />}
+        <button
+          onClick={() => base44.auth.logout("/login")}
+          title={collapsed ? "Log Out" : undefined}
+          className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-md text-sm text-sidebar-foreground/50 hover:text-red-400 hover:bg-sidebar-accent w-full transition-colors"
+        >
+          <LogOut className={cn("w-4 h-4 shrink-0", collapsed && "mx-auto")} />
+          {!collapsed && <span>Log Out</span>}
+        </button>
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-md text-sm text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
@@ -282,14 +290,23 @@ export default function Sidebar() {
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-64 bg-sidebar">
+          <div className="absolute left-0 top-0 bottom-0 w-64 bg-sidebar flex flex-col">
             <button
               onClick={() => setMobileOpen(false)}
               className="absolute top-3 right-3 w-11 h-11 flex items-center justify-center rounded-md text-sidebar-foreground/60 hover:text-white hover:bg-sidebar-accent"
             >
               <X className="w-5 h-5" />
             </button>
-            {sidebarContent}
+            <div className="flex-1 overflow-y-auto">{sidebarContent}</div>
+            <div className="px-2 py-3 border-t border-sidebar-border shrink-0">
+              <button
+                onClick={() => base44.auth.logout("/login")}
+                className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-md text-sm text-sidebar-foreground/50 hover:text-red-400 hover:bg-sidebar-accent w-full transition-colors"
+              >
+                <LogOut className="w-4 h-4 shrink-0" />
+                <span>Log Out</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

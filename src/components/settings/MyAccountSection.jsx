@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Upload, CheckCircle2, Circle, RefreshCw, Trash2, Eye, EyeOff } from "lucide-react";
+import { Upload, CheckCircle2, Circle, RefreshCw, Trash2, Eye, EyeOff, LogOut } from "lucide-react";
 import PasswordStrengthIndicator from "@/components/auth/PasswordStrengthIndicator";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
@@ -189,6 +189,18 @@ export default function MyAccountSection() {
       </div>
 
       <Button onClick={handleSave} className="w-full sm:w-auto">Save Changes</Button>
+
+      {/* Log Out */}
+      <div className="pt-2 border-t">
+        <Button
+          variant="outline"
+          className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+          onClick={() => base44.auth.logout("/login")}
+        >
+          <LogOut className="w-4 h-4" />
+          Log Out
+        </Button>
+      </div>
 
       {/* Delete Account */}
       <div className="space-y-2 pt-4 border-t border-destructive/20">
