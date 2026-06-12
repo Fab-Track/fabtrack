@@ -1,7 +1,7 @@
-import React, { useRef, useState } from "react";
+import React, { useRef } from "react";
 import { format, parseISO, differenceInCalendarDays, isSameDay, startOfDay, startOfMonth, isSameMonth } from "date-fns";
 import { Link } from "react-router-dom";
-import { PHASE_COLORS, PHASE_SHORT, buildFabHeatmap, getHeatColor } from "@/lib/scheduleUtils";
+import { PHASE_COLORS, PHASE_SHORT } from "@/lib/scheduleUtils";
 import { cn } from "@/lib/utils";
 
 const TODAY = startOfDay(new Date());
@@ -181,73 +181,6 @@ function TodayLine({ days, totalDays }) {
   );
 }
 
-// ─── Fab Load row ─────────────────────────────────────────────────────────────
-function FabLoadRow({ heatmap, days, capacity, totalDays }) {
-  const [tooltip, setTooltip] = useState(null);
-
-  return (
-    <div className="relative flex items-center border-b border-border/50 h-8 bg-muted/20">
-      {/* Label */}
-      <div
-        className="shrink-0 px-3 flex items-center z-10 bg-muted/20"
-        style={{ width: LABEL_COL_W }}
-      >
-        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Fab Load</span>
-      </div>
-
-      {/* Heatmap dots — positioned on the shared coordinate system */}
-      <div
-        className="absolute top-0 bottom-0 overflow-hidden"
-        style={{ left: LABEL_COL_W, right: INSTALL_COL_W }}
-      >
-        {/* Today line */}
-        <TodayLine days={days} totalDays={totalDays} />
-
-        {/* Grid lines */}
-        <GridLines days={days} windowStart={days[0]} totalDays={totalDays} zoom="Month" />
-
-        {/* One dot per day */}
-        {days.map((d, i) => {
-          const key = format(d, "yyyy-MM-dd");
-          const entry = heatmap[key] || { count: 0, hours: 0 };
-          const { bg, label } = getHeatColor(entry.hours, capacity);
-          const isToday = isSameDay(d, TODAY);
-          const dotSize = Math.min(14, Math.max(6, (1 / totalDays) * 500));
-
-          return (
-            <div
-              key={key}
-              className="absolute top-0 bottom-0 flex items-center justify-center"
-              style={{ left: leftPct(i, totalDays), width: widthPct(1, totalDays) }}
-            >
-              <div
-                className={cn(
-                  "rounded-full transition-all cursor-default",
-                  entry.hours > 0 ? bg : "bg-transparent",
-                  isToday && entry.hours > 0 && "ring-1 ring-red-500 ring-offset-1"
-                )}
-                style={{
-                  width: Math.min(dotSize, 12),
-                  height: Math.min(dotSize, 12),
-                  minWidth: 4,
-                  minHeight: 4,
-                }}
-                title={entry.hours > 0
-                  ? `${format(d, "EEE MMM d")} — ${label} · ${entry.count} job(s) in fab · ~${Math.round(entry.hours)}h`
-                  : `${format(d, "EEE MMM d")} — No fabrication`
-                }
-              />
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Right spacer */}
-      <div className="shrink-0" style={{ width: INSTALL_COL_W }} />
-    </div>
-  );
-}
-
 // ─── Individual phase bar ─────────────────────────────────────────────────────
 function PhaseBar({ phase, windowStart, windowEnd, totalDays }) {
   const s = parseISO(phase.startDate);
@@ -345,9 +278,8 @@ function JobRow({ job, days, windowStart, windowEnd, totalDays }) {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export default function TimelineView({ jobs, days, windowStart, windowEnd, zoom, capacity = 32 }) {
+export default function TimelineView({ jobs, days, windowStart, windowEnd, zoom }) {
   const totalDays = Math.max(1, days.length);
-  const heatmap = buildFabHeatmap(jobs, days);
 
   return (
     <div className="flex-1 overflow-auto border rounded-xl bg-card">
@@ -377,16 +309,9 @@ export default function TimelineView({ jobs, days, windowStart, windowEnd, zoom,
           </div>
         </div>
 
-        {/* Fab load row */}
-        <FabLoadRow heatmap={heatmap} days={days} capacity={capacity} totalDays={totalDays} />
-
-        {/* Legend */}
+        {/* Phase legend */}
         <div className="flex items-center gap-3 px-3 py-1.5 text-[9px] text-muted-foreground flex-wrap border-t border-border/20">
-          <span className="font-semibold uppercase tracking-wide">Fab Load:</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full inline-block bg-emerald-300" /> Light</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full inline-block bg-amber-300" /> Moderate</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full inline-block bg-red-400" /> Heavy</span>
-          <span className="ml-3 font-semibold uppercase tracking-wide">Phases:</span>
+          <span className="font-semibold uppercase tracking-wide">Phases:</span>
           {Object.entries(PHASE_SHORT).map(([phaseName, label]) => {
             const c = PHASE_COLORS[phaseName];
             if (!c) return null;

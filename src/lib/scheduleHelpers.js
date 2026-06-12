@@ -2,11 +2,11 @@ import { addDays, subDays, parseISO, isValid, format, isBefore, isAfter, isSameD
 
 // Phase definitions (ordered from latest to earliest — we work backwards)
 export const PHASE_DEFS = [
-  { name: "Install Day",              businessDays: 1,  color: "emerald", tailwind: "bg-emerald-500",   border: "border-emerald-500",   text: "text-emerald-700",   light: "bg-emerald-100" },
-  { name: "Ready for Install",        businessDays: 3,  color: "lime",    tailwind: "bg-lime-500",      border: "border-lime-500",      text: "text-lime-700",      light: "bg-lime-100" },
-  { name: "Powder Coat",              businessDays: 5,  color: "blue",    tailwind: "bg-blue-500",      border: "border-blue-500",      text: "text-blue-700",      light: "bg-blue-100" },
-  { name: "Fabrication",              businessDays: 10, color: "orange",  tailwind: "bg-orange-500",    border: "border-orange-500",    text: "text-orange-700",    light: "bg-orange-100" },
-  { name: "Measure & Design Approval",businessDays: 5,  color: "purple",  tailwind: "bg-purple-500",    border: "border-purple-500",    text: "text-purple-700",    light: "bg-purple-100" },
+  { name: "Install",      businessDays: 2,  color: "emerald", tailwind: "bg-emerald-500", border: "border-emerald-500", text: "text-emerald-700", light: "bg-emerald-100" },
+  { name: "Powder Coat",  businessDays: 5,  color: "blue",    tailwind: "bg-blue-500",    border: "border-blue-500",    text: "text-blue-700",   light: "bg-blue-100" },
+  { name: "Fabricate",    businessDays: 10, color: "orange",  tailwind: "bg-orange-500",  border: "border-orange-500",  text: "text-orange-700", light: "bg-orange-100" },
+  { name: "Draw",         businessDays: 4,  color: "purple",  tailwind: "bg-purple-500",  border: "border-purple-500",  text: "text-purple-700", light: "bg-purple-100" },
+  { name: "Measure",      businessDays: 2,  color: "sky",     tailwind: "bg-sky-500",     border: "border-sky-500",     text: "text-sky-700",    light: "bg-sky-100" },
 ];
 
 export const STANDARD_RUNWAY = 24; // standard ~4 weeks of business days total
@@ -116,10 +116,12 @@ export function generateSchedule(promisedInstallDateStr) {
 export function getPhaseColors(color) {
   const map = {
     emerald: { bg: "bg-emerald-500", light: "bg-emerald-100", text: "text-emerald-700", border: "border-emerald-400", hex: "#10b981" },
-    lime:    { bg: "bg-lime-500",    light: "bg-lime-100",    text: "text-lime-700",    border: "border-lime-400",    hex: "#84cc16" },
     blue:    { bg: "bg-blue-500",    light: "bg-blue-100",    text: "text-blue-700",    border: "border-blue-400",    hex: "#3b82f6" },
     orange:  { bg: "bg-orange-500",  light: "bg-orange-100",  text: "text-orange-700",  border: "border-orange-400",  hex: "#f97316" },
     purple:  { bg: "bg-purple-500",  light: "bg-purple-100",  text: "text-purple-700",  border: "border-purple-400",  hex: "#a855f7" },
+    sky:     { bg: "bg-sky-500",     light: "bg-sky-100",     text: "text-sky-700",     border: "border-sky-400",     hex: "#0ea5e9" },
+    // legacy aliases kept for old stored schedules
+    lime:    { bg: "bg-emerald-500", light: "bg-emerald-100", text: "text-emerald-700", border: "border-emerald-400", hex: "#10b981" },
   };
   return map[color] || map.blue;
 }

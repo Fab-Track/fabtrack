@@ -8,41 +8,46 @@ export const ZOOM_LEVELS = ["Day", "Week", "Month", "Quarter"];
 export const VIEW_MODES = ["Timeline", "Calendar", "Crew", "List"];
 
 export const PHASE_ORDER = [
-  "Measure & Design Approval",
-  "Fabrication",
+  "Measure",
+  "Draw",
+  "Fabricate",
   "Powder Coat",
-  "Ready for Install",
-  "Install Day",
+  "Install",
 ];
 
 export const PHASE_SHORT = {
-  "Measure & Design Approval": "Design",
-  "Fabrication": "Fabrication",
+  "Measure":     "Measure",
+  "Draw":        "Draw",
+  "Fabricate":   "Fabricate",
   "Powder Coat": "Powder Coat",
-  "Ready for Install": "Staging",
-  "Install Day": "Install",
+  "Install":     "Install",
 };
 
 export const PHASE_COLORS = {
-  "Measure & Design Approval": { bg: "bg-purple-500", text: "text-white", light: "bg-purple-100 text-purple-800", hex: "#a855f7" },
-  "Fabrication": { bg: "bg-orange-500", text: "text-white", light: "bg-orange-100 text-orange-800", hex: "#f97316" },
-  "Powder Coat": { bg: "bg-blue-500", text: "text-white", light: "bg-blue-100 text-blue-800", hex: "#3b82f6" },
-  "Ready for Install": { bg: "bg-lime-500", text: "text-white", light: "bg-lime-100 text-lime-800", hex: "#84cc16" },
-  "Install Day": { bg: "bg-emerald-500", text: "text-white", light: "bg-emerald-100 text-emerald-800", hex: "#10b981" },
+  "Measure":     { bg: "bg-sky-500",     text: "text-white", light: "bg-sky-100 text-sky-800",         hex: "#0ea5e9" },
+  "Draw":        { bg: "bg-purple-500",  text: "text-white", light: "bg-purple-100 text-purple-800",   hex: "#a855f7" },
+  "Fabricate":   { bg: "bg-orange-500",  text: "text-white", light: "bg-orange-100 text-orange-800",   hex: "#f97316" },
+  "Powder Coat": { bg: "bg-blue-500",    text: "text-white", light: "bg-blue-100 text-blue-800",       hex: "#3b82f6" },
+  "Install":     { bg: "bg-emerald-500", text: "text-white", light: "bg-emerald-100 text-emerald-800", hex: "#10b981" },
 };
 
-// Fallback for legacy color names from scheduleHelpers
+// Fallback for legacy color names and old phase names from stored schedules
 export function getPhaseColorByName(colorOrName) {
-  // Direct match on phase name
   if (PHASE_COLORS[colorOrName]) return PHASE_COLORS[colorOrName];
-  // Legacy color name mapping
   const legacyMap = {
-    purple: PHASE_COLORS["Measure & Design Approval"],
-    orange: PHASE_COLORS["Fabrication"],
-    blue: PHASE_COLORS["Powder Coat"],
-    lime: PHASE_COLORS["Ready for Install"],
-    emerald: PHASE_COLORS["Install Day"],
-    green: PHASE_COLORS["Install Day"],
+    // old phase names
+    "Measure & Design Approval": PHASE_COLORS["Draw"],
+    "Fabrication":               PHASE_COLORS["Fabricate"],
+    "Ready for Install":         PHASE_COLORS["Install"],
+    "Install Day":               PHASE_COLORS["Install"],
+    // old color names
+    sky:     PHASE_COLORS["Measure"],
+    purple:  PHASE_COLORS["Draw"],
+    orange:  PHASE_COLORS["Fabricate"],
+    blue:    PHASE_COLORS["Powder Coat"],
+    emerald: PHASE_COLORS["Install"],
+    lime:    PHASE_COLORS["Install"],
+    green:   PHASE_COLORS["Install"],
   };
   return legacyMap[colorOrName] || { bg: "bg-muted", text: "text-foreground", light: "bg-muted text-muted-foreground", hex: "#6b7280" };
 }
@@ -93,7 +98,7 @@ export function buildFabHeatmap(jobs, days) {
   days.forEach(d => { map[format(d, "yyyy-MM-dd")] = { count: 0, hours: 0 }; });
 
   jobs.forEach(job => {
-    const fabPhase = (job.schedule_phases || []).find(p => p.name === "Fabrication");
+    const fabPhase = (job.schedule_phases || []).find(p => p.name === "Fabricate" || p.name === "Fabrication");
     if (!fabPhase) return;
     const s = parseISO(fabPhase.startDate);
     const e = parseISO(fabPhase.endDate);
