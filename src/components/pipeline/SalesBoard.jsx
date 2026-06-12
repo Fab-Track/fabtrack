@@ -151,7 +151,10 @@ export default function SalesBoard({ jobs = [] }) {
     queryFn: () => base44.entities.User.list("full_name", 200),
   });
   const estimatorReps = allUsers
-    .filter(u => u.role === "estimator" || u.role === "owner")
+    .filter(u => {
+      const role = (u.role || "").toLowerCase();
+      return role === "estimator" || role === "owner" || role === "admin";
+    })
     .map(u => ({ id: u.id, name: u.full_name }))
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
