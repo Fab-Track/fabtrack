@@ -7,6 +7,7 @@ import KpiCard from "./shared/KpiCard";
 import EmptyState from "./shared/EmptyState";
 import ReportHeader from "./shared/ReportHeader";
 import ReportExportButtons from "./ReportExportButtons";
+import PhaseDurationReport from "./PhaseDurationReport";
 
 const STAGE_ORDER = ["In Fabrication", "At Powder Coat", "Ready for Install", "Install Scheduled", "Install Complete"];
 
@@ -151,6 +152,9 @@ export default function ProductionReport() {
           </div>
         ) : <EmptyState />}
       </section>
+
+      {/* Phase Duration Analysis */}
+      <PhaseDurationReport />
 
       {/* Work center utilization */}
       {wcData.length > 0 && (
