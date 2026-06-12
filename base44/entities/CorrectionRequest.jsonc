@@ -1,0 +1,62 @@
+{
+  "name": "CorrectionRequest",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "Employee ID requesting the correction"
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Employee name (denormalized)"
+    },
+    "time_entry_id": {
+      "type": "string",
+      "description": "Optional \u2014 specific time entry to correct"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "The day in question"
+    },
+    "description": {
+      "type": "string",
+      "description": "Employee's description of what's wrong"
+    },
+    "requested_action": {
+      "type": "string",
+      "description": "What the employee wants (e.g. 'Forgot to clock out at 4:30 PM')"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending"
+    },
+    "admin_response": {
+      "type": "string",
+      "description": "Admin's notes when approving/rejecting"
+    },
+    "approved_by_id": {
+      "type": "string",
+      "description": "Admin user ID who approved/rejected"
+    },
+    "approved_by_name": {
+      "type": "string",
+      "description": "Admin name who approved/rejected"
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the request was resolved"
+    }
+  },
+  "required": [
+    "employee_id",
+    "date",
+    "description"
+  ]
+}

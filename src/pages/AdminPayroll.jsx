@@ -23,10 +23,11 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Download, Users, Clock, Pencil, Plus, AlertTriangle, CheckCircle, ChevronDown, ChevronRight } from "lucide-react";
+import { Download, Users, Clock, Pencil, Plus, AlertTriangle, CheckCircle, ChevronDown, ChevronRight, MessageSquare, FileEdit } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import LiveStatusTable from "@/components/timetracking/LiveStatusTable";
 import AdminTimeEntryEdit from "@/components/timetracking/AdminTimeEntryEdit";
+import AdminCorrectionsPanel from "@/components/timetracking/AdminCorrectionsPanel";
 
 const PP_OPTIONS = [
   { value: "current", label: () => `Current: ${getCurrentPayPeriod().label}` },
@@ -66,6 +67,42 @@ export default function AdminPayroll() {
   const { data: auditLogs = [] } = useQuery({
     queryKey: ["timeAuditLogs"],
     queryFn: () => base44.entities.TimeAuditLog.list("-changed_at", 500),
+  });
+
+  const { data: correctionRequests = [] } = useQuery({
+    queryKey: ["correctionRequests"],
+    queryFn: () => base44.entities.CorrectionRequest.list("-created_date", 200),
+    refetchInterval: 30000,
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: ({ requestId, response }) =>
+      base44.entities.CorrectionRequest.update(requestId, {
+        status: "approved",
+        admin_response: response || null,
+        approved_by_id: user?.id,
+        approved_by_name: user?.full_name,
+        resolved_at: new Date().toISOString(),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["correctionRequests"] });
+      toast({ title: "Approved", description: "Correction request approved." });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: ({ requestId, response }) =>
+      base44.entities.CorrectionRequest.update(requestId, {
+        status: "rejected",
+        admin_response: response || null,
+        approved_by_id: user?.id,
+        approved_by_name: user?.full_name,
+        resolved_at: new Date().toISOString(),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["correctionRequests"] });
+      toast({ title: "Rejected", description: "Correction request rejected." });
+    },
   });
 
   if (!isAdmin) return (
@@ -173,6 +210,9 @@ export default function AdminPayroll() {
           </TabsTrigger>
           <TabsTrigger value="entries" className="gap-2">
             <Pencil className="w-3.5 h-3.5" /> Edit Entries
+          </TabsTrigger>
+          <TabsTrigger value="corrections" className="gap-2">
+            <FileEdit className="w-3.5 h-3.5" /> Corrections
           </TabsTrigger>
           <TabsTrigger value="audit" className="gap-2">
             <CheckCircle className="w-3.5 h-3.5" /> Audit Log
@@ -286,6 +326,20 @@ export default function AdminPayroll() {
             activeEntries={activeEntries}
             pp={pp}
             currentUser={user}
+            onRefresh={() => qc.invalidateQueries({ queryKey: ["timeEntries"] })}
+          />
+        </TabsContent>
+
+        {/* ── CORRECTIONS ─────────────────────────────────────────────────── */}
+        <TabsContent value="corrections" className="mt-4">
+          <AdminCorrectionsPanel
+            requests={correctionRequests}
+            employees={activeEmployees}
+            allEntries={allEntries}
+            auditLogs={auditLogs}
+            currentUser={user}
+            onApprove={(id, resp) => approveMutation.mutate({ requestId: id, response: resp })}
+            onReject={(id, resp) => rejectMutation.mutate({ requestId: id, response: resp })}
             onRefresh={() => qc.invalidateQueries({ queryKey: ["timeEntries"] })}
           />
         </TabsContent>
