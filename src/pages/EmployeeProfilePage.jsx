@@ -53,7 +53,12 @@ export default function EmployeeProfilePage() {
   });
 
   // Access control: non-managers can only see their own profile
-  const isOwnProfile = employee?.email === user?.email;
+  // Match by email OR personal_email OR created_by_id (same fallback logic as MyAccountSection)
+  const isOwnProfile = !!employee && (
+    (employee.email && employee.email === user?.email) ||
+    (employee.personal_email && employee.personal_email === user?.email) ||
+    (employee.created_by_id && employee.created_by_id === user?.id)
+  );
   const canViewAny = canManageHR || isOwnProfile;
 
   const handleSendOnboarding = async () => {
