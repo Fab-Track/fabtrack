@@ -51,17 +51,20 @@ const ROLE_NAV = {
     { group: "SALES",       items: ["conversations"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "PAYROLL",     items: ["payroll"] },
+    { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   estimator: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "SALES",       items: ["jobBoard", "customers", "conversations", "documents"] },
     { group: "OPERATIONS",  items: ["reports"] },
+    { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   design_specialist: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "WORK",        items: ["jobBoard", "schedule"] },
+    { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   fabricator: [
