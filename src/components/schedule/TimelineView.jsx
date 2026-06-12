@@ -1,7 +1,7 @@
 import React, { useRef } from "react";
 import { format, parseISO, differenceInCalendarDays, isSameDay, startOfDay, startOfMonth, isSameMonth } from "date-fns";
 import { Link } from "react-router-dom";
-import { PHASE_COLORS, PHASE_SHORT } from "@/lib/scheduleUtils";
+import { PHASE_COLORS, PHASE_SHORT, getPhaseColorByName } from "@/lib/scheduleUtils";
 import { cn } from "@/lib/utils";
 
 const TODAY = startOfDay(new Date());
@@ -195,7 +195,7 @@ function PhaseBar({ phase, windowStart, windowEnd, totalDays }) {
   const leftP = (offset / totalDays) * 100;
   const widthP = Math.max(0.5, (duration / totalDays) * 100);
 
-  const colors = PHASE_COLORS[phase.name] || PHASE_COLORS["Fabrication"];
+  const colors = PHASE_COLORS[phase.name] || getPhaseColorByName(phase.color) || getPhaseColorByName(phase.name);
   const faded = phase.status === "complete";
   const isTrimmedLeft = s < windowStart;
   const isTrimmedRight = e > windowEnd;
