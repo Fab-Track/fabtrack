@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Upload, CheckCircle2, Circle, RefreshCw, Trash2, Eye, EyeOff, LogOut } from "lucide-react";
+import EmployeeProfileView from "@/components/employees/EmployeeProfileView";
 import PasswordStrengthIndicator from "@/components/auth/PasswordStrengthIndicator";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
@@ -20,6 +21,7 @@ import {
 export default function MyAccountSection() {
   const { user, checkUserAuth } = useAuth();
   const qc = useQueryClient();
+  const [profileSheetOpen, setProfileSheetOpen] = useState(false);
   const nameParts = (user?.full_name || "").split(" ");
   const [form, setForm] = useState({
     first_name: nameParts[0] || "",
@@ -160,21 +162,30 @@ export default function MyAccountSection() {
         <Input className="h-8" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="+1..." />
       </div>
 
-      {/* Employee Profile Card — prominent link to full profile */}
+      {/* Employee Profile Card — opens sheet */}
       {myEmployee ? (
-        <div className="border rounded-xl p-4 bg-primary/5 border-primary/20">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-0.5">Employee Profile</p>
-              <p className="text-sm font-medium">{myEmployee.name}</p>
-              <p className="text-xs text-muted-foreground capitalize">{myEmployee.role?.replace(/_/g, " ")}{myEmployee.work_center_primary ? ` · ${myEmployee.work_center_primary}` : ""}</p>
+        <>
+          <div className="border rounded-xl p-4 bg-primary/5 border-primary/20">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-0.5">Employee Profile</p>
+                <p className="text-sm font-medium">{myEmployee.name}</p>
+                <p className="text-xs text-muted-foreground capitalize">{myEmployee.role?.replace(/_/g, " ")}{myEmployee.work_center_primary ? ` · ${myEmployee.work_center_primary}` : ""}</p>
+              </div>
+              <Button size="sm" onClick={() => setProfileSheetOpen(true)}>View My Full Profile</Button>
             </div>
-            <Link to={`/employees/${myEmployee.id}`}>
-              <Button size="sm">View My Full Profile</Button>
-            </Link>
+            <p className="text-xs text-muted-foreground mt-2">View and edit your personal info, culture, goals, and more.</p>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">View and edit your personal info, culture, goals, and more.</p>
-        </div>
+
+          <Sheet open={profileSheetOpen} onOpenChange={setProfileSheetOpen}>
+            <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+              <SheetHeader className="mb-4">
+                <SheetTitle>My Employee Profile</SheetTitle>
+              </SheetHeader>
+              <EmployeeProfileView employeeId={myEmployee.id} />
+            </SheetContent>
+          </Sheet>
+        </>
       ) : (
         <div className="border rounded-xl p-4 bg-muted/30 text-xs text-muted-foreground">
           No employee profile linked to your account. Ask your admin to add your email (<strong>{user?.email}</strong>) to your employee record.
