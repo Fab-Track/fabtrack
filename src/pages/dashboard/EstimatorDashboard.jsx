@@ -2,7 +2,7 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { differenceInDays, parseISO, format, startOfMonth, endOfMonth } from "date-fns";
+import { differenceInDays, parseISO, format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
 import { FileText, CheckCircle2, TrendingUp, DollarSign, Clock } from "lucide-react";
 import DashKpiCard from "@/components/dashboard/shared/DashKpiCard";
 import DashWidget from "@/components/dashboard/shared/DashWidget";
@@ -16,24 +16,36 @@ const STATUS_COLORS = {
   Draft: "bg-gray-100 text-gray-600",
 };
 
+const PERIOD_OPTIONS = [
+  { key: "mtd", label: "MTD" },
+  { key: "qtd", label: "QTD" },
+  { key: "ytd", label: "YTD" },
+];
+
 export default function EstimatorDashboard() {
   const navigate = useNavigate();
+  const [period, setPeriod] = React.useState("mtd");
   const now = new Date();
-  const monthStart = startOfMonth(now);
-  const monthEnd = endOfMonth(now);
   const today = new Date();
+
+  const periodRanges = {
+    mtd:  { start: startOfMonth(now), end: endOfMonth(now), label: "MTD" },
+    qtd:  { start: startOfQuarter(now), end: endOfQuarter(now), label: "QTD" },
+    ytd:  { start: startOfYear(now), end: endOfYear(now), label: "YTD" },
+  };
+  const currentRange = periodRanges[period];
 
   const { data: jobs = [], isLoading } = useQuery({ queryKey: ["jobs"], queryFn: () => base44.entities.Job.list("-created_date", 300), refetchInterval: 5 * 60 * 1000 });
   const { data: estimates = [] } = useQuery({ queryKey: ["estimates-all"], queryFn: () => base44.entities.Estimate.list("-created_date", 300), refetchInterval: 5 * 60 * 1000 });
 
   // KPIs
-  const mtdEstimates = estimates.filter(e => {
+  const periodEstimates = estimates.filter(e => {
     const d = e.created_date ? parseISO(e.created_date) : null;
-    return d && d >= monthStart && d <= monthEnd;
+    return d && d >= currentRange.start && d <= currentRange.end;
   });
-  const sentMTD = mtdEstimates.filter(e => ["Sent","Approved","Rejected"].includes(e.status)).length;
-  const approvedMTD = mtdEstimates.filter(e => e.status === "Approved").length;
-  const closeRateMTD = sentMTD > 0 ? Math.round((approvedMTD / sentMTD) * 100) : 0;
+  const sentPeriod = periodEstimates.filter(e => ["Sent","Approved","Rejected"].includes(e.status)).length;
+  const approvedPeriod = periodEstimates.filter(e => e.status === "Approved").length;
+  const closeRatePeriod = sentPeriod > 0 ? Math.round((approvedPeriod / sentPeriod) * 100) : 0;
   const pipelineValue = estimates
     .filter(e => e.status === "Sent")
     .reduce((s, e) => s + (e.total || 0), 0);
@@ -80,11 +92,28 @@ export default function EstimatorDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* KPIs */}
+      {/* Period selector + KPIs */}
+      <div className="flex items-center justify-end mb-3">
+        <div className="flex gap-0.5 bg-muted rounded-lg p-0.5">
+          {PERIOD_OPTIONS.map(opt => (
+            <button
+              key={opt.key}
+              onClick={() => setPeriod(opt.key)}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                period === opt.key
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <DashKpiCard label="Estimates Sent (MTD)" value={sentMTD} icon={FileText} iconColor="bg-blue-100 text-blue-700" />
-        <DashKpiCard label="Approved (MTD)" value={approvedMTD} icon={CheckCircle2} iconColor="bg-emerald-100 text-emerald-700" />
-        <DashKpiCard label="Close Rate (MTD)" value={sentMTD > 0 ? `${closeRateMTD}%` : "—"} icon={TrendingUp} iconColor="bg-purple-100 text-purple-700" />
+        <DashKpiCard label={`Estimates Sent (${currentRange.label})`} value={sentPeriod} icon={FileText} iconColor="bg-blue-100 text-blue-700" />
+        <DashKpiCard label={`Approved (${currentRange.label})`} value={approvedPeriod} icon={CheckCircle2} iconColor="bg-emerald-100 text-emerald-700" />
+        <DashKpiCard label={`Close Rate (${currentRange.label})`} value={sentPeriod > 0 ? `${closeRatePeriod}%` : "—"} icon={TrendingUp} iconColor="bg-purple-100 text-purple-700" />
         <DashKpiCard label="Pipeline Value" value={`$${pipelineValue.toLocaleString()}`} sub="Awaiting approval" icon={DollarSign} iconColor="bg-amber-100 text-amber-700" />
       </div>
 
