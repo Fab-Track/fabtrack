@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
+import { getUserRoles, isOwnerLevel } from "@/lib/roleHelpers";
 import { Building2, Users, Bell, MessageSquare, Plug, LayoutDashboard, CreditCard, User, ClipboardList, Shield } from "lucide-react";
 import CompanySection from "@/components/settings/CompanySection";
 import UsersRolesSection from "@/components/settings/UsersRolesSection";
@@ -41,13 +42,13 @@ import PayrollSettingsSection from "@/components/settings/PayrollSettingsSection
 
 export default function Settings() {
   const { user } = useAuth();
-  const role = (user?.role || "").toLowerCase();
-  const isOwner = ["admin", "owner"].includes(role);
+  const userRoles = getUserRoles(user);
+  const isOwner = isOwnerLevel(user);
 
   // Filter sections by role
   const visible = ALL_SECTIONS.filter(s => {
     if (s.ownerOnly) return isOwner;
-    if (s.roles) return s.roles.includes(role);
+    if (s.roles) return userRoles.some(r => s.roles.includes(r));
     return false;
   });
 
@@ -57,7 +58,7 @@ export default function Settings() {
     switch (active) {
       case "company":      return <CompanySection />;
       case "users":        return <UsersRolesSection />;
-      case "notifications":return <NotificationsSection isOwner={isOwner} userRole={role} />;
+      case "notifications":return <NotificationsSection isOwner={isOwner} userRole={userRoles[0] || "user"} />;
       case "templates":    return <MessageTemplatesSection />;
       case "integrations": return <IntegrationsSection />;
       case "jobboard":     return <JobBoardSettingsSection />;

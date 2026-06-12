@@ -2,7 +2,7 @@
 // FabTrack Permissions Data
 // ─────────────────────────────────────────────────────────────────
 
-export const ROLES = ["shop_manager", "estimator", "design_specialist", "fabricator", "accountant"];
+export const ROLES = ["shop_manager", "estimator", "design_specialist", "fabricator", "accountant", "payroll"];
 export const ROLE_LABELS = {
   owner: "Owner",
   shop_manager: "Shop Manager",
@@ -10,6 +10,7 @@ export const ROLE_LABELS = {
   design_specialist: "Design Specialist",
   fabricator: "Fabricator",
   accountant: "Accountant",
+  payroll: "Payroll",
 };
 
 export const ROLE_SUMMARIES = {
@@ -18,6 +19,7 @@ export const ROLE_SUMMARIES = {
   design_specialist: "Sees Job Board, Schedule, Drawing Queue, Documents",
   fabricator: "Sees assigned jobs, clocks in/out, Shop Floor, Work Centers, install schedule and site details",
   accountant: "Sees Invoices, Financial Reports, Customer Balances",
+  payroll: "Sees Time & Payroll, employee hours, basic employee info, approves corrections, exports payroll",
 };
 
 // Access levels: 3=Full Control, 2=Edit, 1=View Only, 0=No Access
@@ -304,6 +306,29 @@ export const DEFAULT_PERMISSIONS = {
     comm_send: 2, comm_all: 2, comm_own: 2, comm_templates: 0,
     set_company: 0, set_users: 0, set_notif_shop: 0, set_notif_self: 3,
     set_templates: 0, set_integrations: 0, set_jobboard: 0, set_billing: 1, set_account: 3,
+  },
+  // Payroll — time & payroll focused, limited elsewhere
+  payroll: {
+    dash_own: 3, dash_other: 0, messages: 1, reports_overview: 0, reports_sales: 0,
+    reports_financial: 0, reports_production: 0, reports_customers: 0,
+    jobs_view: 0, jobs_create: 0, jobs_edit: 0, jobs_delete: 0, jobs_move: 0,
+    jobs_costing: 0, jobs_contact: 0,
+    est_view: 0, est_create: 0, est_edit_draft: 0, est_edit_sent: 0, est_send: 0,
+    est_approve: 0, est_delete: 0,
+    inv_view: 0, inv_create: 0, inv_edit: 0, inv_send: 0, inv_paid: 0, inv_delete: 0,
+    co_view: 0, co_create: 0, co_edit: 0, co_send: 0, co_approve: 0, co_delete: 0,
+    cust_view_list: 0, cust_view_profile: 0, cust_view_financial: 0, cust_view_transactions: 0,
+    cust_create: 0, cust_edit: 0, cust_delete: 0,
+    docs_view: 0, docs_financial: 0, docs_create: 0, docs_delete: 0,
+    sched_own: 0, sched_all: 0, sched_edit: 0, sched_assign: 0,
+    shop_clock: 0, shop_live: 3, shop_manual: 2, shop_edit_time: 2, shop_log: 1,
+    score_own: 0, score_all: 0, score_detail: 0, score_notes: 0,
+    emp_list: 1, emp_profile: 0, emp_rates: 1, emp_edit: 0, emp_deactivate: 0,
+    inv_view_items: 0, inv_edit_items: 0, inv_delete_items: 0, inv_po: 0,
+    wc_view: 0, wc_edit: 0,
+    comm_send: 0, comm_all: 0, comm_own: 0, comm_templates: 0,
+    set_company: 0, set_users: 0, set_notif_shop: 0, set_notif_self: 3,
+    set_templates: 0, set_integrations: 0, set_jobboard: 0, set_billing: 0, set_account: 3,
   },
 };
 

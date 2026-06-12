@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
+import { getUserRoles, isOwnerLevel, hasRole } from "@/lib/roleHelpers";
 import { isWithinInterval, parseISO, differenceInDays } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import ReportDateFilter from "./ReportDateFilter";
@@ -26,9 +27,10 @@ const LEADERBOARD_COLORS = ["#f59e0b", "#94a3b8", "#b45309"];
 
 export default function SalesRepPerformance({ jobs, estimates, invoices }) {
   const { user } = useAuth();
-  const effectiveRole = useEffectiveRole(user?.role || "user");
-  const isAdmin = ["owner", "admin"].includes(effectiveRole.toLowerCase());
-  const isEstimator = effectiveRole.toLowerCase() === "estimator";
+  const userRoles = getUserRoles(user);
+  const effectiveRole = useEffectiveRole(userRoles[0] || "user");
+  const isAdmin = isOwnerLevel(user);
+  const isEstimator = hasRole(user, "estimator");
 
   const [range, setRange] = useState(null);
   const [rankBy, setRankBy] = useState("collected");

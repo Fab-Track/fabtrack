@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 import { useImpersonation, canImpersonate, canImpersonateEmployee } from "@/lib/ImpersonationContext";
+import { getUserRoles, isOwnerLevel, hasRole } from "@/lib/roleHelpers";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,12 +28,13 @@ const FILTERS = ["Active", "All", "Terminated", "Onboarding Pending"];
 
 export default function Employees() {
   const { user } = useAuth();
-  const effectiveRole = useEffectiveRole(user?.role || "");
-  const isOwner = ["admin", "owner"].includes(effectiveRole.toLowerCase());
-  const canManageHR = isOwner || effectiveRole.toLowerCase() === "shop_manager";
+  const userRoles = getUserRoles(user);
+  const effectiveRole = useEffectiveRole(userRoles[0] || "");
+  const isOwner = isOwnerLevel(user);
+  const canManageHR = isOwner || hasRole(user, "shop_manager");
   const { startImpersonation } = useImpersonation();
   const navigate = useNavigate();
-  const userCanImpersonate = canImpersonate(user?.role);
+  const userCanImpersonate = canImpersonate(user);
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("Active");
@@ -125,7 +127,7 @@ export default function Employees() {
             const tenure = tenureString(emp.start_date);
             const isTerminated = emp.employment_status === "Terminated";
 
-            const showViewAs = userCanImpersonate && !isTerminated && canImpersonateEmployee(user?.role, emp.role);
+            const showViewAs = userCanImpersonate && !isTerminated && canImpersonateEmployee(user, emp.role);
             return (
               <Link key={emp.id} to={`/employees/${emp.id}`}>
                 <div className={`bg-card border rounded-xl p-4 hover:shadow-md transition-shadow flex items-center gap-4 ${isTerminated ? "opacity-60" : ""}`}>

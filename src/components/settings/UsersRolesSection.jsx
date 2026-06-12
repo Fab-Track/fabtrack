@@ -323,7 +323,10 @@ export default function UsersRolesSection() {
         <RoleSummaryCard
           role={summaryRole}
           permissions={permissions[summaryRole] || DEFAULT_PERMISSIONS[summaryRole] || {}}
-          userCount={users.filter(u => (u.role || "").toLowerCase() === summaryRole).length}
+          userCount={users.filter(u => {
+            const rl = (u.roles && u.roles.length > 0) ? u.roles : (u.role ? [u.role] : []);
+            return rl.some(r => r.toLowerCase() === summaryRole);
+          }).length}
           open={!!summaryRole}
           onClose={() => setSummaryRole(null)}
         />

@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
+import { getUserRoles, hasRole } from "@/lib/roleHelpers";
 import { getBoardsForRole, getDefaultBoard, SALES_STAGES, SHOP_STAGES, BILLING_STAGES } from "@/lib/pipelineHelpers";
 
 const BOARD_STAGES = { Sales: SALES_STAGES, Shop: SHOP_STAGES, Billing: BILLING_STAGES };
@@ -32,9 +33,10 @@ const BOARD_COLORS = {
 
 export default function JobBoard() {
   const { user } = useAuth();
-  const effectiveRole = useEffectiveRole(user?.role || "admin");
-  const isFabricator = effectiveRole.toLowerCase() === "fabricator";
-  const isAccountant = effectiveRole.toLowerCase() === "accountant";
+  const userRoles = getUserRoles(user);
+  const effectiveRole = useEffectiveRole(userRoles[0] || "admin");
+  const isFabricator = hasRole(user, "fabricator");
+  const isAccountant = hasRole(user, "accountant");
 
   const [filterType, setFilterType] = useState("all");
   const [activeBoard, setActiveBoard] = useState(null);

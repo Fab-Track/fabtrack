@@ -72,18 +72,27 @@ export function useImpersonation() {
   return ctx;
 }
 
-// Roles that CAN impersonate
-export function canImpersonate(userRole) {
-  return ["admin", "owner", "shop_manager"].includes((userRole || "").toLowerCase());
+// Roles that CAN impersonate (accepts user object or string)
+export function canImpersonate(userOrRole) {
+  if (!userOrRole) return false;
+  if (typeof userOrRole === "object") {
+    return hasAnyRole(userOrRole, ["admin", "owner", "shop_manager"]);
+  }
+  return ["admin", "owner", "shop_manager"].includes((userOrRole || "").toLowerCase());
 }
 
-// Which employees a given role can impersonate
-export function canImpersonateEmployee(adminRole, employeeRole) {
-  const role = (adminRole || "").toLowerCase();
+// Which employees a given role can impersonate (accepts user object or string)
+export function canImpersonateEmployee(adminInfo, employeeRole) {
+  const isOwnerLevel = typeof adminInfo === "object"
+    ? hasAnyRole(adminInfo, ["admin", "owner"])
+    : ["admin", "owner"].includes((adminInfo || "").toLowerCase());
+  if (isOwnerLevel) return true;
+
+  const effRole = typeof adminInfo === "object"
+    ? getUserRoles(adminInfo)[0] || ""
+    : (adminInfo || "").toLowerCase();
   const empRole = (employeeRole || "").toLowerCase();
-  if (["admin", "owner"].includes(role)) return true;
-  if (role === "shop_manager") {
-    // Shop managers can only impersonate fabricators/installers/field roles
+  if (effRole === "shop_manager") {
     return ["welder", "fitter", "cutter", "installer", "grinder", "fabricator"].includes(empRole);
   }
   return false;

@@ -3,6 +3,7 @@ import { Eye, X, ChevronRight, UserCheck } from "lucide-react";
 import { usePreviewRole, PREVIEW_ROLE_OPTIONS } from "@/lib/PreviewRoleContext";
 import { useImpersonation, canImpersonate, canImpersonateEmployee } from "@/lib/ImpersonationContext";
 import { useAuth } from "@/lib/AuthContext";
+import { getUserRoles } from "@/lib/roleHelpers";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
@@ -17,7 +18,7 @@ export default function PreviewRoleSelector({ collapsed }) {
   const { data: employees = [] } = useQuery({
     queryKey: ["employees"],
     queryFn: () => base44.entities.Employee.list("-created_date", 100),
-    enabled: open && canImpersonate(user?.role),
+    enabled: open && canImpersonate(user),
   });
 
   useEffect(() => {
@@ -50,12 +51,12 @@ export default function PreviewRoleSelector({ collapsed }) {
       : null;
 
   const isActive = isImpersonating || isPreviewing;
-  const userCanImpersonate = canImpersonate(user?.role);
+  const userCanImpersonate = canImpersonate(user);
 
   // Only show employees that this user can impersonate
   const impersonatableEmployees = employees.filter(e =>
     e.is_active !== false &&
-    canImpersonateEmployee(user?.role, e.role)
+    canImpersonateEmployee(user, e.role)
   );
 
   return (
