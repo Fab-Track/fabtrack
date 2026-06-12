@@ -45,6 +45,14 @@ const ROLE_NAV = {
     { group: "PAYROLL",     items: ["payroll"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
+  owner: [
+    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
+    { group: "SALES",       items: ["jobBoard", "customers", "conversations", "documents"] },
+    { group: "OPERATIONS",  items: ["reports", "schedule", "workCenters", "inventory"] },
+    { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
+    { group: "PAYROLL",     items: ["payroll"] },
+    { group: "ACCOUNT",     items: ["settings"] },
+  ],
   shop_manager: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "OPERATIONS",  items: ["jobBoard", "reports", "schedule", "workCenters", "inventory"] },
@@ -85,6 +93,7 @@ const ROLE_NAV = {
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "SALES",       items: ["jobBoard"] },
     { group: "FINANCE",     items: ["documents", "customers", "conversations", "reports"] },
+    { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   welder: [
@@ -108,6 +117,7 @@ const ROLE_NAV = {
     { group: "OPERATIONS",  items: ["reports", "schedule", "workCenters", "inventory"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "PAYROLL",     items: ["payroll"] },
+    { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
 };

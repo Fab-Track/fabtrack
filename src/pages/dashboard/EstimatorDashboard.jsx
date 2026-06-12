@@ -1,12 +1,15 @@
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Skeleton } from "@/components/ui/skeleton";
-import { differenceInDays, parseISO, format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
+import { useAuth } from "@/lib/AuthContext";
+import { differenceInSeconds, parseISO, differenceInDays, format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
 import { FileText, CheckCircle2, TrendingUp, DollarSign, Clock } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import DashKpiCard from "@/components/dashboard/shared/DashKpiCard";
 import DashWidget from "@/components/dashboard/shared/DashWidget";
 import EstimatorFollowUpsWidget from "@/components/dashboard/estimator/EstimatorFollowUpsWidget";
+import MasterClockCard from "@/components/timetracking/MasterClockCard";
+import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -24,10 +27,13 @@ const PERIOD_OPTIONS = [
 ];
 
 export default function EstimatorDashboard() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [period, setPeriod] = React.useState("mtd");
   const now = new Date();
   const today = new Date();
+  const [activeElapsedSeconds, setActiveElapsedSeconds] = useState(0);
 
   const periodRanges = {
     mtd:  { start: startOfMonth(now), end: endOfMonth(now), label: "MTD" },
@@ -38,6 +44,31 @@ export default function EstimatorDashboard() {
 
   const { data: jobs = [], isLoading } = useQuery({ queryKey: ["jobs"], queryFn: () => base44.entities.Job.list("-created_date", 300), refetchInterval: 5 * 60 * 1000 });
   const { data: estimates = [] } = useQuery({ queryKey: ["estimates-all"], queryFn: () => base44.entities.Estimate.list("-created_date", 300), refetchInterval: 5 * 60 * 1000 });
+
+  // ── Clock-in data ──
+  const { data: employees = [] } = useQuery({ queryKey: ["employees"], queryFn: () => base44.entities.Employee.list("-created_date", 100) });
+  const { data: allTimeEntries = [] } = useQuery({ queryKey: ["timeEntries", "all"], queryFn: () => base44.entities.TimeEntry.list("-clock_in", 500) });
+  const { data: activeEntries = [] } = useQuery({ queryKey: ["timeEntries", "active"], queryFn: () => base44.entities.TimeEntry.filter({ is_active: true }), refetchInterval: 30000 });
+
+  const myEmployee2 = employees.find(e => e.email === user?.email || e.personal_email === user?.email || e.created_by_id === user?.id) || null;
+  const myId = myEmployee2?.id || user?.id;
+  const myActiveEntries2 = myId ? activeEntries.filter(e => e.employee_id === myId) : [];
+  const masterEntry = myActiveEntries2.find(e => !e.job_id) || null;
+
+  useEffect(() => {
+    const unsubscribe = base44.entities.TimeEntry.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+    });
+    return unsubscribe;
+  }, [queryClient]);
+
+  useEffect(() => {
+    if (!masterEntry?.clock_in) { setActiveElapsedSeconds(0); return; }
+    const tick = () => { const secs = differenceInSeconds(new Date(), parseISO(masterEntry.clock_in)); setActiveElapsedSeconds(Math.max(0, secs)); };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [masterEntry?.clock_in]);
 
   // KPIs
   const periodEstimates = estimates.filter(e => {
@@ -93,6 +124,12 @@ export default function EstimatorDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* ── CLOCK IN ── */}
+      <div className="space-y-3">
+        <MasterClockCard employee={myEmployee2 || { id: user?.id, name: user?.full_name, work_center_primary: "General" }} masterEntry={masterEntry} />
+        {myEmployee2 && <HoursStatsRow employee={myEmployee2} timeEntries={allTimeEntries} activeEntry={masterEntry} />}
+      </div>
+
       {/* Period selector + KPIs */}
       <div className="flex items-center justify-end mb-3">
         <div className="flex gap-0.5 bg-muted rounded-lg p-0.5">

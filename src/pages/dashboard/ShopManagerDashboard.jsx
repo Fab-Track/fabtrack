@@ -1,21 +1,27 @@
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Skeleton } from "@/components/ui/skeleton";
-import { differenceInDays, parseISO, format, startOfMonth, endOfMonth } from "date-fns";
+import { useAuth } from "@/lib/AuthContext";
+import { differenceInSeconds, parseISO, differenceInDays, format, startOfMonth, endOfMonth } from "date-fns";
 import { Wrench, Clock, Calendar, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import DashKpiCard from "@/components/dashboard/shared/DashKpiCard";
 import DashWidget from "@/components/dashboard/shared/DashWidget";
 import TodaysInstalls from "@/components/dashboard/owner/TodaysInstalls";
+import MasterClockCard from "@/components/timetracking/MasterClockCard";
+import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 import { Link } from "react-router-dom";
 
 const PROD_STAGES = ["In Fabrication", "Fab Queue", "Powder Coat", "At Powder Coat", "Ready for Install", "Install Scheduled"];
 
 export default function ShopManagerDashboard() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const now = new Date();
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);
   const today = new Date();
+  const [activeElapsedSeconds, setActiveElapsedSeconds] = useState(0);
 
   const { data: jobs = [], isLoading } = useQuery({
     queryKey: ["jobs"],
@@ -31,6 +37,37 @@ export default function ShopManagerDashboard() {
     queryKey: ["employees"],
     queryFn: () => base44.entities.Employee.list("-created_date", 100),
   });
+
+  // ── Clock-in data ──
+  const { data: allTimeEntries = [] } = useQuery({
+    queryKey: ["timeEntries", "all"],
+    queryFn: () => base44.entities.TimeEntry.list("-clock_in", 500),
+  });
+  const { data: activeEntries = [] } = useQuery({
+    queryKey: ["timeEntries", "active"],
+    queryFn: () => base44.entities.TimeEntry.filter({ is_active: true }),
+    refetchInterval: 30000,
+  });
+
+  const myEmployee = employees.find(e => e.email === user?.email || e.personal_email === user?.email || e.created_by_id === user?.id) || null;
+  const myId = myEmployee?.id || user?.id;
+  const myActiveEntries = myId ? activeEntries.filter(e => e.employee_id === myId) : [];
+  const masterEntry = myActiveEntries.find(e => !e.job_id) || null;
+
+  useEffect(() => {
+    const unsubscribe = base44.entities.TimeEntry.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+    });
+    return unsubscribe;
+  }, [queryClient]);
+
+  useEffect(() => {
+    if (!masterEntry?.clock_in) { setActiveElapsedSeconds(0); return; }
+    const tick = () => { const secs = differenceInSeconds(new Date(), parseISO(masterEntry.clock_in)); setActiveElapsedSeconds(Math.max(0, secs)); };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [masterEntry?.clock_in]);
 
   const shopJobs = jobs.filter(j => j.pipeline_board === "Shop");
   const inFab = jobs.filter(j => j.stage === "In Fabrication" || j.stage === "Fab Queue" || j.status === "In Fabrication").length;
@@ -77,6 +114,12 @@ export default function ShopManagerDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* ── CLOCK IN ── */}
+      <div className="space-y-3">
+        <MasterClockCard employee={myEmployee || { id: user?.id, name: user?.full_name, work_center_primary: "General" }} masterEntry={masterEntry} />
+        {myEmployee && <HoursStatsRow employee={myEmployee} timeEntries={allTimeEntries} activeEntry={masterEntry} />}
+      </div>
+
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <DashKpiCard label="In Fabrication" value={inFab} icon={Wrench} iconColor="bg-purple-100 text-purple-700" navigateTo="/jobs" />

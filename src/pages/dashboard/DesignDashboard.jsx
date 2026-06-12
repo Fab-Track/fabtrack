@@ -1,14 +1,16 @@
-import React, { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useMemo, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import {
-  differenceInDays, parseISO, format, isValid,
+  differenceInSeconds, parseISO, differenceInDays, format, isValid,
   startOfWeek, endOfWeek, isWithinInterval, startOfMonth, endOfMonth,
 } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import MasterClockCard from "@/components/timetracking/MasterClockCard";
+import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 
 import DashWidget from "@/components/dashboard/shared/DashWidget";
 import DesignStatsCards from "@/components/dashboard/design/DesignStatsCards";
@@ -34,11 +36,13 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function DesignDashboard() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const today = new Date();
   const weekStart = startOfWeek(today);
   const weekEnd = endOfWeek(today);
   const monthStart = startOfMonth(today);
   const monthEnd = endOfMonth(today);
+  const [activeElapsedSeconds, setActiveElapsedSeconds] = useState(0);
 
   const { data: employees = [] } = useQuery({
     queryKey: ["employees"],
@@ -53,6 +57,29 @@ export default function DesignDashboard() {
   const me = employees.find(
     e => e.email === user?.email || e.personal_email === user?.email || e.created_by_id === user?.id
   );
+
+  // ── Clock-in data ──
+  const { data: allTimeEntries = [] } = useQuery({ queryKey: ["timeEntries", "all"], queryFn: () => base44.entities.TimeEntry.list("-clock_in", 500) });
+  const { data: activeEntries = [] } = useQuery({ queryKey: ["timeEntries", "active"], queryFn: () => base44.entities.TimeEntry.filter({ is_active: true }), refetchInterval: 30000 });
+
+  const myId = me?.id || user?.id;
+  const myActiveEntries = myId ? activeEntries.filter(e => e.employee_id === myId) : [];
+  const masterEntry = myActiveEntries.find(e => !e.job_id) || null;
+
+  useEffect(() => {
+    const unsubscribe = base44.entities.TimeEntry.subscribe(() => {
+      queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+    });
+    return unsubscribe;
+  }, [queryClient]);
+
+  useEffect(() => {
+    if (!masterEntry?.clock_in) { setActiveElapsedSeconds(0); return; }
+    const tick = () => { const secs = differenceInSeconds(new Date(), parseISO(masterEntry.clock_in)); setActiveElapsedSeconds(Math.max(0, secs)); };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [masterEntry?.clock_in]);
 
   // --- Filter: only Shop board, only design-relevant stages ---
   const shopJobs = allJobs.filter(j => j.pipeline_board === "Shop");
@@ -102,6 +129,12 @@ export default function DesignDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* ── CLOCK IN ── */}
+      <div className="space-y-3">
+        <MasterClockCard employee={me || { id: user?.id, name: user?.full_name, work_center_primary: "General" }} masterEntry={masterEntry} />
+        {me && <HoursStatsRow employee={me} timeEntries={allTimeEntries} activeEntry={masterEntry} />}
+      </div>
+
       {/* ── Stat Cards ── */}
       <DesignStatsCards
         measuresNeeded={measureJobs.length}
