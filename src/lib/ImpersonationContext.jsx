@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
+import { getUserRoles, hasAnyRole } from "@/lib/roleHelpers";
 
 const ImpersonationContext = createContext(null);
 

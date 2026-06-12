@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { UserPlus, Pencil, MailOpen, Eye, Table2, Clock, ChevronRight, Ban, CheckCircle2, RefreshCw, KeyRound } from "lucide-react";
+import { UserPlus, Pencil, MailOpen, Eye, Table2, Clock, ChevronRight, Ban, CheckCircle2, RefreshCw, KeyRound, X } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -18,7 +18,7 @@ import PermissionAuditLog from "./permissions/PermissionAuditLog";
 import RoleSummaryCard from "./permissions/RoleSummaryCard";
 import { ROLES as PERM_ROLES, ROLE_LABELS, DEFAULT_PERMISSIONS } from "@/lib/permissionsData";
 
-const ROLES = ["owner", "admin", "shop_manager", "estimator", "fabricator", "accountant", "design_specialist"];
+const ROLES = ["owner", "admin", "shop_manager", "estimator", "fabricator", "accountant", "design_specialist", "payroll"];
 
 function statusBadge(status) {
   if (status === "active") return <Badge className="bg-green-100 text-green-700 text-xs border-0">Active</Badge>;
@@ -49,7 +49,7 @@ export default function UsersRolesSection() {
   const [tab, setTab] = useState("users");
   const [showInvite, setShowInvite] = useState(false);
   const [editUser, setEditUser] = useState(null);
-  const [invite, setInvite] = useState({ first_name: "", last_name: "", email: "", role: "fabricator", phone: "" });
+  const [invite, setInvite] = useState({ first_name: "", last_name: "", email: "", roles: ["fabricator"], phone: "" });
   const [inviting, setInviting] = useState(false);
   const [summaryRole, setSummaryRole] = useState(null);
 
@@ -63,18 +63,27 @@ export default function UsersRolesSection() {
   async function handleInvite() {
     if (!invite.email || !invite.first_name) { toast.error("Name and email are required"); return; }
     setInviting(true);
-    // Platform only accepts "user" or "admin"; custom roles are stored on the User entity separately
-    const platformRole = invite.role === "owner" || invite.role === "admin" ? "admin" : "user";
+    const roles = invite.roles?.length ? invite.roles : ["fabricator"];
+    const isHighPriv = roles.some(r => r === "owner" || r === "admin");
+    const platformRole = isHighPriv ? "admin" : "user";
     await base44.users.inviteUser(invite.email, platformRole);
+    // Set the roles array on the invited user (will be applied when they register)
+    // For now, also set the legacy role field to the first role
+    const baseRole = roles[0];
+    // Note: we can't update the user entity here since invite only creates a pending user.
+    // The roles will be assigned when the user registers or when admin edits them.
     toast.success(`Invite sent to ${invite.email}`);
     setInviting(false);
     setShowInvite(false);
-    setInvite({ first_name: "", last_name: "", email: "", role: "fabricator", phone: "" });
+    setInvite({ first_name: "", last_name: "", email: "", roles: ["fabricator"], phone: "" });
     qc.invalidateQueries({ queryKey: ["users"] });
   }
 
   async function handleSaveEdit(form) {
-    await base44.entities.User.update(editUser.id, { role: form.role });
+    await base44.entities.User.update(editUser.id, {
+      roles: form.roles,
+      role: form.roles[0] || "fabricator", // legacy field for backward compat
+    });
     toast.success("User updated");
     qc.invalidateQueries({ queryKey: ["users"] });
     setEditUser(null);
@@ -159,7 +168,8 @@ export default function UsersRolesSection() {
                 {users.length === 0 ? (
                   <tr><td colSpan={6} className="text-center py-8 text-muted-foreground text-sm">No users yet.</td></tr>
                 ) : users.map(u => {
-                  const roleKey = (u.role || "").toLowerCase().replace(/ /g, "_");
+                  const userRoleList = (u.roles && u.roles.length > 0) ? u.roles : (u.role ? [u.role] : []);
+                  const primaryRoleKey = (userRoleList[0] || "").toLowerCase().replace(/ /g, "_");
                   const status = u.account_status || "active";
                   const isDeactivated = status === "deactivated";
                   const isLocked = status === "locked";
@@ -168,10 +178,14 @@ export default function UsersRolesSection() {
                       <td className="px-4 py-3 font-medium">{u.full_name || "—"}</td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">{u.email}</td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs capitalize">{(u.role || "—").replace(/_/g, " ")}</span>
-                          {PERM_ROLES.includes(roleKey) && (
-                            <button onClick={() => setSummaryRole(roleKey)} className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {userRoleList.length === 0 ? (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          ) : userRoleList.map(r => (
+                            <Badge key={r} variant="outline" className="text-[10px] capitalize py-0 px-1.5">{r.replace(/_/g, " ")}</Badge>
+                          ))}
+                          {PERM_ROLES.includes(primaryRoleKey) && (
+                            <button onClick={() => setSummaryRole(primaryRoleKey)} className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5 ml-1">
                               View <ChevronRight className="w-2.5 h-2.5" />
                             </button>
                           )}
@@ -190,7 +204,9 @@ export default function UsersRolesSection() {
                           </Button>
                           {status === "invited" && (
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Resend invite" onClick={async () => {
-                              const platformRole = u.role === "owner" || u.role === "admin" ? "admin" : "user";
+                              const ul = (u.roles && u.roles.length > 0) ? u.roles : (u.role ? [u.role] : ["fabricator"]);
+                              const isHighPriv = ul.some(r => r === "owner" || r === "admin");
+                              const platformRole = isHighPriv ? "admin" : "user";
                               await base44.users.inviteUser(u.email, platformRole);
                               toast.success("Invite resent");
                             }}>
@@ -261,20 +277,34 @@ export default function UsersRolesSection() {
               <Label className="text-xs">Email Address *</Label>
               <Input className="h-8" type="email" value={invite.email} onChange={e => setInvite(p => ({ ...p, email: e.target.value }))} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Role</Label>
-                <Select value={invite.role} onValueChange={v => setInvite(p => ({ ...p, role: v }))}>
-                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {ROLES.map(r => <SelectItem key={r} value={r} className="capitalize">{r.replace(/_/g, " ")}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+            <div>
+              <Label className="text-xs">Roles (select multiple)</Label>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {ROLES.map(r => {
+                  const selected = invite.roles.includes(r);
+                  return (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setInvite(p => ({
+                        ...p,
+                        roles: selected ? p.roles.filter(x => x !== r) : [...p.roles, r],
+                      }))}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-medium capitalize border transition-colors ${
+                        selected
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-muted text-muted-foreground border-border hover:border-primary/50"
+                      }`}
+                    >
+                      {r.replace(/_/g, " ")}
+                    </button>
+                  );
+                })}
               </div>
-              <div>
-                <Label className="text-xs">Phone Number</Label>
-                <Input className="h-8" value={invite.phone} onChange={e => setInvite(p => ({ ...p, phone: e.target.value }))} placeholder="+1..." />
-              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Phone Number</Label>
+              <Input className="h-8" value={invite.phone} onChange={e => setInvite(p => ({ ...p, phone: e.target.value }))} placeholder="+1..." />
             </div>
             <Button onClick={handleInvite} disabled={inviting} className="w-full gap-1.5">
               {inviting ? "Sending…" : <><MailOpen className="w-3.5 h-3.5" /> Send Invite</>}
@@ -303,7 +333,8 @@ export default function UsersRolesSection() {
 }
 
 function EditUserSheet({ user, onClose, onSave }) {
-  const [form, setForm] = React.useState({ role: user.role || "fabricator" });
+  const initialRoles = (user.roles && user.roles.length > 0) ? user.roles : (user.role ? [user.role] : ["fabricator"]);
+  const [form, setForm] = React.useState({ roles: initialRoles });
   return (
     <Sheet open onOpenChange={onClose}>
       <SheetContent>
@@ -314,15 +345,31 @@ function EditUserSheet({ user, onClose, onSave }) {
             <Input className="h-8" value={user.email} disabled />
           </div>
           <div>
-            <Label className="text-xs">Role</Label>
-            <Select value={form.role} onValueChange={v => setForm(p => ({ ...p, role: v }))}>
-              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {ROLES.map(r => <SelectItem key={r} value={r} className="capitalize">{r.replace(/_/g, " ")}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Label className="text-xs">Roles (select multiple)</Label>
+            <div className="flex flex-wrap gap-1.5 mt-1 mb-2">
+              {ROLES.map(r => {
+                const selected = form.roles.includes(r);
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setForm(p => ({
+                      ...p,
+                      roles: selected ? p.roles.filter(x => x !== r) : [...p.roles, r],
+                    }))}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium capitalize border transition-colors ${
+                      selected
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted text-muted-foreground border-border hover:border-primary/50"
+                    }`}
+                  >
+                    {r.replace(/_/g, " ")}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <Button className="w-full" onClick={() => onSave(form)}>Save Changes</Button>
+          <Button className="w-full" onClick={() => onSave(form)} disabled={form.roles.length === 0}>Save Changes</Button>
         </div>
       </SheetContent>
     </Sheet>

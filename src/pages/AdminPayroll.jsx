@@ -9,6 +9,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
+import { hasPayrollAccess } from "@/lib/roleHelpers";
 import {
   getCurrentPayPeriod, getPreviousPayPeriod,
   groupByWorkweek, formatHours, getNetHours,
@@ -36,8 +37,7 @@ const PP_OPTIONS = [
 
 export default function AdminPayroll() {
   const { user } = useAuth();
-  const role = (user?.role || "").toLowerCase();
-  const isAdmin = ["admin", "owner"].includes(role);
+  const isAdmin = hasPayrollAccess(user);
   const { toast } = useToast();
   const qc = useQueryClient();
 

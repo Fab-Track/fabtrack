@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole, usePreviewRole } from "@/lib/PreviewRoleContext";
 import { useImpersonation, canImpersonate } from "@/lib/ImpersonationContext";
+import { getUserRoles } from "@/lib/roleHelpers";
 import PreviewRoleSelector from "./PreviewRoleSelector";
 import NotificationBell from "./NotificationBell";
 
@@ -96,6 +97,12 @@ const ROLE_NAV = {
     { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
+  payroll: [
+    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
+    { group: "PAYROLL",     items: ["payroll"] },
+    { group: "TIME",        items: ["myTimesheet"] },
+    { group: "ACCOUNT",     items: ["settings"] },
+  ],
   welder: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "SHOP",        items: ["shopFloor"] },
@@ -124,6 +131,31 @@ const ROLE_NAV = {
 
 function getNavGroups(role) {
   return ROLE_NAV[role] || ROLE_NAV["user"];
+}
+
+/** Union of nav groups across multiple roles */
+function getUnionNavGroups(roles) {
+  if (!roles || roles.length === 0) return ROLE_NAV["user"];
+  // Collect all items each role grants, preserving group name for ordering
+  const groupOrder = [];
+  const seenGroups = new Set();
+  const itemsPerGroup = new Map(); // groupName -> Set of item keys
+
+  roles.forEach(role => {
+    const groups = ROLE_NAV[role] || ROLE_NAV["user"];
+    groups.forEach(g => {
+      if (!itemsPerGroup.has(g.group)) {
+        groupOrder.push(g.group);
+        itemsPerGroup.set(g.group, new Set());
+      }
+      g.items.forEach(item => itemsPerGroup.get(g.group).add(item));
+    });
+  });
+
+  return groupOrder.map(group => ({
+    group,
+    items: [...itemsPerGroup.get(group)],
+  }));
 }
 
 // Top 4 items for mobile bottom bar (flattened, skipping settings)
@@ -177,12 +209,12 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const realRole = user?.role || "user";
-  const effectiveRole = useEffectiveRole(realRole);
-  const isOwner = OWNER_ROLES.includes(realRole.toLowerCase());
-  const userCanImpersonate = canImpersonate(realRole);
+  const userRoles = getUserRoles(user);
+  const effectiveRole = useEffectiveRole(userRoles[0] || "user");
+  const isOwner = userRoles.some(r => OWNER_ROLES.includes(r));
+  const userCanImpersonate = canImpersonate(userRoles[0] || "user");
 
-  const navGroups = getNavGroups(effectiveRole);
+  const navGroups = getUnionNavGroups(userRoles);
   const mobileItems = getMobileItems(navGroups);
 
   // Unread message count for badge

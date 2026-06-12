@@ -8,7 +8,8 @@ export const PREVIEW_ROLES = [
   { id: "design_specialist",label: "Design Specialist",        dashboardView: "owner" },
   { id: "fabricator",       label: "Fabricator",               dashboardView: "fabricator" },
   { id: "installer",        label: "Fabricator",               dashboardView: "fabricator" },
-  { id: "accountant",       label: "Accountant",               dashboardView: "estimator" },
+  { id: "accountant",       label: "Accountant",               dashboardView: "accountant" },
+  { id: "payroll",          label: "Payroll",                  dashboardView: "accountant" },
 ];
 
 export const PREVIEW_ROLE_OPTIONS = [
@@ -18,6 +19,7 @@ export const PREVIEW_ROLE_OPTIONS = [
   { id: "design_specialist", label: "Design Specialist (Drawer)" },
   { id: "fabricator",        label: "Fabricator" },
   { id: "accountant",        label: "Accountant" },
+  { id: "payroll",           label: "Payroll" },
 ];
 
 const PreviewRoleContext = createContext(null);

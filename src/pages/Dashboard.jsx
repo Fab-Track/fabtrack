@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole, usePreviewRole } from "@/lib/PreviewRoleContext";
 import { useImpersonation } from "@/lib/ImpersonationContext";
+import { getUserRoles, getDashboardForRoles, isOwnerLevel } from "@/lib/roleHelpers";
 import DashboardGreeting from "@/components/dashboard/shared/DashboardGreeting";
 import OwnerDashboard from "./dashboard/OwnerDashboard";
 import ShopManagerDashboard from "./dashboard/ShopManagerDashboard";
@@ -54,13 +55,13 @@ function ViewSwitcher({ activeView, onChange, views }) {
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const realRole = user?.role || "owner";
-  const effectiveRole = useEffectiveRole(realRole);
+  const userRoles = getUserRoles(user);
+  const effectiveRole = useEffectiveRole(userRoles[0] || "user");
   const { isPreviewing } = usePreviewRole();
   const { isImpersonating, impersonatedEmployee } = useImpersonation();
 
-  const isRealOwner = ["owner", "admin"].includes(realRole.toLowerCase());
-  const defaultView = getDashboardForRole(effectiveRole);
+  const isRealOwner = isOwnerLevel(user);
+  const defaultView = getDashboardForRoles(user);
 
   const [activeView, setActiveView] = useState(() => {
     if (!isRealOwner) return defaultView;

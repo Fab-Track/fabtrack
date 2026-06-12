@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
+import { getUserRoles } from "@/lib/roleHelpers";
 import OverviewReport from "@/components/reports/OverviewReport";
 import SalesReport from "@/components/reports/SalesReport";
 import FinancialReport from "@/components/reports/FinancialReport";
@@ -19,8 +20,9 @@ const ALL_TABS = [
 
 export default function Reports() {
   const { user } = useAuth();
-  const role = useEffectiveRole(user?.role || "user");
-  const visibleTabs = ALL_TABS.filter(t => t.roles.includes(role));
+  const roles = getUserRoles(user);
+  const effectiveRole = useEffectiveRole(roles[0] || "user");
+  const visibleTabs = ALL_TABS.filter(t => roles.some(r => t.roles.includes(r)));
   const [activeTab, setActiveTab] = useState(visibleTabs[0]?.id || "overview");
 
   return (

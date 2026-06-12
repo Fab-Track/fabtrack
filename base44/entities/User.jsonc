@@ -4,7 +4,7 @@
   "properties": {
     "role": {
       "type": "string",
-      "description": "The role of the user in the app",
+      "description": "Legacy single role \u2014 kept for backward compatibility during migration to multi-role",
       "enum": [
         "owner",
         "admin",
@@ -13,8 +13,27 @@
         "fabricator",
         "installer",
         "accountant",
-        "design_specialist"
+        "design_specialist",
+        "payroll"
       ]
+    },
+    "roles": {
+      "type": "array",
+      "description": "Multi-role array \u2014 a user can hold multiple roles simultaneously. Access is the union of all roles.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "owner",
+          "admin",
+          "shop_manager",
+          "estimator",
+          "fabricator",
+          "installer",
+          "accountant",
+          "design_specialist",
+          "payroll"
+        ]
+      }
     },
     "account_status": {
       "type": "string",
@@ -61,7 +80,5 @@
       "description": "Phone number for SMS 2FA"
     }
   },
-  "required": [
-    "role"
-  ]
+  "required": []
 }
