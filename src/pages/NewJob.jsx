@@ -12,8 +12,10 @@ import { Link } from "react-router-dom";
 import { generateJobNumber } from "@/lib/jobHelpers";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function NewJob() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -43,6 +45,8 @@ export default function NewJob() {
     expected_install_date: "",
     customer_approval_status: "pending",
     last_activity_date: new Date().toISOString(),
+    assigned_rep_id: user?.id || "",
+    assigned_rep_name: user?.full_name || "",
   });
 
   const createMutation = useMutation({
@@ -154,6 +158,16 @@ export default function NewJob() {
                 onChange={e => updateField("site_address", e.target.value)}
                 placeholder="123 Main St, City, State"
               />
+            </div>
+
+            <div>
+              <Label className="text-xs">Assigned Rep (Sales Owner)</Label>
+              <Input 
+                value={form.assigned_rep_name} 
+                onChange={e => updateField("assigned_rep_name", e.target.value)}
+                placeholder="Sales rep name"
+              />
+              <p className="text-[10px] text-muted-foreground mt-0.5">This rep gets credit for all estimates and revenue on this job.</p>
             </div>
           </CardContent>
         </Card>

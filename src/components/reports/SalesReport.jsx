@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Eye, Send } from "lucide-react";
+import SalesRepPerformance from "./SalesRepPerformance";
 
 const STATUS_COLORS = {
   Sent: "bg-blue-100 text-blue-700",
@@ -33,6 +34,7 @@ export default function SalesReport() {
 
   const { data: jobs = [] } = useQuery({ queryKey: ["jobs"], queryFn: () => base44.entities.Job.list("-created_date", 500) });
   const { data: estimates = [] } = useQuery({ queryKey: ["estimates-all"], queryFn: () => base44.entities.Estimate.list("-created_date", 500) });
+  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: () => base44.entities.Invoice.list("-created_date", 500) });
 
   const filteredEstimates = estimates.filter(e => inRange(e.created_date, range));
 
@@ -256,6 +258,9 @@ export default function SalesReport() {
           </div>
         ) : <EmptyState message="No records found for the selected filters." />}
       </section>
+
+      {/* Sales Rep Performance */}
+      <SalesRepPerformance jobs={jobs} estimates={estimates} invoices={invoices} />
     </div>
   );
 }

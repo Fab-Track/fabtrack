@@ -43,6 +43,7 @@ export default function JobOverviewTab({ job }) {
               <p className="text-sm text-muted-foreground">{job.lead_close_reason}</p>
             </div>
           )}
+          <DetailRow label="Assigned Rep" value={job.assigned_rep_name || "—"} />
           <DetailRow label="Customer Approval" value={
             <Badge variant={job.customer_approval_status === "approved" ? "default" : "outline"} className="text-xs">
               {job.customer_approval_status || "pending"}

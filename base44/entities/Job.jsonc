@@ -152,6 +152,14 @@
       "type": "string",
       "description": "Estimator name"
     },
+    "assigned_rep_id": {
+      "type": "string",
+      "description": "Sales rep / estimator owner of this job for performance tracking"
+    },
+    "assigned_rep_name": {
+      "type": "string",
+      "description": "Sales rep name (denormalized)"
+    },
     "customer_approval_status": {
       "type": "string",
       "enum": [
