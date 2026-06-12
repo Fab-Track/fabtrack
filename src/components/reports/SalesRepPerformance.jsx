@@ -73,7 +73,14 @@ export default function SalesRepPerformance({ jobs, estimates, invoices }) {
   const repData = useMemo(() => {
     return reps.map(rep => {
       const repJobs = jobs.filter(j => j.assigned_rep_id === rep.id || (j.assigned_rep_name && j.assigned_rep_name === rep.name));
-      const repJobIds = new Set(repJobs.map(j => j.id));
+      // For close rate, exclude Unqualified and Project Cancelled jobs
+      const qualifiedRepJobs = repJobs.filter(j => {
+        if (!j.is_lead_closed) return true; // active jobs count
+        if (j.lead_outcome_category === "Unqualified") return false;
+        if (j.lead_close_reason === "lost_cancelled") return false; // Project Cancelled
+        return true;
+      });
+      const repJobIds = new Set(qualifiedRepJobs.map(j => j.id));
 
       // Estimates for this rep's jobs, filtered by date range (using estimate created_date)
       const repEstimates = estimates.filter(e =>

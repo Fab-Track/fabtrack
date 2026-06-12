@@ -6,6 +6,7 @@ import SalesReport from "@/components/reports/SalesReport";
 import FinancialReport from "@/components/reports/FinancialReport";
 import ProductionReport from "@/components/reports/ProductionReport";
 import CustomersReport from "@/components/reports/CustomersReport";
+import ClosedLeadsReport from "@/components/reports/ClosedLeadsReport";
 
 const ALL_TABS = [
   { id: "overview",    label: "Overview",    roles: ["owner", "admin", "user"] },
@@ -13,6 +14,7 @@ const ALL_TABS = [
   { id: "financial",   label: "Financial",   roles: ["owner", "admin", "user", "accountant"] },
   { id: "production",  label: "Production",  roles: ["owner", "admin", "user", "shop_manager"] },
   { id: "customers",   label: "Customers",   roles: ["owner", "admin", "user", "estimator", "shop_manager"] },
+  { id: "closedLeads", label: "Closed Leads", roles: ["owner", "admin", "user", "estimator", "shop_manager"] },
 ];
 
 export default function Reports() {
@@ -52,6 +54,7 @@ export default function Reports() {
         {activeTab === "financial"  && <FinancialReport />}
         {activeTab === "production" && <ProductionReport />}
         {activeTab === "customers"  && <CustomersReport />}
+        {activeTab === "closedLeads" && <ClosedLeadsReport />}
       </div>
     </div>
   );

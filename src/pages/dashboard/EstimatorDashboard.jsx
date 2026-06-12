@@ -6,6 +6,7 @@ import { differenceInDays, parseISO, format, startOfMonth, endOfMonth, startOfQu
 import { FileText, CheckCircle2, TrendingUp, DollarSign, Clock } from "lucide-react";
 import DashKpiCard from "@/components/dashboard/shared/DashKpiCard";
 import DashWidget from "@/components/dashboard/shared/DashWidget";
+import EstimatorFollowUpsWidget from "@/components/dashboard/estimator/EstimatorFollowUpsWidget";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -116,6 +117,9 @@ export default function EstimatorDashboard() {
         <DashKpiCard label={`Close Rate (${currentRange.label})`} value={sentPeriod > 0 ? `${closeRatePeriod}%` : "—"} icon={TrendingUp} iconColor="bg-purple-100 text-purple-700" />
         <DashKpiCard label="Pipeline Value" value={`$${pipelineValue.toLocaleString()}`} sub="Awaiting approval" icon={DollarSign} iconColor="bg-amber-100 text-amber-700" />
       </div>
+
+      {/* Follow-Up Reminders */}
+      <EstimatorFollowUpsWidget jobs={jobs} />
 
       {/* Action-required table */}
       <DashWidget title="My Estimates — Action Required">

@@ -14,6 +14,7 @@ import CashFlowMini from "@/components/dashboard/owner/CashFlowMini";
 import CustomerMixCard from "@/components/dashboard/owner/CustomerMixCard";
 import CustomerLifetimeValueCard from "@/components/dashboard/owner/CustomerLifetimeValueCard";
 import PipelineVelocityCard from "@/components/dashboard/owner/PipelineVelocityCard";
+import ClosedLeadsDashboardCard from "@/components/dashboard/owner/ClosedLeadsDashboardCard";
 
 export default function OwnerDashboard() {
   const now = new Date();
@@ -83,7 +84,10 @@ export default function OwnerDashboard() {
         <PipelineVelocityCard jobs={jobs} />
       </div>
 
-      {/* Row 5 — Today's Installs + Cash Flow */}
+      {/* Row 5 — Closed Leads */}
+      <ClosedLeadsDashboardCard jobs={jobs} />
+
+      {/* Row 6 — Today's Installs + Cash Flow */}
       <div className="grid lg:grid-cols-2 gap-4">
         <DashWidget title="Today's Installs" action="View Full Schedule" actionTo="/schedule">
           <TodaysInstalls jobs={jobs} />

@@ -99,8 +99,7 @@
     },
     "expected_install_date": {
       "type": "string",
-      "format": "date",
-      "description": "Expected install date"
+      "format": "date"
     },
     "promised_install_date": {
       "type": "string",
@@ -228,18 +227,22 @@
     },
     "lead_outcome": {
       "type": "string",
+      "description": "Specific close reason e.g. Price - Too Expensive, Non-Responsive / Went Dark"
+    },
+    "lead_outcome_category": {
+      "type": "string",
       "enum": [
-        "Unqualified Lead",
-        "Qualified \u2014 Not Interested",
-        "Qualified \u2014 Lost",
-        "Qualified \u2014 Won",
-        "Testing"
+        "Won",
+        "Lost",
+        "Unqualified",
+        "On Hold",
+        "Other"
       ],
-      "description": "Outcome of the sales lead"
+      "description": "Top-level outcome category for closed leads"
     },
     "lead_close_reason": {
       "type": "string",
-      "description": "Reason the lead closed this way"
+      "description": "Legacy close reason / notes"
     },
     "lead_lost_to": {
       "type": "string",
@@ -254,6 +257,20 @@
       "type": "boolean",
       "default": false,
       "description": "True when lead is archived/closed from Sales board"
+    },
+    "close_notes": {
+      "type": "string",
+      "description": "Free-text notes added when closing the lead"
+    },
+    "follow_up_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Follow-up date set when closing with Not Ready - Follow Up Later"
+    },
+    "follow_up_notified": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether a reminder notification has been sent for this follow-up"
     },
     "schedule_phases": {
       "type": "array",
