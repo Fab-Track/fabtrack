@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ArrowRight } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 /**
  * Generic stage-move confirmation dialog.
@@ -19,6 +20,7 @@ import { ArrowRight } from "lucide-react";
 export default function StageTransitionDialog({
   open, onClose, title, message, fromStage, toStage, toBoard,
   onConfirm, confirmLabel = "Confirm", requireNote = false, isPending = false,
+  repSelector = null, // { reps: [{id, name}], selectedRepId, onSelect }
 }) {
   const [note, setNote] = useState("");
 
@@ -53,6 +55,21 @@ export default function StageTransitionDialog({
               onChange={e => setNote(e.target.value)}
             />
           </div>
+          {repSelector && repSelector.reps.length > 0 && (
+            <div>
+              <Label className="text-xs">Who gets sales credit?</Label>
+              <Select value={repSelector.selectedRepId || ""} onValueChange={repSelector.onSelect}>
+                <SelectTrigger className="mt-1 text-sm h-9">
+                  <SelectValue placeholder="Select a rep…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {repSelector.reps.map(rep => (
+                    <SelectItem key={rep.id} value={rep.id} className="text-sm">{rep.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
             <Button

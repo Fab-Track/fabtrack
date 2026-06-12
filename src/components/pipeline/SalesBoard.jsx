@@ -127,6 +127,7 @@ export default function SalesBoard({ jobs = [] }) {
   const [closingLead, setClosingLead] = useState(null);
   const [deletingJob, setDeletingJob] = useState(null);
   const [showClosed, setShowClosed] = useState(false);
+  const [promoteRepId, setPromoteRepId] = useState(null);
   const { user } = useAuth();
   const effectiveRole = useEffectiveRole(user?.role || "admin");
   const isOwner = effectiveRole.toLowerCase() === "owner";
@@ -144,6 +145,23 @@ export default function SalesBoard({ jobs = [] }) {
     queryFn: () => base44.entities.Estimate.list("-created_date", 200),
     enabled: jobIds.length > 0,
   });
+  // Fetch users with estimator or owner roles for rep credit selector
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => base44.entities.User.list("full_name", 200),
+  });
+  const estimatorReps = allUsers
+    .filter(u => u.role === "estimator" || u.role === "owner")
+    .map(u => ({ id: u.id, name: u.full_name }))
+    .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+  // Fetch invoices to check for paid deposits
+  const { data: allInvoices = [] } = useQuery({
+    queryKey: ["salesBoardInvoices", jobIds.join(",")],
+    queryFn: () => base44.entities.Invoice.list("-issued_date", 500),
+    enabled: jobIds.length > 0,
+  });
+
   // Group estimates by job_id for quick lookup
   const estimatesByJob = allEstimates.reduce((acc, e) => {
     if (!acc[e.job_id]) acc[e.job_id] = [];
@@ -165,8 +183,17 @@ export default function SalesBoard({ jobs = [] }) {
   });
 
   const moveMutation = useMutation({
-    mutationFn: ({ job, toBoard, toStage, note }) =>
-      base44.entities.Job.update(job.id, buildStageTransition(job, toBoard, toStage, note)),
+    mutationFn: ({ job, toBoard, toStage, note, repId }) => {
+      const update = buildStageTransition(job, toBoard, toStage, note);
+      if (repId) {
+        const rep = estimatorReps.find(r => r.id === repId);
+        update.assigned_rep_id = repId;
+        update.assigned_rep_name = rep?.name || null;
+        update.assigned_estimator = repId;
+        update.assigned_estimator_name = rep?.name || null;
+      }
+      return base44.entities.Job.update(job.id, update);
+    },
     onSuccess: async (_, vars) => {
       // Reverse sync: job dragged to "Estimate Sent" → update Draft estimate to Sent
       if (vars.toStage === "Estimate Sent") {
@@ -180,6 +207,7 @@ export default function SalesBoard({ jobs = [] }) {
       qc.invalidateQueries({ queryKey: ["jobs"] });
       qc.invalidateQueries({ queryKey: ["salesBoardEstimates"] });
       setPromoting(null);
+      setPromoteRepId(null);
     },
   });
 
@@ -194,7 +222,13 @@ export default function SalesBoard({ jobs = [] }) {
 
   function handlePromoteConfirm(note) {
     if (!promoting) return;
-    moveMutation.mutate({ job: promoting, toBoard: "Shop", toStage: "New Jobs Landed — Needs Approval", note });
+    moveMutation.mutate({
+      job: promoting,
+      toBoard: "Shop",
+      toStage: "New Jobs Landed — Needs Approval",
+      note,
+      repId: promoteRepId || null,
+    });
   }
 
   return (
@@ -272,7 +306,7 @@ export default function SalesBoard({ jobs = [] }) {
 
       <StageTransitionDialog
         open={!!promoting}
-        onClose={() => setPromoting(null)}
+        onClose={() => { setPromoting(null); setPromoteRepId(null); }}
         title="Move to Shop Flow?"
         message={`"${promoting?.job_name}" has a deposit. Move it to the Shop Board under "New Jobs Landed — Needs Approval"?`}
         fromStage="Deposit Received / Sale Won"
@@ -281,6 +315,11 @@ export default function SalesBoard({ jobs = [] }) {
         confirmLabel="Yes, Move to Shop"
         onConfirm={handlePromoteConfirm}
         isPending={moveMutation.isPending}
+        repSelector={{
+          reps: estimatorReps,
+          selectedRepId: promoteRepId,
+          onSelect: setPromoteRepId,
+        }}
       />
 
       <CloseLeadModal
