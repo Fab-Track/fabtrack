@@ -15,7 +15,8 @@
       "enum": [
         "new_lead",
         "overdue_invoice",
-        "info"
+        "info",
+        "todo_reminder"
       ],
       "default": "info"
     },
@@ -33,6 +34,10 @@
         "type": "string"
       },
       "description": "Which roles should see this notification"
+    },
+    "assignee_id": {
+      "type": "string",
+      "description": "Specific user ID this notification is for (e.g. todo assignee)"
     }
   },
   "required": [

@@ -9,6 +9,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import DashboardTodosWidget from "@/components/dashboard/shared/DashboardTodosWidget";
 import MasterClockCard from "@/components/timetracking/MasterClockCard";
 import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 
@@ -134,6 +135,9 @@ export default function DesignDashboard() {
         <MasterClockCard employee={me || { id: user?.id, name: user?.full_name, work_center_primary: "General" }} masterEntry={masterEntry} />
         {me && <HoursStatsRow employee={me} timeEntries={allTimeEntries} activeEntry={masterEntry} />}
       </div>
+
+      {/* ── To-Dos ── */}
+      <DashboardTodosWidget />
 
       {/* ── Stat Cards ── */}
       <DesignStatsCards

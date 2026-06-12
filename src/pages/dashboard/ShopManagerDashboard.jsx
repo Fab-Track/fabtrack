@@ -11,6 +11,7 @@ import TodaysInstalls from "@/components/dashboard/owner/TodaysInstalls";
 import MasterClockCard from "@/components/timetracking/MasterClockCard";
 import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 import { Link } from "react-router-dom";
+import DashboardTodosWidget from "@/components/dashboard/shared/DashboardTodosWidget";
 
 const PROD_STAGES = ["In Fabrication", "Fab Queue", "Powder Coat", "At Powder Coat", "Ready for Install", "Install Scheduled"];
 
@@ -127,6 +128,9 @@ export default function ShopManagerDashboard() {
         <DashKpiCard label="Install Scheduled" value={installScheduled} icon={Calendar} iconColor="bg-blue-100 text-blue-700" navigateTo="/schedule" />
         <DashKpiCard label="Completed (MTD)" value={completedThisMonth} icon={CheckCircle2} iconColor="bg-gray-100 text-gray-700" />
       </div>
+
+      {/* To-Dos */}
+      <DashboardTodosWidget />
 
       {/* Production Board Snapshot */}
       <DashWidget title="Production Board Snapshot" action="View Full Job Board" actionTo="/jobs">

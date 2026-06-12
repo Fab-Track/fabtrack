@@ -11,6 +11,7 @@ import DashWidget from "@/components/dashboard/shared/DashWidget";
 import MasterClockCard from "@/components/timetracking/MasterClockCard";
 import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 import { useNavigate } from "react-router-dom";
+import DashboardTodosWidget from "@/components/dashboard/shared/DashboardTodosWidget";
 import { toast } from "sonner";
 
 export default function AccountantDashboard() {
@@ -131,6 +132,9 @@ export default function AccountantDashboard() {
         <DashKpiCard label="Overdue" value={`$${overdueAmt.toLocaleString()}`} icon={AlertCircle} iconColor="bg-red-100 text-red-700" highlight={overdueAmt > 0 ? "red" : undefined} navigateTo="/reports" />
         <DashKpiCard label="Avg Days to Pay" value={avgDaysToPay !== null ? `${avgDaysToPay}d` : "—"} icon={TrendingUp} iconColor="bg-purple-100 text-purple-700" />
       </div>
+
+      {/* To-Dos */}
+      <DashboardTodosWidget />
 
       {/* Overdue invoices */}
       <DashWidget title="Overdue Invoices — Priority Action">

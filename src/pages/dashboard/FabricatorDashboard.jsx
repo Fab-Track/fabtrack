@@ -11,6 +11,7 @@ import MyScoreBreakdown from "@/components/dashboard/fabricator/MyScoreBreakdown
 import MyMonthComparison from "@/components/dashboard/fabricator/MyMonthComparison";
 import NextInstallCard from "@/components/dashboard/fabricator/NextInstallCard";
 import MyUpcomingInstalls from "@/components/dashboard/fabricator/MyUpcomingInstalls";
+import DashboardTodosWidget from "@/components/dashboard/shared/DashboardTodosWidget";
 import MasterClockCard from "@/components/timetracking/MasterClockCard";
 import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 
@@ -118,6 +119,9 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
           />
         )}
       </div>
+
+      {/* ── To-Dos ── */}
+      <DashboardTodosWidget />
 
       {/* Large stat cards */}
       <FabricatorStatsRow

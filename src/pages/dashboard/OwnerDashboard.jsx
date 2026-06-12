@@ -15,6 +15,7 @@ import CustomerMixCard from "@/components/dashboard/owner/CustomerMixCard";
 import CustomerLifetimeValueCard from "@/components/dashboard/owner/CustomerLifetimeValueCard";
 import PipelineVelocityCard from "@/components/dashboard/owner/PipelineVelocityCard";
 import ClosedLeadsDashboardCard from "@/components/dashboard/owner/ClosedLeadsDashboardCard";
+import DashboardTodosWidget from "@/components/dashboard/shared/DashboardTodosWidget";
 
 export default function OwnerDashboard() {
   const now = new Date();
@@ -62,7 +63,10 @@ export default function OwnerDashboard() {
         <DashKpiCard label="Estimates Pending" value={estimatesPending.length} sub="Awaiting approval" icon={FileText} iconColor="bg-purple-100 text-purple-700" navigateTo="/jobs" />
       </div>
 
-      {/* Row 2 — Urgent Actions */}
+      {/* Row 2 — To-Dos */}
+      <DashboardTodosWidget />
+
+      {/* Row 3 — Urgent Actions */}
       <DashWidget title="Urgent Actions">
         <OwnerUrgentActions jobs={jobs} invoices={invoices} estimates={estimates} />
       </DashWidget>

@@ -1,0 +1,72 @@
+{
+  "name": "JobTodo",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "Linked job ID"
+    },
+    "job_number": {
+      "type": "string",
+      "description": "Job number (denormalized)"
+    },
+    "job_name": {
+      "type": "string",
+      "description": "Job name (denormalized)"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Customer name (denormalized)"
+    },
+    "description": {
+      "type": "string",
+      "description": "To-do text"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "High",
+        "Medium",
+        "Low"
+      ],
+      "default": "Medium"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Optional due date"
+    },
+    "assignee_id": {
+      "type": "string",
+      "description": "User ID assigned to this to-do"
+    },
+    "assignee_name": {
+      "type": "string",
+      "description": "Assignee display name"
+    },
+    "is_completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_by_id": {
+      "type": "string"
+    },
+    "completed_by_name": {
+      "type": "string"
+    },
+    "reminder_sent": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether a due-date reminder has been sent"
+    }
+  },
+  "required": [
+    "job_id",
+    "description",
+    "assignee_id"
+  ]
+}
