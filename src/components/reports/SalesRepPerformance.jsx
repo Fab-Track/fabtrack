@@ -72,7 +72,7 @@ export default function SalesRepPerformance({ jobs, estimates, invoices }) {
   // Per-rep metrics
   const repData = useMemo(() => {
     return reps.map(rep => {
-      const repJobs = jobs.filter(j => j.assigned_rep_id === rep.id);
+      const repJobs = jobs.filter(j => j.assigned_rep_id === rep.id || (j.assigned_rep_name && j.assigned_rep_name === rep.name));
       const repJobIds = new Set(repJobs.map(j => j.id));
 
       // Estimates for this rep's jobs, filtered by date range (using estimate created_date)
@@ -120,7 +120,9 @@ export default function SalesRepPerformance({ jobs, estimates, invoices }) {
     });
   }, [reps, jobs, estimates, invoices, range]);
 
-  // Leaderboard ranked
+  // Leaderboard ranked — maps rankBy to the actual data property for the chart
+  const rankValueKey = rankBy === "approved" ? "approvedVolume" : rankBy === "sent" ? "sentVolume" : rankBy;
+
   const leaderboard = useMemo(() => {
     return [...repData]
       .sort((a, b) => {
@@ -132,8 +134,9 @@ export default function SalesRepPerformance({ jobs, estimates, invoices }) {
           case "avgDeal": return b.avgDeal - a.avgDeal;
           default: return 0;
         }
-      });
-  }, [repData, rankBy]);
+      })
+      .map(r => ({ ...r, _rankValue: rankBy === "closeRate" ? r.closeRate : r[rankValueKey] || 0 }));
+  }, [repData, rankBy, rankValueKey]);
 
   // Detail table: filtered by permission
   const detailRows = selectedRepId
@@ -202,7 +205,7 @@ export default function SalesRepPerformance({ jobs, estimates, invoices }) {
                   if (["collected", "approved", "sent", "avgDeal"].includes(rankBy)) return `$${v.toLocaleString()}`;
                   return v;
                 }} />
-                <Bar dataKey={rankBy} radius={[0, 4, 4, 0]}>
+                <Bar dataKey="_rankValue" radius={[0, 4, 4, 0]}>
                   {leaderboard.map((_, i) => (
                     <Cell key={i} fill={LEADERBOARD_COLORS[i] || "#64748b"} />
                   ))}
@@ -237,7 +240,9 @@ export default function SalesRepPerformance({ jobs, estimates, invoices }) {
                 <span className="font-semibold shrink-0">
                   {rankBy === "closeRate" ? `${r.closeRate}%` :
                    rankBy === "avgDeal" ? `$${r.avgDeal.toLocaleString()}` :
-                   `$${r[rankBy].toLocaleString()}`}
+                   rankBy === "approved" ? `$${r.approvedVolume.toLocaleString()}` :
+                   rankBy === "sent" ? `$${r.sentVolume.toLocaleString()}` :
+                   `$${(r[rankBy] || 0).toLocaleString()}`}
                 </span>
               </div>
             ))}
