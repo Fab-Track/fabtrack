@@ -11,6 +11,9 @@ import PipelineSnapshot from "@/components/dashboard/owner/PipelineSnapshot";
 import RecentActivityFeed from "@/components/dashboard/owner/RecentActivityFeed";
 import TodaysInstalls from "@/components/dashboard/owner/TodaysInstalls";
 import CashFlowMini from "@/components/dashboard/owner/CashFlowMini";
+import CustomerMixCard from "@/components/dashboard/owner/CustomerMixCard";
+import CustomerLifetimeValueCard from "@/components/dashboard/owner/CustomerLifetimeValueCard";
+import PipelineVelocityCard from "@/components/dashboard/owner/PipelineVelocityCard";
 
 export default function OwnerDashboard() {
   const now = new Date();
@@ -20,6 +23,7 @@ export default function OwnerDashboard() {
   const { data: jobs = [], isLoading } = useQuery({ queryKey: ["jobs"], queryFn: () => base44.entities.Job.list("-created_date", 300), refetchInterval: 5 * 60 * 1000 });
   const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: () => base44.entities.Invoice.list("-created_date", 500), refetchInterval: 5 * 60 * 1000 });
   const { data: estimates = [] } = useQuery({ queryKey: ["estimates-all"], queryFn: () => base44.entities.Estimate.list("-created_date", 300), refetchInterval: 5 * 60 * 1000 });
+  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: () => base44.entities.Customer.list("name", 500), refetchInterval: 5 * 60 * 1000 });
 
   const today = new Date();
 
@@ -72,7 +76,14 @@ export default function OwnerDashboard() {
         </DashWidget>
       </div>
 
-      {/* Row 4 — Today's Installs + Cash Flow */}
+      {/* Row 4 — Customer Analytics */}
+      <div className="grid lg:grid-cols-3 gap-4 mb-4">
+        <CustomerMixCard jobs={jobs} customers={customers} />
+        <CustomerLifetimeValueCard invoices={invoices} customers={customers} />
+        <PipelineVelocityCard jobs={jobs} />
+      </div>
+
+      {/* Row 5 — Today's Installs + Cash Flow */}
       <div className="grid lg:grid-cols-2 gap-4">
         <DashWidget title="Today's Installs" action="View Full Schedule" actionTo="/schedule">
           <TodaysInstalls jobs={jobs} />
