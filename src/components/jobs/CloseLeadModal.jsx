@@ -58,15 +58,22 @@ export default function CloseLeadModal({ open, onClose, job }) {
   const closeMutation = useMutation({
     mutationFn: () => {
       const reason = OUTCOME_REASONS[outcomeCategory]?.find(r => r.id === reasonId);
+      const isWon = outcomeCategory === "Won";
       const update = {
         lead_outcome: reason?.label || outcomeCategory,
         lead_outcome_category: outcomeCategory,
         lead_close_reason: reasonId,
         lead_lost_to: ["lost_price_competitor", "lost_price_expensive"].includes(reasonId) ? (lostTo || null) : null,
         lead_closed_at: new Date().toISOString(),
-        is_lead_closed: true,
+        is_lead_closed: !isWon,
         close_notes: notes || null,
       };
+      // Won leads move to "Deposit Received / Sale Won" instead of being archived
+      if (isWon) {
+        update.stage = "Deposit Received / Sale Won";
+        update.pipeline_board = "Sales";
+        update.stage_entered_at = new Date().toISOString();
+      }
       if (requiresFollowUp && followUpDate) {
         update.follow_up_date = format(followUpDate, "yyyy-MM-dd");
         update.follow_up_notified = false;
@@ -103,7 +110,10 @@ export default function CloseLeadModal({ open, onClose, job }) {
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-xs text-muted-foreground">
-            <strong>{job?.job_name}</strong> — record why this lead is closing. It will be archived off the active board.
+            <strong>{job?.job_name}</strong> —{" "}
+            {outcomeCategory === "Won"
+              ? "it will move to Deposit Received / Sale Won."
+              : "record why this lead is closing. It will be archived off the active board."}
           </p>
 
           {/* Step 1: Outcome Category */}
