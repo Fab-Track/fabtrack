@@ -29,6 +29,7 @@ const OnboardingSurveyPage = lazy(() => import('@/pages/OnboardingSurveyPage'));
 const Settings         = lazy(() => import('@/pages/Settings'));
 const EstimatePage     = lazy(() => import('@/pages/EstimatePage'));
 const EstimateView     = lazy(() => import('@/pages/EstimateView'));
+const InvoiceView      = lazy(() => import('@/pages/InvoiceView'));
 const MyTimesheet      = lazy(() => import('@/pages/MyTimesheet'));
 const AdminPayroll     = lazy(() => import('@/pages/AdminPayroll'));
 const Reports          = lazy(() => import('@/pages/Reports'));
@@ -118,6 +119,7 @@ const AuthenticatedApp = () => {
       <Route path="/onboarding" element={<OnboardingSurveyPage />} />
       <Route path="/welcome" element={<OnboardingWelcome />} />
       <Route path="/estimate-view/:estimateId" element={<EstimateView />} />
+      <Route path="/invoice-view/:invoiceId" element={<InvoiceView />} />
       
       {/* Main app with sidebar layout */}
       <Route element={<AppLayout />}>

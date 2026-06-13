@@ -1,7 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CreditCard, Loader2 } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 
 const STATUS_COLORS = {
   Unpaid: "bg-amber-100 text-amber-800",
@@ -19,6 +22,32 @@ Accepted payment methods: Check, ACH, Credit Card, or Stripe.
 Late payments may be subject to a 1.5% monthly finance charge. For questions regarding this invoice, please contact High Country Metal Works directly.`;
 
 export default function InvoiceCustomerView({ invoice, job, customer, lines, subtotal, discountPct, discountAmt, tax, taxAmount, total, amountPaid, balanceDue, notes, viewMode, issuedDate, dueDate, invoiceLabel, status, contractText }) {
+  const [payLoading, setPayLoading] = useState(false);
+  const [payError, setPayError] = useState(null);
+
+  const showPayButton = (status === "Unpaid" || status === "Partial" || status === "Overdue") && balanceDue > 0 && invoice?.id;
+
+  const handlePayNow = async () => {
+    setPayLoading(true);
+    setPayError(null);
+    try {
+      const origin = window.location.origin;
+      const res = await base44.functions.invoke("createStripeCheckout", {
+        invoice_id: invoice.id,
+        success_url: `${origin}/invoice-view/${invoice.id}?payment=success`,
+        cancel_url: `${origin}/invoice-view/${invoice.id}?payment=cancelled`,
+      });
+      if (res.data?.checkout_url) {
+        window.location.href = res.data.checkout_url;
+      } else {
+        setPayError(res.data?.error || "Failed to create checkout session");
+      }
+    } catch (err) {
+      setPayError("Something went wrong. Please try again.");
+    }
+    setPayLoading(false);
+  };
+
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-xl border shadow-sm overflow-hidden">
       {/* Header */}
@@ -162,6 +191,35 @@ export default function InvoiceCustomerView({ invoice, job, customer, lines, sub
             )}
           </div>
         </div>
+
+        {/* Pay Now */}
+        {showPayButton && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 sm:p-5 text-center">
+            <p className="text-sm font-semibold text-emerald-800 mb-3">
+              Ready to pay? Click below to pay securely with credit or debit card.
+            </p>
+            <button
+              onClick={handlePayNow}
+              disabled={payLoading}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-semibold py-3 px-8 rounded-xl shadow-lg transition-colors text-sm sm:text-base touch-target"
+            >
+              {payLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <CreditCard className="w-5 h-5" />
+              )}
+              {payLoading
+                ? "Redirecting to secure checkout…"
+                : `Pay $${balanceDue.toLocaleString("en-US", { minimumFractionDigits: 2 })} Now`}
+            </button>
+            {payError && (
+              <p className="text-xs text-red-600 mt-2">{payError}</p>
+            )}
+            <p className="text-[11px] text-muted-foreground mt-2">
+              Secure payment powered by Stripe
+            </p>
+          </div>
+        )}
 
         {/* Customer Notes */}
         {notes && (
