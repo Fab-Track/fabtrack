@@ -214,18 +214,18 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
 
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b bg-muted/30 shrink-0 gap-2">
-      <div className="flex items-center gap-3 flex-wrap">
-        <div>
-          <p className="text-xs text-muted-foreground font-mono">{job.job_number}</p>
-          <h2 className="font-semibold text-sm">{job.job_name}</h2>
+      <div className="sticky top-0 z-20 bg-background border-b px-4 py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between shrink-0 gap-2">
+      <div className="flex items-center gap-3 flex-wrap min-w-0">
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground font-mono truncate">{job.job_number}</p>
+          <h2 className="font-semibold text-sm truncate">{job.job_name}</h2>
         </div>
         <div className="flex items-center gap-1.5">
           <Select value={serviceCategory} onValueChange={setServiceCategory}>
-            <SelectTrigger className={`h-9 text-xs w-44 ${!serviceCategory ? "border-amber-400 bg-amber-50" : ""}`}>
-              <SelectValue placeholder="Service Category…" />
+            <SelectTrigger className={`h-9 text-xs w-36 sm:w-44 touch-target ${!serviceCategory ? "border-amber-400 bg-amber-50" : ""}`}>
+              <SelectValue placeholder="Category…" />
             </SelectTrigger>
             <SelectContent>
               {["Railing","Staircase","Structural","Gate","Planter Box","Wall Wrap","Awning","Other / Custom"].map(c => (
@@ -236,39 +236,39 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
           {!serviceCategory && <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" title="Required for Sent status" />}
         </div>
       </div>
-      <div className="flex items-center gap-2 flex-wrap">
-          {/* Editor view toggle — local only, does not save */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Editor view toggle */}
           <div className="flex items-center border rounded-md overflow-hidden h-8">
             <button
-              className={`px-2.5 h-full text-xs flex items-center gap-1 transition-colors ${editorView === "summary" ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"}`}
+              className={`px-2 sm:px-2.5 h-full text-xs flex items-center gap-1 transition-colors touch-target ${editorView === "summary" ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"}`}
               onClick={() => setEditorView("summary")}
             >
-              <AlignJustify className="w-3 h-3" /> Summary
+              <AlignJustify className="w-3 h-3" /> <span className="hidden sm:inline">Summary</span>
             </button>
             <button
-              className={`px-2.5 h-full text-xs flex items-center gap-1 transition-colors ${editorView === "detail" ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"}`}
+              className={`px-2 sm:px-2.5 h-full text-xs flex items-center gap-1 transition-colors touch-target ${editorView === "detail" ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"}`}
               onClick={() => setEditorView("detail")}
             >
-              <LayoutList className="w-3 h-3" /> Detail
+              <LayoutList className="w-3 h-3" /> <span className="hidden sm:inline">Detail</span>
             </button>
           </div>
-          {/* Customer-facing view mode — saved with estimate */}
+          {/* Customer-facing view mode */}
           <button
             onClick={() => setViewMode(v => v === "summary" ? "detail" : "summary")}
-            className="h-8 px-2.5 text-xs border rounded-md flex items-center gap-1.5 hover:bg-muted transition-colors text-muted-foreground"
+            className="h-8 px-2 sm:px-2.5 text-xs border rounded-md flex items-center gap-1.5 hover:bg-muted transition-colors text-muted-foreground touch-target"
             title="Toggle what the customer sees"
           >
-            <span className="text-[10px] uppercase tracking-wide font-medium opacity-60">Customer:</span>
-            <span className="font-semibold text-foreground">{viewMode === "summary" ? "Summary" : "Detail"}</span>
+            <span className="text-[10px] uppercase tracking-wide font-medium opacity-60">Cust:</span>
+            <span className="font-semibold text-foreground">{viewMode === "summary" ? "Sum" : "Det"}</span>
           </button>
           {isLocked && estimate?.id ? (
             <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-700">
               <Lock className="w-3 h-3" />
-              <span className="text-xs font-semibold">Approved — Locked</span>
+              <span className="text-xs font-semibold">Locked</span>
             </div>
           ) : (
             <Select value={status} onValueChange={(v) => { setStatus(v); if (v !== "Approved") setApprovalMethod(""); }}>
-              <SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 text-xs w-24 touch-target"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {["Draft", "Sent", "Approved", "Rejected"].map(s => (
                   <SelectItem key={s} value={s}>{s}</SelectItem>
@@ -276,25 +276,25 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
               </SelectContent>
             </Select>
           )}
-          <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
-            {save.isPending ? "Saving…" : isNew ? "Create Estimate" : "Save Changes"}
+          <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending} className="touch-target">
+            {save.isPending ? "Saving…" : isNew ? "Create" : "Save"}
           </Button>
           {!isNew && status === "Approved" && onCreateDepositInvoice && (
             <Button
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 touch-target"
               onClick={() => onCreateDepositInvoice({ lines, total, markup, overhead, tax, notes })}
             >
-              <FileText className="w-3.5 h-3.5" /> Create Deposit Invoice
+              <FileText className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Create Deposit Invoice</span><span className="sm:hidden">Deposit</span>
             </Button>
           )}
           {onClose && (
-            <Button size="sm" variant="outline" onClick={onClose}>Close</Button>
+            <Button size="sm" variant="outline" onClick={onClose} className="touch-target">Close</Button>
           )}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1">
         {/* Internal approval audit — shown when manually setting to Approved */}
         {status === "Approved" && !estimate?.approved_at && (
           <div className="mx-5 mt-4 p-4 rounded-lg border border-emerald-200 bg-emerald-50 space-y-3">
@@ -357,8 +357,8 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
 
           {editorView === "detail" ? (
             <>
-              {/* Detail — horizontally scrollable on mobile */}
-              <div className="overflow-x-auto -mx-1 px-1">
+              {/* Desktop: grid layout */}
+              <div className="hidden md:block overflow-x-auto -mx-1 px-1">
               <div style={{ minWidth: 540 }}>
               <div className="grid grid-cols-[2fr_1.5fr_0.7fr_1fr_1fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
                 <span>Description</span>
@@ -426,6 +426,79 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
               </div>
               </div>{/* minWidth wrapper */}
               </div>{/* overflow-x-auto */}
+
+              {/* Mobile: card layout */}
+              <div className="md:hidden space-y-3">
+                {lines.map((line, idx) => (
+                  <div key={line._id} className="bg-card rounded-xl border p-3 space-y-2.5">
+                    <div>
+                      <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Description</Label>
+                      <Input
+                        className="h-9 text-sm mt-0.5"
+                        placeholder="Description"
+                        value={line.description}
+                        onChange={e => updateLine(idx, "description", e.target.value)}
+                        disabled={isLocked && !!estimate?.id}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Install Location</Label>
+                      <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)} disabled={isLocked && !!estimate?.id}>
+                        <SelectTrigger className="h-9 text-sm w-full mt-0.5"><SelectValue /></SelectTrigger>
+                        <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Qty</Label>
+                        <Input
+                          className="h-9 text-sm mt-0.5"
+                          type="number"
+                          value={line.quantity}
+                          onChange={e => updateLine(idx, "quantity", e.target.value)}
+                          disabled={isLocked && !!estimate?.id}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Unit Cost</Label>
+                        <Input
+                          className="h-9 text-sm mt-0.5"
+                          type="number"
+                          placeholder="0.00"
+                          value={line.unit_cost}
+                          onChange={e => updateLine(idx, "unit_cost", e.target.value)}
+                          disabled={isLocked && !!estimate?.id}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 border-t">
+                      <div>
+                        <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Amount</Label>
+                        <p className="text-base font-bold mt-0.5">
+                          ${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                      {!(isLocked && !!estimate?.id) && (
+                        <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-destructive touch-target" onClick={() => removeLine(idx)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                    {line.photo_url && (
+                      <div className="flex items-center gap-2">
+                        <img src={line.photo_url} alt="" className="h-12 w-20 object-cover rounded border" />
+                        <button
+                          className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${line.show_photo !== false ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-border"}`}
+                          onClick={() => updateLine(idx, "show_photo", line.show_photo === false)}
+                        >
+                          {line.show_photo !== false ? <Image className="w-3 h-3" /> : <ImageOff className="w-3 h-3" />}
+                          {line.show_photo !== false ? "Show photo" : "Hide photo"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </>
           ) : (
             <>

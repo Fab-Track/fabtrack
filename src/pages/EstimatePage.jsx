@@ -339,9 +339,10 @@ export default function EstimatePage() {
             <Save className="w-3.5 h-3.5" />
             {save.isPending ? "Saving…" : "Save"}
           </Button>
-          <Button size="sm" className="gap-1.5 h-8" onClick={() => { setActiveTab("customer"); setSendPanelOpen(true); }}>
+          <Button size="sm" className="gap-1.5 h-8 touch-target" onClick={() => { setActiveTab("customer"); setSendPanelOpen(true); }}>
             <Send className="w-3.5 h-3.5" />
-            Review & Send
+            <span className="hidden sm:inline">Review & Send</span>
+            <span className="sm:hidden">Send</span>
           </Button>
         </div>
       </div>
@@ -468,7 +469,8 @@ export default function EstimatePage() {
                   </div>
                 )}
 
-                <div className="overflow-x-auto -mx-2 px-2">
+                {/* Desktop: grid layout */}
+                <div className="hidden md:block overflow-x-auto -mx-2 px-2">
                   <div style={{ minWidth: 620 }}>
                     {/* Column headers */}
                     <div className="grid gap-1.5 text-xs text-muted-foreground font-medium mb-2 px-1"
@@ -531,11 +533,88 @@ export default function EstimatePage() {
                           )}
                         </div>
                       ))}
-                      {lines.length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center py-8">No line items yet. Click "Add Line Item" to start.</p>
-                      )}
                     </div>
                   </div>
+                </div>
+
+                {/* Mobile: card layout */}
+                <div className="md:hidden space-y-3">
+                  {lines.map((line, idx) => (
+                    <div key={line._id} className="bg-card rounded-xl border p-3 space-y-2.5">
+                      {/* Description */}
+                      <div>
+                        <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Description</Label>
+                        <ProductServiceDropdown
+                          value={line.description}
+                          onChange={v => updateLine(idx, "description", v)}
+                          onSelect={item => handleProductSelect(idx, item)}
+                        />
+                      </div>
+
+                      {/* Install Location */}
+                      <div>
+                        <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Install Location</Label>
+                        <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)}>
+                          <SelectTrigger className="h-9 text-sm w-full mt-0.5"><SelectValue /></SelectTrigger>
+                          <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Category + Qty + Unit Cost row */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Category</Label>
+                          <Select value={line.category || "Labor"} onValueChange={v => updateLine(idx, "category", v)}>
+                            <SelectTrigger className="h-9 text-sm w-full mt-0.5"><SelectValue /></SelectTrigger>
+                            <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Qty</Label>
+                          <Input className="h-9 text-sm mt-0.5" type="number" value={line.quantity} onChange={e => updateLine(idx, "quantity", e.target.value)} />
+                        </div>
+                        <div>
+                          <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Unit Cost</Label>
+                          <Input className="h-9 text-sm mt-0.5" type="number" placeholder="0.00" value={line.unit_cost} onChange={e => updateLine(idx, "unit_cost", e.target.value)} />
+                        </div>
+                      </div>
+
+                      {/* Total + Delete */}
+                      <div className="flex items-center justify-between pt-1 border-t">
+                        <div>
+                          <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Amount</Label>
+                          <p className="text-base font-bold mt-0.5">
+                            ${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 text-muted-foreground hover:text-destructive touch-target"
+                          onClick={() => removeLine(idx)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+
+                      {/* Inline calculators */}
+                      {line._is_railing && (
+                        <RailingInlineCalc
+                          styleName={line._railing_style}
+                          onPriceChange={(total, lnft) => handleRailingPrice(idx, total, lnft)}
+                        />
+                      )}
+                      {line._is_staircase && (
+                        <StaircaseInlineCalc
+                          staircaseType={line._staircase_type}
+                          onPriceChange={(total, qty) => handleStaircasePrice(idx, total, qty)}
+                        />
+                      )}
+                    </div>
+                  ))}
+                  {lines.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-8">No line items yet. Click "Add Line Item" to start.</p>
+                  )}
                 </div>
               </div>
 
