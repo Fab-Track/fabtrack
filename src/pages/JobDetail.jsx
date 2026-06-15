@@ -35,6 +35,7 @@ import ProjectDetailsTab from "@/components/jobs/ProjectDetailsTab";
 import JobMessagesTab from "@/components/jobs/JobMessagesTab";
 import JobCommunicationsTab from "@/components/jobs/JobCommunicationsTab";
 import JobTodosTab from "@/components/jobs/JobTodosTab";
+import JobEventsList from "@/components/events/JobEventsList";
 import QueuedMessageBanner from "@/components/comms/QueuedMessageBanner";
 import MessageComposerModal from "@/components/comms/MessageComposerModal";
 
@@ -105,9 +106,9 @@ export default function JobDetail() {
   const isShopRole = ["fabricator", "design_specialist"].includes(effectiveRole.toLowerCase());
 
   // Fabricator / Design Specialist see only these tabs in this order
-  const SHOP_TABS = ["overview", "schedule", "project-details", "attachments", "messages", "shop-log", "todos"];
+  const SHOP_TABS = ["overview", "schedule", "project-details", "attachments", "messages", "shop-log", "appointments", "todos"];
   // All other roles see all tabs in this order
-  const ALL_TABS = ["overview", "schedule", "project-details", "attachments", "messages", "shop-log", "todos", "documents", "costing", "communications", "history"];
+  const ALL_TABS = ["overview", "schedule", "project-details", "attachments", "messages", "shop-log", "appointments", "todos", "documents", "costing", "communications", "history"];
 
   const visibleTabs = isShopRole ? SHOP_TABS : ALL_TABS;
 
@@ -233,6 +234,9 @@ export default function JobDetail() {
           {visibleTabs.includes("shop-log") && <TabsTrigger value="shop-log" className="shrink-0">Shop Log</TabsTrigger>}
           {visibleTabs.includes("documents") && <TabsTrigger value="documents" className="shrink-0">Documents</TabsTrigger>}
           {visibleTabs.includes("costing") && <TabsTrigger value="costing" className="shrink-0">Costing</TabsTrigger>}
+          {visibleTabs.includes("appointments") && (
+            <TabsTrigger value="appointments" className="shrink-0">Appointments</TabsTrigger>
+          )}
           {visibleTabs.includes("todos") && (
             <TabsTrigger value="todos" className="shrink-0">
               Todos
@@ -257,6 +261,7 @@ export default function JobDetail() {
         <TabsContent value="shop-log"><JobShopLogTab timeEntries={timeEntries} job={job} /></TabsContent>
         <TabsContent value="documents"><JobDocumentsTab job={job} /></TabsContent>
         <TabsContent value="costing"><JobCostingTab job={job} timeEntries={timeEntries} purchaseOrders={purchaseOrders} employees={employees} /></TabsContent>
+        <TabsContent value="appointments"><JobEventsList job={job} /></TabsContent>
         <TabsContent value="todos"><JobTodosTab job={job} /></TabsContent>
         <TabsContent value="communications"><JobCommunicationsTab job={job} /></TabsContent>
         <TabsContent value="history"><JobHistoryTab job={job} /></TabsContent>

@@ -1,0 +1,333 @@
+import React, { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
+import { ChevronLeft, ChevronRight, Plus, Filter } from "lucide-react";
+import { format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isSameMonth, addMonths, subMonths, addWeeks, subWeeks, getDay } from "date-fns";
+
+const TYPE_COLORS = {
+  Measure: "bg-blue-500",
+  Consultation: "bg-purple-500",
+  "Site Visit": "bg-amber-500",
+  Other: "bg-slate-500",
+};
+
+function formatTime(t) {
+  if (!t) return "";
+  const [h, m] = t.split(":");
+  const hour = parseInt(h);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const h12 = hour % 12 || 12;
+  return `${h12}:${m}${ampm}`;
+}
+
+export default function Calendar() {
+  const { user } = useAuth();
+  const [view, setView] = useState("month"); // month | week | day
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [teamView, setTeamView] = useState(false); // false = My Calendar, true = Team
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const { data: events = [], isLoading } = useQuery({
+    queryKey: ["all-scheduled-events"],
+    queryFn: () => base44.entities.ScheduledEvent.list("-date", 500),
+  });
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ["employees"],
+    queryFn: () => base44.entities.Employee.list("-created_date", 100),
+  });
+
+  // Match current user to an employee record for "My Calendar" filtering
+  const myEmployee = useMemo(() => {
+    if (!user || !employees.length) return null;
+    const match = employees.find(
+      e => e.email === user.email || e.personal_email === user.email || e.created_by_id === user.id
+    );
+    return match;
+  }, [user, employees]);
+
+  // Filter: My vs Team
+  const filteredEvents = useMemo(() => {
+    return events.filter(e => {
+      if (e.status !== "Scheduled") return false;
+      if (!teamView && myEmployee && e.assigned_user_ids?.length) {
+        return e.assigned_user_ids.includes(myEmployee.id || myEmployee.created_by_id);
+      }
+      return true;
+    });
+  }, [events, teamView, myEmployee]);
+
+  // Navigation
+  function prev() {
+    if (view === "month") setCurrentDate(subMonths(currentDate, 1));
+    else if (view === "week") setCurrentDate(subWeeks(currentDate, 1));
+    else setCurrentDate(addDays(currentDate, -1));
+  }
+  function next() {
+    if (view === "month") setCurrentDate(addMonths(currentDate, 1));
+    else if (view === "week") setCurrentDate(addWeeks(currentDate, 1));
+    else setCurrentDate(addDays(currentDate, 1));
+  }
+  function goToday() {
+    setCurrentDate(new Date());
+    setSelectedDate(new Date());
+  }
+
+  const titleText = view === "month"
+    ? format(currentDate, "MMMM yyyy")
+    : view === "week"
+    ? `Week of ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "MMM d")}`
+    : format(currentDate, "EEEE, MMMM d, yyyy");
+
+  return (
+    <div className="p-4 md:p-6 max-w-[1400px] mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-bold">Calendar</h1>
+          <Badge variant="outline" className="text-xs">{filteredEvents.length} events</Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Team / My toggle */}
+          <div className="flex items-center border rounded-md overflow-hidden h-8">
+            <button
+              className={`px-3 h-full text-xs font-medium transition-colors ${!teamView ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"}`}
+              onClick={() => setTeamView(false)}
+            >
+              My Calendar
+            </button>
+            <button
+              className={`px-3 h-full text-xs font-medium transition-colors ${teamView ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"}`}
+              onClick={() => setTeamView(true)}
+            >
+              Team
+            </button>
+          </div>
+          {/* View toggle */}
+          <div className="flex items-center border rounded-md overflow-hidden h-8">
+            {["month", "week", "day"].map(v => (
+              <button
+                key={v}
+                className={`px-3 h-full text-xs font-medium capitalize transition-colors ${view === v ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"}`}
+                onClick={() => { setView(v); if (v === "day") setCurrentDate(selectedDate); }}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Nav bar */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={prev}><ChevronLeft className="w-4 h-4" /></Button>
+          <h2 className="text-base font-semibold min-w-[160px] text-center">{titleText}</h2>
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={next}><ChevronRight className="w-4 h-4" /></Button>
+        </div>
+        <Button variant="outline" size="sm" className="h-8 text-xs" onClick={goToday}>Today</Button>
+      </div>
+
+      {/* Calendar Content */}
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">Loading...</div>
+      ) : (
+        <>
+          {view === "month" && <MonthView currentDate={currentDate} events={filteredEvents} employees={employees} />}
+          {view === "week" && <WeekView currentDate={currentDate} events={filteredEvents} employees={employees} />}
+          {view === "day" && <DayView currentDate={currentDate} events={filteredEvents} employees={employees} />}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Month View ──────────────────────────────────────────────────────────────
+function MonthView({ currentDate, events, employees }) {
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const calEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+
+  const days = [];
+  let day = calStart;
+  while (day <= calEnd) {
+    days.push(day);
+    day = addDays(day, 1);
+  }
+
+  const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  return (
+    <div className="bg-card rounded-xl border overflow-hidden">
+      {/* Day headers */}
+      <div className="grid grid-cols-7 border-b">
+        {dayNames.map(d => (
+          <div key={d} className="p-2 text-center text-xs font-semibold text-muted-foreground border-r last:border-r-0">{d}</div>
+        ))}
+      </div>
+      {/* Days grid */}
+      <div className="grid grid-cols-7">
+        {days.map(d => {
+          const dayEvents = events.filter(e => e.date && isSameDay(parseISO(e.date), d));
+          const isCurrentMonth = isSameMonth(d, currentDate);
+          const isToday = isSameDay(d, new Date());
+          return (
+            <div
+              key={d.toISOString()}
+              className={`min-h-[80px] md:min-h-[100px] p-1 border-r border-b last:border-r-0 text-xs ${isCurrentMonth ? "bg-transparent" : "bg-muted/30"}`}
+            >
+              <div className={`font-medium mb-0.5 px-1 ${isToday ? "bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center" : ""}`}>
+                {format(d, "d")}
+              </div>
+              <div className="space-y-0.5">
+                {dayEvents.slice(0, 3).map(ev => (
+                  <EventDot key={ev.id} event={ev} employees={employees} />
+                ))}
+                {dayEvents.length > 3 && (
+                  <p className="text-[10px] text-muted-foreground px-1">+{dayEvents.length - 3} more</p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Week View ────────────────────────────────────────────────────────────────
+function WeekView({ currentDate, events, employees }) {
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const hours = Array.from({ length: 14 }, (_, i) => i + 6); // 6am-7pm
+
+  return (
+    <div className="bg-card rounded-xl border overflow-auto">
+      <div className="min-w-[700px]">
+        {/* Header row */}
+        <div className="grid grid-cols-8 border-b">
+          <div className="p-2 text-xs text-muted-foreground font-medium text-center border-r">Time</div>
+          {Array.from({ length: 7 }, (_, i) => {
+            const d = addDays(weekStart, i);
+            const isToday = isSameDay(d, new Date());
+            return (
+              <div key={i} className={`p-2 text-center border-r last:border-r-0 ${isToday ? "bg-primary/5" : ""}`}>
+                <p className="text-[10px] text-muted-foreground uppercase">{format(d, "EEE")}</p>
+                <p className={`text-sm font-semibold ${isToday ? "text-primary" : ""}`}>{format(d, "d")}</p>
+              </div>
+            );
+          })}
+        </div>
+        {/* Hour rows */}
+        {hours.map(h => (
+          <div key={h} className="grid grid-cols-8 border-b text-xs">
+            <div className="p-1.5 text-muted-foreground font-medium text-center border-r">{h % 12 || 12}{h >= 12 ? "PM" : "AM"}</div>
+            {Array.from({ length: 7 }, (_, dayIdx) => {
+              const d = addDays(weekStart, dayIdx);
+              const hourEvents = events.filter(e => {
+                if (!e.date || !isSameDay(parseISO(e.date), d)) return false;
+                const startH = parseInt(e.start_time?.split(":")[0]);
+                return startH === h;
+              });
+              return (
+                <div key={dayIdx} className="p-0.5 border-r last:border-r-0 min-h-[36px]">
+                  {hourEvents.map(ev => (
+                    <EventDot key={ev.id} event={ev} employees={employees} />
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Day View ─────────────────────────────────────────────────────────────────
+function DayView({ currentDate, events, employees }) {
+  const dayEvents = events.filter(e => e.date && isSameDay(parseISO(e.date), currentDate)).sort((a, b) => {
+    return (a.start_time || "").localeCompare(b.start_time || "");
+  });
+  const hours = Array.from({ length: 14 }, (_, i) => i + 6);
+  const isToday = isSameDay(currentDate, new Date());
+
+  return (
+    <div className="bg-card rounded-xl border overflow-hidden">
+      <div className={`p-3 border-b flex items-center justify-between ${isToday ? "bg-primary/5" : ""}`}>
+        <div>
+          <p className="text-sm font-semibold">{format(currentDate, "EEEE, MMMM d")}</p>
+          <p className="text-xs text-muted-foreground">{dayEvents.length} appointment{dayEvents.length !== 1 ? "s" : ""}</p>
+        </div>
+      </div>
+      <div className="max-h-[600px] overflow-y-auto">
+        {hours.map(h => {
+          const hourEvents = dayEvents.filter(e => {
+            const startH = parseInt(e.start_time?.split(":")[0]);
+            return startH === h;
+          });
+          return (
+            <div key={h} className="flex border-b text-xs min-h-[48px]">
+              <div className="w-16 shrink-0 p-2 text-muted-foreground font-medium text-center border-r bg-muted/20">
+                {h % 12 || 12}{h >= 12 ? "P" : "A"}
+              </div>
+              <div className="flex-1 p-1.5 space-y-1">
+                {hourEvents.map(ev => (
+                  <DayEventCard key={ev.id} event={ev} employees={employees} />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        {dayEvents.length === 0 && (
+          <div className="p-8 text-center text-sm text-muted-foreground">No appointments for this day.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Mini Event Dot (month/week) ─────────────────────────────────────────────
+function EventDot({ event, employees }) {
+  const color = TYPE_COLORS[event.event_type] || TYPE_COLORS.Other;
+  return (
+    <Link to={`/jobs/${event.job_id}`} className="block truncate">
+      <div className="flex items-center gap-1 px-1 py-0.5 rounded hover:bg-muted/80 transition-colors">
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${color}`} />
+        <span className="truncate text-[10px] leading-tight">
+          {formatTime(event.start_time)} {event.event_type}
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+// ── Event Card (day view) ────────────────────────────────────────────────────
+function DayEventCard({ event, employees }) {
+  const color = TYPE_COLORS[event.event_type] || TYPE_COLORS.Other;
+  return (
+    <Link to={`/jobs/${event.job_id}`} className="block">
+      <div className="flex items-start gap-2 p-2 rounded-lg border hover:bg-muted/50 transition-colors">
+        <div className={`w-1 self-stretch rounded-full ${color}`} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge className={`text-[10px] py-0 h-5 ${TYPE_COLORS[event.event_type] ? TYPE_COLORS[event.event_type].replace("500", "100").replace("500", "800") : ""}`}>
+              {event.event_type}
+            </Badge>
+            <span className="text-xs font-medium">{formatTime(event.start_time)} – {formatTime(event.end_time)}</span>
+          </div>
+          <p className="text-xs font-medium mt-0.5">{event.job_name}</p>
+          {event.customer_name && <p className="text-[11px] text-muted-foreground">{event.customer_name}</p>}
+          {event.assigned_user_names?.length > 0 && (
+            <p className="text-[10px] text-muted-foreground mt-0.5">{event.assigned_user_names.join(", ")}</p>
+          )}
+          {event.notes && <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{event.notes}</p>}
+        </div>
+      </div>
+    </Link>
+  );
+}

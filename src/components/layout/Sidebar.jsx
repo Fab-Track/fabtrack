@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Kanban, Wrench, Clock,
-  FileText, CalendarDays, Users, Package,
+  FileText, CalendarDays, Calendar, Users, Package,
   Trophy, ChevronLeft, ChevronRight,
   Building2, Settings, Menu, X, BarChart2, MessageCircle, MessagesSquare, LogOut
 } from "lucide-react";
@@ -25,6 +25,7 @@ const ALL_ITEMS = {
   conversations:  { label: "Conversations",    icon: MessagesSquare,  path: "/conversations" },
   documents:      { label: "Documents",        icon: FileText,        path: "/documents" },
   reports:        { label: "Reports",          icon: BarChart2,       path: "/reports" },
+  calendar:       { label: "Calendar",         icon: Calendar,        path: "/calendar" },
   schedule:       { label: "Schedule",         icon: CalendarDays,    path: "/schedule" },
   workCenters:    { label: "Work Centers",     icon: Wrench,          path: "/work-centers" },
   inventory:      { label: "Inventory",        icon: Package,         path: "/inventory" },
@@ -41,7 +42,7 @@ const ROLE_NAV = {
   admin: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "SALES",       items: ["jobBoard", "customers", "conversations", "documents"] },
-    { group: "OPERATIONS",  items: ["reports", "schedule", "workCenters", "inventory"] },
+    { group: "OPERATIONS",  items: ["calendar", "reports", "schedule", "workCenters", "inventory"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "PAYROLL",     items: ["payroll"] },
     { group: "ACCOUNT",     items: ["settings"] },
@@ -49,14 +50,14 @@ const ROLE_NAV = {
   owner: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "SALES",       items: ["jobBoard", "customers", "conversations", "documents"] },
-    { group: "OPERATIONS",  items: ["reports", "schedule", "workCenters", "inventory"] },
+    { group: "OPERATIONS",  items: ["calendar", "reports", "schedule", "workCenters", "inventory"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "PAYROLL",     items: ["payroll"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   shop_manager: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
-    { group: "OPERATIONS",  items: ["jobBoard", "reports", "schedule", "workCenters", "inventory"] },
+    { group: "OPERATIONS",  items: ["calendar", "jobBoard", "reports", "schedule", "workCenters", "inventory"] },
     { group: "SALES",       items: ["conversations"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "PAYROLL",     items: ["payroll"] },
@@ -66,27 +67,27 @@ const ROLE_NAV = {
   estimator: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "SALES",       items: ["jobBoard", "customers", "conversations", "documents"] },
-    { group: "OPERATIONS",  items: ["reports"] },
+    { group: "OPERATIONS",  items: ["calendar", "reports"] },
     { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   design_specialist: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
-    { group: "WORK",        items: ["jobBoard", "schedule"] },
+    { group: "WORK",        items: ["calendar", "jobBoard", "schedule"] },
     { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   fabricator: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "JOBS",        items: ["jobBoard"] },
-    { group: "SHOP",        items: ["schedule", "shopFloor"] },
+    { group: "SHOP",        items: ["calendar", "schedule", "shopFloor"] },
     { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   installer: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "JOBS",        items: ["jobBoard"] },
-    { group: "SHOP",        items: ["schedule", "shopFloor"] },
+    { group: "SHOP",        items: ["calendar", "schedule", "shopFloor"] },
     { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],

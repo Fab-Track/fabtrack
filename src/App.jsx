@@ -35,6 +35,7 @@ const AdminPayroll     = lazy(() => import('@/pages/AdminPayroll'));
 const Reports          = lazy(() => import('@/pages/Reports'));
 const Messages         = lazy(() => import('@/pages/Messages'));
 const Conversations    = lazy(() => import('@/pages/Conversations'));
+const CalendarPage     = lazy(() => import('@/pages/Calendar'));
 const OnboardingWelcome = lazy(() => import('@/pages/OnboardingWelcome'));
 const Login            = lazy(() => import('@/pages/Login'));
 const Register         = lazy(() => import('@/pages/Register'));
@@ -132,6 +133,7 @@ const AuthenticatedApp = () => {
         <Route path="/reports" element={<Reports />} />
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/messages" element={<Messages />} />
+        <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/conversations" element={<Conversations />} />
         <Route path="/customers" element={<Customers />} />
         <Route path="/inventory" element={<Inventory />} />
