@@ -15,17 +15,6 @@ import AddLineItemWizard from "./AddLineItemWizard";
 import { toast } from "sonner";
 import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
 
-const PHASES = [
-  "General Labor",
-  "Measure",
-  "Design / Draw",
-  "Fabrication",
-  "Powder Coat",
-  "Installation",
-  "Demolition",
-  "Other",
-];
-
 const INSTALL_LOCATIONS = [
   "Interior — Main Staircase",
   "Interior — Secondary Staircase",
@@ -56,7 +45,6 @@ const blankLine = () => ({
   category: "All",
   description: "",
   install_location: "N/A",
-  phase: "",
   quantity: 1,
   unit: "ea",
   unit_cost: 0,
@@ -371,11 +359,10 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
             <>
               {/* Desktop: grid layout */}
               <div className="hidden md:block overflow-x-auto -mx-1 px-1">
-              <div style={{ minWidth: 720 }}>
-              <div className="grid grid-cols-[1.8fr_1.2fr_0.8fr_0.6fr_0.9fr_0.9fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
+              <div style={{ minWidth: 540 }}>
+              <div className="grid grid-cols-[2fr_1.5fr_0.7fr_1fr_1fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
                 <span>Description</span>
                 <span>Install Location</span>
-                <span>Phase</span>
                 <span>Qty</span>
                 <span>Unit Cost</span>
                 <span>Total</span>
@@ -384,7 +371,7 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
               <div className="space-y-2">
                 {lines.map((line, idx) => (
                   <div key={line._id} className="space-y-1">
-                    <div className="grid grid-cols-[1.8fr_1.2fr_0.8fr_0.6fr_0.9fr_0.9fr_auto] gap-1.5 items-center">
+                    <div className="grid grid-cols-[2fr_1.5fr_0.7fr_1fr_1fr_auto] gap-1.5 items-center">
                       <Input
                         className="h-8 text-xs"
                         placeholder="Description"
@@ -395,10 +382,6 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                       <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)} disabled={isLocked && !!estimate?.id}>
                         <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
-                      </Select>
-                      <Select value={line.phase || ""} onValueChange={v => updateLine(idx, "phase", v)} disabled={isLocked && !!estimate?.id}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Phase" /></SelectTrigger>
-                        <SelectContent>{PHASES.map(p => <SelectItem key={p} value={p} className="text-xs">{p}</SelectItem>)}</SelectContent>
                       </Select>
                       <Input
                         className="h-8 text-xs"
@@ -463,13 +446,6 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                       <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)} disabled={isLocked && !!estimate?.id}>
                         <SelectTrigger className="h-9 text-sm w-full mt-0.5"><SelectValue /></SelectTrigger>
                         <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Phase</Label>
-                      <Select value={line.phase || ""} onValueChange={v => updateLine(idx, "phase", v)} disabled={isLocked && !!estimate?.id}>
-                        <SelectTrigger className="h-9 text-sm w-full mt-0.5"><SelectValue placeholder="Phase" /></SelectTrigger>
-                        <SelectContent>{PHASES.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
