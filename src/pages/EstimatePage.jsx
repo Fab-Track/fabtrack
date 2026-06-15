@@ -155,11 +155,12 @@ export default function EstimatePage() {
   const actorName = user?.full_name || user?.email || "Team Member";
 
   const save = useMutation({
-    mutationFn: () => {
+    mutationFn: (nextStatus) => {
+      const finalStatus = nextStatus || status;
       const payload = {
         job_id: jobId,
         job_number: job?.job_number,
-        status,
+        status: finalStatus,
         estimate_number: estimateNumber,
         estimate_date: estimateDate,
         expiration_date: expirationDate,
@@ -174,7 +175,7 @@ export default function EstimatePage() {
         internal_notes: internalNotes,
         customer_signature: signature,
         view_mode: viewMode,
-        ...(status === "Approved" ? { approved_date: approvedDate || new Date().toISOString().split("T")[0] } : {}),
+        ...(finalStatus === "Approved" ? { approved_date: approvedDate || new Date().toISOString().split("T")[0] } : {}),
       };
       return isNew
         ? base44.entities.Estimate.create(payload)
@@ -182,14 +183,15 @@ export default function EstimatePage() {
     },
     onSuccess: async (savedEstimate) => {
       const prevStatus = existingEstimate?.status || "Draft";
+      const finalStatus = savedEstimate?.status || status;
 
       if (isNew) {
         await autoMoveSalesStage(job, "Estimate In Progress", "Estimate created", actorName);
       }
-      if (status === "Sent" && prevStatus !== "Sent") {
+      if (finalStatus === "Sent" && prevStatus !== "Sent") {
         await autoMoveSalesStage(job, "Estimate Sent", "Estimate marked Sent", actorName);
       }
-      if (status === "Approved" && prevStatus !== "Approved") {
+      if (finalStatus === "Approved" && prevStatus !== "Approved") {
         await base44.entities.Job.update(jobId, { estimate_total: total, customer_approval_status: "approved" });
         await autoMoveSalesStage({ ...job, estimate_total: total }, "Awaiting Deposit", `Estimate approved by ${signature}`, actorName);
 
@@ -761,7 +763,7 @@ export default function EstimatePage() {
                     setStatus("Sent");
                     setActiveTab("edit");
                     setSentBanner({ email, date: format(new Date(), "MMM d, yyyy") });
-                    save.mutate();
+                    save.mutate("Sent");
                   }}
                 />
               )}
