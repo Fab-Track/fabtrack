@@ -34,9 +34,11 @@ export default function Calendar() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [gcalConnected, setGcalConnected] = useState(false);
   const [gcalLoading, setGcalLoading] = useState(true);
+  const [gcalError, setGcalError] = useState(null);
 
   // Check Google Calendar connection status
   const checkGcal = useCallback(async () => {
+    setGcalError(null);
     try {
       const res = await base44.functions.invoke("syncEventToGoogle", { event_id: "_check", action: "check" });
       setGcalConnected(!res.data?.skipped);
@@ -52,16 +54,35 @@ export default function Calendar() {
   }, [user, checkGcal]);
 
   const handleConnectGcal = async () => {
-    const url = await base44.connectors.connectAppUser(GCAL_CONNECTOR_ID);
-    const popup = window.open(url, "_blank");
-    const timer = setInterval(() => {
-      if (!popup || popup.closed) { clearInterval(timer); checkGcal(); }
-    }, 500);
+    setGcalError(null);
+    try {
+      const url = await base44.connectors.connectAppUser(GCAL_CONNECTOR_ID);
+      const popup = window.open(url, "_blank");
+      if (!popup) {
+        setGcalError("Pop-up blocked. Please allow pop-ups for this site.");
+        return;
+      }
+      const timer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(timer);
+          checkGcal();
+        }
+      }, 500);
+    } catch (e) {
+      console.error("Google Calendar connect error:", e);
+      setGcalError("Failed to start connection. Please refresh and try again.");
+    }
   };
 
   const handleDisconnectGcal = async () => {
-    await base44.connectors.disconnectAppUser(GCAL_CONNECTOR_ID);
-    setGcalConnected(false);
+    try {
+      await base44.connectors.disconnectAppUser(GCAL_CONNECTOR_ID);
+      setGcalConnected(false);
+      setGcalError(null);
+    } catch (e) {
+      console.error("Google Calendar disconnect error:", e);
+      setGcalError("Failed to disconnect. Please try again.");
+    }
   };
 
   const { data: events = [], isLoading } = useQuery({
@@ -134,6 +155,7 @@ export default function Calendar() {
               </Button>
             )
           )}
+          {gcalError && <span className="text-xs text-destructive">{gcalError}</span>}
         </div>
         <div className="flex items-center gap-2">
           {/* Team / My toggle */}
