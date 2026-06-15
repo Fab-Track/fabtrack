@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
@@ -14,6 +14,7 @@ import { differenceInMonths, parseISO } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 
 import EmployeeProfileTab from "@/components/employees/EmployeeProfileTab";
+import NewEmployeeForm from "@/components/employees/NewEmployeeForm";
 import EmployeeWorkInfoTab from "@/components/employees/EmployeeWorkInfoTab";
 import EmployeeCultureTab from "@/components/employees/EmployeeCultureTab";
 import EmployeeGoalsReviewsTab from "@/components/employees/EmployeeGoalsReviewsTab";
@@ -38,6 +39,9 @@ export default function EmployeeProfilePage() {
   const { toast } = useToast();
   const [sendingOnboarding, setSendingOnboarding] = useState(false);
   const [onboardingLink, setOnboardingLink] = useState(null);
+  const navigate = useNavigate();
+
+  const isNewEmployee = id === "new";
 
   const isOwner = ["admin","owner"].includes(effectiveRole.toLowerCase());
   const isShopManager = effectiveRole.toLowerCase() === "shop_manager";
@@ -49,7 +53,7 @@ export default function EmployeeProfilePage() {
       const rows = await base44.entities.Employee.filter({ id });
       return rows[0];
     },
-    enabled: !!id,
+    enabled: !!id && !isNewEmployee,
   });
 
   // Access control: non-managers can only see their own profile
@@ -80,6 +84,19 @@ export default function EmployeeProfilePage() {
 
   if (isLoading) {
     return <div className="p-6 space-y-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-48 rounded-xl" /></div>;
+  }
+
+  // ── New Employee Creation Form ───────────────────────────────────
+  if (isNewEmployee) {
+    if (!canManageHR) {
+      return (
+        <div className="p-6">
+          <p className="text-muted-foreground">Access denied. Only owners and shop managers can add employees.</p>
+          <Link to="/employees" className="text-sm text-accent hover:underline">Back to Employees</Link>
+        </div>
+      );
+    }
+    return <NewEmployeeForm onCreated={(newId) => navigate(`/employees/${newId}`)} onCancel={() => navigate("/employees")} />;
   }
 
   if (!employee || !canViewAny) {
