@@ -11,6 +11,35 @@ const TYPE_COLORS = {
 
 const CONNECTOR_ID = "6a3064759fc0db7e563bb0c8";
 
+async function refreshCalendarToken(base44, employee) {
+  const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID');
+  const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET');
+  if (!clientId || !clientSecret || !employee.calendar_refresh_token) return false;
+
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: employee.calendar_refresh_token,
+      grant_type: 'refresh_token',
+    }),
+  });
+
+  if (!res.ok) return false;
+  const data = await res.json();
+
+  await base44.asServiceRole.entities.Employee.update(employee.id, {
+    calendar_access_token: data.access_token,
+    calendar_token_expiry: data.expires_in
+      ? new Date(Date.now() + data.expires_in * 1000).toISOString()
+      : null,
+  });
+
+  return true;
+}
+
 function buildEventBody(event) {
   const date = event.date;
   const startTime = event.start_time;
@@ -73,12 +102,38 @@ Deno.serve(async (req) => {
 
     // Check-only mode — just test the connection
     if (action === "check") {
+      let source = null;
+      // 1. APP_USER connector
       try {
         const conn = await base44.asServiceRole.connectors.getCurrentAppUserConnection(CONNECTOR_ID);
-        return Response.json({ connected: !!conn?.accessToken });
-      } catch {
-        return Response.json({ skipped: true, reason: "Not connected" });
+        if (conn?.accessToken) { source = "app_user"; }
+      } catch { /* not connected via app user */ }
+      
+      // 2. Employee-stored token
+      if (!source && user) {
+        try {
+          const employees = await base44.asServiceRole.entities.Employee.filter({
+            $or: [
+              { created_by_id: user.id },
+              { email: user.email },
+              { personal_email: user.email },
+            ]
+          });
+          if (employees.length > 0 && employees[0].calendar_connected) {
+            source = "employee_token";
+          }
+        } catch { /* no employee token */ }
       }
+      
+      // 3. Shared connection
+      if (!source) {
+        try {
+          const shared = await base44.asServiceRole.connectors.getConnection("googlecalendar");
+          if (shared?.accessToken) { source = "shared"; }
+        } catch { /* not connected via shared */ }
+      }
+      
+      return Response.json({ connected: !!source, source, skipped: !source, reason: source ? null : "Not connected" });
     }
 
     // Fetch the full ScheduledEvent record
@@ -88,17 +143,62 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Event not found" }, { status: 404 });
     }
 
-    // Get current app user's Google Calendar connection
+    // Try multiple sources for Google Calendar access token:
+    // 1. APP_USER connector (per-user OAuth via workspace connector)
+    // 2. Employee-stored Calendar token (manual OAuth flow)
+    // 3. Shared connection (builder-level OAuth)
     let accessToken;
+    let connectionSource = "none";
+
+    // 1. Try APP_USER connector
     try {
       const conn = await base44.asServiceRole.connectors.getCurrentAppUserConnection(CONNECTOR_ID);
-      accessToken = conn.accessToken;
-    } catch (connErr) {
-      return Response.json({ skipped: true, reason: "Google Calendar not connected for this user" });
+      if (conn?.accessToken) {
+        accessToken = conn.accessToken;
+        connectionSource = "app_user";
+      }
+    } catch { /* not connected via app user */ }
+
+    // 2. Try Employee-stored calendar token (match by user id or email)
+    if (!accessToken) {
+      try {
+        const employees = await base44.asServiceRole.entities.Employee.filter({
+          $or: [
+            { created_by_id: user.id },
+            { email: user.email },
+            { personal_email: user.email },
+          ]
+        });
+        if (employees.length > 0 && employees[0].calendar_connected && employees[0].calendar_access_token) {
+          const emp = employees[0];
+          // Check if token is expired and needs refresh
+          if (emp.calendar_token_expiry && new Date(emp.calendar_token_expiry) <= new Date()) {
+            const refreshed = await refreshCalendarToken(base44, emp);
+            if (refreshed) {
+              const fresh = await base44.asServiceRole.entities.Employee.get(emp.id);
+              accessToken = fresh.calendar_access_token;
+            }
+          } else {
+            accessToken = emp.calendar_access_token;
+          }
+          if (accessToken) connectionSource = "employee_token";
+        }
+      } catch { /* no employee token */ }
+    }
+
+    // 3. Try shared connection
+    if (!accessToken) {
+      try {
+        const shared = await base44.asServiceRole.connectors.getConnection("googlecalendar");
+        if (shared?.accessToken) {
+          accessToken = shared.accessToken;
+          connectionSource = "shared";
+        }
+      } catch { /* shared also not available */ }
     }
 
     if (!accessToken) {
-      return Response.json({ skipped: true, reason: "No access token" });
+      return Response.json({ skipped: true, reason: "Google Calendar not connected. Click 'Connect Google' on the Calendar page." });
     }
 
     const authHeader = { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" };

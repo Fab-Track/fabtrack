@@ -33,6 +33,7 @@ export default function Calendar() {
   const [teamView, setTeamView] = useState(false); // false = My Calendar, true = Team
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [gcalConnected, setGcalConnected] = useState(false);
+  const [gcalConnSource, setGcalConnSource] = useState(null); // "shared" | "app_user" | null
   const [gcalLoading, setGcalLoading] = useState(true);
   const [gcalError, setGcalError] = useState(null);
 
@@ -42,8 +43,10 @@ export default function Calendar() {
     try {
       const res = await base44.functions.invoke("syncEventToGoogle", { event_id: "_check", action: "check" });
       setGcalConnected(!res.data?.skipped);
+      setGcalConnSource(res.data?.source || null);
     } catch {
       setGcalConnected(false);
+      setGcalConnSource(null);
     } finally {
       setGcalLoading(false);
     }
@@ -56,8 +59,13 @@ export default function Calendar() {
   const handleConnectGcal = async () => {
     setGcalError(null);
     try {
-      const url = await base44.connectors.connectAppUser(GCAL_CONNECTOR_ID);
-      const popup = window.open(url, "_blank");
+      const res = await base44.functions.invoke("calendarOAuthStart", {});
+      const authUrl = res.data?.auth_url;
+      if (!authUrl) {
+        setGcalError("Failed to start OAuth. Please try again.");
+        return;
+      }
+      const popup = window.open(authUrl, "_blank");
       if (!popup) {
         setGcalError("Pop-up blocked. Please allow pop-ups for this site.");
         return;
@@ -76,8 +84,10 @@ export default function Calendar() {
 
   const handleDisconnectGcal = async () => {
     try {
-      await base44.connectors.disconnectAppUser(GCAL_CONNECTOR_ID);
+      // Also try APP_USER connector disconnect
+      try { await base44.connectors.disconnectAppUser(GCAL_CONNECTOR_ID); } catch {}
       setGcalConnected(false);
+      setGcalConnSource(null);
       setGcalError(null);
     } catch (e) {
       console.error("Google Calendar disconnect error:", e);
@@ -147,15 +157,18 @@ export default function Calendar() {
           {!gcalLoading && (
             gcalConnected ? (
               <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-emerald-600" onClick={handleDisconnectGcal}>
-                <CalendarIcon className="w-3.5 h-3.5" /> Google Connected
+                <CalendarIcon className="w-3.5 h-3.5" />
+                Google Connected{gcalConnSource === "app_user" ? " (You)" : gcalConnSource === "shared" ? " (Team)" : ""}
               </Button>
             ) : (
-              <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={handleConnectGcal}>
-                <CalendarIcon className="w-3.5 h-3.5" /> Connect Google
-              </Button>
+              <div className="flex items-center gap-1.5">
+                <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={handleConnectGcal}>
+                  <CalendarIcon className="w-3.5 h-3.5" /> Connect My Google
+                </Button>
+                {gcalError && <span className="text-[11px] text-destructive">{gcalError}</span>}
+              </div>
             )
           )}
-          {gcalError && <span className="text-xs text-destructive">{gcalError}</span>}
         </div>
         <div className="flex items-center gap-2">
           {/* Team / My toggle */}

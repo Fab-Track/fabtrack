@@ -223,6 +223,33 @@
       "type": "string",
       "format": "date-time",
       "description": "When the access token expires"
+    },
+    "calendar_connected": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this employee's Google Calendar is connected via OAuth"
+    },
+    "calendar_connected_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When Calendar was last successfully authorized"
+    },
+    "calendar_connected_email": {
+      "type": "string",
+      "description": "The Google email that was authorized for Calendar"
+    },
+    "calendar_access_token": {
+      "type": "string",
+      "description": "Calendar OAuth access token \u2014 server-side only"
+    },
+    "calendar_refresh_token": {
+      "type": "string",
+      "description": "Calendar OAuth refresh token \u2014 server-side only"
+    },
+    "calendar_token_expiry": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the calendar access token expires"
     }
   },
   "required": [
