@@ -60,6 +60,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
   const [notes, setNotes] = useState(prefill?.notes || invoice?.notes || "");
   const [internalNotes, setInternalNotes] = useState(invoice?.internal_notes || "");
   const [paymentMethod, setPaymentMethod] = useState(invoice?.payment_method || "");
+  const [savedInvoice, setSavedInvoice] = useState(invoice?.id ? invoice : null);
   const [viewMode, setViewMode] = useState(invoice?.view_mode || "detail");
   const [issuedDate, setIssuedDate] = useState(invoice?.issued_date || new Date().toISOString().split("T")[0]);
   const [dueDate, setDueDate] = useState(() => {
@@ -165,9 +166,13 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
         }, 0);
         payload.invoice_number = `${yearPrefix}${String(maxNum + 1).padStart(4, "0")}`;
         if (prefill?.invoice_label) payload.invoice_label = prefill.invoice_label;
-        return base44.entities.Invoice.create({ ...payload, view_mode: viewMode });
+        const created = await base44.entities.Invoice.create({ ...payload, view_mode: viewMode });
+        setSavedInvoice(created);
+        return created;
       }
-      return base44.entities.Invoice.update(invoice.id, { ...payload, view_mode: viewMode });
+      const updated = await base44.entities.Invoice.update(invoice.id, { ...payload, view_mode: viewMode });
+      setSavedInvoice(updated);
+      return updated;
     },
     onSuccess: async () => {
       const prevStatus = invoice?.status || "Unpaid";
@@ -218,7 +223,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
 
   // Derived values for the review/send screen
   const reviewProps = {
-    invoice, job, customer, lines,
+    invoice: savedInvoice || invoice, job, customer, lines,
     subtotal, discountPct: discount, discountAmt, tax, taxAmount,
     total, amountPaid, balanceDue, notes,
     viewMode, issuedDate, dueDate, invoiceLabel, status, contractText,
@@ -330,7 +335,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
         {activeTab === "customer_view" && (
           <div className="p-6">
             <InvoiceCustomerView
-              invoice={invoice}
+              invoice={savedInvoice || invoice}
               job={job}
               customer={customer}
               lines={lines}
