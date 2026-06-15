@@ -74,11 +74,17 @@ export default function EventForm({ open, onClose, job, event, onSaved }) {
     setSaving(true);
     try {
       const payload = { ...form };
+      let savedEvent;
       if (isEdit) {
-        await base44.entities.ScheduledEvent.update(event.id, payload);
+        savedEvent = await base44.entities.ScheduledEvent.update(event.id, payload);
       } else {
-        await base44.entities.ScheduledEvent.create(payload);
+        savedEvent = await base44.entities.ScheduledEvent.create(payload);
       }
+      // Sync to Google Calendar (fire and forget)
+      base44.functions.invoke("syncEventToGoogle", {
+        event_id: savedEvent?.id || event?.id,
+        action: isEdit ? "update" : "create",
+      }).catch(() => {});
       onSaved?.();
       onClose();
     } catch (e) {

@@ -1,12 +1,14 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Plus, Filter } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Filter, Calendar as CalendarIcon } from "lucide-react";
 import { format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isSameMonth, addMonths, subMonths, addWeeks, subWeeks, getDay } from "date-fns";
+
+const GCAL_CONNECTOR_ID = "6a3064759fc0db7e563bb0c8";
 
 const TYPE_COLORS = {
   Measure: "bg-blue-500",
@@ -30,6 +32,37 @@ export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [teamView, setTeamView] = useState(false); // false = My Calendar, true = Team
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [gcalConnected, setGcalConnected] = useState(false);
+  const [gcalLoading, setGcalLoading] = useState(true);
+
+  // Check Google Calendar connection status
+  const checkGcal = useCallback(async () => {
+    try {
+      const res = await base44.functions.invoke("syncEventToGoogle", { event_id: "_check", action: "check" });
+      setGcalConnected(!res.data?.skipped);
+    } catch {
+      setGcalConnected(false);
+    } finally {
+      setGcalLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) checkGcal();
+  }, [user, checkGcal]);
+
+  const handleConnectGcal = async () => {
+    const url = await base44.connectors.connectAppUser(GCAL_CONNECTOR_ID);
+    const popup = window.open(url, "_blank");
+    const timer = setInterval(() => {
+      if (!popup || popup.closed) { clearInterval(timer); checkGcal(); }
+    }, 500);
+  };
+
+  const handleDisconnectGcal = async () => {
+    await base44.connectors.disconnectAppUser(GCAL_CONNECTOR_ID);
+    setGcalConnected(false);
+  };
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["all-scheduled-events"],
@@ -90,6 +123,17 @@ export default function Calendar() {
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-bold">Calendar</h1>
           <Badge variant="outline" className="text-xs">{filteredEvents.length} events</Badge>
+          {!gcalLoading && (
+            gcalConnected ? (
+              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-emerald-600" onClick={handleDisconnectGcal}>
+                <CalendarIcon className="w-3.5 h-3.5" /> Google Connected
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={handleConnectGcal}>
+                <CalendarIcon className="w-3.5 h-3.5" /> Connect Google
+              </Button>
+            )
+          )}
         </div>
         <div className="flex items-center gap-2">
           {/* Team / My toggle */}

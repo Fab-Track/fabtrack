@@ -41,10 +41,17 @@ export default function JobEventsList({ job }) {
 
   async function changeStatus(event, newStatus) {
     await base44.entities.ScheduledEvent.update(event.id, { status: newStatus });
+    // Sync to Google Calendar
+    if (newStatus === "Cancelled") {
+      base44.functions.invoke("syncEventToGoogle", { event_id: event.id, action: "delete" }).catch(() => {});
+    } else {
+      base44.functions.invoke("syncEventToGoogle", { event_id: event.id, action: "update" }).catch(() => {});
+    }
     qc.invalidateQueries(["scheduled-events", job.id]);
   }
 
   async function deleteEvent(event) {
+    base44.functions.invoke("syncEventToGoogle", { event_id: event.id, action: "delete" }).catch(() => {});
     await base44.entities.ScheduledEvent.delete(event.id);
     qc.invalidateQueries(["scheduled-events", job.id]);
   }

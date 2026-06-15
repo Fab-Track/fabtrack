@@ -94,25 +94,26 @@ const ROLE_NAV = {
   accountant: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "SALES",       items: ["jobBoard"] },
-    { group: "FINANCE",     items: ["documents", "customers", "conversations", "reports"] },
+    { group: "FINANCE",     items: ["calendar", "documents", "customers", "conversations", "reports"] },
     { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   payroll: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
+    { group: "CALENDAR",    items: ["calendar"] },
     { group: "PAYROLL",     items: ["payroll"] },
     { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   welder: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
-    { group: "SHOP",        items: ["shopFloor"] },
+    { group: "SHOP",        items: ["calendar", "shopFloor"] },
     { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   foreman: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
-    { group: "OPERATIONS",  items: ["schedule", "workCenters"] },
+    { group: "OPERATIONS",  items: ["calendar", "schedule", "workCenters"] },
     { group: "SHOP",        items: ["shopFloor", "employees"] },
     { group: "PAYROLL",     items: ["payroll"] },
     { group: "TIME",        items: ["myTimesheet"] },
@@ -122,7 +123,7 @@ const ROLE_NAV = {
   user: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "SALES",       items: ["jobBoard", "customers", "conversations", "documents"] },
-    { group: "OPERATIONS",  items: ["reports", "schedule", "workCenters", "inventory"] },
+    { group: "OPERATIONS",  items: ["calendar", "reports", "schedule", "workCenters", "inventory"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "PAYROLL",     items: ["payroll"] },
     { group: "TIME",        items: ["myTimesheet"] },
