@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ export default function JobAttachmentsTab({ job }) {
   const [form, setForm] = useState({ label: "Drawing", version: "v1", notes: "" });
   const [uploadOpen, setUploadOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState(null);
+  const fileInputRef = useRef(null);
 
   const { data: attachments = [], isLoading } = useQuery({
     queryKey: ["attachments", job.id],
@@ -54,6 +55,7 @@ export default function JobAttachmentsTab({ job }) {
     if (!file) return;
     setPendingFile(file);
     setUploadOpen(true);
+    e.target.value = "";
   }
 
   async function handleUpload() {
@@ -97,12 +99,12 @@ export default function JobAttachmentsTab({ job }) {
         <Button
           size="sm"
           className="gap-2"
-          onClick={() => document.getElementById("job-attachment-upload")?.click()}
+          onClick={() => fileInputRef.current?.click()}
         >
           <Upload className="w-4 h-4" /> Upload File
         </Button>
         <input
-          id="job-attachment-upload"
+          ref={fileInputRef}
           type="file"
           className="hidden"
           onChange={handleFileChange}
