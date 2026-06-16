@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Hash, Pin, Briefcase, Search, Plus, Archive, MessageCircle } from "lucide-react";
+import { Hash, Pin, Briefcase, Search, Plus, Archive, MessageCircle, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { canAccessChannel, formatMessageTime } from "@/lib/messagingHelpers";
 
@@ -13,7 +13,9 @@ export default function ChannelList({
   onNewChannel,
   showArchived,
   onToggleArchived,
+  onMarkAllRead,
 }) {
+  const [markingAll, setMarkingAll] = useState(false);
   const [search, setSearch] = useState("");
 
   const userRole = user?.role || "user";
@@ -71,6 +73,20 @@ export default function ChannelList({
             className="w-full pl-8 pr-3 py-1.5 text-xs rounded-md bg-muted border-0 focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
+        {Object.keys(unreadCounts || {}).length > 0 && onMarkAllRead && (
+          <button
+            onClick={async () => {
+              setMarkingAll(true);
+              await onMarkAllRead();
+              setMarkingAll(false);
+            }}
+            disabled={markingAll}
+            className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+          >
+            <CheckCheck className="w-3.5 h-3.5" />
+            {markingAll ? "Marking…" : "Mark all as read"}
+          </button>
+        )}
       </div>
 
       {/* Channel list */}

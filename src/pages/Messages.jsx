@@ -69,6 +69,15 @@ export default function Messages() {
     setMobileView("thread");
   };
 
+  async function markAllRead() {
+    const now = new Date().toISOString();
+    const promises = memberships.map(m =>
+      base44.entities.ChannelMembership.update(m.id, { last_read_at: now })
+    );
+    await Promise.all(promises);
+    qc.invalidateQueries({ queryKey: ["memberships"] });
+  }
+
   if (isLoading) {
     return (
       <div className="p-6 space-y-3">
@@ -97,6 +106,7 @@ export default function Messages() {
           onNewChannel={() => setShowNewChannel(true)}
           showArchived={showArchived}
           onToggleArchived={() => setShowArchived(v => !v)}
+          onMarkAllRead={markAllRead}
         />
       </div>
 
