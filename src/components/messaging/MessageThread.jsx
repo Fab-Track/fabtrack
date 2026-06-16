@@ -13,7 +13,10 @@ import { cn } from "@/lib/utils";
 export default function MessageThread({ channel, currentUser, onBack, isMobile }) {
   const [replyTo, setReplyTo] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const bottomRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const queryClient = useQueryClient();
 
   const queryKey = ["messages", channel?.id];
@@ -47,14 +50,38 @@ export default function MessageThread({ channel, currentUser, onBack, isMobile }
           last_read_at: new Date().toISOString(),
         });
       }
+      // Invalidate memberships so unread badge recalculates immediately
+      queryClient.invalidateQueries({ queryKey: ["memberships"] });
     };
     markRead().catch(() => {});
   }, [channel?.id, currentUser]);
 
-  // Scroll to bottom on new messages
+  // Smart auto-scroll: only scroll down if user is already near the bottom
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 200;
+    if (isNearBottom) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages.length]);
+
+  // Load older messages
+  const loadOlderMessages = async () => {
+    if (loadingOlder || messages.length === 0) return;
+    setLoadingOlder(true);
+    const oldestDate = messages[0]?.created_date;
+    const older = await base44.entities.Message.filter(
+      { channel_id: channel.id, created_date: { $lt: oldestDate } },
+      "-created_date",
+      50
+    );
+    if (older.length < 50) setHasMoreMessages(false);
+    if (older.length > 0) {
+      queryClient.setQueryData(queryKey, [...older.reverse(), ...messages]);
+    }
+    setLoadingOlder(false);
+  };
 
   if (!channel) {
     return (
@@ -126,7 +153,19 @@ export default function MessageThread({ channel, currentUser, onBack, isMobile }
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto py-2">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto py-2">
+        {/* Load older messages button */}
+        {!isLoading && hasMoreMessages && messages.length > 0 && (
+          <div className="flex justify-center pb-2">
+            <button
+              onClick={loadOlderMessages}
+              disabled={loadingOlder}
+              className="text-xs text-muted-foreground hover:text-foreground px-3 py-1 rounded-full bg-muted/60 hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              {loadingOlder ? "Loading…" : "Load older messages"}
+            </button>
+          </div>
+        )}
         {isLoading ? (
           <div className="flex justify-center py-12 text-xs text-muted-foreground">Loading messages…</div>
         ) : messages.length === 0 ? (
