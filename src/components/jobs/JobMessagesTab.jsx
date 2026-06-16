@@ -9,35 +9,26 @@ import { PERMANENT_CHANNELS } from "@/lib/messagingHelpers";
 
 export default function JobMessagesTab({ job }) {
   const { user } = useAuth();
-  const [channel, setChannel] = useState(null);
-  const [loadingChannel, setLoadingChannel] = useState(true);
   const [replyTo, setReplyTo] = useState(null);
   const bottomRef = useRef(null);
   const queryClient = useQueryClient();
 
-  const queryKey = ["messages", channel?.id];
+  // Use React Query for channel lookup — avoids raw useEffect API calls that cause rate limits
+  const { data: channelData = [], isLoading: loadingChannel } = useQuery({
+    queryKey: ["job-channel", job?.id],
+    queryFn: () => base44.entities.MessageChannel.filter({ job_id: job.id }),
+    enabled: !!job?.id,
+    staleTime: 60000,
+  });
+  const channel = channelData.length > 0 ? channelData[0] : null;
 
-  // Find or create job channel
-  useEffect(() => {
-    if (!job?.id) return;
-    const findChannel = async () => {
-      setLoadingChannel(true);
-      const existing = await base44.entities.MessageChannel.filter({ job_id: job.id });
-      if (existing.length > 0) {
-        setChannel(existing[0]);
-      } else {
-        setChannel(null);
-      }
-      setLoadingChannel(false);
-    };
-    findChannel();
-  }, [job?.id]);
+  const queryKey = ["messages", channel?.id];
 
   const { data: messages = [], isLoading: messagesLoading } = useQuery({
     queryKey,
     queryFn: () => base44.entities.Message.filter({ channel_id: channel.id }, "created_date", 200),
     enabled: !!channel?.id,
-    refetchInterval: 5000,
+    refetchInterval: 10000,
   });
 
   useEffect(() => {
@@ -45,13 +36,11 @@ export default function JobMessagesTab({ job }) {
   }, [messages.length]);
 
   const handleCreateChannel = async () => {
-    setLoadingChannel(true);
     const res = await base44.functions.invoke("createJobChannel", { job_id: job.id });
     if (res?.data?.channel) {
-      setChannel(res.data.channel);
+      queryClient.invalidateQueries({ queryKey: ["job-channel", job.id] });
       queryClient.invalidateQueries({ queryKey: ["channels"] });
     }
-    setLoadingChannel(false);
   };
 
   if (loadingChannel) {
