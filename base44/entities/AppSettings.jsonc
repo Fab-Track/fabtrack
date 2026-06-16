@@ -59,6 +59,34 @@
       "type": "number",
       "default": 1,
       "description": "Day the workweek starts: 0=Sunday, 1=Monday (FLSA default)"
+    },
+    "stripe_secret_key": {
+      "type": "string",
+      "description": "Stripe secret key (sk_live_... or sk_test_...)"
+    },
+    "stripe_webhook_secret": {
+      "type": "string",
+      "description": "Stripe webhook signing secret (whsec_...)"
+    },
+    "stripe_is_connected": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether Stripe keys are configured and verified"
+    },
+    "stripe_connected_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When Stripe was last successfully connected"
+    },
+    "stripe_mode": {
+      "type": "string",
+      "enum": [
+        "test",
+        "live",
+        ""
+      ],
+      "default": "",
+      "description": "Detected Stripe key mode"
     }
   },
   "required": [

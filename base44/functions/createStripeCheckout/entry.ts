@@ -30,7 +30,20 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Invoice has no balance due' }, { status: 400 });
     }
 
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
+    // Read Stripe key from AppSettings first (multi-tenant), fall back to env var
+    let stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    try {
+      const settings = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'main' });
+      if (settings.length > 0 && settings[0].stripe_secret_key) {
+        stripeSecretKey = settings[0].stripe_secret_key;
+      }
+    } catch { /* fall back to env var */ }
+
+    if (!stripeSecretKey) {
+      return Response.json({ error: 'Stripe is not configured. Contact the business owner.' }, { status: 500 });
+    }
+
+    const stripe = new Stripe(stripeSecretKey);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],

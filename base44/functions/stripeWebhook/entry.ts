@@ -3,8 +3,28 @@ import { createClient } from 'npm:@base44/sdk@0.8.31';
 
 Deno.serve(async (req) => {
   try {
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
-    const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
+    // Read Stripe keys from AppSettings first (multi-tenant), fall back to env vars
+    let stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    let webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
+
+    const base44 = createClient({
+      appId: Deno.env.get('BASE44_APP_ID'),
+      env: 'production',
+    });
+
+    try {
+      const settings = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'main' });
+      if (settings.length > 0) {
+        if (settings[0].stripe_secret_key) stripeSecretKey = settings[0].stripe_secret_key;
+        if (settings[0].stripe_webhook_secret) webhookSecret = settings[0].stripe_webhook_secret;
+      }
+    } catch { /* fall back to env vars */ }
+
+    if (!stripeSecretKey) {
+      return Response.json({ error: 'Stripe secret key not configured' }, { status: 500 });
+    }
+
+    const stripe = new Stripe(stripeSecretKey);
 
     if (!webhookSecret) {
       return Response.json({ error: 'Webhook secret not configured' }, { status: 500 });
@@ -38,11 +58,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'No invoice_id in session metadata' }, { status: 400 });
     }
 
-    // Use service role to update invoice (webhook has no user context)
-    const base44 = createClient({
-      appId: Deno.env.get('BASE44_APP_ID'),
-      env: 'production',
-    });
+    // base44 client already created above — reuse for service role operations
 
     // Fetch current invoice
     const invoice = await base44.asServiceRole.entities.Invoice.get(invoiceId);

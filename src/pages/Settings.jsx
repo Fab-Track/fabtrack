@@ -14,6 +14,7 @@ import ServiceCatalogSection from "@/components/settings/ServiceCatalogSection";
 import AdminActivityLogSection from "@/components/settings/AdminActivityLogSection";
 import { BookOpen, Activity, DollarSign, Image, Timer, Paperclip } from "lucide-react";
 import AttachmentCategoriesSection from "@/components/settings/AttachmentCategoriesSection";
+import StripeSettingsSection from "@/components/settings/StripeSettingsSection";
 
 // All settings nav items — visibility controlled per role below
 const ALL_SECTIONS = [
@@ -29,6 +30,7 @@ const ALL_SECTIONS = [
   { id: "materials",  label: "Materials",            icon: DollarSign,      ownerOnly: true },
   { id: "payroll_settings", label: "Payroll",        icon: Timer,           ownerOnly: true },
   { id: "security",   label: "Security",             icon: Shield,          ownerOnly: true },
+  { id: "stripe",     label: "Stripe Payments",      icon: CreditCard,      ownerOnly: true },
   { id: "billing",    label: "Billing",              icon: CreditCard,      ownerOnly: true },
   { id: "activity",   label: "Activity Log",         icon: Activity,        ownerOnly: true },
   { id: "attachments", label: "Attachment Categories", icon: Paperclip,      ownerOnly: true },
@@ -68,6 +70,7 @@ export default function Settings() {
       case "contracts":    return <EstimateContractSection />;
       case "styles":       return <StyleLibrarySection />;
       case "materials":    return <MaterialsPriceSection />;
+      case "stripe":       return <StripeSettingsSection />;
       case "billing":      return <BillingSection />;
       case "payroll_settings": return <PayrollSettingsSection />;
       case "security":     return <SecuritySection />;
