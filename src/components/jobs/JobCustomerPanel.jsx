@@ -1,15 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Pencil, Mail, Phone, MapPin, UserX, UserSearch, Tag } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Mail, Phone, MapPin, UserSearch, Tag, User, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
+import EditCustomerSheet from "@/components/jobs/EditCustomerSheet";
+import EditJobSheet from "@/components/jobs/EditJobSheet";
 
 // A small info cell: label + value
 function InfoCell({ label, value, icon: Icon }) {
@@ -25,13 +23,12 @@ function InfoCell({ label, value, icon: Icon }) {
 
 export default function JobCustomerPanel({ job, onJobUpdated }) {
   const queryClient = useQueryClient();
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editCustomerOpen, setEditCustomerOpen] = useState(false);
+  const [editJobOpen, setEditJobOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", type: "" });
 
   // Fetch full customer record when we have a customer_id
-  const { data: customer, refetch: refetchCustomer } = useQuery({
+  const { data: customer } = useQuery({
     queryKey: ["customer", job?.customer_id],
     queryFn: () => base44.entities.Customer.filter({ id: job.customer_id }).then(r => r[0]),
     enabled: !!job?.customer_id,
@@ -44,42 +41,6 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
     enabled: assignOpen,
   });
 
-  // Sync form when customer loads or sheet opens
-  useEffect(() => {
-    if (customer && sheetOpen) {
-      setForm({
-        name: customer.name || "",
-        email: customer.email || "",
-        phone: customer.phone || "",
-        address: customer.address || "",
-        type: customer.type || "",
-      });
-    }
-  }, [customer, sheetOpen]);
-
-  const f = (field, val) => setForm(p => ({ ...p, [field]: val }));
-
-  async function handleSave() {
-    setSaving(true);
-    await base44.entities.Customer.update(customer.id, {
-      name: form.name,
-      email: form.email,
-      phone: form.phone,
-      address: form.address,
-      type: form.type || undefined,
-    });
-    // Also update denormalized name on the job if name changed
-    if (form.name !== customer.name) {
-      await base44.entities.Job.update(job.id, { customer_name: form.name });
-    }
-    await refetchCustomer();
-    queryClient.invalidateQueries({ queryKey: ["job", job.id] });
-    onJobUpdated?.();
-    setSaving(false);
-    setSheetOpen(false);
-    toast.success("Customer updated.");
-  }
-
   async function handleAssign(selected) {
     await base44.entities.Job.update(job.id, {
       customer_id: selected.id,
@@ -89,6 +50,11 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
     onJobUpdated?.();
     setAssignOpen(false);
     toast.success(`Customer assigned: ${selected.name}`);
+  }
+
+  function handleSaved() {
+    queryClient.invalidateQueries({ queryKey: ["job", job.id] });
+    onJobUpdated?.();
   }
 
   // — No customer linked —
@@ -151,67 +117,45 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
           </div>
         )}
 
-        {/* Edit button */}
+        {/* Two edit buttons */}
         {job.customer_id && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
-            onClick={() => setSheetOpen(true)}
-          >
-            <Pencil className="w-3 h-3" /> Edit
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs gap-1.5"
+              onClick={() => setEditCustomerOpen(true)}
+            >
+              <User className="w-3.5 h-3.5" /> Edit Customer
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs gap-1.5"
+              onClick={() => setEditJobOpen(true)}
+            >
+              <Wrench className="w-3.5 h-3.5" /> Edit Job
+            </Button>
+          </div>
         )}
       </div>
 
-      {/* Edit slide-out panel */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-sm">
-          <SheetHeader className="mb-4">
-            <SheetTitle className="flex items-center gap-2">
-              <Pencil className="w-4 h-4" /> Edit Customer
-            </SheetTitle>
-          </SheetHeader>
-          <div className="space-y-4">
-            <div>
-              <Label className="text-xs">Name</Label>
-              <Input value={form.name} onChange={e => f("name", e.target.value)} placeholder="Customer name" />
-            </div>
-            <div>
-              <Label className="text-xs">Email</Label>
-              <Input type="email" value={form.email} onChange={e => f("email", e.target.value)} placeholder="email@example.com" />
-            </div>
-            <div>
-              <Label className="text-xs">Phone</Label>
-              <Input value={form.phone} onChange={e => f("phone", e.target.value)} placeholder="(555) 123-4567" />
-            </div>
-            <div>
-              <Label className="text-xs">Billing Address</Label>
-              <Input value={form.address} onChange={e => f("address", e.target.value)} placeholder="123 Main St, City, State" />
-            </div>
-            <div>
-              <Label className="text-xs">Customer Type</Label>
-              <Select value={form.type} onValueChange={val => f("type", val)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type…" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Homeowner">Homeowner</SelectItem>
-                  <SelectItem value="General Contractor">Contractor</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setSheetOpen(false)}>
-                Cancel
-              </Button>
-              <Button className="flex-1" onClick={handleSave} disabled={saving || !form.name.trim()}>
-                {saving ? "Saving…" : "Save"}
-              </Button>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Edit Customer slide-out */}
+      <EditCustomerSheet
+        open={editCustomerOpen}
+        onOpenChange={setEditCustomerOpen}
+        customerId={job?.customer_id}
+        jobId={job?.id}
+        onSaved={handleSaved}
+      />
+
+      {/* Edit Job slide-out */}
+      <EditJobSheet
+        open={editJobOpen}
+        onOpenChange={setEditJobOpen}
+        job={job}
+        onSaved={handleSaved}
+      />
     </>
   );
 }
