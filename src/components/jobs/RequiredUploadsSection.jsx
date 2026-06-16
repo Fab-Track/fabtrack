@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,7 @@ const INSPIRATION_SECTION = {
 
 function RequiredUploadCard({ sectionDef, files = [], bypassed = false, onUpload, onBypass, uploading }) {
   const [naChecked, setNaChecked] = useState(false);
+  const fileInputRef = useRef(null);
   const Icon = sectionDef.icon;
   const hasFiles = files.length > 0;
 
@@ -116,10 +117,9 @@ function RequiredUploadCard({ sectionDef, files = [], bypassed = false, onUpload
 
       {/* Upload button — always show if not bypassed */}
       {!bypassed && (
-        <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium border rounded-md px-3 py-1.5 hover:bg-white/80 transition-colors bg-white/60 shadow-sm">
-          <Upload className="w-3.5 h-3.5" />
-          {uploading ? "Uploading…" : hasFiles ? "Upload More" : "Upload File"}
+        <>
           <input
+            ref={fileInputRef}
             type="file"
             accept={sectionDef.accept}
             multiple={!!sectionDef.multiple}
@@ -127,7 +127,16 @@ function RequiredUploadCard({ sectionDef, files = [], bypassed = false, onUpload
             disabled={uploading}
             onChange={onUpload}
           />
-        </label>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium border rounded-md px-3 py-1.5 hover:bg-white/80 transition-colors bg-white/60 shadow-sm"
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="w-3.5 h-3.5" />
+            {uploading ? "Uploading…" : hasFiles ? "Upload More" : "Upload File"}
+          </button>
+        </>
       )}
 
       {/* N/A bypass */}
@@ -191,23 +200,26 @@ export default function RequiredUploadsSection({ job }) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     setUploading(u => ({ ...u, [sectionKey]: true }));
-    const uploaded = [];
-    for (const file of files) {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      uploaded.push({ file_url, file_name: file.name, file_type: file.type, uploaded_at: new Date().toISOString() });
+    try {
+      const uploaded = [];
+      for (const file of files) {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        uploaded.push({ file_url, file_name: file.name, file_type: file.type, uploaded_at: new Date().toISOString() });
+      }
+      const existing = requiredData[sectionKey]?.files || [];
+      const updated = {
+        ...requiredData,
+        [sectionKey]: {
+          ...requiredData[sectionKey],
+          files: [...existing, ...uploaded],
+          bypassed: false,
+        },
+      };
+      await saveRequiredData(updated);
+    } finally {
+      setUploading(u => ({ ...u, [sectionKey]: false }));
+      e.target.value = "";
     }
-    const existing = requiredData[sectionKey]?.files || [];
-    const updated = {
-      ...requiredData,
-      [sectionKey]: {
-        ...requiredData[sectionKey],
-        files: [...existing, ...uploaded],
-        bypassed: false,
-      },
-    };
-    await saveRequiredData(updated);
-    setUploading(u => ({ ...u, [sectionKey]: false }));
-    e.target.value = "";
   }
 
   async function handleBypass(sectionKey, undo = false) {
