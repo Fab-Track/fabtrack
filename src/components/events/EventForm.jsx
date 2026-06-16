@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,7 @@ export default function EventForm({ open, onClose, job, event, onSaved }) {
   const isEdit = !!event;
   const [form, setForm] = useState(blankEvent(job));
   const [saving, setSaving] = useState(false);
+  const qc = useQueryClient();
 
   useEffect(() => {
     if (event) {
@@ -85,6 +86,9 @@ export default function EventForm({ open, onClose, job, event, onSaved }) {
         event_id: savedEvent?.id || event?.id,
         action: isEdit ? "update" : "create",
       }).catch(() => {});
+      // Invalidate both the job-scoped and global Calendar caches
+      qc.invalidateQueries({ queryKey: ["scheduled-events", job?.id] });
+      qc.invalidateQueries({ queryKey: ["all-scheduled-events"] });
       onSaved?.();
       onClose();
     } catch (e) {

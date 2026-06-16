@@ -116,14 +116,19 @@ export default function Calendar() {
 
   // Filter: My vs Team
   const filteredEvents = useMemo(() => {
+    if (!user) return [];
     return events.filter(e => {
       if (e.status !== "Scheduled") return false;
-      if (!teamView && myEmployee && e.assigned_user_ids?.length) {
-        return e.assigned_user_ids.includes(myEmployee.id || myEmployee.created_by_id);
+      if (!teamView) {
+        // My Calendar: show events assigned to me OR unassigned events
+        if (e.assigned_user_ids?.length) {
+          return e.assigned_user_ids.includes(user.id);
+        }
+        return true; // unassigned events visible to everyone
       }
-      return true;
+      return true; // Team view shows all
     });
-  }, [events, teamView, myEmployee]);
+  }, [events, teamView, user]);
 
   // Navigation
   function prev() {

@@ -47,13 +47,15 @@ export default function JobEventsList({ job }) {
     } else {
       base44.functions.invoke("syncEventToGoogle", { event_id: event.id, action: "update" }).catch(() => {});
     }
-    qc.invalidateQueries(["scheduled-events", job.id]);
+    qc.invalidateQueries({ queryKey: ["scheduled-events", job.id] });
+    qc.invalidateQueries({ queryKey: ["all-scheduled-events"] });
   }
 
   async function deleteEvent(event) {
     base44.functions.invoke("syncEventToGoogle", { event_id: event.id, action: "delete" }).catch(() => {});
     await base44.entities.ScheduledEvent.delete(event.id);
-    qc.invalidateQueries(["scheduled-events", job.id]);
+    qc.invalidateQueries({ queryKey: ["scheduled-events", job.id] });
+    qc.invalidateQueries({ queryKey: ["all-scheduled-events"] });
   }
 
   function openEdit(event) {
@@ -67,7 +69,8 @@ export default function JobEventsList({ job }) {
   }
 
   function handleSaved() {
-    qc.invalidateQueries(["scheduled-events", job.id]);
+    qc.invalidateQueries({ queryKey: ["scheduled-events", job.id] });
+    qc.invalidateQueries({ queryKey: ["all-scheduled-events"] });
   }
 
   return (
