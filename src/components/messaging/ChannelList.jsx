@@ -19,10 +19,14 @@ export default function ChannelList({
   const userRole = user?.role || "user";
   const userId = user?.id || user?.email || "";
 
-  const visible = channels.filter(c => {
-    if (c.is_archived && !showArchived) return false;
-    return canAccessChannel(c, userRole, userId, user?.email);
-  });
+  const accessible = channels.filter(c =>
+    canAccessChannel(c, userRole, userId, user?.email)
+  );
+
+  // Active channels — exclude archived unless explicitly toggled
+  const visible = search
+    ? accessible  // search always includes archived
+    : accessible.filter(c => !c.is_archived || showArchived);
 
   const filtered = search
     ? visible.filter(c =>
