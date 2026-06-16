@@ -3,9 +3,17 @@ import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CheckCircle2, AlertTriangle, Upload, FileImage, FileText, Ruler, Camera, X } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Upload, FileImage, FileText, Ruler, Camera, Lightbulb, X } from "lucide-react";
 
 const REQUIRED_SECTIONS = [
+  {
+    key: "before_photos",
+    label: "Before / Measure Photos",
+    description: "Measure visit photos before fabrication",
+    icon: Camera,
+    accept: "image/*",
+    multiple: true,
+  },
   {
     key: "house_plans",
     label: "House Plans",
@@ -21,14 +29,6 @@ const REQUIRED_SECTIONS = [
     accept: "*",
   },
   {
-    key: "before_photos",
-    label: "Before / Measure Photos",
-    description: "Measure visit photos before fabrication",
-    icon: Camera,
-    accept: "image/*",
-    multiple: true,
-  },
-  {
     key: "after_photos",
     label: "After / Install Photos",
     description: "Install completion photos",
@@ -37,6 +37,15 @@ const REQUIRED_SECTIONS = [
     multiple: true,
   },
 ];
+
+const INSPIRATION_SECTION = {
+  key: "inspiration_photos",
+  label: "Inspiration Photos",
+  description: "Reference or style inspiration images",
+  icon: Lightbulb,
+  accept: "image/*",
+  multiple: true,
+};
 
 function RequiredUploadCard({ sectionDef, files = [], bypassed = false, onUpload, onBypass, uploading }) {
   const [naChecked, setNaChecked] = useState(false);
@@ -166,6 +175,7 @@ export default function RequiredUploadsSection({ job }) {
 
   // required_uploads stored in job.job_level_data.required_uploads
   const requiredData = job.job_level_data?.required_uploads || {};
+  const inspirationData = requiredData[INSPIRATION_SECTION.key] || {};
 
   async function saveRequiredData(updated) {
     await base44.entities.Job.update(job.id, {
@@ -237,6 +247,18 @@ export default function RequiredUploadsSection({ job }) {
             <AlertTriangle className="w-3.5 h-3.5" /> {REQUIRED_SECTIONS.length - completedCount} Remaining
           </span>
         )}
+      </div>
+
+      {/* Inspiration Photos — full-width row above required docs */}
+      <div className="mb-3">
+        <RequiredUploadCard
+          sectionDef={INSPIRATION_SECTION}
+          files={inspirationData.files || []}
+          bypassed={!!inspirationData.bypassed}
+          uploading={!!uploading[INSPIRATION_SECTION.key]}
+          onUpload={e => handleUpload(e, INSPIRATION_SECTION.key)}
+          onBypass={handleBypass}
+        />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
