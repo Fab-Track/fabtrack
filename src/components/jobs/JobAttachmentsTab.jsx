@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Upload, Paperclip, Trash2, ExternalLink, FileText, Image, File } from "lucide-react";
-import JobAttachmentsNew from "@/components/jobs/JobAttachmentsNew";
+import RequiredUploadsSection from "@/components/jobs/RequiredUploadsSection";
 
 const LABELS = ["Drawing", "Cut List", "Photo", "Permit", "Signed Estimate", "Other"];
 
@@ -37,7 +37,6 @@ export default function JobAttachmentsTab({ job }) {
   const [form, setForm] = useState({ label: "Drawing", version: "v1", notes: "" });
   const [uploadOpen, setUploadOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState(null);
-  const fileInputRef = useRef(null);
 
   const { data: attachments = [], isLoading } = useQuery({
     queryKey: ["attachments", job.id],
@@ -55,7 +54,6 @@ export default function JobAttachmentsTab({ job }) {
     if (!file) return;
     setPendingFile(file);
     setUploadOpen(true);
-    e.target.value = "";
   }
 
   async function handleUpload() {
@@ -92,23 +90,16 @@ export default function JobAttachmentsTab({ job }) {
 
   return (
     <div className="space-y-4">
-      <JobAttachmentsNew job={job} />
+      <RequiredUploadsSection job={job} />
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">{attachments.length} file{attachments.length !== 1 ? "s" : ""} attached</p>
-        <Button
-          size="sm"
-          className="gap-2"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Upload className="w-4 h-4" /> Upload File
-        </Button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="hidden"
-          onChange={handleFileChange}
-        />
+        <label className="cursor-pointer">
+          <input type="file" className="hidden" onChange={handleFileChange} />
+          <Button asChild size="sm" className="gap-2 cursor-pointer">
+            <span><Upload className="w-4 h-4" /> Upload File</span>
+          </Button>
+        </label>
       </div>
 
       {isLoading ? (
