@@ -94,12 +94,19 @@ export default function JobAttachmentsTab({ job }) {
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">{attachments.length} file{attachments.length !== 1 ? "s" : ""} attached</p>
-        <label className="cursor-pointer">
-          <input type="file" className="hidden" onChange={handleFileChange} />
-          <Button asChild size="sm" className="gap-2 cursor-pointer">
-            <span><Upload className="w-4 h-4" /> Upload File</span>
-          </Button>
-        </label>
+        <Button
+          size="sm"
+          className="gap-2"
+          onClick={() => document.getElementById("job-attachment-upload")?.click()}
+        >
+          <Upload className="w-4 h-4" /> Upload File
+        </Button>
+        <input
+          id="job-attachment-upload"
+          type="file"
+          className="hidden"
+          onChange={handleFileChange}
+        />
       </div>
 
       {isLoading ? (
