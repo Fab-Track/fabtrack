@@ -69,6 +69,37 @@ export default function Messages() {
     setMobileView("thread");
   };
 
+  const handleMarkRead = async (channelId) => {
+    const uid = user?.id || user?.email;
+    if (!uid) return;
+    const existing = await base44.entities.ChannelMembership.filter({
+      channel_id: channelId,
+      user_id: uid,
+    });
+    if (existing.length > 0) {
+      await base44.entities.ChannelMembership.update(existing[0].id, {
+        last_read_at: new Date().toISOString(),
+      });
+    } else {
+      await base44.entities.ChannelMembership.create({
+        channel_id: channelId,
+        user_id: uid,
+        user_email: user?.email,
+        user_name: user?.full_name || user?.email,
+        user_role: user?.role,
+        last_read_at: new Date().toISOString(),
+      });
+    }
+    qc.invalidateQueries({ queryKey: ["memberships"] });
+    qc.invalidateQueries({ queryKey: ["messages-unread"] });
+  };
+
+  const handleChannelUpdated = () => {
+    refetchChannels();
+    // Clear selection so the thread reloads with fresh data
+    setSelectedChannel(prev => prev ? { ...prev } : null);
+  };
+
   if (isLoading) {
     return (
       <div className="p-6 space-y-3">
@@ -97,6 +128,7 @@ export default function Messages() {
           onNewChannel={() => setShowNewChannel(true)}
           showArchived={showArchived}
           onToggleArchived={() => setShowArchived(v => !v)}
+          onMarkRead={handleMarkRead}
         />
       </div>
 
@@ -110,6 +142,7 @@ export default function Messages() {
           currentUser={user}
           onBack={() => setMobileView("list")}
           isMobile={mobileView === "thread"}
+          onChannelUpdated={handleChannelUpdated}
         />
       </div>
 

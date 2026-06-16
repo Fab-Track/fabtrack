@@ -2,14 +2,15 @@ import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
-import { MessageCircle, Loader2 } from "lucide-react";
+import { MessageCircle, Loader2, Settings, CheckCheck, Briefcase } from "lucide-react";
 import MessageBubble from "@/components/messaging/MessageBubble";
 import MessageComposer from "@/components/messaging/MessageComposer";
-import { PERMANENT_CHANNELS } from "@/lib/messagingHelpers";
+import ChannelSettingsDialog from "@/components/messaging/ChannelSettingsDialog";
 
 export default function JobMessagesTab({ job }) {
   const { user } = useAuth();
   const [replyTo, setReplyTo] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
   const bottomRef = useRef(null);
   const queryClient = useQueryClient();
 
@@ -43,6 +44,31 @@ export default function JobMessagesTab({ job }) {
     }
   };
 
+  const handleMarkRead = async () => {
+    if (!channel?.id) return;
+    const uid = user?.id || user?.email;
+    const existing = await base44.entities.ChannelMembership.filter({
+      channel_id: channel.id,
+      user_id: uid,
+    });
+    if (existing.length > 0) {
+      await base44.entities.ChannelMembership.update(existing[0].id, {
+        last_read_at: new Date().toISOString(),
+      });
+    } else {
+      await base44.entities.ChannelMembership.create({
+        channel_id: channel.id,
+        user_id: uid,
+        user_email: user?.email,
+        user_name: user?.full_name || user?.email,
+        user_role: user?.role,
+        last_read_at: new Date().toISOString(),
+      });
+    }
+    queryClient.invalidateQueries({ queryKey: ["memberships"] });
+    queryClient.invalidateQueries({ queryKey: ["messages-unread"] });
+  };
+
   if (loadingChannel) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -72,8 +98,32 @@ export default function JobMessagesTab({ job }) {
     );
   }
 
+  const isArchived = channel?.is_archived;
+
   return (
     <div className="flex flex-col" style={{ height: "60vh", minHeight: "400px" }}>
+      {/* Header */}
+      <div className="flex items-center gap-2 px-1 py-1.5 shrink-0">
+        <Briefcase className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+        <span className="text-xs font-medium truncate flex-1">{channel.display_name}</span>
+        <button
+          onClick={handleMarkRead}
+          className="p-1 rounded hover:bg-muted transition-colors shrink-0"
+          title="Mark all as read"
+          aria-label="Mark all as read"
+        >
+          <CheckCheck className="w-3.5 h-3.5 text-muted-foreground" />
+        </button>
+        <button
+          onClick={() => setShowSettings(true)}
+          className="p-1 rounded hover:bg-muted transition-colors shrink-0"
+          title="Channel settings"
+          aria-label="Channel settings"
+        >
+          <Settings className="w-3.5 h-3.5 text-muted-foreground" />
+        </button>
+      </div>
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto border rounded-xl mb-0">
         {messagesLoading ? (
@@ -100,13 +150,31 @@ export default function JobMessagesTab({ job }) {
         )}
       </div>
 
-      <MessageComposer
-        channel={channel}
-        currentUser={user}
-        replyTo={replyTo}
-        onCancelReply={() => setReplyTo(null)}
-        onSent={() => queryClient.invalidateQueries({ queryKey })}
-      />
+      {!isArchived ? (
+        <MessageComposer
+          channel={channel}
+          currentUser={user}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
+          onSent={() => queryClient.invalidateQueries({ queryKey })}
+        />
+      ) : (
+        <div className="border-t px-4 py-3 text-center text-xs text-muted-foreground bg-muted/30">
+          This channel is archived. Messages are read-only.
+        </div>
+      )}
+
+      {showSettings && (
+        <ChannelSettingsDialog
+          channel={channel}
+          currentUser={user}
+          onClose={() => setShowSettings(false)}
+          onChannelUpdated={() => {
+            queryClient.invalidateQueries({ queryKey: ["job-channel", job.id] });
+            queryClient.invalidateQueries({ queryKey: ["channels"] });
+          }}
+        />
+      )}
     </div>
   );
 }

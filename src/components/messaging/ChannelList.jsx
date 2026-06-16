@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Hash, Pin, Briefcase, Search, Plus, Archive, MessageCircle } from "lucide-react";
+import { Hash, Pin, Briefcase, Search, Plus, Archive, MessageCircle, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { canAccessChannel, formatMessageTime } from "@/lib/messagingHelpers";
 
@@ -13,6 +13,7 @@ export default function ChannelList({
   onNewChannel,
   showArchived,
   onToggleArchived,
+  onMarkRead,
 }) {
   const [search, setSearch] = useState("");
 
@@ -87,6 +88,7 @@ export default function ChannelList({
             isSelected={ch.id === selectedId}
             unread={unreadCounts[ch.id] || 0}
             onClick={() => onSelect(ch)}
+            onMarkRead={onMarkRead}
           />
         ))}
 
@@ -103,6 +105,7 @@ export default function ChannelList({
             unread={unreadCounts[ch.id] || 0}
             onClick={() => onSelect(ch)}
             currentUserId={userId}
+            onMarkRead={onMarkRead}
           />
         ))}
 
@@ -117,6 +120,7 @@ export default function ChannelList({
                 isSelected={ch.id === selectedId}
                 unread={unreadCounts[ch.id] || 0}
                 onClick={() => onSelect(ch)}
+                onMarkRead={onMarkRead}
               />
             ))}
           </>
@@ -145,7 +149,7 @@ function SectionHeader({ label, className }) {
   );
 }
 
-function ChannelRow({ channel, isSelected, unread, onClick, currentUserId }) {
+function ChannelRow({ channel, isSelected, unread, onClick, currentUserId, onMarkRead }) {
   const isPermanent = channel.is_permanent;
   const isArchived = channel.is_archived;
   const isDm = channel.channel_type === "dm";
@@ -164,7 +168,7 @@ function ChannelRow({ channel, isSelected, unread, onClick, currentUserId }) {
     <button
       onClick={onClick}
       className={cn(
-        "w-full flex items-start gap-2.5 px-3 py-2 text-left transition-colors hover:bg-muted/60 cursor-pointer",
+        "group w-full flex items-start gap-2.5 px-3 py-2 text-left transition-colors hover:bg-muted/60 cursor-pointer",
         isSelected && "bg-primary/10 border-r-2 border-primary"
       )}
     >
@@ -182,25 +186,35 @@ function ChannelRow({ channel, isSelected, unread, onClick, currentUserId }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-1">
-          <span className={cn(
-            "text-xs font-medium truncate",
-            isSelected ? "text-foreground" : "text-foreground/80",
-            isArchived && "opacity-50"
-          )}>
-            {displayName}
-          </span>
-          <div className="flex items-center gap-1 shrink-0">
-            {channel.last_message_at && (
-              <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                {formatMessageTime(channel.last_message_at)}
-              </span>
-            )}
-            {unread > 0 && (
-              <span className="bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                {unread > 99 ? "99+" : unread}
-              </span>
-            )}
-          </div>
+        <span className={cn(
+          "text-xs font-medium truncate",
+          isSelected ? "text-foreground" : "text-foreground/80",
+          isArchived && "opacity-50"
+        )}>
+          {displayName}
+        </span>
+        <div className="flex items-center gap-1 shrink-0">
+          {unread > 0 && onMarkRead && (
+            <button
+              onClick={e => { e.stopPropagation(); onMarkRead(channel.id); }}
+              className="p-0.5 rounded hover:bg-muted/80 transition-colors opacity-0 group-hover:opacity-100"
+              title="Mark all as read"
+              aria-label="Mark all as read"
+            >
+              <CheckCheck className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+            </button>
+          )}
+          {channel.last_message_at && (
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+              {formatMessageTime(channel.last_message_at)}
+            </span>
+          )}
+          {unread > 0 && (
+            <span className="bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+              {unread > 99 ? "99+" : unread}
+            </span>
+          )}
+        </div>
         </div>
         {channel.last_message_preview && (
           <p className="text-[11px] text-muted-foreground truncate mt-0.5">

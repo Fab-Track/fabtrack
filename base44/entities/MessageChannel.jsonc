@@ -17,7 +17,8 @@
       "type": "string",
       "enum": [
         "team",
-        "job"
+        "job",
+        "dm"
       ],
       "default": "team"
     },

@@ -10,7 +10,7 @@ import MessageComposer from "./MessageComposer";
 import ChannelSettingsDialog from "./ChannelSettingsDialog";
 import { cn } from "@/lib/utils";
 
-export default function MessageThread({ channel, currentUser, onBack, isMobile }) {
+export default function MessageThread({ channel, currentUser, onBack, isMobile, onChannelUpdated }) {
   const [replyTo, setReplyTo] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -209,6 +209,7 @@ export default function MessageThread({ channel, currentUser, onBack, isMobile }
           channel={channel}
           currentUser={currentUser}
           onClose={() => setShowSettings(false)}
+          onChannelUpdated={onChannelUpdated}
         />
       )}
     </div>
