@@ -12,7 +12,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Upload, Paperclip, Trash2, ExternalLink, FileText, Image, File } from "lucide-react";
-import RequiredUploadsSection from "@/components/jobs/RequiredUploadsSection";
+import JobAttachmentsNew from "@/components/jobs/JobAttachmentsNew";
 
 const LABELS = ["Drawing", "Cut List", "Photo", "Permit", "Signed Estimate", "Other"];
 
@@ -92,7 +92,7 @@ export default function JobAttachmentsTab({ job }) {
 
   return (
     <div className="space-y-4">
-      <RequiredUploadsSection job={job} />
+      <JobAttachmentsNew job={job} />
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">{attachments.length} file{attachments.length !== 1 ? "s" : ""} attached</p>
