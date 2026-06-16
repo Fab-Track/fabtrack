@@ -3,47 +3,50 @@
   "type": "object",
   "properties": {
     "job_id": {
-      "type": "string"
+      "type": "string",
+      "description": "Linked job ID"
     },
     "job_number": {
-      "type": "string"
+      "type": "string",
+      "description": "Job number (denormalized)"
+    },
+    "category": {
+      "type": "string",
+      "description": "Category name from AttachmentCategory (e.g. 'Cut List', 'Inspiration Photos')"
     },
     "file_url": {
-      "type": "string"
+      "type": "string",
+      "description": "Uploaded file URL"
     },
     "file_name": {
-      "type": "string"
+      "type": "string",
+      "description": "Original file name"
     },
     "file_type": {
       "type": "string",
       "description": "MIME type"
     },
-    "label": {
-      "type": "string",
-      "enum": [
-        "Drawing",
-        "Cut List",
-        "Photo",
-        "Permit",
-        "Signed Estimate",
-        "Other"
-      ],
-      "default": "Other"
-    },
     "version": {
       "type": "string",
-      "description": "e.g. v1, v2, Rev A"
+      "description": "Version label e.g. 'v1', 'v2'. Only meaningful for versioned categories."
+    },
+    "version_group": {
+      "type": "string",
+      "description": "Shared group key linking versions of the same logical file. Usually derived from file_name on first upload."
     },
     "uploaded_by": {
-      "type": "string"
+      "type": "string",
+      "description": "Name or ID of uploader"
     },
     "notes": {
-      "type": "string"
+      "type": "string",
+      "description": "Optional notes"
     }
   },
   "required": [
     "job_id",
     "file_url",
-    "file_name"
+    "file_name",
+    "category"
   ]
 }

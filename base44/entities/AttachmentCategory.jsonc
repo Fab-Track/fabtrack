@@ -1,0 +1,28 @@
+{
+  "name": "AttachmentCategory",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Category name displayed in upload picker and grouped view"
+    },
+    "sort_order": {
+      "type": "number",
+      "default": 0,
+      "description": "Display order (lower = first)"
+    },
+    "uses_versioning": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether files in this category stack as versions instead of separate files"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Hidden categories won't appear in upload picker or display"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}
