@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Upload, Paperclip, Image, File, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AttachmentCategoryGroup from "./AttachmentCategoryGroup";
 
 export default function JobAttachmentsTab({ job }) {
@@ -160,40 +161,41 @@ export default function JobAttachmentsTab({ job }) {
 
       {/* Upload area */}
       <div className="space-y-3">
-        {/* Category selector */}
-        <div className="flex flex-wrap gap-2 items-center">
+        {/* Category dropdown */}
+        <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground shrink-0">Category:</span>
-          <div className="flex flex-wrap gap-1.5">
-            {activeCategories.map(cat => (
-              <button
-                key={cat.name}
-                onClick={() => { setSelectedCategory(cat.name); setUploadStatus(null); }}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                  selectedCategory === cat.name
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
+          <Select
+            value={selectedCategory}
+            onValueChange={(v) => { setSelectedCategory(v); setUploadStatus(null); }}
+          >
+            <SelectTrigger className="w-[220px] h-9 text-xs">
+              <SelectValue placeholder="Select a category…" />
+            </SelectTrigger>
+            <SelectContent>
+              {activeCategories.map(cat => (
+                <SelectItem key={cat.name} value={cat.name} className="text-xs">
+                  {cat.name}
+                  {cat.uses_versioning && <span className="ml-2 text-[10px] text-muted-foreground">(versioned)</span>}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Drop zone + upload button */}
+        {/* Drop zone + upload button — disabled until category selected */}
         <div
           ref={dropZoneRef}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onDrop={onDrop}
-          className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer ${
-            dragOver
-              ? "border-primary bg-primary/5"
-              : selectedCategory
-                ? "border-border hover:border-primary/40 bg-muted/20"
-                : "border-muted-foreground/20 bg-muted/10"
+          onDragOver={selectedCategory ? onDragOver : undefined}
+          onDragLeave={selectedCategory ? onDragLeave : undefined}
+          onDrop={selectedCategory ? onDrop : undefined}
+          className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
+            !selectedCategory
+              ? "border-muted-foreground/10 bg-muted/5 cursor-not-allowed"
+              : dragOver
+                ? "border-primary bg-primary/5 cursor-pointer"
+                : "border-border hover:border-primary/40 bg-muted/20 cursor-pointer"
           }`}
-          onClick={triggerFilePick}
+          onClick={selectedCategory ? triggerFilePick : undefined}
         >
           <input
             ref={fileInputRef}
@@ -228,13 +230,15 @@ export default function JobAttachmentsTab({ job }) {
               ) : (
                 <>
                   <Upload className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
-                  <p className="text-sm font-medium">
+                  <p className="text-sm font-medium text-muted-foreground">
                     {selectedCategory
                       ? `Drop files here or tap to upload to "${selectedCategory}"`
-                      : "Select a category above first, then upload"}
+                      : "Select a category from the dropdown above to enable upload"}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Images, PDFs, documents — tap for camera on mobile
+                    {selectedCategory
+                      ? "Images, PDFs, documents — tap for camera on mobile"
+                      : "Upload is disabled until you choose a category"}
                   </p>
                 </>
               )}
