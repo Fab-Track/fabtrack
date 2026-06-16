@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { buildStageTransition } from "@/lib/pipelineHelpers";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, addDays } from "date-fns";
@@ -70,9 +71,11 @@ export default function CloseLeadModal({ open, onClose, job }) {
       };
       // Won leads move to "Deposit Received / Sale Won" instead of being archived
       if (isWon) {
-        update.stage = "Deposit Received / Sale Won";
-        update.pipeline_board = "Sales";
-        update.stage_entered_at = new Date().toISOString();
+        const transition = buildStageTransition(job, "Sales", "Deposit Received / Sale Won", notes || "Lead closed as Won");
+        // Enrich with actor name
+        const history = [...transition.stage_history];
+        if (history.length > 0) history[history.length - 1] = { ...history[history.length - 1], triggered_by: "Close Lead" };
+        Object.assign(update, transition, { stage_history: history });
       }
       if (requiresFollowUp && followUpDate) {
         update.follow_up_date = format(followUpDate, "yyyy-MM-dd");
