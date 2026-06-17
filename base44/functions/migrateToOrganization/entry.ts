@@ -9,8 +9,13 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (user.role !== 'owner' && !(user.roles || []).includes('owner') && !(user.roles || []).includes('super_admin')) {
-      return Response.json({ error: 'Only the organization owner can run this migration' }, { status: 403 });
+    const userRoles = user.roles || [];
+    const isOwner = user.role === 'owner' || userRoles.includes('owner');
+    const isSuperAdmin = userRoles.includes('super_admin');
+    const isAppAdmin = user.role === 'admin'; // app builder/creator via platform
+    
+    if (!isOwner && !isSuperAdmin && !isAppAdmin) {
+      return Response.json({ error: 'Only the organization owner or app admin can run this migration' }, { status: 403 });
     }
 
     // Create the first organization — High Country Metal Works
