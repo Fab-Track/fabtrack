@@ -87,7 +87,7 @@ export default function StripeSettingsSection() {
       <div>
         <h2 className="font-semibold text-base">Stripe Payments</h2>
         <p className="text-sm text-muted-foreground">
-          Connect your Stripe account to accept credit card payments on customer invoices.
+          Connect your Stripe account for customer invoice payments AND platform subscription billing. These keys power both your shops' customer payments and your orgs' monthly subscription charges.
         </p>
       </div>
 

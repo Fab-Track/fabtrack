@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Building2, Plus, Users, Briefcase, User, Loader2, Shield, ArrowLeft, ChevronRight, Eye, LogOut, Bug } from 'lucide-react';
+import { Building2, Plus, Users, Briefcase, User, Loader2, Shield, ArrowLeft, ChevronRight, Eye, LogOut, Bug, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { startOrgImpersonation } from '@/components/super-admin/SuperAdminBanner';
@@ -266,6 +266,11 @@ export default function SuperAdmin() {
                               {org.job_count} job{org.job_count !== 1 ? 's' : ''}
                             </span>
                             <span>Created {new Date(org.created_date).toLocaleDateString()}</span>
+                            {org.stripe_subscription_id && (
+                              <span className="flex items-center gap-1 text-green-600 font-medium">
+                                <CheckCircle className="w-3 h-3" /> Billing Linked
+                              </span>
+                            )}
                           </div>
                         </div>
                         <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />

@@ -65,6 +65,21 @@
       "type": "string",
       "description": "Stripe subscription ID"
     },
+    "active_user_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Cached count of active app users in this org \u2014 used for metered billing and user cap checks"
+    },
+    "subscription_period_end": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Current subscription period end date, synced from Stripe"
+    },
+    "last_billing_sync_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last time subscription status was synced from Stripe webhook"
+    },
     "created_by_user_id": {
       "type": "string",
       "description": "User who created this organization"

@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { UserPlus, Pencil, MailOpen, Eye, Table2, Clock, ChevronRight, Ban, CheckCircle2, RefreshCw, KeyRound, X } from "lucide-react";
+import { UserPlus, Pencil, MailOpen, Eye, Table2, Clock, ChevronRight, Ban, CheckCircle2, RefreshCw, KeyRound, X, Users } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import { useUserCapCheck } from "@/hooks/useUserCapCheck";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import PermissionsMatrix from "./permissions/PermissionsMatrix";
@@ -45,6 +46,7 @@ const TABS = [
 export default function UsersRolesSection() {
   const qc = useQueryClient();
   const { user: currentUser } = useAuth();
+  const { atCap, userCap, userCount } = useUserCapCheck();
   const isAdminOrOwner = ["admin", "owner"].includes((currentUser?.role || "").toLowerCase());
   const [tab, setTab] = useState("users");
   const [showInvite, setShowInvite] = useState(false);
@@ -62,6 +64,10 @@ export default function UsersRolesSection() {
 
   async function handleInvite() {
     if (!invite.email || !invite.first_name) { toast.error("Name and email are required"); return; }
+    if (atCap) {
+      toast.error(`User cap reached (${userCount}/${userCap}). Upgrade your plan to add more users.`);
+      return;
+    }
     setInviting(true);
     const roles = invite.roles?.length ? invite.roles : ["fabricator"];
     const isHighPriv = roles.some(r => r === "owner" || r === "admin");
@@ -121,9 +127,17 @@ export default function UsersRolesSection() {
           <p className="text-sm text-muted-foreground">Manage users, permissions, and role access for FabTrack.</p>
         </div>
         {tab === "users" && (
-          <Button size="sm" onClick={() => setShowInvite(true)} className="gap-1.5">
-            <UserPlus className="w-3.5 h-3.5" /> Invite User
-          </Button>
+          <div className="flex items-center gap-2">
+            {userCap !== null && (
+              <span className={`text-xs ${atCap ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                <Users className="w-3 h-3 inline mr-0.5" />
+                {userCount}/{userCap} users
+              </span>
+            )}
+            <Button size="sm" onClick={() => setShowInvite(true)} className="gap-1.5" disabled={atCap}>
+              <UserPlus className="w-3.5 h-3.5" /> Invite User
+            </Button>
+          </div>
         )}
       </div>
 
