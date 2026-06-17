@@ -40,9 +40,9 @@ export const PLANS = {
   starter: {
     displayName: 'Starter',
     description: 'Core job management for small shops.',
-    userCap: 5,                  // placeholder — adjust as needed
-    basePriceId: 'price_starter_base_monthly',        // PLACEHOLDER — replace with real Stripe Price ID
-    meteredPriceId: 'price_starter_per_user_monthly', // PLACEHOLDER — replace with real Stripe Metered Price ID
+    userCap: 5,
+    basePriceId: 'price_1TjQRsArEccErEMJWCLMtjee',        // $250/mo base
+    meteredPriceId: 'price_1TjQRsArEccErEMJkqgjlnjQ',      // $15/user/mo metered
     features: [
       'job_board',
       'customers',
@@ -58,9 +58,9 @@ export const PLANS = {
   professional: {
     displayName: 'Professional',
     description: 'Full shop management with time tracking, reports, and costing.',
-    userCap: 20,                 // placeholder — adjust as needed
-    basePriceId: 'price_professional_base_monthly',        // PLACEHOLDER
-    meteredPriceId: 'price_professional_per_user_monthly', // PLACEHOLDER
+    userCap: 20,
+    basePriceId: 'price_1TjQT3ArEccErEMJQKHdAAMp',          // $350/mo base
+    meteredPriceId: 'price_1TjQTYArEccErEMJclhK5ZO4',       // $15/user/mo metered
     features: [
       'job_board',
       'customers',
@@ -86,9 +86,9 @@ export const PLANS = {
   enterprise: {
     displayName: 'Enterprise',
     description: 'Unlimited users with advanced integrations, branding, and priority support.',
-    userCap: 999,                // effectively unlimited — adjust as needed
-    basePriceId: 'price_enterprise_base_monthly',        // PLACEHOLDER
-    meteredPriceId: 'price_enterprise_per_user_monthly', // PLACEHOLDER
+    userCap: 999,
+    basePriceId: 'price_1TjQULArEccErEMJWo6OCaQD',          // $500/mo base
+    meteredPriceId: 'price_1TjQUhArEccErEMJyA5p4Rfr',       // $15/user/mo metered
     features: [
       'job_board',
       'customers',

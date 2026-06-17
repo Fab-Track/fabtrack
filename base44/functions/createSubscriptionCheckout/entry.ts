@@ -8,16 +8,16 @@ import Stripe from 'npm:stripe@17.7.0';
  */
 const PLAN_PRICES = {
   starter: {
-    base: 'price_starter_base_monthly',        // PLACEHOLDER
-    metered: 'price_starter_per_user_monthly', // PLACEHOLDER
+    base: 'price_1TjQRsArEccErEMJWCLMtjee',        // $250/mo base
+    metered: 'price_1TjQRsArEccErEMJkqgjlnjQ',      // $15/user/mo metered
   },
   professional: {
-    base: 'price_professional_base_monthly',        // PLACEHOLDER
-    metered: 'price_professional_per_user_monthly', // PLACEHOLDER
+    base: 'price_1TjQT3ArEccErEMJQKHdAAMp',          // $350/mo base
+    metered: 'price_1TjQTYArEccErEMJclhK5ZO4',       // $15/user/mo metered
   },
   enterprise: {
-    base: 'price_enterprise_base_monthly',        // PLACEHOLDER
-    metered: 'price_enterprise_per_user_monthly', // PLACEHOLDER
+    base: 'price_1TjQULArEccErEMJWo6OCaQD',          // $500/mo base
+    metered: 'price_1TjQUhArEccErEMJyA5p4Rfr',       // $15/user/mo metered
   },
 };
 
