@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Kanban, Wrench, Clock,
   FileText, CalendarDays, Calendar, Users, Package,
   Trophy, ChevronLeft, ChevronRight,
-  Building2, Settings, Menu, X, BarChart2, MessageCircle, MessagesSquare, LogOut
+  Building2, Settings, Menu, X, BarChart2, MessageCircle, MessagesSquare, LogOut, Bug
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -15,6 +15,7 @@ import { useImpersonation, canImpersonate } from "@/lib/ImpersonationContext";
 import { getUserRoles } from "@/lib/roleHelpers";
 import PreviewRoleSelector from "./PreviewRoleSelector";
 import NotificationBell from "./NotificationBell";
+import ReportProblemModal from "@/components/super-admin/ReportProblemModal";
 
 // ── All possible nav items ──────────────────────────────────────────────────
 const ALL_ITEMS = {
@@ -210,6 +211,7 @@ export default function Sidebar() {
   const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const userRoles = getUserRoles(user);
   const effectiveRole = useEffectiveRole(userRoles[0] || "user");
@@ -317,6 +319,14 @@ export default function Sidebar() {
       {/* Preview Role + Collapse + Logout — desktop only */}
       <div className="hidden md:block px-2 py-3 border-t border-sidebar-border space-y-1">
         <NotificationBell collapsed={collapsed} />
+        <button
+          onClick={() => setShowReportModal(true)}
+          title={collapsed ? "Report a Problem" : undefined}
+          className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-md text-sm text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
+        >
+          <Bug className={cn("w-4 h-4 shrink-0", collapsed && "mx-auto")} />
+          {!collapsed && <span>Report a Problem</span>}
+        </button>
         {userCanImpersonate && <PreviewRoleSelector collapsed={collapsed} />}
         <button
           onClick={() => base44.auth.logout("/login")}
@@ -378,6 +388,8 @@ export default function Sidebar() {
           </div>
         </div>
       )}
+
+      <ReportProblemModal open={showReportModal} onClose={() => setShowReportModal(false)} />
 
       {/* ── Desktop sidebar ── */}
       <aside className={cn(

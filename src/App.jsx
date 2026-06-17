@@ -11,6 +11,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import AppLayout from '@/components/layout/AppLayout';
 import SuperAdminBanner from '@/components/super-admin/SuperAdminBanner';
 import { isSuperAdminImpersonating } from '@/components/super-admin/SuperAdminBanner';
+import ErrorBoundary from '@/components/shared/ErrorBoundary';
 import { base44 } from '@/api/base44Client';
 import { Ban } from 'lucide-react';
 
@@ -182,6 +183,7 @@ const AuthenticatedApp = () => {
   }
 
   return (
+    <ErrorBoundary>
     <OrgAccessGate>
       <SuperAdminBanner />
       <Suspense fallback={<PageLoader />}>
@@ -231,6 +233,7 @@ const AuthenticatedApp = () => {
       </AnimatedRoutes>
       </Suspense>
     </OrgAccessGate>
+    </ErrorBoundary>
   );
 };
 

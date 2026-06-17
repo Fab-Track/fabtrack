@@ -1,0 +1,91 @@
+{
+  "name": "Issue",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "user_report",
+        "system_error"
+      ],
+      "description": "Type of issue \u2014 user-submitted report or auto-captured system error"
+    },
+    "title": {
+      "type": "string",
+      "description": "Brief summary of the issue"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description or error message"
+    },
+    "screenshot_url": {
+      "type": "string",
+      "description": "Optional screenshot URL uploaded with the report"
+    },
+    "organization_id": {
+      "type": "string",
+      "description": "Organization where the issue occurred"
+    },
+    "organization_name": {
+      "type": "string",
+      "description": "Organization name (denormalized for display)"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User who reported or was affected by the issue"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Display name of the reporting/affected user"
+    },
+    "user_role": {
+      "type": "string",
+      "description": "Role(s) of the user at time of issue"
+    },
+    "page_url": {
+      "type": "string",
+      "description": "Full URL where the issue occurred"
+    },
+    "page_route": {
+      "type": "string",
+      "description": "Route segment where the issue occurred"
+    },
+    "error_stack": {
+      "type": "string",
+      "description": "Stack trace (for system errors only)"
+    },
+    "error_context": {
+      "type": "string",
+      "description": "Additional JSON context about the error"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "in_progress",
+        "resolved"
+      ],
+      "default": "open",
+      "description": "Current triage status"
+    },
+    "admin_notes": {
+      "type": "string",
+      "description": "Internal notes added by super admin while investigating"
+    },
+    "resolved_by": {
+      "type": "string",
+      "description": "Name of super admin who resolved the issue"
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the issue was resolved"
+    }
+  },
+  "required": [
+    "type",
+    "title",
+    "description",
+    "organization_id"
+  ]
+}

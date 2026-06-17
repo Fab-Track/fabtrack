@@ -9,12 +9,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Building2, Plus, Users, Briefcase, User, Loader2, Shield, ArrowLeft, ChevronRight, Eye, LogOut } from 'lucide-react';
+import { Building2, Plus, Users, Briefcase, User, Loader2, Shield, ArrowLeft, ChevronRight, Eye, LogOut, Bug } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { startOrgImpersonation } from '@/components/super-admin/SuperAdminBanner';
 import OrgDetail from '@/components/super-admin/OrgDetail';
 import SuperAdminAuditLog from '@/components/super-admin/SuperAdminAuditLog';
+import IssueList from '@/components/super-admin/IssueList';
 
 export default function SuperAdmin() {
   const { user } = useAuth();
@@ -275,6 +276,11 @@ export default function SuperAdmin() {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Issues & Bug Tracker */}
+        <div className="mt-6">
+          <IssueList />
         </div>
 
         {/* Global Audit Log */}
