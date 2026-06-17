@@ -56,19 +56,33 @@ Deno.serve(async (req) => {
       stripe_mode: '',
     });
 
-    // 3. Invite the owner user
-    const inviteResult = await base44.asServiceRole.users.inviteUser(ownerEmail, 'owner');
-
-    // 4. Update the invited user with organization_id and name
-    // The invited user gets created with status 'invited' — find them by email
-    const users = await base44.asServiceRole.entities.User.filter({ email: ownerEmail });
-    if (users.length > 0) {
-      await base44.asServiceRole.entities.User.update(users[0].id, {
+    // 3. Invite or update the owner user
+    let ownerUser = null;
+    const existingUsers = await base44.asServiceRole.entities.User.filter({ email: ownerEmail });
+    
+    if (existingUsers.length > 0) {
+      // User already exists — update their organization affiliation
+      ownerUser = existingUsers[0];
+      await base44.asServiceRole.entities.User.update(ownerUser.id, {
         organization_id: org.id,
         organization_name: name,
         full_name: ownerName,
-        roles: ['owner'],
       });
+    } else {
+      // New user — invite them as admin (platform only supports 'user'/'admin')
+      await base44.users.inviteUser(ownerEmail, 'admin');
+      
+      // Find the just-created invited user
+      const newUsers = await base44.asServiceRole.entities.User.filter({ email: ownerEmail });
+      if (newUsers.length > 0) {
+        ownerUser = newUsers[0];
+        await base44.asServiceRole.entities.User.update(ownerUser.id, {
+          organization_id: org.id,
+          organization_name: name,
+          full_name: ownerName,
+          roles: ['owner'],
+        });
+      }
     }
 
     return Response.json({
