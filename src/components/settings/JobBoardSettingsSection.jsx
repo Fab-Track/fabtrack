@@ -78,7 +78,7 @@ function PipelineEditor({ title, defaultStages }) {
 }
 
 export default function JobBoardSettingsSection() {
-  const [prefix, setPrefix] = useState("HCMW");
+  const [prefix, setPrefix] = useState("");
   const [estimateExpiry, setEstimateExpiry] = useState(30);
   const [depositPct, setDepositPct] = useState(50);
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -30,14 +30,21 @@ export default function TwilioPhoneNumbersTable() {
   const [testPhone, setTestPhone] = useState("");
   const [testing, setTesting] = useState(false);
 
+  const [orgId, setOrgId] = useState(null);
+  React.useEffect(() => {
+    base44.auth.me().then(u => setOrgId(u?.organization_id || null)).catch(() => {});
+  }, []);
+
   const { data: phoneNumbers = [], isLoading } = useQuery({
-    queryKey: ["twilioPhoneNumbers"],
-    queryFn: () => base44.entities.TwilioPhoneNumber.list("sort_order", 50),
+    queryKey: ["twilioPhoneNumbers", orgId],
+    queryFn: () => orgId ? base44.entities.TwilioPhoneNumber.filter({ organization_id: orgId }, "sort_order", 50) : [],
+    enabled: !!orgId,
   });
 
   const { data: employees = [] } = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => base44.entities.Employee.list("-created_date", 100),
+    queryKey: ["employees", orgId],
+    queryFn: () => orgId ? base44.entities.Employee.filter({ organization_id: orgId }, "-created_date", 100) : [],
+    enabled: !!orgId,
   });
 
   const activeEmployees = employees.filter(e => e.is_active !== false && e.employment_status !== "Terminated");
@@ -117,7 +124,7 @@ export default function TwilioPhoneNumbersTable() {
       action: "sendTestSMS",
       to_phone: testPhone.trim(),
       from_phone: testDialog.phone_number,
-      from_name: testDialog.assigned_employee_name || "HCMW",
+      from_name: testDialog.assigned_employee_name || "FabTrack",
     });
     setTesting(false);
     if (resp.data?.ok) {

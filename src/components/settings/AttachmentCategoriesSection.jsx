@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -30,9 +30,15 @@ export default function AttachmentCategoriesSection() {
   const [editVersioning, setEditVersioning] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const [orgId, setOrgId] = useState(null);
+  useEffect(() => {
+    base44.auth.me().then(u => setOrgId(u?.organization_id || null)).catch(() => {});
+  }, []);
+
   const { data: categories = [], isLoading } = useQuery({
-    queryKey: ["attachment-categories"],
-    queryFn: () => base44.entities.AttachmentCategory.filter({}, "sort_order", 50),
+    queryKey: ["attachment-categories", orgId],
+    queryFn: () => orgId ? base44.entities.AttachmentCategory.filter({ organization_id: orgId }, "sort_order", 50) : [],
+    enabled: !!orgId,
   });
 
   // Seed defaults if no categories exist
@@ -46,6 +52,7 @@ export default function AttachmentCategoriesSection() {
         sort_order: (i + 1) * 10,
         uses_versioning: usesVersioning,
         is_active: true,
+        organization_id: orgId,
       });
     }
     qc.invalidateQueries({ queryKey: ["attachment-categories"] });
@@ -61,6 +68,7 @@ export default function AttachmentCategoriesSection() {
       sort_order: maxOrder + 10,
       uses_versioning: newVersioning,
       is_active: true,
+      organization_id: orgId,
     });
     qc.invalidateQueries({ queryKey: ["attachment-categories"] });
     setNewName("");

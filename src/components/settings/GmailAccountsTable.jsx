@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import GmailSystemSenderCard from "./GmailSystemSenderCard";
 
 const EMAIL_ROLES = ["owner", "estimator", "shop_manager", "admin", "accountant"];
-const ALLOWED_DOMAIN = "highcountrymetalworks.com";
+
 
 function StatusBadge({ employee }) {
   const status = employee.gmail_token_status;
@@ -76,9 +76,15 @@ function ConnectRow({ employee, onRefresh }) {
 
 export default function GmailAccountsTable() {
   const qc = useQueryClient();
+  const [orgId, setOrgId] = useState(null);
+  useEffect(() => {
+    base44.auth.me().then(u => setOrgId(u?.organization_id || null)).catch(() => {});
+  }, []);
+
   const { data: employees = [], isLoading } = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => base44.entities.Employee.list("-created_date", 100),
+    queryKey: ["employees", orgId],
+    queryFn: () => orgId ? base44.entities.Employee.filter({ organization_id: orgId }, "-created_date", 100) : [],
+    enabled: !!orgId,
     staleTime: 30000,
   });
 
@@ -97,7 +103,7 @@ export default function GmailAccountsTable() {
       {/* Privacy note */}
       <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-800">
         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-        <span>FabTrack only uses Gmail to send messages — no inbox is read or stored. Each user authorizes their own account. Only <strong>@{ALLOWED_DOMAIN}</strong> addresses are accepted.</span>
+        <span>FabTrack only uses Gmail to send messages — no inbox is read or stored. Each user authorizes their own account with their company email.</span>
       </div>
 
       {/* Per-user table */}

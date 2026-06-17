@@ -27,8 +27,8 @@ export default function IntegrationsSection() {
 
   const [sendgridKey, setSendgridKey] = useState("");
   const [showSendgridKey, setShowSendgridKey] = useState(false);
-  const [sendgridFrom, setSendgridFrom] = useState("cole@highcountrymetalworks.com");
-  const [sendgridFromName, setSendgridFromName] = useState("Cole @ High Country Metal Works");
+  const [sendgridFrom, setSendgridFrom] = useState("");
+  const [sendgridFromName, setSendgridFromName] = useState("");
   const [sgStatus, setSgStatus] = useState("not_connected");
 
   async function handleTestSMS() {
@@ -37,8 +37,8 @@ export default function IntegrationsSection() {
     const resp = await base44.functions.invoke("sendCustomerMessage", {
       channel: "SMS",
       to_phone: testNumber,
-      from_phone: twilioFrom || "(801) 210-9103",
-      from_name: "HCMW Test",
+      from_phone: twilioFrom,
+      from_name: "FabTrack Test",
       message_body: "✅ Test SMS from FabTrack — Twilio is connected!",
     });
     setTesting(false);
@@ -131,7 +131,7 @@ export default function IntegrationsSection() {
           <div>
             <h3 className="font-semibold text-sm">Gmail / Google Workspace</h3>
             <p className="text-xs text-muted-foreground">
-              Connect each team member's HCMW Gmail so FabTrack can send emails on their behalf
+              Connect each team member's Gmail so FabTrack can send emails on their behalf
             </p>
           </div>
         </div>
@@ -149,7 +149,7 @@ export default function IntegrationsSection() {
             </div>
             <div>
               <h3 className="font-semibold text-sm">SendGrid Email</h3>
-              <p className="text-xs text-muted-foreground">Send emails from your domain (e.g. cole@highcountrymetalworks.com)</p>
+              <p className="text-xs text-muted-foreground">Send emails from your domain (e.g. info@yourcompany.com)</p>
             </div>
           </div>
           <StatusDot status={sgStatus} />

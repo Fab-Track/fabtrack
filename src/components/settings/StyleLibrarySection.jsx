@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,15 @@ export default function StyleLibrarySection() {
   const [uploading, setUploading] = useState(null);
   const [editDesc, setEditDesc] = useState({});
 
+  const [orgId, setOrgId] = useState(null);
+  useEffect(() => {
+    base44.auth.me().then(u => setOrgId(u?.organization_id || null)).catch(() => {});
+  }, []);
+
   const { data: library = [] } = useQuery({
-    queryKey: ["railingStyleLibrary"],
-    queryFn: () => base44.entities.RailingStyleLibrary.list(),
+    queryKey: ["railingStyleLibrary", orgId],
+    queryFn: () => orgId ? base44.entities.RailingStyleLibrary.filter({ organization_id: orgId }) : [],
+    enabled: !!orgId,
   });
 
   const byStyle = library.reduce((acc, r) => { acc[r.style_name] = r; return acc; }, {});
@@ -27,7 +33,7 @@ export default function StyleLibrarySection() {
       if (existing) {
         return base44.entities.RailingStyleLibrary.update(existing.id, { photo_url, description });
       }
-      return base44.entities.RailingStyleLibrary.create({ style_name: styleName, photo_url, description });
+      return base44.entities.RailingStyleLibrary.create({ style_name: styleName, photo_url, description, organization_id: orgId });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["railingStyleLibrary"] });

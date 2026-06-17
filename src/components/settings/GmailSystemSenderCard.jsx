@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 
-const SYSTEM_EMAIL = "billing@highcountrymetalworks.com";
+
 
 function StatusBadge({ status }) {
   if (status === "connected") return <Badge className="gap-1 bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="w-3 h-3" />Connected</Badge>;
@@ -77,7 +77,7 @@ export default function GmailSystemSenderCard() {
             <Badge variant="outline" className="text-[10px] px-1.5 py-0">billing@</Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            All estimates and invoices are sent from <strong>{SYSTEM_EMAIL}</strong>
+            All estimates and invoices are sent from the connected system sender
           </p>
         </div>
         {s === null ? (

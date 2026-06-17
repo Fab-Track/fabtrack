@@ -11,7 +11,7 @@ const SETTING_KEY = "estimate_settings";
 
 const DEFAULT_CONTRACT = `TERMS AND CONDITIONS
 
-By signing this estimate, you ("Customer") agree to authorize High Country Metal Works ("Company") to proceed with the scope of work described above at the agreed-upon price.
+By signing this estimate, you ("Customer") agree to authorize the Company to proceed with the scope of work described above at the agreed-upon price.
 
 1. SCOPE OF WORK — Work is limited to the items described in this estimate. Any changes must be submitted as a written Change Order and approved by both parties before additional work begins.
 
@@ -31,9 +31,15 @@ export default function EstimateContractSection() {
   const [emailEnabled, setEmailEnabled] = useState(false);
   const [recordId, setRecordId] = useState(null);
 
+  const [orgId, setOrgId] = React.useState(null);
+  React.useEffect(() => {
+    base44.auth.me().then(u => setOrgId(u?.organization_id || null)).catch(() => {});
+  }, []);
+
   const { data: settings = [], isLoading } = useQuery({
-    queryKey: ["appSettings", SETTING_KEY],
-    queryFn: () => base44.entities.AppSettings.filter({ setting_key: SETTING_KEY }),
+    queryKey: ["appSettings", SETTING_KEY, orgId],
+    queryFn: () => base44.entities.AppSettings.filter({ setting_key: SETTING_KEY, organization_id: orgId }),
+    enabled: !!orgId,
   });
 
   useEffect(() => {
@@ -51,6 +57,7 @@ export default function EstimateContractSection() {
     mutationFn: () => {
       const payload = {
         setting_key: SETTING_KEY,
+        organization_id: orgId,
         estimate_contract_text: contractText,
         estimate_approval_email_enabled: emailEnabled,
       };

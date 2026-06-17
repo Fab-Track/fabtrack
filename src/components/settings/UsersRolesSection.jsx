@@ -55,9 +55,11 @@ export default function UsersRolesSection() {
   const [inviting, setInviting] = useState(false);
   const [summaryRole, setSummaryRole] = useState(null);
 
+  const orgId = currentUser?.organization_id;
+
   const { data: users = [] } = useQuery({
-    queryKey: ["users"],
-    queryFn: () => base44.entities.User.list(),
+    queryKey: ["users", orgId],
+    queryFn: () => orgId ? base44.entities.User.filter({ organization_id: orgId }) : [],
   });
 
   const permissions = loadPermissions();

@@ -13,9 +13,15 @@ const ROLES = ["owner", "admin", "shop_manager", "estimator", "fabricator", "ins
 export default function SecuritySection() {
   const qc = useQueryClient();
 
+  const [orgId, setOrgId] = useState(null);
+  useEffect(() => {
+    base44.auth.me().then(u => setOrgId(u?.organization_id || null)).catch(() => {});
+  }, []);
+
   const { data: settingsArr = [] } = useQuery({
-    queryKey: ["app-settings"],
-    queryFn: () => base44.entities.AppSettings.filter({ setting_key: "global" }),
+    queryKey: ["app-settings", orgId],
+    queryFn: () => orgId ? base44.entities.AppSettings.filter({ setting_key: "global", organization_id: orgId }) : [],
+    enabled: !!orgId,
   });
   const settings = settingsArr[0] || {};
 
@@ -42,7 +48,7 @@ export default function SecuritySection() {
       if (settings.id) {
         return base44.entities.AppSettings.update(settings.id, patch);
       } else {
-        return base44.entities.AppSettings.create({ setting_key: "global", ...patch });
+        return base44.entities.AppSettings.create({ setting_key: "global", organization_id: orgId, ...patch });
       }
     },
     onSuccess: () => {

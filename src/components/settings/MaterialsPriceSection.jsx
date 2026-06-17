@@ -15,9 +15,15 @@ export default function MaterialsPriceSection() {
   const [saving, setSaving] = useState(null);
   const [seeded, setSeeded] = useState(false);
 
+  const [orgId, setOrgId] = useState(null);
+  useEffect(() => {
+    base44.auth.me().then(u => setOrgId(u?.organization_id || null)).catch(() => {});
+  }, []);
+
   const { data: materials = [], isLoading } = useQuery({
-    queryKey: ["materialPriceList"],
-    queryFn: () => base44.entities.MaterialPriceList.list(),
+    queryKey: ["materialPriceList", orgId],
+    queryFn: () => orgId ? base44.entities.MaterialPriceList.filter({ organization_id: orgId }) : [],
+    enabled: !!orgId,
   });
 
   useEffect(() => {
@@ -25,7 +31,7 @@ export default function MaterialsPriceSection() {
       setSeeded(true);
       Promise.all(
         DEFAULT_MATERIALS.map(m =>
-          base44.entities.MaterialPriceList.create({ name: m.name, category: m.category, cost_per_foot: m.costPerFoot })
+          base44.entities.MaterialPriceList.create({ name: m.name, category: m.category, cost_per_foot: m.costPerFoot, organization_id: orgId })
         )
       ).then(() => qc.invalidateQueries({ queryKey: ["materialPriceList"] }));
     }

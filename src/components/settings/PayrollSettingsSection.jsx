@@ -26,9 +26,15 @@ export default function PayrollSettingsSection() {
   const [weekStart, setWeekStart] = useState(1);
   const [saving, setSaving] = useState(false);
 
+  const [orgId, setOrgId] = useState(null);
+  useEffect(() => {
+    base44.auth.me().then(u => setOrgId(u?.organization_id || null)).catch(() => {});
+  }, []);
+
   const { data: settingsArr = [] } = useQuery({
-    queryKey: ["appSettings"],
-    queryFn: () => base44.entities.AppSettings.filter({ setting_key: "main" }),
+    queryKey: ["appSettings", orgId],
+    queryFn: () => orgId ? base44.entities.AppSettings.filter({ setting_key: "main", organization_id: orgId }) : [],
+    enabled: !!orgId,
   });
   const settings = settingsArr[0] || null;
 
@@ -43,7 +49,7 @@ export default function PayrollSettingsSection() {
     if (settings) {
       await base44.entities.AppSettings.update(settings.id, { payroll_workweek_start_day: weekStart });
     } else {
-      await base44.entities.AppSettings.create({ setting_key: "main", payroll_workweek_start_day: weekStart });
+      await base44.entities.AppSettings.create({ setting_key: "main", payroll_workweek_start_day: weekStart, organization_id: orgId });
     }
     qc.invalidateQueries({ queryKey: ["appSettings"] });
     toast({ title: "Payroll settings saved" });

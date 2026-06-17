@@ -328,9 +328,15 @@ export default function ServiceCatalogSection() {
   const [manageCatsOpen, setManageCatsOpen] = useState(false);
   const [customCategories, setCustomCategories] = useState([]);
 
+  const [orgId, setOrgId] = useState(null);
+  useEffect(() => {
+    base44.auth.me().then(u => setOrgId(u?.organization_id || null)).catch(() => {});
+  }, []);
+
   const { data: catalog = [], isLoading } = useQuery({
-    queryKey: ["serviceCatalog"],
-    queryFn: () => base44.entities.ServiceCatalog.list("sort_order"),
+    queryKey: ["serviceCatalog", orgId],
+    queryFn: () => orgId ? base44.entities.ServiceCatalog.filter({ organization_id: orgId }, "sort_order") : [],
+    enabled: !!orgId,
   });
 
   // Derive categories from DB (unique) merged with defaults and any newly created ones
@@ -341,7 +347,7 @@ export default function ServiceCatalogSection() {
   useEffect(() => {
     if (!isLoading && catalog.length === 0 && !seeded) {
       setSeeded(true);
-      Promise.all(DEFAULT_SERVICE_CATALOG.map(item => base44.entities.ServiceCatalog.create({ ...item, is_active: true })))
+      Promise.all(DEFAULT_SERVICE_CATALOG.map(item => base44.entities.ServiceCatalog.create({ ...item, is_active: true, organization_id: orgId })))
         .then(() => qc.invalidateQueries({ queryKey: ["serviceCatalog"] }));
     }
   }, [isLoading, catalog.length, seeded]);
