@@ -27,7 +27,7 @@ export default function MaterialsPriceSection() {
   });
 
   useEffect(() => {
-    if (!isLoading && materials.length === 0 && !seeded) {
+    if (!isLoading && materials.length === 0 && !seeded && orgId) {
       setSeeded(true);
       Promise.all(
         DEFAULT_MATERIALS.map(m =>
@@ -35,7 +35,7 @@ export default function MaterialsPriceSection() {
         )
       ).then(() => qc.invalidateQueries({ queryKey: ["materialPriceList"] }));
     }
-  }, [isLoading, materials.length, seeded]);
+  }, [isLoading, materials.length, seeded, orgId]);
 
   async function handleSave(mat) {
     setSaving(mat.id);

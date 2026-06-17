@@ -33,6 +33,7 @@ export default function StyleLibrarySection() {
       if (existing) {
         return base44.entities.RailingStyleLibrary.update(existing.id, { photo_url, description });
       }
+      if (!orgId) return toast.error("Cannot save — organization not loaded");
       return base44.entities.RailingStyleLibrary.create({ style_name: styleName, photo_url, description, organization_id: orgId });
     },
     onSuccess: () => {

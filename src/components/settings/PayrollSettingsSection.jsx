@@ -45,6 +45,7 @@ export default function PayrollSettingsSection() {
   }, [settings]);
 
   const save = async () => {
+    if (!orgId) return toast({ title: "Organization not loaded", variant: "destructive" });
     setSaving(true);
     if (settings) {
       await base44.entities.AppSettings.update(settings.id, { payroll_workweek_start_day: weekStart });

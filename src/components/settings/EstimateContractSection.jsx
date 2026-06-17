@@ -55,6 +55,7 @@ export default function EstimateContractSection() {
 
   const save = useMutation({
     mutationFn: () => {
+      if (!orgId) throw new Error("Organization not loaded");
       const payload = {
         setting_key: SETTING_KEY,
         organization_id: orgId,

@@ -345,12 +345,12 @@ export default function ServiceCatalogSection() {
 
   // Seed defaults if empty
   useEffect(() => {
-    if (!isLoading && catalog.length === 0 && !seeded) {
+    if (!isLoading && catalog.length === 0 && !seeded && orgId) {
       setSeeded(true);
       Promise.all(DEFAULT_SERVICE_CATALOG.map(item => base44.entities.ServiceCatalog.create({ ...item, is_active: true, organization_id: orgId })))
         .then(() => qc.invalidateQueries({ queryKey: ["serviceCatalog"] }));
     }
-  }, [isLoading, catalog.length, seeded]);
+  }, [isLoading, catalog.length, seeded, orgId]);
 
   const createItem = useMutation({
     mutationFn: (data) => base44.entities.ServiceCatalog.create({ ...data, is_active: true, sort_order: catalog.length }),

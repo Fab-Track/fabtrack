@@ -10,6 +10,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Plus, Trash2, GripVertical, Pencil, Image } from "lucide-react";
+import { toast } from "sonner";
 
 const DEFAULT_NAMES = [
   "Inspiration Photos",
@@ -43,6 +44,7 @@ export default function AttachmentCategoriesSection() {
 
   // Seed defaults if no categories exist
   const seedDefaults = async () => {
+    if (!orgId) return toast.error("Cannot seed — organization not loaded");
     setSaving(true);
     for (let i = 0; i < DEFAULT_NAMES.length; i++) {
       const name = DEFAULT_NAMES[i];
@@ -61,6 +63,7 @@ export default function AttachmentCategoriesSection() {
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
+    if (!orgId) return toast.error("Cannot add — organization not loaded");
     setSaving(true);
     const maxOrder = categories.reduce((max, c) => Math.max(max, c.sort_order || 0), 0);
     await base44.entities.AttachmentCategory.create({

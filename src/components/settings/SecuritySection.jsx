@@ -45,6 +45,7 @@ export default function SecuritySection() {
 
   const saveMutation = useMutation({
     mutationFn: async (patch) => {
+      if (!orgId) throw new Error("Organization not loaded");
       if (settings.id) {
         return base44.entities.AppSettings.update(settings.id, patch);
       } else {

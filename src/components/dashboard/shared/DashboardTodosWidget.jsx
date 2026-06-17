@@ -2,6 +2,7 @@ import React from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
+import { useOrgFilter } from "@/lib/orgContext";
 import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -17,12 +18,13 @@ const PRIORITY_COLORS = {
 
 export default function DashboardTodosWidget() {
   const { user } = useAuth();
+  const orgFilter = useOrgFilter();
   const queryClient = useQueryClient();
 
   const { data: todos = [], isLoading } = useQuery({
-    queryKey: ["myTodos"],
+    queryKey: ["myTodos", orgFilter],
     queryFn: async () => {
-      const all = await base44.entities.JobTodo.filter({}, "-created_date", 300);
+      const all = await base44.entities.JobTodo.filter(orgFilter, "-created_date", 300);
       return all.filter(t => {
         if (t.is_completed) return false;
         return t.assignee_id === user?.id || t.created_by_id === user?.id;
