@@ -14,6 +14,7 @@ import MyUpcomingInstalls from "@/components/dashboard/fabricator/MyUpcomingInst
 import DashboardTodosWidget from "@/components/dashboard/shared/DashboardTodosWidget";
 import MasterClockCard from "@/components/timetracking/MasterClockCard";
 import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
+import { useOrgFilter } from "@/lib/orgContext";
 
 export default function FabricatorDashboard({ overrideEmployee = null }) {
   const { user } = useAuth();
@@ -22,30 +23,32 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
   // Live elapsed seconds for active session — drives real-time hour counts
   const [activeElapsedSeconds, setActiveElapsedSeconds] = useState(0);
 
+  const orgFilter = useOrgFilter();
+
   const { data: employees = [] } = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => base44.entities.Employee.list("-created_date", 100),
+    queryKey: ["employees", orgFilter],
+    queryFn: () => base44.entities.Employee.filter(orgFilter, "-created_date", 100),
   });
 
   const { data: jobs = [] } = useQuery({
-    queryKey: ["jobs"],
-    queryFn: () => base44.entities.Job.list("-created_date", 200),
+    queryKey: ["jobs", orgFilter],
+    queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 200),
   });
 
   const { data: allTimeEntries = [], isLoading } = useQuery({
-    queryKey: ["timeEntries", "all"],
-    queryFn: () => base44.entities.TimeEntry.list("-clock_in", 500),
+    queryKey: ["timeEntries", "all", orgFilter],
+    queryFn: () => base44.entities.TimeEntry.filter(orgFilter, "-clock_in", 500),
   });
 
   const { data: activeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", "active"],
-    queryFn: () => base44.entities.TimeEntry.filter({ is_active: true }),
+    queryKey: ["timeEntries", "active", orgFilter],
+    queryFn: () => base44.entities.TimeEntry.filter({ ...orgFilter, is_active: true }),
     refetchInterval: 30000,
   });
 
   const { data: qcInspections = [] } = useQuery({
-    queryKey: ["qcInspections"],
-    queryFn: () => base44.entities.QCInspection.list("-created_date", 200),
+    queryKey: ["qcInspections", orgFilter],
+    queryFn: () => base44.entities.QCInspection.filter(orgFilter, "-created_date", 200),
   });
 
   // Use impersonated employee if provided, otherwise match logged-in user by email

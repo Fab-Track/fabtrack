@@ -13,6 +13,7 @@ import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import DashboardTodosWidget from "@/components/dashboard/shared/DashboardTodosWidget";
+import { useOrgFilter } from "@/lib/orgContext";
 
 const STATUS_COLORS = {
   Sent: "bg-blue-100 text-blue-700",
@@ -43,13 +44,15 @@ export default function EstimatorDashboard() {
   };
   const currentRange = periodRanges[period];
 
-  const { data: jobs = [], isLoading } = useQuery({ queryKey: ["jobs"], queryFn: () => base44.entities.Job.list("-created_date", 300), refetchInterval: 5 * 60 * 1000 });
-  const { data: estimates = [] } = useQuery({ queryKey: ["estimates-all"], queryFn: () => base44.entities.Estimate.list("-created_date", 300), refetchInterval: 5 * 60 * 1000 });
+  const orgFilter = useOrgFilter();
+
+  const { data: jobs = [], isLoading } = useQuery({ queryKey: ["jobs", orgFilter], queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 300), refetchInterval: 5 * 60 * 1000 });
+  const { data: estimates = [] } = useQuery({ queryKey: ["estimates-all", orgFilter], queryFn: () => base44.entities.Estimate.filter(orgFilter, "-created_date", 300), refetchInterval: 5 * 60 * 1000 });
 
   // ── Clock-in data ──
-  const { data: employees = [] } = useQuery({ queryKey: ["employees"], queryFn: () => base44.entities.Employee.list("-created_date", 100) });
-  const { data: allTimeEntries = [] } = useQuery({ queryKey: ["timeEntries", "all"], queryFn: () => base44.entities.TimeEntry.list("-clock_in", 500) });
-  const { data: activeEntries = [] } = useQuery({ queryKey: ["timeEntries", "active"], queryFn: () => base44.entities.TimeEntry.filter({ is_active: true }), refetchInterval: 30000 });
+  const { data: employees = [] } = useQuery({ queryKey: ["employees", orgFilter], queryFn: () => base44.entities.Employee.filter(orgFilter, "-created_date", 100) });
+  const { data: allTimeEntries = [] } = useQuery({ queryKey: ["timeEntries", "all", orgFilter], queryFn: () => base44.entities.TimeEntry.filter(orgFilter, "-clock_in", 500) });
+  const { data: activeEntries = [] } = useQuery({ queryKey: ["timeEntries", "active", orgFilter], queryFn: () => base44.entities.TimeEntry.filter({ ...orgFilter, is_active: true }), refetchInterval: 30000 });
 
   const myEmployee2 = employees.find(e => e.email === user?.email || e.personal_email === user?.email || e.created_by_id === user?.id) || null;
   const myId = myEmployee2?.id || user?.id;

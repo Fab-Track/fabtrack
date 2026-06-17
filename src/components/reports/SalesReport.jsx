@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Eye, Send } from "lucide-react";
 import SalesRepPerformance from "./SalesRepPerformance";
+import { useOrgFilter } from "@/lib/orgContext";
 
 const STATUS_COLORS = {
   Sent: "bg-blue-100 text-blue-700",
@@ -32,9 +33,11 @@ export default function SalesReport() {
   const [range, setRange] = useState(null);
   const [statusFilter, setStatusFilter] = useState("All");
 
-  const { data: jobs = [] } = useQuery({ queryKey: ["jobs"], queryFn: () => base44.entities.Job.list("-created_date", 500) });
-  const { data: estimates = [] } = useQuery({ queryKey: ["estimates-all"], queryFn: () => base44.entities.Estimate.list("-created_date", 500) });
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: () => base44.entities.Invoice.list("-created_date", 500) });
+  const orgFilter = useOrgFilter();
+
+  const { data: jobs = [] } = useQuery({ queryKey: ["jobs", orgFilter], queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 500) });
+  const { data: estimates = [] } = useQuery({ queryKey: ["estimates-all", orgFilter], queryFn: () => base44.entities.Estimate.filter(orgFilter, "-created_date", 500) });
+  const { data: invoices = [] } = useQuery({ queryKey: ["invoices", orgFilter], queryFn: () => base44.entities.Invoice.filter(orgFilter, "-created_date", 500) });
 
   const filteredEstimates = estimates.filter(e => inRange(e.created_date, range));
 

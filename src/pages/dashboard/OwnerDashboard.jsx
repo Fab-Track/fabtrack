@@ -16,16 +16,19 @@ import CustomerLifetimeValueCard from "@/components/dashboard/owner/CustomerLife
 import PipelineVelocityCard from "@/components/dashboard/owner/PipelineVelocityCard";
 import ClosedLeadsDashboardCard from "@/components/dashboard/owner/ClosedLeadsDashboardCard";
 import DashboardTodosWidget from "@/components/dashboard/shared/DashboardTodosWidget";
+import { useOrgFilter } from "@/lib/orgContext";
 
 export default function OwnerDashboard() {
   const now = new Date();
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);
 
-  const { data: jobs = [], isLoading } = useQuery({ queryKey: ["jobs"], queryFn: () => base44.entities.Job.list("-created_date", 300), refetchInterval: 5 * 60 * 1000 });
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: () => base44.entities.Invoice.list("-created_date", 500), refetchInterval: 5 * 60 * 1000 });
-  const { data: estimates = [] } = useQuery({ queryKey: ["estimates-all"], queryFn: () => base44.entities.Estimate.list("-created_date", 300), refetchInterval: 5 * 60 * 1000 });
-  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: () => base44.entities.Customer.list("name", 500), refetchInterval: 5 * 60 * 1000 });
+  const orgFilter = useOrgFilter();
+
+  const { data: jobs = [], isLoading } = useQuery({ queryKey: ["jobs", orgFilter], queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 300), refetchInterval: 5 * 60 * 1000 });
+  const { data: invoices = [] } = useQuery({ queryKey: ["invoices", orgFilter], queryFn: () => base44.entities.Invoice.filter(orgFilter, "-created_date", 500), refetchInterval: 5 * 60 * 1000 });
+  const { data: estimates = [] } = useQuery({ queryKey: ["estimates-all", orgFilter], queryFn: () => base44.entities.Estimate.filter(orgFilter, "-created_date", 300), refetchInterval: 5 * 60 * 1000 });
+  const { data: customers = [] } = useQuery({ queryKey: ["customers", orgFilter], queryFn: () => base44.entities.Customer.filter(orgFilter, "name", 500), refetchInterval: 5 * 60 * 1000 });
 
   const today = new Date();
 

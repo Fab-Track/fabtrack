@@ -8,6 +8,7 @@ import EmptyState from "./shared/EmptyState";
 import ReportHeader from "./shared/ReportHeader";
 import ReportExportButtons from "./ReportExportButtons";
 import PhaseDurationReport from "./PhaseDurationReport";
+import { useOrgFilter } from "@/lib/orgContext";
 
 const STAGE_ORDER = ["In Fabrication", "At Powder Coat", "Ready for Install", "Install Scheduled", "Install Complete"];
 
@@ -19,9 +20,11 @@ function inRange(dateStr, range) {
 export default function ProductionReport() {
   const [range, setRange] = useState(null);
 
-  const { data: jobs = [] } = useQuery({ queryKey: ["jobs"], queryFn: () => base44.entities.Job.list("-created_date", 500) });
-  const { data: timeEntries = [] } = useQuery({ queryKey: ["timeEntries", "all"], queryFn: () => base44.entities.TimeEntry.list("-clock_in", 1000) });
-  const { data: qcInspections = [] } = useQuery({ queryKey: ["qcInspections"], queryFn: () => base44.entities.QCInspection.list("-created_date", 500) });
+  const orgFilter = useOrgFilter();
+
+  const { data: jobs = [] } = useQuery({ queryKey: ["jobs", orgFilter], queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 500) });
+  const { data: timeEntries = [] } = useQuery({ queryKey: ["timeEntries", "all", orgFilter], queryFn: () => base44.entities.TimeEntry.filter(orgFilter, "-clock_in", 1000) });
+  const { data: qcInspections = [] } = useQuery({ queryKey: ["qcInspections", orgFilter], queryFn: () => base44.entities.QCInspection.filter(orgFilter, "-created_date", 500) });
 
   // ── KPIs ────────────────────────────────────────────────────────────
   const completedJobs = jobs.filter(j => ["Install Complete", "Invoiced"].includes(j.status) && inRange(j.updated_date, range));

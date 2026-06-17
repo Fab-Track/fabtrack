@@ -9,6 +9,7 @@ import ReportExportButtons from "./ReportExportButtons";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { OUTCOME_REASONS } from "@/components/jobs/CloseLeadModal";
+import { useOrgFilter } from "@/lib/orgContext";
 import { Link } from "react-router-dom";
 
 function inRange(dateStr, range) {
@@ -32,14 +33,16 @@ export default function ClosedLeadsReport() {
   const [range, setRange] = useState(null);
   const [filterRepId, setFilterRepId] = useState("all");
 
+  const orgFilter = useOrgFilter();
+
   const { data: jobs = [] } = useQuery({
-    queryKey: ["jobs"],
-    queryFn: () => base44.entities.Job.list("-created_date", 500),
+    queryKey: ["jobs", orgFilter],
+    queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 500),
     refetchInterval: 5 * 60 * 1000,
   });
   const { data: users = [] } = useQuery({
-    queryKey: ["users"],
-    queryFn: () => base44.entities.User.list("full_name", 200),
+    queryKey: ["users", orgFilter],
+    queryFn: () => base44.entities.User.filter(orgFilter, "full_name", 200),
   });
 
   const closedJobs = useMemo(() => {

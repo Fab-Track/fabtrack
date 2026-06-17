@@ -11,6 +11,7 @@ import EmptyState from "./shared/EmptyState";
 import ReportHeader from "./shared/ReportHeader";
 import { Link } from "react-router-dom";
 import { AlertTriangle, AlertCircle, Clock, FileText } from "lucide-react";
+import { useOrgFilter } from "@/lib/orgContext";
 
 const JOB_TYPE_COLORS = ["#1e3a5f", "#f59e0b", "#10b981", "#6366f1", "#f43f5e", "#06b6d4", "#8b5cf6"];
 
@@ -22,9 +23,11 @@ function inRange(dateStr, range) {
 export default function OverviewReport({ onTabChange }) {
   const [range, setRange] = useState(null);
 
-  const { data: jobs = [] } = useQuery({ queryKey: ["jobs"], queryFn: () => base44.entities.Job.list("-created_date", 500) });
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: () => base44.entities.Invoice.list("-created_date", 500) });
-  const { data: estimates = [] } = useQuery({ queryKey: ["estimates-all"], queryFn: () => base44.entities.Estimate.list("-created_date", 500) });
+  const orgFilter = useOrgFilter();
+
+  const { data: jobs = [] } = useQuery({ queryKey: ["jobs", orgFilter], queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 500) });
+  const { data: invoices = [] } = useQuery({ queryKey: ["invoices", orgFilter], queryFn: () => base44.entities.Invoice.filter(orgFilter, "-created_date", 500) });
+  const { data: estimates = [] } = useQuery({ queryKey: ["estimates-all", orgFilter], queryFn: () => base44.entities.Estimate.filter(orgFilter, "-created_date", 500) });
 
   // ── Date-filtered data ─────────────────────────────────────────────
   const filteredInvoices = invoices.filter(inv =>

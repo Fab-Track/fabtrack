@@ -12,6 +12,7 @@ import MasterClockCard from "@/components/timetracking/MasterClockCard";
 import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 import { Link } from "react-router-dom";
 import DashboardTodosWidget from "@/components/dashboard/shared/DashboardTodosWidget";
+import { useOrgFilter } from "@/lib/orgContext";
 
 const PROD_STAGES = ["In Fabrication", "Fab Queue", "Powder Coat", "At Powder Coat", "Ready for Install", "Install Scheduled"];
 
@@ -24,29 +25,31 @@ export default function ShopManagerDashboard() {
   const today = new Date();
   const [activeElapsedSeconds, setActiveElapsedSeconds] = useState(0);
 
+  const orgFilter = useOrgFilter();
+
   const { data: jobs = [], isLoading } = useQuery({
-    queryKey: ["jobs"],
-    queryFn: () => base44.entities.Job.list("-created_date", 300),
+    queryKey: ["jobs", orgFilter],
+    queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 300),
     refetchInterval: 5 * 60 * 1000,
   });
   const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", "active"],
-    queryFn: () => base44.entities.TimeEntry.filter({ is_active: true }),
+    queryKey: ["timeEntries", "active", orgFilter],
+    queryFn: () => base44.entities.TimeEntry.filter({ ...orgFilter, is_active: true }),
     refetchInterval: 30000,
   });
   const { data: employees = [] } = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => base44.entities.Employee.list("-created_date", 100),
+    queryKey: ["employees", orgFilter],
+    queryFn: () => base44.entities.Employee.filter(orgFilter, "-created_date", 100),
   });
 
   // ── Clock-in data ──
   const { data: allTimeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", "all"],
-    queryFn: () => base44.entities.TimeEntry.list("-clock_in", 500),
+    queryKey: ["timeEntries", "all", orgFilter],
+    queryFn: () => base44.entities.TimeEntry.filter(orgFilter, "-clock_in", 500),
   });
   const { data: activeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", "active"],
-    queryFn: () => base44.entities.TimeEntry.filter({ is_active: true }),
+    queryKey: ["timeEntries", "active", orgFilter],
+    queryFn: () => base44.entities.TimeEntry.filter({ ...orgFilter, is_active: true }),
     refetchInterval: 30000,
   });
 

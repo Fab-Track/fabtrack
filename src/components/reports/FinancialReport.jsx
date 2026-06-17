@@ -10,6 +10,7 @@ import ReportExportButtons from "./ReportExportButtons";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { useOrgFilter } from "@/lib/orgContext";
 
 function inRange(dateStr, range) {
   if (!range || !dateStr) return true;
@@ -78,8 +79,10 @@ export default function FinancialReport() {
   const [typeFilter, setTypeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
 
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: () => base44.entities.Invoice.list("-created_date", 500) });
-  const { data: jobs = [] } = useQuery({ queryKey: ["jobs"], queryFn: () => base44.entities.Job.list("-created_date", 500) });
+  const orgFilter = useOrgFilter();
+
+  const { data: invoices = [] } = useQuery({ queryKey: ["invoices", orgFilter], queryFn: () => base44.entities.Invoice.filter(orgFilter, "-created_date", 500) });
+  const { data: jobs = [] } = useQuery({ queryKey: ["jobs", orgFilter], queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 500) });
 
   const filteredInvoices = invoices.filter(inv => inRange(inv.issued_date || inv.created_date, range));
 

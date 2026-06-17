@@ -9,6 +9,7 @@ import ReportHeader from "./shared/ReportHeader";
 import ReportExportButtons from "./ReportExportButtons";
 import { Link } from "react-router-dom";
 import { Eye, Send } from "lucide-react";
+import { useOrgFilter } from "@/lib/orgContext";
 
 function inRange(dateStr, range) {
   if (!range || !dateStr) return true;
@@ -19,10 +20,12 @@ export default function CustomersReport() {
   const [range, setRange] = useState(null);
   const [showAllCustomers, setShowAllCustomers] = useState(false);
 
-  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: () => base44.entities.Customer.list("-created_date", 500) });
-  const { data: jobs = [] } = useQuery({ queryKey: ["jobs"], queryFn: () => base44.entities.Job.list("-created_date", 500) });
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: () => base44.entities.Invoice.list("-created_date", 500) });
-  const { data: estimates = [] } = useQuery({ queryKey: ["estimates-all"], queryFn: () => base44.entities.Estimate.list("-created_date", 500) });
+  const orgFilter = useOrgFilter();
+
+  const { data: customers = [] } = useQuery({ queryKey: ["customers", orgFilter], queryFn: () => base44.entities.Customer.filter(orgFilter, "-created_date", 500) });
+  const { data: jobs = [] } = useQuery({ queryKey: ["jobs", orgFilter], queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 500) });
+  const { data: invoices = [] } = useQuery({ queryKey: ["invoices", orgFilter], queryFn: () => base44.entities.Invoice.filter(orgFilter, "-created_date", 500) });
+  const { data: estimates = [] } = useQuery({ queryKey: ["estimates-all", orgFilter], queryFn: () => base44.entities.Estimate.filter(orgFilter, "-created_date", 500) });
 
   // ── KPIs ────────────────────────────────────────────────────────────
   const totalCustomers = customers.length;
