@@ -30,6 +30,7 @@ import LiveStatusBanner from "@/components/timetracking/LiveStatusBanner";
 import PayPeriodSummaryCard from "@/components/timetracking/PayPeriodSummaryCard";
 import CorrectionRequestModal from "@/components/timetracking/CorrectionRequestModal";
 import WeeklyHoursChart from "@/components/timetracking/WeeklyHoursChart";
+import { useOrgFilter } from "@/lib/orgContext";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 function generateDayRows(payPeriod, allEntries, employeeId) {
@@ -100,9 +101,11 @@ export default function MyTimesheet() {
   const [expandedDays, setExpandedDays] = useState({});
   const [correctionDay, setCorrectionDay] = useState(null);
 
+  const orgFilter = useOrgFilter();
+
   const { data: employees = [] } = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => base44.entities.Employee.list("-created_date", 100),
+    queryKey: ["employees", orgFilter],
+    queryFn: () => base44.entities.Employee.filter(orgFilter, "-created_date", 100),
   });
 
   const myEmployee = employees.find(
@@ -112,21 +115,21 @@ export default function MyTimesheet() {
   const myId = myEmployee?.id || user?.id;
 
   const { data: allEntries = [], isLoading } = useQuery({
-    queryKey: ["timeEntries", "all"],
-    queryFn: () => base44.entities.TimeEntry.list("-clock_in", 2000),
+    queryKey: ["timeEntries", "all", orgFilter],
+    queryFn: () => base44.entities.TimeEntry.filter(orgFilter, "-clock_in", 2000),
     enabled: !!myId,
     refetchInterval: 30000,
   });
 
   const { data: activeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", "active"],
-    queryFn: () => base44.entities.TimeEntry.filter({ is_active: true }),
+    queryKey: ["timeEntries", "active", orgFilter],
+    queryFn: () => base44.entities.TimeEntry.filter({ ...orgFilter, is_active: true }),
     refetchInterval: 15000,
   });
 
   const { data: correctionRequests = [] } = useQuery({
-    queryKey: ["correctionRequests", myId],
-    queryFn: () => base44.entities.CorrectionRequest.filter({ employee_id: myId }, "-created_date", 100),
+    queryKey: ["correctionRequests", myId, orgFilter],
+    queryFn: () => base44.entities.CorrectionRequest.filter({ ...orgFilter, employee_id: myId }, "-created_date", 100),
     enabled: !!myId,
   });
 

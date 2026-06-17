@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 import { useImpersonation, canImpersonate, canImpersonateEmployee } from "@/lib/ImpersonationContext";
 import { getUserRoles, isOwnerLevel, hasRole } from "@/lib/roleHelpers";
+import { useOrgFilter } from "@/lib/orgContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,9 +47,11 @@ export default function Employees() {
     navigate("/");
   };
 
+  const orgFilter = useOrgFilter();
+
   const { data: employees = [], isLoading } = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => base44.entities.Employee.list("-start_date"),
+    queryKey: ["employees", orgFilter],
+    queryFn: () => base44.entities.Employee.filter(orgFilter, "-start_date"),
   });
 
   const filtered = employees.filter((emp) => {

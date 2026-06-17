@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Users } from "lucide-react";
+import { useOrgFilter } from "@/lib/orgContext";
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isSameMonth, addMonths, subMonths, addWeeks, subWeeks, getDay } from "date-fns";
 
@@ -96,14 +97,16 @@ export default function Calendar() {
     }
   };
 
+  const orgFilter = useOrgFilter();
+
   const { data: events = [], isLoading } = useQuery({
-    queryKey: ["all-scheduled-events"],
-    queryFn: () => base44.entities.ScheduledEvent.list("-date", 500),
+    queryKey: ["all-scheduled-events", orgFilter],
+    queryFn: () => base44.entities.ScheduledEvent.filter(orgFilter, "-date", 500),
   });
 
   const { data: employees = [] } = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => base44.entities.Employee.list("-created_date", 100),
+    queryKey: ["employees", orgFilter],
+    queryFn: () => base44.entities.Employee.filter(orgFilter, "-created_date", 100),
   });
 
   // Build unique assigned-users map for filter dropdown + color coding

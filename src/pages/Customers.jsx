@@ -27,6 +27,7 @@ import PaymentBehaviorCard from "@/components/customers/PaymentBehaviorCard";
 import QuickActionsBar from "@/components/customers/QuickActionsBar";
 import CustomerARSummaryBar from "@/components/customers/CustomerARSummaryBar";
 import CustomerContactsSection from "@/components/customers/CustomerContactsSection";
+import { useOrgFilter } from "@/lib/orgContext";
 
 const JOB_TYPE_COLORS = ["#3b82f6", "#f97316", "#a855f7", "#10b981", "#84cc16", "#ef4444"];
 
@@ -477,24 +478,25 @@ export default function Customers() {
   const [sortBy, setSortBy] = useState("name"); // name | outstanding | lastJob
   const [form, setForm] = useState({ name: "", type: "", company: "", phone: "", email: "", address: "", notes: "" });
   const queryClient = useQueryClient();
+  const orgFilter = useOrgFilter();
 
   const { data: customers = [], isLoading } = useQuery({
-    queryKey: ["customers"],
-    queryFn: () => base44.entities.Customer.list("-created_date", 200),
+    queryKey: ["customers", orgFilter],
+    queryFn: () => base44.entities.Customer.filter(orgFilter, "-created_date", 200),
   });
 
   const { data: allJobs = [] } = useQuery({
-    queryKey: ["jobs"],
-    queryFn: () => base44.entities.Job.list("-created_date", 500),
+    queryKey: ["jobs", orgFilter],
+    queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 500),
   });
 
   const { data: allInvoices = [] } = useQuery({
-    queryKey: ["invoices-global"],
-    queryFn: () => base44.entities.Invoice.list("-created_date", 500),
+    queryKey: ["invoices-global", orgFilter],
+    queryFn: () => base44.entities.Invoice.filter(orgFilter, "-created_date", 500),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Customer.create(data),
+    mutationFn: (data) => base44.entities.Customer.create({ ...data, ...orgFilter }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       setDialogOpen(false);

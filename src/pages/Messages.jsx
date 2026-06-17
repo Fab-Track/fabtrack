@@ -5,6 +5,7 @@ import PullToRefreshIndicator from "@/components/ui/PullToRefreshIndicator";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { canAccessChannel } from "@/lib/messagingHelpers";
+import { useOrgFilter } from "@/lib/orgContext";
 import ChannelList from "@/components/messaging/ChannelList";
 import MessageThread from "@/components/messaging/MessageThread";
 import NewMessageDialog from "@/components/messaging/NewMessageDialog";
@@ -23,15 +24,18 @@ export default function Messages() {
     base44.functions.invoke("ensurePermanentChannels", {}).catch(() => {});
   }, []);
 
+  const orgFilter = useOrgFilter();
+
   const { data: channels = [], isLoading, refetch: refetchChannels } = useQuery({
-    queryKey: ["channels"],
-    queryFn: () => base44.entities.MessageChannel.list("sort_order", 200),
+    queryKey: ["channels", orgFilter],
+    queryFn: () => base44.entities.MessageChannel.filter(orgFilter, "sort_order", 200),
     refetchInterval: 15000,
   });
 
   const { data: memberships = [] } = useQuery({
-    queryKey: ["memberships", user?.id],
+    queryKey: ["memberships", user?.id, orgFilter],
     queryFn: () => base44.entities.ChannelMembership.filter({
+      ...orgFilter,
       user_id: user?.id || user?.email,
     }),
     enabled: !!user,
@@ -39,8 +43,8 @@ export default function Messages() {
   });
 
   const { data: allMessages = [] } = useQuery({
-    queryKey: ["messages-unread"],
-    queryFn: () => base44.entities.Message.list("-created_date", 500),
+    queryKey: ["messages-unread", orgFilter],
+    queryFn: () => base44.entities.Message.filter(orgFilter, "-created_date", 500),
     refetchInterval: 15000,
   });
 

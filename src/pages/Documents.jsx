@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useOrgFilter } from "@/lib/orgContext";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -63,9 +64,11 @@ function EstimatesTab() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
+  const orgFilter = useOrgFilter();
+
   const { data: estimates = [] } = useQuery({
-    queryKey: ["estimates-global"],
-    queryFn: () => base44.entities.Estimate.list("-created_date", 500),
+    queryKey: ["estimates-global", orgFilter],
+    queryFn: () => base44.entities.Estimate.filter(orgFilter, "-created_date", 500),
   });
 
   const filtered = useMemo(() => estimates.filter(e => {
@@ -124,9 +127,11 @@ function InvoicesTab() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
+  const orgFilter = useOrgFilter();
+
   const { data: invoices = [] } = useQuery({
-    queryKey: ["invoices-global"],
-    queryFn: () => base44.entities.Invoice.list("-created_date", 500),
+    queryKey: ["invoices-global", orgFilter],
+    queryFn: () => base44.entities.Invoice.filter(orgFilter, "-created_date", 500),
   });
 
   const filtered = useMemo(() => invoices.filter(inv => {
@@ -190,9 +195,11 @@ function ChangeOrdersTab() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
+  const orgFilter = useOrgFilter();
+
   const { data: changeOrders = [] } = useQuery({
-    queryKey: ["changeOrders-global"],
-    queryFn: () => base44.entities.ChangeOrder.list("-created_date", 500),
+    queryKey: ["changeOrders-global", orgFilter],
+    queryFn: () => base44.entities.ChangeOrder.filter(orgFilter, "-created_date", 500),
   });
 
   const filtered = useMemo(() => changeOrders.filter(co => {

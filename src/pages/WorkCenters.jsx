@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import { getJobHealth, getHealthBorder } from "@/lib/jobHelpers";
 import ClockWidget from "@/components/timetracking/ClockWidget";
 import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
+import { useOrgFilter } from "@/lib/orgContext";
 
 const WORK_CENTERS = ["Cut", "Fit", "Weld", "Grind", "Powder Coat", "Install"];
 
@@ -19,26 +20,28 @@ export default function WorkCenters() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("Cut");
 
+  const orgFilter = useOrgFilter();
+
   const { data: employees = [] } = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => base44.entities.Employee.list("-created_date", 100),
+    queryKey: ["employees", orgFilter],
+    queryFn: () => base44.entities.Employee.filter(orgFilter, "-created_date", 100),
   });
 
   const myEmployee = employees.find(e => e.email === user?.email) || null;
 
   const { data: jobs = [] } = useQuery({
-    queryKey: ["jobs"],
-    queryFn: () => base44.entities.Job.list("-created_date", 200),
+    queryKey: ["jobs", orgFilter],
+    queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 200),
   });
 
   const { data: timeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", "all"],
-    queryFn: () => base44.entities.TimeEntry.list("-clock_in", 500),
+    queryKey: ["timeEntries", "all", orgFilter],
+    queryFn: () => base44.entities.TimeEntry.filter(orgFilter, "-clock_in", 500),
   });
 
   const { data: activeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", "active"],
-    queryFn: () => base44.entities.TimeEntry.filter({ is_active: true }),
+    queryKey: ["timeEntries", "active", orgFilter],
+    queryFn: () => base44.entities.TimeEntry.filter({ ...orgFilter, is_active: true }),
     refetchInterval: 15000,
   });
 

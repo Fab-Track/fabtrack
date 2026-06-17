@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Package, Plus, AlertTriangle, Pencil, Trash2, ClipboardCheck } from "lucide-react";
 import WeeklyReviewPanel from "@/components/inventory/WeeklyReviewPanel";
+import { useOrgFilter } from "@/lib/orgContext";
 
 const CATEGORIES = ["Steel", "Hardware", "Consumables", "Tools", "Other"];
 
@@ -25,6 +26,7 @@ const BLANK = {
 
 export default function Inventory() {
   const qc = useQueryClient();
+  const orgFilter = useOrgFilter();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(BLANK);
   const [editId, setEditId] = useState(null);
@@ -33,13 +35,13 @@ export default function Inventory() {
   const [reviewOpen, setReviewOpen] = useState(false);
 
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ["inventory"],
-    queryFn: () => base44.entities.InventoryItem.list("-created_date", 200),
+    queryKey: ["inventory", orgFilter],
+    queryFn: () => base44.entities.InventoryItem.filter(orgFilter, "-created_date", 200),
   });
 
   const { data: reservations = [] } = useQuery({
-    queryKey: ["materialReservations"],
-    queryFn: () => base44.entities.MaterialReservation.filter({ status: "reserved" }),
+    queryKey: ["materialReservations", orgFilter],
+    queryFn: () => base44.entities.MaterialReservation.filter({ ...orgFilter, status: "reserved" }),
   });
 
   // Compute reserved quantity per inventory item id
@@ -51,7 +53,7 @@ export default function Inventory() {
     mutationFn: () =>
       editId
         ? base44.entities.InventoryItem.update(editId, form)
-        : base44.entities.InventoryItem.create(form),
+        : base44.entities.InventoryItem.create({ ...form, ...orgFilter }),
     onSuccess: () => { qc.invalidateQueries(["inventory"]); setOpen(false); },
   });
 

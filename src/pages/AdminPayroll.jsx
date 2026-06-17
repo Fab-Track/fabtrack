@@ -29,6 +29,7 @@ import { useToast } from "@/components/ui/use-toast";
 import LiveStatusTable from "@/components/timetracking/LiveStatusTable";
 import AdminTimeEntryEdit from "@/components/timetracking/AdminTimeEntryEdit";
 import AdminCorrectionsPanel from "@/components/timetracking/AdminCorrectionsPanel";
+import { useOrgFilter } from "@/lib/orgContext";
 
 const PP_OPTIONS = [
   { value: "current", label: () => `Current: ${getCurrentPayPeriod().label}` },
@@ -47,31 +48,33 @@ export default function AdminPayroll() {
   const [addEntryEmployee, setAddEntryEmployee] = useState(null);
   const [expandedEmployees, setExpandedEmployees] = useState({});
 
+  const orgFilter = useOrgFilter();
+
   const { data: employees = [] } = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => base44.entities.Employee.list("-created_date", 100),
+    queryKey: ["employees", orgFilter],
+    queryFn: () => base44.entities.Employee.filter(orgFilter, "-created_date", 100),
   });
 
   const { data: allEntries = [], isLoading } = useQuery({
-    queryKey: ["timeEntries", "all"],
-    queryFn: () => base44.entities.TimeEntry.list("-clock_in", 2000),
+    queryKey: ["timeEntries", "all", orgFilter],
+    queryFn: () => base44.entities.TimeEntry.filter(orgFilter, "-clock_in", 2000),
     refetchInterval: 30000,
   });
 
   const { data: activeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", "active"],
-    queryFn: () => base44.entities.TimeEntry.filter({ is_active: true }),
+    queryKey: ["timeEntries", "active", orgFilter],
+    queryFn: () => base44.entities.TimeEntry.filter({ ...orgFilter, is_active: true }),
     refetchInterval: 15000,
   });
 
   const { data: auditLogs = [] } = useQuery({
-    queryKey: ["timeAuditLogs"],
-    queryFn: () => base44.entities.TimeAuditLog.list("-changed_at", 500),
+    queryKey: ["timeAuditLogs", orgFilter],
+    queryFn: () => base44.entities.TimeAuditLog.filter(orgFilter, "-changed_at", 500),
   });
 
   const { data: correctionRequests = [] } = useQuery({
-    queryKey: ["correctionRequests"],
-    queryFn: () => base44.entities.CorrectionRequest.list("-created_date", 200),
+    queryKey: ["correctionRequests", orgFilter],
+    queryFn: () => base44.entities.CorrectionRequest.filter(orgFilter, "-created_date", 200),
     refetchInterval: 30000,
   });
 

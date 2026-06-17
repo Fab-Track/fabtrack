@@ -6,6 +6,7 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 import { getUserRoles, hasRole } from "@/lib/roleHelpers";
+import { useOrgFilter } from "@/lib/orgContext";
 import { getBoardsForRole, getDefaultBoard, SALES_STAGES, SHOP_STAGES, BILLING_STAGES } from "@/lib/pipelineHelpers";
 
 const BOARD_STAGES = { Sales: SALES_STAGES, Shop: SHOP_STAGES, Billing: BILLING_STAGES };
@@ -44,14 +45,15 @@ export default function JobBoard() {
   const [viewMode, setViewMode] = useState({ Sales: "kanban", Shop: "kanban", Billing: "kanban" });
 
   const queryClient = useQueryClient();
+  const orgFilter = useOrgFilter();
 
   useEffect(() => {
     setActiveBoard(getDefaultBoard(effectiveRole));
   }, [effectiveRole]);
 
   const { data: jobs = [], isLoading, refetch: refetchJobs } = useQuery({
-    queryKey: ["jobs"],
-    queryFn: () => base44.entities.Job.list("-created_date", 500),
+    queryKey: ["jobs", orgFilter],
+    queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 500),
   });
 
   const { containerRef: pullRef, isPulling, pullDistance } = usePullToRefresh({

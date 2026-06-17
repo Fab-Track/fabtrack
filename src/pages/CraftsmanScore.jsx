@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Trophy, Plus, Star, Award, TrendingUp, ClipboardCheck } from "lucide-react";
 import QCInspectionForm from "@/components/craftsman/QCInspectionForm";
+import { useOrgFilter } from "@/lib/orgContext";
 
 // Tier thresholds
 function getTier(avg) {
@@ -22,19 +23,21 @@ export default function CraftsmanScore() {
   const [newOpen, setNewOpen] = useState(false);
   const [tab, setTab] = useState("leaderboard");
 
+  const orgFilter = useOrgFilter();
+
   const { data: inspections = [] } = useQuery({
-    queryKey: ["qcInspections"],
-    queryFn: () => base44.entities.QCInspection.list("-created_date", 500),
+    queryKey: ["qcInspections", orgFilter],
+    queryFn: () => base44.entities.QCInspection.filter(orgFilter, "-created_date", 500),
   });
 
   const { data: employees = [] } = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => base44.entities.Employee.list(),
+    queryKey: ["employees", orgFilter],
+    queryFn: () => base44.entities.Employee.filter(orgFilter),
   });
 
   const { data: jobs = [] } = useQuery({
-    queryKey: ["jobs-qc"],
-    queryFn: () => base44.entities.Job.list("-created_date", 200),
+    queryKey: ["jobs-qc", orgFilter],
+    queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 200),
   });
 
   // Build per-employee stats

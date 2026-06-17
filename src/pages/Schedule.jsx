@@ -8,6 +8,7 @@ import TimelineView from "@/components/schedule/TimelineView";
 import CalendarView from "@/components/schedule/CalendarView";
 import CrewView from "@/components/schedule/CrewView";
 import ListView from "@/components/schedule/ListView";
+import { useOrgFilter } from "@/lib/orgContext";
 
 const TODAY = startOfDay(new Date());
 
@@ -58,9 +59,11 @@ export default function Schedule() {
     savePrefs({ zoom, viewMode });
   }, [zoom, viewMode]);
 
+  const orgFilter = useOrgFilter();
+
   const { data: jobs = [] } = useQuery({
-    queryKey: ["jobs"],
-    queryFn: () => base44.entities.Job.list("-created_date", 300),
+    queryKey: ["jobs", orgFilter],
+    queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 300),
   });
 
   // When zoom changes, snap anchor to the appropriate period boundary
