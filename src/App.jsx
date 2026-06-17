@@ -37,6 +37,7 @@ const Messages         = lazy(() => import('@/pages/Messages'));
 const Conversations    = lazy(() => import('@/pages/Conversations'));
 const CalendarPage     = lazy(() => import('@/pages/Calendar'));
 const OnboardingWelcome = lazy(() => import('@/pages/OnboardingWelcome'));
+const SuperAdmin       = lazy(() => import('@/pages/SuperAdmin'));
 const Login            = lazy(() => import('@/pages/Login'));
 const Register         = lazy(() => import('@/pages/Register'));
 const ForgotPassword   = lazy(() => import('@/pages/ForgotPassword'));
@@ -119,6 +120,7 @@ const AuthenticatedApp = () => {
       <Route path="/lead" element={<LeadForm />} />
       <Route path="/onboarding" element={<OnboardingSurveyPage />} />
       <Route path="/welcome" element={<OnboardingWelcome />} />
+      <Route path="/super-admin" element={<SuperAdmin />} />
       <Route path="/estimate-view/:estimateId" element={<EstimateView />} />
       <Route path="/invoice-view/:invoiceId" element={<InvoiceView />} />
       
