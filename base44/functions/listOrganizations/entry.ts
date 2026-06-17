@@ -44,6 +44,7 @@ Deno.serve(async (req) => {
         name: org.name,
         slug: org.slug,
         plan: org.plan,
+        subscription_status: org.subscription_status || 'trial',
         is_active: org.is_active,
         created_date: org.created_date,
         owner_name: owner ? (owner.full_name || owner.email) : null,

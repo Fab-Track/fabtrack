@@ -2,22 +2,28 @@ import React, { useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Building2, Plus, Users, Briefcase, User, Loader2, Shield, ArrowLeft } from 'lucide-react';
+import { Building2, Plus, Users, Briefcase, User, Loader2, Shield, ArrowLeft, ChevronRight, Eye, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
+import { startOrgImpersonation } from '@/components/super-admin/SuperAdminBanner';
+import OrgDetail from '@/components/super-admin/OrgDetail';
+import SuperAdminAuditLog from '@/components/super-admin/SuperAdminAuditLog';
 
 export default function SuperAdmin() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [ownerEmail, setOwnerEmail] = useState('');
+  const [selectedOrg, setSelectedOrg] = useState(null);
 
   const isSuperAdmin = (user?.roles || []).includes('super_admin');
 
@@ -57,6 +63,34 @@ export default function SuperAdmin() {
     createOrgMutation.mutate({ name: name.trim(), ownerName: ownerName.trim(), ownerEmail: ownerEmail.trim() });
   };
 
+  const handleOrgClick = (org) => {
+    setSelectedOrg(org);
+  };
+
+  const handleBack = () => {
+    setSelectedOrg(null);
+    queryClient.invalidateQueries({ queryKey: ['super-admin', 'organizations'] });
+  };
+
+  const handleImpersonate = async () => {
+    if (!selectedOrg) return;
+    // Log impersonation start
+    await base44.entities.SuperAdminAuditLog.create({
+      admin_email: user?.email || '',
+      admin_name: user?.full_name || user?.email || '',
+      action_type: 'impersonation_started',
+      organization_id: selectedOrg.id,
+      organization_name: selectedOrg.name,
+      action_detail: `Started viewing "${selectedOrg.name}" as super admin support session`,
+    }).catch(() => {});
+    startOrgImpersonation(selectedOrg.id, selectedOrg.name);
+    navigate('/');
+  };
+
+  const handleDeleteOrg = () => {
+    setSelectedOrg(null);
+  };
+
   if (!isSuperAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -82,6 +116,29 @@ export default function SuperAdmin() {
       </div>
     );
   }
+
+  // Detail view for selected org
+  if (selectedOrg) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="max-w-5xl mx-auto p-6 md:p-8">
+          <OrgDetail
+            org={selectedOrg}
+            onBack={handleBack}
+            onImpersonate={handleImpersonate}
+            onDelete={handleDeleteOrg}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const statusBadgeColor = {
+    trial: 'bg-blue-100 text-blue-700 border-blue-200',
+    active: 'bg-green-100 text-green-700 border-green-200',
+    past_due: 'bg-amber-100 text-amber-700 border-amber-200',
+    suspended: 'bg-red-100 text-red-700 border-red-200',
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -178,41 +235,51 @@ export default function SuperAdmin() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {orgsData.map((org) => (
-                    <div
-                      key={org.id}
-                      className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold truncate">{org.name}</h3>
-                          <Badge variant={org.is_active ? 'default' : 'secondary'} className="shrink-0">
-                            {org.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
-                          <Badge variant="outline" className="shrink-0 capitalize">{org.plan}</Badge>
+                  {orgsData.map((org) => {
+                    const status = org.subscription_status || org.is_active ? 'trial' : 'suspended';
+                    return (
+                      <button
+                        key={org.id}
+                        onClick={() => handleOrgClick(org)}
+                        className="w-full text-left flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors cursor-pointer"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold truncate">{org.name}</h3>
+                            <Badge className={statusBadgeColor[org.subscription_status || 'trial'] || ''}>
+                              {org.subscription_status || (org.is_active ? 'active' : 'inactive')}
+                            </Badge>
+                            <Badge variant="outline" className="shrink-0 capitalize">{org.plan}</Badge>
+                          </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <User className="w-3 h-3" />
+                              {org.owner_name || 'No owner'}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Users className="w-3 h-3" />
+                              {org.user_count} user{org.user_count !== 1 ? 's' : ''}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Briefcase className="w-3 h-3" />
+                              {org.job_count} job{org.job_count !== 1 ? 's' : ''}
+                            </span>
+                            <span>Created {new Date(org.created_date).toLocaleDateString()}</span>
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <User className="w-3 h-3" />
-                            {org.owner_name || 'No owner'}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Users className="w-3 h-3" />
-                            {org.user_count} user{org.user_count !== 1 ? 's' : ''}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Briefcase className="w-3 h-3" />
-                            {org.job_count} job{org.job_count !== 1 ? 's' : ''}
-                          </span>
-                          <span>Created {new Date(org.created_date).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                        <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Global Audit Log */}
+        <div className="mt-6">
+          <SuperAdminAuditLog organizationId={null} />
         </div>
 
         {/* Data Isolation Confirmation */}

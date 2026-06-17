@@ -1,0 +1,61 @@
+{
+  "name": "SuperAdminAuditLog",
+  "type": "object",
+  "properties": {
+    "admin_email": {
+      "type": "string",
+      "description": "Email of the super admin who performed the action"
+    },
+    "admin_name": {
+      "type": "string",
+      "description": "Display name of the super admin"
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "org_created",
+        "org_updated",
+        "org_suspended",
+        "org_reactivated",
+        "org_deleted",
+        "plan_changed",
+        "owner_assigned",
+        "owner_reinvited",
+        "user_deactivated",
+        "user_reactivated",
+        "impersonation_started",
+        "impersonation_ended"
+      ],
+      "description": "Type of super admin action"
+    },
+    "organization_id": {
+      "type": "string",
+      "description": "Affected organization ID"
+    },
+    "organization_name": {
+      "type": "string",
+      "description": "Organization name (denormalized)"
+    },
+    "affected_user_email": {
+      "type": "string",
+      "description": "Email of affected user (for user actions)"
+    },
+    "affected_user_name": {
+      "type": "string",
+      "description": "Name of affected user"
+    },
+    "action_detail": {
+      "type": "string",
+      "description": "Human-readable description of what was done"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional structured data (previous values, new values, etc.)"
+    }
+  },
+  "required": [
+    "admin_email",
+    "action_type",
+    "action_detail"
+  ]
+}

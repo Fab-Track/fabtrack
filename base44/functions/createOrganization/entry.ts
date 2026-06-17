@@ -85,6 +85,18 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Log audit entry
+    await base44.asServiceRole.entities.SuperAdminAuditLog.create({
+      admin_email: user.email,
+      admin_name: user.full_name || user.email,
+      action_type: 'org_created',
+      organization_id: org.id,
+      organization_name: name,
+      action_detail: `Created organization "${name}" with owner "${ownerName}" (${ownerEmail})`,
+      affected_user_email: ownerEmail,
+      affected_user_name: ownerName,
+    });
+
     return Response.json({
       success: true,
       organization: {

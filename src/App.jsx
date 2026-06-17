@@ -9,6 +9,10 @@ import { PreviewRoleProvider } from '@/lib/PreviewRoleContext';
 import { ImpersonationProvider } from '@/lib/ImpersonationContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import AppLayout from '@/components/layout/AppLayout';
+import SuperAdminBanner from '@/components/super-admin/SuperAdminBanner';
+import { isSuperAdminImpersonating } from '@/components/super-admin/SuperAdminBanner';
+import { base44 } from '@/api/base44Client';
+import { Ban } from 'lucide-react';
 
 // Lazy-loaded pages for better initial load performance
 const Dashboard        = lazy(() => import('@/pages/Dashboard'));
@@ -67,6 +71,78 @@ function AnimatedRoutes({ children }) {
   );
 }
 
+// Suspended org message shown when org's subscription_status is "suspended"
+function SuspendedOrgMessage({ orgName }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="max-w-md w-full text-center space-y-4">
+        <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+          <Ban className="w-8 h-8 text-destructive" />
+        </div>
+        <h1 className="text-xl font-bold">Subscription Inactive</h1>
+        <p className="text-muted-foreground">
+          {orgName ? `The "${orgName}" organization's subscription is currently suspended.` : "Your organization's subscription is currently inactive."}
+          {' '}Please contact support to restore access.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Your data has not been deleted and will be available once access is restored.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function OrgAccessGate({ children }) {
+  const { user, isAuthenticated } = useAuth();
+  const [orgStatus, setOrgStatus] = React.useState(null);
+  const [checking, setChecking] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isAuthenticated || !user) return;
+    const orgId = user.organization_id;
+    // Super admins don't have org scope — skip check
+    if (!orgId || (user.roles || []).includes('super_admin')) {
+      setOrgStatus('ok');
+      return;
+    }
+
+    let cancelled = false;
+    setChecking(true);
+    base44.entities.Organization.get(orgId)
+      .then((org) => {
+        if (cancelled) return;
+        if (org && (org.subscription_status === 'suspended')) {
+          setOrgStatus('suspended');
+        } else {
+          setOrgStatus('ok');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setOrgStatus('ok'); // Allow access on error
+      })
+      .finally(() => {
+        if (!cancelled) setChecking(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [isAuthenticated, user]);
+
+  // Still loading auth — don't interfere
+  if (checking) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (orgStatus === 'suspended') {
+    return <SuspendedOrgMessage orgName={user?.organization_name} />;
+  }
+
+  return children;
+}
+
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
@@ -106,52 +182,55 @@ const AuthenticatedApp = () => {
   }
 
   return (
-    <Suspense fallback={<PageLoader />}>
-    <AnimatedRoutes>
-    <Routes>
-      {/* Auth pages */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
+    <OrgAccessGate>
+      <SuperAdminBanner />
+      <Suspense fallback={<PageLoader />}>
+      <AnimatedRoutes>
+      <Routes>
+        {/* Auth pages */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
-      {/* Public pages - no sidebar */}
-      <Route path="/kiosk" element={<ShopKiosk />} />
-      <Route path="/lead" element={<LeadForm />} />
-      <Route path="/onboarding" element={<OnboardingSurveyPage />} />
-      <Route path="/welcome" element={<OnboardingWelcome />} />
-      <Route path="/super-admin" element={<SuperAdmin />} />
-      <Route path="/estimate-view/:estimateId" element={<EstimateView />} />
-      <Route path="/invoice-view/:invoiceId" element={<InvoiceView />} />
-      
-      {/* Main app with sidebar layout */}
-      <Route element={<AppLayout />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/jobs" element={<JobBoard />} />
-        <Route path="/jobs/new" element={<NewJob />} />
-        <Route path="/jobs/:id" element={<JobDetail />} />
-        <Route path="/jobs/:jobId/estimates/:estimateId" element={<EstimatePage />} />
-        <Route path="/work-centers" element={<WorkCenters />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/schedule" element={<Schedule />} />
-        <Route path="/messages" element={<Messages />} />
-        <Route path="/calendar" element={<CalendarPage />} />
-        <Route path="/conversations" element={<Conversations />} />
-        <Route path="/customers" element={<Customers />} />
-        <Route path="/inventory" element={<Inventory />} />
-        <Route path="/craftsman" element={<CraftsmanScore />} />
-        <Route path="/employees" element={<Employees />} />
-        <Route path="/employees/:id" element={<EmployeeProfilePage />} />
-        <Route path="/documents" element={<Documents />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/my-timesheet" element={<MyTimesheet />} />
-        <Route path="/admin-payroll" element={<AdminPayroll />} />
-      </Route>
+        {/* Public pages - no sidebar */}
+        <Route path="/kiosk" element={<ShopKiosk />} />
+        <Route path="/lead" element={<LeadForm />} />
+        <Route path="/onboarding" element={<OnboardingSurveyPage />} />
+        <Route path="/welcome" element={<OnboardingWelcome />} />
+        <Route path="/super-admin" element={<SuperAdmin />} />
+        <Route path="/estimate-view/:estimateId" element={<EstimateView />} />
+        <Route path="/invoice-view/:invoiceId" element={<InvoiceView />} />
+        
+        {/* Main app with sidebar layout */}
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/jobs" element={<JobBoard />} />
+          <Route path="/jobs/new" element={<NewJob />} />
+          <Route path="/jobs/:id" element={<JobDetail />} />
+          <Route path="/jobs/:jobId/estimates/:estimateId" element={<EstimatePage />} />
+          <Route path="/work-centers" element={<WorkCenters />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/schedule" element={<Schedule />} />
+          <Route path="/messages" element={<Messages />} />
+          <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/conversations" element={<Conversations />} />
+          <Route path="/customers" element={<Customers />} />
+          <Route path="/inventory" element={<Inventory />} />
+          <Route path="/craftsman" element={<CraftsmanScore />} />
+          <Route path="/employees" element={<Employees />} />
+          <Route path="/employees/:id" element={<EmployeeProfilePage />} />
+          <Route path="/documents" element={<Documents />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/my-timesheet" element={<MyTimesheet />} />
+          <Route path="/admin-payroll" element={<AdminPayroll />} />
+        </Route>
 
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
-    </AnimatedRoutes>
-    </Suspense>
+        <Route path="*" element={<PageNotFound />} />
+      </Routes>
+      </AnimatedRoutes>
+      </Suspense>
+    </OrgAccessGate>
   );
 };
 

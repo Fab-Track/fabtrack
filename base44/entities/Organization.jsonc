@@ -35,6 +35,17 @@
       "default": true,
       "description": "Whether this organization is active"
     },
+    "subscription_status": {
+      "type": "string",
+      "enum": [
+        "trial",
+        "active",
+        "past_due",
+        "suspended"
+      ],
+      "default": "trial",
+      "description": "Billing/subscription status \u2014 controls user access. Suspended orgs cannot be accessed."
+    },
     "plan": {
       "type": "string",
       "enum": [

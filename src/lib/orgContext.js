@@ -1,14 +1,45 @@
 import { useAuth } from '@/lib/AuthContext';
+import { useState, useEffect } from 'react';
+
+// Keys for session-storage-based super admin impersonation
+const IMPERSONATION_KEY = 'super_impersonate_org_id';
 
 /**
- * Returns the current user's organization_id.
- * Returns null for super_admins (they see all orgs).
+ * Returns the effective organization_id for data scoping.
+ * - Normal users: returns their organization_id
+ * - Super admins not impersonating: returns null (sees all orgs)
+ * - Super admins impersonating: returns the impersonated org_id
  */
 export function useOrgId() {
   const { user } = useAuth();
+  const [impersonationId, setImpersonationId] = useState(
+    () => sessionStorage.getItem(IMPERSONATION_KEY)
+  );
+
+  useEffect(() => {
+    const handleStorage = () => setImpersonationId(sessionStorage.getItem(IMPERSONATION_KEY));
+    window.addEventListener('storage', handleStorage);
+    // Also poll since storage events don't fire in same tab
+    const interval = setInterval(() => {
+      const current = sessionStorage.getItem(IMPERSONATION_KEY);
+      if (current !== impersonationId) setImpersonationId(current);
+    }, 500);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
+  }, [impersonationId]);
+
   if (!user) return null;
-  // Super admins have no org scope
+
+  // Super admin impersonating an org
+  if ((user.roles || []).includes('super_admin') && impersonationId) {
+    return impersonationId;
+  }
+
+  // Super admins have no org scope (unless impersonating)
   if ((user.roles || []).includes('super_admin')) return null;
+
   return user.organization_id || null;
 }
 
@@ -32,8 +63,8 @@ export function withOrgFilter(filters, orgId) {
 
 /**
  * Hook that returns a filter-ready object with organization_id.
- * Returns { organization_id: '...' } for org-scoped users,
- * or {} for super admins (they see all orgs).
+ * Returns { organization_id: '...' } for org-scoped users or impersonating super admins,
+ * or {} for super admins not impersonating (they see all orgs).
  * Usage: const orgFilter = useOrgFilter();
  *        base44.entities.Job.filter({ ...orgFilter, status: 'active' })
  */
