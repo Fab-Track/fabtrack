@@ -10,6 +10,10 @@
       "type": "string",
       "description": "Unique key for this settings record"
     },
+    "business_hours": {
+      "type": "object",
+      "description": "Business hours per day for automated notifications"
+    },
     "system_sender_email": {
       "type": "string"
     },

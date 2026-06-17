@@ -1,43 +1,128 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Upload, Building2 } from "lucide-react";
+import { Upload, Building2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+const DEFAULT_HOURS = {
+  Mon: { enabled: true, start: "08:00", end: "18:00" },
+  Tue: { enabled: true, start: "08:00", end: "18:00" },
+  Wed: { enabled: true, start: "08:00", end: "18:00" },
+  Thu: { enabled: true, start: "08:00", end: "18:00" },
+  Fri: { enabled: true, start: "08:00", end: "18:00" },
+  Sat: { enabled: true, start: "09:00", end: "14:00" },
+  Sun: { enabled: false, start: "08:00", end: "17:00" },
+};
+
 export default function CompanySection() {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [orgId, setOrgId] = useState(null);
   const [form, setForm] = useState({
-    name: "High Country Metal Works",
-    phone: "801-210-9103",
-    email: "info@highcountrymetalworks.com",
+    name: "",
+    phone: "",
+    email: "",
     address: "",
     logo_url: "",
   });
-  const [hours, setHours] = useState({
-    Mon: { enabled: true, start: "08:00", end: "18:00" },
-    Tue: { enabled: true, start: "08:00", end: "18:00" },
-    Wed: { enabled: true, start: "08:00", end: "18:00" },
-    Thu: { enabled: true, start: "08:00", end: "18:00" },
-    Fri: { enabled: true, start: "08:00", end: "18:00" },
-    Sat: { enabled: true, start: "09:00", end: "14:00" },
-    Sun: { enabled: false, start: "08:00", end: "17:00" },
-  });
+  const [hours, setHours] = useState(DEFAULT_HOURS);
   const [uploading, setUploading] = useState(false);
+
+  // Load org + business hours on mount
+  useEffect(() => {
+    async function load() {
+      try {
+        const user = await base44.auth.me();
+        if (!user?.organization_id) {
+          setLoading(false);
+          return;
+        }
+        setOrgId(user.organization_id);
+
+        const org = await base44.entities.Organization.get(user.organization_id);
+        setForm({
+          name: org.name || "",
+          phone: org.phone || "",
+          email: org.email || "",
+          address: org.address || "",
+          logo_url: org.logo_url || "",
+        });
+
+        // Load business hours from AppSettings
+        const settings = await base44.entities.AppSettings.filter({
+          organization_id: user.organization_id,
+          setting_key: "business_hours",
+        }, null, 1);
+        if (settings.length > 0 && settings[0].business_hours) {
+          setHours(settings[0].business_hours);
+        }
+      } catch {
+        toast.error("Failed to load company settings");
+      }
+      setLoading(false);
+    }
+    load();
+  }, []);
 
   async function handleLogoUpload(file) {
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setForm(p => ({ ...p, logo_url: file_url }));
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setForm(p => ({ ...p, logo_url: file_url }));
+      toast.success("Logo uploaded");
+    } catch {
+      toast.error("Logo upload failed");
+    }
     setUploading(false);
-    toast.success("Logo uploaded");
   }
 
-  function handleSave() {
-    toast.success("Company settings saved");
+  async function handleSave() {
+    if (!orgId) return;
+    setSaving(true);
+    try {
+      // Save org fields
+      await base44.entities.Organization.update(orgId, {
+        name: form.name,
+        phone: form.phone,
+        email: form.email,
+        address: form.address,
+        logo_url: form.logo_url,
+      });
+
+      // Save business hours to AppSettings
+      const existing = await base44.entities.AppSettings.filter({
+        organization_id: orgId,
+        setting_key: "business_hours",
+      }, null, 1);
+
+      if (existing.length > 0) {
+        await base44.entities.AppSettings.update(existing[0].id, { business_hours: hours });
+      } else {
+        await base44.entities.AppSettings.create({
+          organization_id: orgId,
+          setting_key: "business_hours",
+          business_hours: hours,
+        });
+      }
+
+      toast.success("Company settings saved");
+    } catch {
+      toast.error("Failed to save company settings");
+    }
+    setSaving(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground py-8">
+        <Loader2 className="w-4 h-4 animate-spin" /> Loading settings…
+      </div>
+    );
   }
 
   return (
@@ -125,7 +210,10 @@ export default function CompanySection() {
         </div>
       </div>
 
-      <Button onClick={handleSave} className="w-full sm:w-auto">Save Changes</Button>
+      <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto gap-1.5">
+        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+        Save Changes
+      </Button>
     </div>
   );
 }
