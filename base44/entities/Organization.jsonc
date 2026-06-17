@@ -1,0 +1,66 @@
+{
+  "name": "Organization",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Organization/company name"
+    },
+    "slug": {
+      "type": "string",
+      "description": "URL-friendly unique identifier"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "Company logo image URL"
+    },
+    "address": {
+      "type": "string",
+      "description": "Company address"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Company phone number"
+    },
+    "email": {
+      "type": "string",
+      "description": "Company email"
+    },
+    "website": {
+      "type": "string",
+      "description": "Company website"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this organization is active"
+    },
+    "plan": {
+      "type": "string",
+      "enum": [
+        "trial",
+        "starter",
+        "professional",
+        "enterprise"
+      ],
+      "default": "trial",
+      "description": "Subscription plan tier"
+    },
+    "stripe_customer_id": {
+      "type": "string",
+      "description": "Stripe customer ID for billing"
+    },
+    "stripe_subscription_id": {
+      "type": "string",
+      "description": "Stripe subscription ID"
+    },
+    "created_by_user_id": {
+      "type": "string",
+      "description": "User who created this organization"
+    }
+  },
+  "required": [
+    "name",
+    "slug"
+  ]
+}

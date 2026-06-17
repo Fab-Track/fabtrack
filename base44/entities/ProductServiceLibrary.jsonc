@@ -2,6 +2,10 @@
   "name": "ProductServiceLibrary",
   "type": "object",
   "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
     "name": {
       "type": "string",
       "description": "Product or service name"
@@ -44,6 +48,7 @@
     }
   },
   "required": [
-    "name"
+    "name",
+    "organization_id"
   ]
 }

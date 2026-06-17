@@ -2,6 +2,10 @@
   "name": "OnboardingSurvey",
   "type": "object",
   "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
     "employee_id": {
       "type": "string"
     },
@@ -31,6 +35,7 @@
   },
   "required": [
     "employee_id",
-    "token"
+    "token",
+    "organization_id"
   ]
 }

@@ -2,6 +2,10 @@
   "name": "JobAttachment",
   "type": "object",
   "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
     "job_id": {
       "type": "string",
       "description": "Linked job ID"
@@ -47,6 +51,7 @@
     "job_id",
     "file_url",
     "file_name",
-    "category"
+    "category",
+    "organization_id"
   ]
 }

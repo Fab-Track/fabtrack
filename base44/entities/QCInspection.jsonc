@@ -2,6 +2,10 @@
   "name": "QCInspection",
   "type": "object",
   "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
     "job_id": {
       "type": "string",
       "description": "Job ID"
@@ -71,6 +75,7 @@
   "required": [
     "job_id",
     "employee_id",
-    "work_center"
+    "work_center",
+    "organization_id"
   ]
 }

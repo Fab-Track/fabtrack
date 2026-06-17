@@ -2,6 +2,10 @@
   "name": "MaterialReservation",
   "type": "object",
   "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
     "job_id": {
       "type": "string"
     },
@@ -58,6 +62,7 @@
   "required": [
     "job_id",
     "inventory_item_id",
-    "quantity"
+    "quantity",
+    "organization_id"
   ]
 }

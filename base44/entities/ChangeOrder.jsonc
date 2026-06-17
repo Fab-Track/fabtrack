@@ -2,6 +2,10 @@
   "name": "ChangeOrder",
   "type": "object",
   "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
     "job_id": {
       "type": "string",
       "description": "Linked job ID"
@@ -64,6 +68,7 @@
   },
   "required": [
     "job_id",
-    "description"
+    "description",
+    "organization_id"
   ]
 }

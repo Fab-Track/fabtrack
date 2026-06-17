@@ -2,6 +2,10 @@
   "name": "Estimate",
   "type": "object",
   "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
     "job_id": {
       "type": "string",
       "description": "Linked job ID"
@@ -167,6 +171,7 @@
     }
   },
   "required": [
-    "job_id"
+    "job_id",
+    "organization_id"
   ]
 }

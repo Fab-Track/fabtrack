@@ -2,6 +2,10 @@
   "name": "EmployeeDocument",
   "type": "object",
   "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
     "employee_id": {
       "type": "string"
     },
@@ -41,6 +45,7 @@
   "required": [
     "employee_id",
     "file_url",
-    "file_name"
+    "file_name",
+    "organization_id"
   ]
 }

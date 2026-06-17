@@ -2,6 +2,10 @@
   "name": "MessageChannel",
   "type": "object",
   "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
     "name": {
       "type": "string",
       "description": "Channel slug e.g. #general or #hcmw-2025-041-thornton-gate"
@@ -74,6 +78,7 @@
   },
   "required": [
     "name",
-    "display_name"
+    "display_name",
+    "organization_id"
   ]
 }

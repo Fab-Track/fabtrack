@@ -2,6 +2,10 @@
   "name": "CorrectionRequest",
   "type": "object",
   "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
     "employee_id": {
       "type": "string",
       "description": "Employee ID requesting the correction"
@@ -57,6 +61,7 @@
   "required": [
     "employee_id",
     "date",
-    "description"
+    "description",
+    "organization_id"
   ]
 }

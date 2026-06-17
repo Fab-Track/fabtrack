@@ -2,6 +2,10 @@
   "name": "Customer",
   "type": "object",
   "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
     "name": {
       "type": "string",
       "description": "Customer name"
@@ -69,6 +73,7 @@
     }
   },
   "required": [
-    "name"
+    "name",
+    "organization_id"
   ]
 }

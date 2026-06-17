@@ -2,6 +2,10 @@
   "name": "TimeEntry",
   "type": "object",
   "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
     "employee_id": {
       "type": "string",
       "description": "Employee ID"
@@ -117,6 +121,7 @@
     }
   },
   "required": [
-    "employee_id"
+    "employee_id",
+    "organization_id"
   ]
 }

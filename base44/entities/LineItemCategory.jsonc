@@ -2,6 +2,10 @@
   "name": "LineItemCategory",
   "type": "object",
   "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
     "name": {
       "type": "string",
       "description": "Category name"
@@ -12,6 +16,7 @@
     }
   },
   "required": [
-    "name"
+    "name",
+    "organization_id"
   ]
 }

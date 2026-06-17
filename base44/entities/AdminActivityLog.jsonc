@@ -2,6 +2,10 @@
   "name": "AdminActivityLog",
   "type": "object",
   "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
     "admin_user_email": {
       "type": "string",
       "description": "Email of the admin/owner who performed the action"
@@ -40,6 +44,7 @@
   "required": [
     "admin_user_email",
     "impersonated_employee_id",
-    "action_type"
+    "action_type",
+    "organization_id"
   ]
 }

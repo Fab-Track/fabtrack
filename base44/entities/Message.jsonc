@@ -2,6 +2,10 @@
   "name": "Message",
   "type": "object",
   "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
     "channel_id": {
       "type": "string"
     },
@@ -68,6 +72,7 @@
   "required": [
     "channel_id",
     "sender_name",
-    "content"
+    "content",
+    "organization_id"
   ]
 }

@@ -2,6 +2,10 @@
   "name": "AppSettings",
   "type": "object",
   "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
     "setting_key": {
       "type": "string",
       "description": "Unique key for this settings record"
@@ -90,6 +94,7 @@
     }
   },
   "required": [
-    "setting_key"
+    "setting_key",
+    "organization_id"
   ]
 }

@@ -2,10 +2,19 @@
   "name": "User",
   "type": "object",
   "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID this user belongs to (null for super admins)"
+    },
+    "organization_name": {
+      "type": "string",
+      "description": "Organization name (denormalized)"
+    },
     "role": {
       "type": "string",
       "description": "Legacy single role \u2014 kept for backward compatibility during migration to multi-role",
       "enum": [
+        "super_admin",
         "owner",
         "admin",
         "shop_manager",
@@ -23,6 +32,7 @@
       "items": {
         "type": "string",
         "enum": [
+          "super_admin",
           "owner",
           "admin",
           "shop_manager",
