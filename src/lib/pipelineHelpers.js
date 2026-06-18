@@ -48,9 +48,13 @@ export const BOARD_ACCESS = {
 export function getBoardsForRole(role) {
   if (!role) return ["Sales", "Shop", "Billing"];
   const r = role.toLowerCase();
-  return ["Sales", "Shop", "Billing"].filter(board =>
+  // Super admins have full access to all boards
+  if (r === "super_admin") return ["Sales", "Shop", "Billing"];
+  const boards = ["Sales", "Shop", "Billing"].filter(board =>
     BOARD_ACCESS[board].includes(r)
   );
+  // Unrecognized roles fall back to all boards so the page never gets stuck
+  return boards.length ? boards : ["Sales", "Shop", "Billing"];
 }
 
 export function getDefaultBoard(role) {
