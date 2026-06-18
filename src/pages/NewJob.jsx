@@ -36,6 +36,7 @@ export default function NewJob() {
   );
 
   const [form, setForm] = useState({
+    organization_id: user?.organization_id || "",
     job_number: generateJobNumber(),
     job_name: "",
     customer_id: prefilledCustomerId,

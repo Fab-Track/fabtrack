@@ -186,7 +186,7 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
               <Label className="text-xs">Linked Customer</Label>
               <CustomerCombobox
                 customers={allCustomers}
-                value={allCustomers.find(c => c.id === form.customer_id) || null}
+                value={form.customer_id || null}
                 onChange={(selected) => {
                   f("customer_id", selected?.id || "");
                   f("customer_name", selected?.name || "");
