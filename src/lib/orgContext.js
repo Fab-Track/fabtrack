@@ -44,6 +44,21 @@ export function useOrgId() {
 }
 
 /**
+ * Returns the organization_id to stamp onto NEW records.
+ * - Impersonating super admin: the impersonated org_id
+ * - Normal user: their organization_id
+ * - Super admin who also belongs to an org: their organization_id (so they can use the app)
+ * Falls back to user.organization_id when there's no active org scope.
+ * Usage: const writeOrgId = useWriteOrgId();
+ *        base44.entities.Customer.create({ ...data, organization_id: writeOrgId })
+ */
+export function useWriteOrgId() {
+  const { user } = useAuth();
+  const orgId = useOrgId();
+  return orgId || user?.organization_id || null;
+}
+
+/**
  * Returns whether the current user is a super admin.
  */
 export function useIsSuperAdmin() {

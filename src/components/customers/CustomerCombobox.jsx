@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { useAuth } from "@/lib/AuthContext";
+import { useWriteOrgId } from "@/lib/orgContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 // ── Quick-create modal ─────────────────────────────────────────────────────────
 function NewCustomerModal({ open, onClose, onCreated }) {
   const qc = useQueryClient();
-  const { user } = useAuth();
+  const writeOrgId = useWriteOrgId();
   const [form, setForm] = useState({
     first_name: "", last_name: "", company: "",
     phone: "", email: "", address: "", type: "",
@@ -24,7 +24,7 @@ function NewCustomerModal({ open, onClose, onCreated }) {
 
   const createMutation = useMutation({
     mutationFn: () => base44.entities.Customer.create({
-      organization_id: user?.organization_id || "",
+      organization_id: writeOrgId,
       name: fullName || form.company,
       company: form.company,
       phone: form.phone,

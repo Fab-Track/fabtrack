@@ -13,9 +13,11 @@ import { generateJobNumber } from "@/lib/jobHelpers";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/lib/AuthContext";
+import { useWriteOrgId } from "@/lib/orgContext";
 
 export default function NewJob() {
   const { user } = useAuth();
+  const writeOrgId = useWriteOrgId();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -36,7 +38,6 @@ export default function NewJob() {
   );
 
   const [form, setForm] = useState({
-    organization_id: user?.organization_id || "",
     job_number: generateJobNumber(),
     job_name: "",
     customer_id: prefilledCustomerId,
@@ -73,7 +74,7 @@ export default function NewJob() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    createMutation.mutate(form);
+    createMutation.mutate({ ...form, organization_id: writeOrgId });
   };
 
   return (
