@@ -86,6 +86,7 @@ export default function JobAttachmentsTab({ job }) {
         await base44.entities.JobAttachment.create({
           job_id: job.id,
           job_number: job.job_number,
+          organization_id: job.organization_id,
           category: selectedCategory,
           file_url,
           file_name: fileName,
@@ -203,7 +204,6 @@ export default function JobAttachmentsTab({ job }) {
             className="hidden"
             accept={acceptTypes}
             multiple
-            capture="environment"
             onChange={e => handleFiles(e.target.files)}
           />
 
