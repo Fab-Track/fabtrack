@@ -50,8 +50,10 @@ export default function MessageThread({ channel, currentUser, onBack, isMobile, 
           last_read_at: new Date().toISOString(),
         });
       }
-      // Invalidate memberships so unread badge recalculates immediately
+      // Invalidate all membership + message queries so badges clear immediately everywhere
       queryClient.invalidateQueries({ queryKey: ["memberships"] });
+      queryClient.invalidateQueries({ queryKey: ["messages-unread"] });
+      queryClient.invalidateQueries({ queryKey: ["messages-sidebar-unread"] });
     };
     markRead().catch(() => {});
   }, [channel?.id, currentUser]);
@@ -135,6 +137,11 @@ export default function MessageThread({ channel, currentUser, onBack, isMobile, 
             <p className="text-xs text-muted-foreground truncate">{channel.description}</p>
           )}
         </div>
+        {channel.member_ids?.length > 0 && (
+          <span className="text-[10px] text-muted-foreground shrink-0 bg-muted px-1.5 py-0.5 rounded-full">
+            {channel.member_ids.length} {channel.member_ids.length === 1 ? "member" : "members"}
+          </span>
+        )}
         <button
           onClick={() => setShowSettings(true)}
           className="p-1.5 rounded hover:bg-muted transition-colors shrink-0"

@@ -20,15 +20,32 @@ export default function NewMessageDialog({ onClose, onCreated, currentUser }) {
 
   const { data: users = [] } = useQuery({
     queryKey: ["all-users-dm"],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: async () => {
+      // Try User entity first (works for admins), fall back to Employee records
+      try {
+        const userList = await base44.entities.User.list();
+        if (userList.length > 1) return userList; // Found other users
+      } catch {}
+      // Non-admins: use Employee records as user directory
+      const employees = await base44.entities.Employee.list("-created_date", 200);
+      return employees.map(e => ({
+        id: e.id,
+        full_name: e.name,
+        email: e.email || "",
+        role: e.role || "team_member",
+        organization_id: e.organization_id,
+      }));
+    },
     enabled: tab === "dm",
   });
 
-  const otherUsers = users.filter(u =>
-    u.id !== currentUser?.id &&
-    (u.full_name?.toLowerCase().includes(dmSearch.toLowerCase()) ||
-     u.email?.toLowerCase().includes(dmSearch.toLowerCase()))
-  );
+  const otherUsers = users.filter(u => {
+    const uid = u.id || u._id;
+    if (uid === currentUser?.id) return false;
+    const search = dmSearch.toLowerCase();
+    return (u.full_name?.toLowerCase().includes(search) ||
+     u.email?.toLowerCase().includes(search));
+  });
 
   const handleSelectUser = async (otherUser) => {
     if (saving) return;
@@ -134,7 +151,7 @@ export default function NewMessageDialog({ onClose, onCreated, currentUser }) {
               )}
               {otherUsers.map(u => (
                 <button
-                  key={u.id}
+                  key={u.id || u._id}
                   onClick={() => handleSelectUser(u)}
                   disabled={saving}
                   className="w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-muted text-left transition-colors disabled:opacity-50"

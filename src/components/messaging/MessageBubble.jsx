@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Reply, Copy, Trash2, MoreHorizontal, Bot } from "lucide-react";
+import { Reply, Copy, Trash2, MoreHorizontal, Bot, BookmarkX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { REACTION_EMOJIS, formatMessageTime } from "@/lib/messagingHelpers";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 function AttachmentPreview({ attachment }) {
   const isImage = attachment.type?.startsWith("image/") ||
@@ -70,8 +71,30 @@ export default function MessageBubble({ message, currentUser, onReply, channelId
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content);
+    toast.success("Copied to clipboard");
     setShowActions(false);
   };
+
+  const handleMarkUnread = async () => {
+    // Reset last_read_at for this channel so messages appear unread again
+    const uid = currentUser?.id || currentUser?.email;
+    const memberships = await base44.entities.ChannelMembership.filter({
+      channel_id: channelId,
+      user_id: uid,
+    });
+    if (memberships.length > 0) {
+      await base44.entities.ChannelMembership.update(memberships[0].id, {
+        last_read_at: new Date(0).toISOString(),
+      });
+    }
+    queryClient.invalidateQueries({ queryKey: ["memberships"] });
+    queryClient.invalidateQueries({ queryKey: ["messages-unread"] });
+    queryClient.invalidateQueries({ queryKey: ["messages-sidebar-unread"] });
+    setShowActions(false);
+    toast.success("Channel marked as unread");
+  };
+
+  const [showOverflow, setShowOverflow] = useState(false);
 
   if (message.is_deleted) {
     return (
@@ -204,15 +227,43 @@ export default function MessageBubble({ message, currentUser, onReply, channelId
           >
             <Copy className="w-3.5 h-3.5" />
           </button>
-          {canDelete && (
+          <div className="w-px h-4 bg-border mx-1" />
+          <div className="relative">
             <button
-              onClick={handleDelete}
-              className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-              title="Delete"
+              onClick={(e) => { e.stopPropagation(); setShowOverflow(v => !v); }}
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              title="More actions"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <MoreHorizontal className="w-3.5 h-3.5" />
             </button>
-          )}
+            {showOverflow && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowOverflow(false)} />
+                <div className="absolute right-0 top-full mt-1 bg-card border rounded-lg shadow-lg py-1 z-20 w-36" onClick={() => setShowOverflow(false)}>
+                  <button
+                    onClick={handleCopy}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted text-left transition-colors"
+                  >
+                    <Copy className="w-3 h-3" /> Copy text
+                  </button>
+                  {canDelete && (
+                    <button
+                      onClick={handleDelete}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-destructive/10 hover:text-destructive text-left transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" /> Delete
+                    </button>
+                  )}
+                  <button
+                    onClick={handleMarkUnread}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted text-left transition-colors"
+                  >
+                    <BookmarkX className="w-3 h-3" /> Mark as unread
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -136,6 +136,9 @@ export default function ChannelList({
           <Archive className="w-3.5 h-3.5" />
           {showArchived ? "Hide Archived" : "View Archived Channels"}
         </button>
+        {showArchived && accessible.filter(c => c.is_archived).length === 0 && (
+          <p className="text-[10px] text-muted-foreground px-1 py-1">No archived channels</p>
+        )}
       </div>
     </div>
   );
