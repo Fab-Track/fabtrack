@@ -14,16 +14,19 @@ import { Plus, X, Loader2 } from "lucide-react";
 
 const EVENT_TYPES = ["Measure", "Consultation", "Site Visit", "Other"];
 
+const today = () => new Date().toISOString().split("T")[0];
+
 const blankEvent = (job) => ({
   job_id: job?.id || "",
   job_number: job?.job_number || "",
   job_name: job?.job_name || "",
   customer_id: job?.customer_id || "",
   customer_name: job?.customer_name || "",
+  organization_id: job?.organization_id || "",
   event_type: "Measure",
-  date: "",
-  start_time: "",
-  end_time: "",
+  date: today(),
+  start_time: "09:00",
+  end_time: "10:00",
   location: job?.site_address || "",
   assigned_user_ids: [],
   assigned_user_names: [],
@@ -71,10 +74,13 @@ export default function EventForm({ open, onClose, job, event, onSaved }) {
   }
 
   async function handleSave() {
-    if (!form.date || !form.start_time || !form.end_time) return;
+    if (!form.date || !form.start_time || !form.end_time) {
+      alert("Please fill in the date, start time, and end time.");
+      return;
+    }
     setSaving(true);
     try {
-      const payload = { ...form };
+      const payload = { ...form, organization_id: job?.organization_id || form.organization_id };
       let savedEvent;
       if (isEdit) {
         savedEvent = await base44.entities.ScheduledEvent.update(event.id, payload);
