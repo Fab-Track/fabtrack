@@ -5,7 +5,7 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { SALES_STAGES, SALES_COLORS, daysInStage, buildStageTransition } from "@/lib/pipelineHelpers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Clock, DollarSign, AlertTriangle, MoreHorizontal, X } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import StageTransitionDialog from "./StageTransitionDialog";
@@ -24,6 +24,7 @@ const EST_PILL = {
 
 // ── Sales Card ─────────────────────────────────────────────────────────────────
 function SalesCard({ job, isDragging, onPromote, estimates = [], onCloseLead, onDeleteJob, canDelete }) {
+  const navigate = useNavigate();
   const days = daysInStage(job);
   const isStale = days > 7 && job.stage !== "Deposit Received / Sale Won";
 
@@ -39,27 +40,30 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], onCloseLead, on
     && differenceInDays(new Date(), parseISO(latestEst.created_date)) > 7;
 
   return (
-    <div className={`bg-card rounded-lg border p-3 hover:shadow-md transition-all ${isDragging ? "shadow-lg ring-2 ring-accent/50" : ""} ${job.is_lead_closed ? "opacity-50" : ""}`}>
+    <div
+      className={`bg-card rounded-lg border p-3 hover:shadow-md transition-all ${isDragging ? "shadow-lg ring-2 ring-accent/50" : ""} ${job.is_lead_closed ? "opacity-50" : ""}`}
+      onClick={() => navigate(`/jobs/${job.id}`)}
+    >
       <div className="flex items-start justify-between mb-1">
         <span className="text-[10px] font-mono text-muted-foreground">{job.job_number}</span>
         <div className="flex items-center gap-1">
           {job.job_type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.job_type}</Badge>}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-0.5 rounded hover:bg-muted text-muted-foreground" onClick={e => e.preventDefault()}>
+              <button className="p-0.5 rounded hover:bg-muted text-muted-foreground" onClick={e => { e.preventDefault(); e.stopPropagation(); }} onMouseDown={e => e.stopPropagation()}>
                 <MoreHorizontal className="w-3.5 h-3.5" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="text-sm">
               {!job.is_lead_closed && (
-                <DropdownMenuItem onClick={e => { e.preventDefault(); onCloseLead(job); }}>
+                <DropdownMenuItem onClick={e => { e.preventDefault(); e.stopPropagation(); onCloseLead(job); }}>
                   <X className="w-3.5 h-3.5 mr-2" /> Close Lead
                 </DropdownMenuItem>
               )}
               {canDelete && (
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
-                  onClick={e => { e.preventDefault(); onDeleteJob(job); }}
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); onDeleteJob(job); }}
                 >
                   Delete Job
                 </DropdownMenuItem>

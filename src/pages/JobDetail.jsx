@@ -46,6 +46,7 @@ export default function JobDetail() {
   const isAccountant = effectiveRole.toLowerCase() === "accountant";
   const isOwner = effectiveRole.toLowerCase() === "owner";
   const isEstimator = effectiveRole.toLowerCase() === "estimator";
+  const [activeTab, setActiveTab] = useState("overview");
   const [composerOpen, setComposerOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [searchParams] = useSearchParams();
@@ -208,7 +209,7 @@ export default function JobDetail() {
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="overview">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-4 h-auto gap-1 flex flex-nowrap overflow-x-auto w-full justify-start"
           style={{ scrollbarWidth: "none" }}
         >

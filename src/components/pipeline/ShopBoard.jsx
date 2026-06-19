@@ -5,13 +5,14 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { SHOP_STAGES, SHOP_COLORS, daysInStage, buildStageTransition } from "@/lib/pipelineHelpers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Clock, CalendarDays, Paintbrush, Users } from "lucide-react";
 import StageTransitionDialog from "./StageTransitionDialog";
 import { format, parseISO, isValid } from "date-fns";
 
 // ── Shop Card ──────────────────────────────────────────────────────────────────
 function ShopCard({ job, isDragging, onComplete, readOnly = false }) {
+  const navigate = useNavigate();
   const days = daysInStage(job);
   const isStale = days > 5;
   const installDate = job.promised_install_date && isValid(parseISO(job.promised_install_date))
@@ -21,7 +22,10 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false }) {
       : null;
 
   return (
-    <div className={`bg-card rounded-lg border p-3 hover:shadow-md transition-all ${isDragging ? "shadow-lg ring-2 ring-accent/50" : ""}`}>
+    <div
+      className={`bg-card rounded-lg border p-3 hover:shadow-md transition-all ${isDragging ? "shadow-lg ring-2 ring-accent/50" : ""}`}
+      onClick={() => navigate(`/jobs/${job.id}`)}
+    >
       <div className="flex items-start justify-between mb-1">
         <span className="text-[10px] font-mono text-muted-foreground">{job.job_number}</span>
         {job.job_type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.job_type}</Badge>}
@@ -67,7 +71,7 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false }) {
         <Button
           size="sm"
           className="w-full mt-2 h-7 text-xs bg-emerald-600 hover:bg-emerald-700"
-          onClick={e => { e.preventDefault(); onComplete(job); }}
+          onClick={e => { e.preventDefault(); e.stopPropagation(); onComplete(job); }}
         >
           Move to Billing →
         </Button>

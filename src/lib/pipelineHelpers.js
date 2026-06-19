@@ -178,11 +178,12 @@ export function buildStageTransition(job, toBoard, toStage, note = "") {
 
 // ── Billing overdue stage calculator ──────────────────────────────────────────
 export function calcBillingStage(invoiceSentDate, amountPaid, total) {
-  if (amountPaid >= total) return "Paid / Closed";
-  if (!invoiceSentDate) return "2nd Half Invoice Sent";
+  // If there's no invoice yet, the job still needs one created
+  if (!invoiceSentDate) return "Needs 2nd Half Invoice Created";
+  // Only mark as paid if there's actually a payment
+  if (total > 0 && amountPaid >= total) return "Paid / Closed";
   const days = differenceInDays(new Date(), parseISO(invoiceSentDate));
   if (days >= 30) return "30+ Days Overdue";
-  if (days >= 30) return "30 Days Overdue";
   if (days >= 20) return "20 Days Overdue";
   if (days >= 15) return "15 Days Overdue";
   if (days >= 10) return "10 Days Overdue";

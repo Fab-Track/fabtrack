@@ -15,6 +15,16 @@ import ErrorBoundary from '@/components/shared/ErrorBoundary';
 import { base44 } from '@/api/base44Client';
 import { Ban } from 'lucide-react';
 
+// Redirect /dashboard → /
+function DashboardRedirect() {
+  React.useEffect(() => { window.location.replace('/'); }, []);
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-background">
+      <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
+    </div>
+  );
+}
+
 // Lazy-loaded pages for better initial load performance
 const Dashboard        = lazy(() => import('@/pages/Dashboard'));
 const JobBoard         = lazy(() => import('@/pages/JobBoard'));
@@ -194,6 +204,9 @@ const AuthenticatedApp = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+
+        {/* Redirect /dashboard to / */}
+        <Route path="/dashboard" element={<DashboardRedirect />} />
 
         {/* Public pages - no sidebar */}
         <Route path="/kiosk" element={<ShopKiosk />} />

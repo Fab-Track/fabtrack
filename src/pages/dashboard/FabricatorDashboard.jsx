@@ -111,7 +111,7 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
       {/* ── MASTER / PAYROLL CLOCK ── top of dashboard, always visible */}
       <div className="space-y-3">
         <MasterClockCard
-          employee={myEmployee || { id: user?.id, name: user?.full_name, work_center_primary: "General" }}
+          employee={myEmployee || { id: user?.id, name: user?.full_name, work_center_primary: "General", organization_id: user?.organization_id }}
           masterEntry={masterEntry}
         />
         {myEmployee && (

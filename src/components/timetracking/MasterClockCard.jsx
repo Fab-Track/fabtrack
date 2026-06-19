@@ -22,6 +22,7 @@ import {
 async function doClockIn(employee) {
   const now = new Date();
   return base44.entities.TimeEntry.create({
+    organization_id: employee.organization_id,
     employee_id: employee.id,
     employee_name: employee.name,
     entry_type: "shift",

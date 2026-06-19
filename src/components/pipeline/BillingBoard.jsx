@@ -6,7 +6,7 @@ import { BILLING_STAGES, BILLING_COLORS, BILLING_CARD_BG, daysInStage, buildStag
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { differenceInDays, parseISO, isValid } from "date-fns";
 import { DollarSign, Send, CheckCircle2, AlertCircle } from "lucide-react";
 
@@ -55,6 +55,7 @@ function BillingSummary({ jobs, invoiceMap }) {
 
 // ── Billing Card ───────────────────────────────────────────────────────────────
 function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder }) {
+  const navigate = useNavigate();
   const days = job.invoice_sent_date && isValid(parseISO(job.invoice_sent_date))
     ? differenceInDays(new Date(), parseISO(job.invoice_sent_date))
     : null;
@@ -63,7 +64,10 @@ function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder }) {
   const isOverdue = days !== null && days > 0 && job.stage !== "Paid / Closed";
 
   return (
-    <div className={`${bg} rounded-lg border p-3 hover:shadow-md transition-all ${isDragging ? "shadow-lg ring-2 ring-accent/50" : ""}`}>
+    <div
+      className={`${bg} rounded-lg border p-3 hover:shadow-md transition-all ${isDragging ? "shadow-lg ring-2 ring-accent/50" : ""}`}
+      onClick={() => navigate(`/jobs/${job.id}?from=billing`)}
+    >
       <div className="flex items-start justify-between mb-1">
         <span className="text-[10px] font-mono text-muted-foreground">{job.job_number}</span>
         {isOverdue && (
@@ -90,7 +94,7 @@ function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder }) {
             <Button
               size="sm"
               className="flex-1 h-7 text-[10px] bg-emerald-600 hover:bg-emerald-700 gap-1"
-              onClick={e => { e.preventDefault(); onMarkPaid(job); }}
+              onClick={e => { e.preventDefault(); e.stopPropagation(); onMarkPaid(job); }}
             >
               <CheckCircle2 className="w-3 h-3" /> Mark Paid
             </Button>
@@ -99,7 +103,7 @@ function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder }) {
                 size="sm"
                 variant="outline"
                 className="h-7 px-2 text-[10px] gap-1"
-                onClick={e => { e.preventDefault(); onSendReminder(job, invoice); }}
+                onClick={e => { e.preventDefault(); e.stopPropagation(); onSendReminder(job, invoice); }}
               >
                 <Send className="w-3 h-3" />
               </Button>
