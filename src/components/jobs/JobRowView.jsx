@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { JOB_STATUSES, STATUS_COLORS, getJobHealth, getHealthBorder } from "@/lib/jobHelpers";
 import { Badge } from "@/components/ui/badge";
@@ -7,10 +7,16 @@ import { Link, useNavigate } from "react-router-dom";
 import { format, parseISO, isValid } from "date-fns";
 import {
   ChevronDown, ChevronRight, GripVertical,
-  CalendarDays, Users, Paintbrush, MoreHorizontal,
+  CalendarDays, Users, Paintbrush, MoreHorizontal, Archive, Trash2,
 } from "lucide-react";
+import { useAuth } from "@/lib/AuthContext";
+import { useEffectiveRole } from "@/lib/PreviewRoleContext";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
+import DeleteJobModal from "@/components/jobs/DeleteJobModal";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
 const SECTION_BORDER = {
@@ -42,14 +48,27 @@ function SortIcon({ col, sortKey, sortDir }) {
 
 function JobRow({ job, index, onStatusChange }) {
   const navigate = useNavigate();
+  const qc = useQueryClient();
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const health = getJobHealth(job);
   const healthBorder = getHealthBorder(health);
+  const { user } = useAuth();
+  const effectiveRole = useEffectiveRole(user?.role || "admin");
+  const role = effectiveRole.toLowerCase();
+  const canManage = role === "owner" || role === "admin";
+
+  const archiveMutation = useMutation({
+    mutationFn: () => base44.entities.Job.update(job.id, { is_archived: true, archived_at: new Date().toISOString() }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["jobs"] }); toast.success("Job archived"); },
+    onError: (err) => toast.error(err?.message || "Failed to archive"),
+  });
 
   const installDate = job.expected_install_date && isValid(parseISO(job.expected_install_date))
     ? format(parseISO(job.expected_install_date), "MMM d, yyyy")
     : "—";
 
   return (
+    <>
     <Draggable draggableId={job.id} index={index}>
       {(provided, snapshot) => (
         <div
@@ -135,12 +154,33 @@ function JobRow({ job, index, onStatusChange }) {
                     Move → {s}
                   </DropdownMenuItem>
                 ))}
+                {canManage && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="gap-2" onClick={() => archiveMutation.mutate()}>
+                      <Archive className="w-3.5 h-3.5" /> Archive
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive" onClick={() => setDeleteOpen(true)}>
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
       )}
     </Draggable>
+
+    {canManage && (
+      <DeleteJobModal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        job={job}
+        onDeleted={() => setDeleteOpen(false)}
+      />
+    )}
+    </>
   );
 }
 

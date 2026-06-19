@@ -16,8 +16,10 @@ import BillingBoard from "@/components/pipeline/BillingBoard";
 import PipelineRowView from "@/components/pipeline/PipelineRowView";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Filter, TrendingUp, Wrench, DollarSign, LayoutGrid, List } from "lucide-react";
+import { Plus, Filter, TrendingUp, Wrench, DollarSign, LayoutGrid, List, Archive, RotateCcw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { format, parseISO } from "date-fns";
 import { Link } from "react-router-dom";
 
 const BOARD_ICONS = {
@@ -51,13 +53,25 @@ export default function JobBoard() {
     setActiveBoard(getDefaultBoard(effectiveRole));
   }, [effectiveRole]);
 
-  const { data: jobs = [], isLoading, refetch: refetchJobs } = useQuery({
+  const [showArchived, setShowArchived] = useState(false);
+
+  const { data: allJobs = [], isLoading, refetch: refetchJobs } = useQuery({
     queryKey: ["jobs", orgFilter],
     queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 500),
   });
 
+  // Active jobs: not archived. Archived jobs: is_archived === true
+  const jobs = allJobs.filter(j => !j.is_archived);
+  const totalArchived = allJobs.filter(j => j.is_archived);
+  const archivedJobs = showArchived ? totalArchived : [];
+
   const { containerRef: pullRef, isPulling, pullDistance } = usePullToRefresh({
     onRefresh: () => refetchJobs(),
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: (jobId) => base44.entities.Job.update(jobId, { is_archived: false, archived_at: null }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["jobs"] }),
   });
 
   const allowedBoards = getBoardsForRole(effectiveRole);
@@ -132,6 +146,18 @@ export default function JobBoard() {
               </button>
             </div>
           )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9 gap-1.5"
+            onClick={() => setShowArchived(v => !v)}
+          >
+            <Archive className="w-4 h-4" />
+            {showArchived ? "Hide Archived" : "Archived"}
+            {totalArchived.length > 0 && (
+              <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-muted">{totalArchived.length}</span>
+            )}
+          </Button>
           {!isFabricator && !isAccountant && (
             <Link to="/jobs/new">
               <Button size="sm" className="h-9">
@@ -186,6 +212,57 @@ export default function JobBoard() {
             : <BillingBoard jobs={filtered.Billing} readOnly={isAccountant} />
         )}
       </div>
+
+      {/* Archived Jobs */}
+      {showArchived && (
+        <div className="mt-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Archive className="w-4 h-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              Archived Jobs ({archivedJobs.length})
+            </h2>
+          </div>
+          {archivedJobs.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">No archived jobs.</p>
+          ) : (
+            <div className="border rounded-lg overflow-hidden">
+              <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-muted/40 border-b text-xs font-medium text-muted-foreground">
+                <span className="col-span-2">Job #</span>
+                <span className="col-span-3">Name</span>
+                <span className="col-span-2">Customer</span>
+                <span className="col-span-2">Archived</span>
+                <span className="col-span-2">Status</span>
+                <span className="col-span-1"></span>
+              </div>
+              {archivedJobs.map(job => (
+                <div key={job.id} className="grid grid-cols-12 gap-2 px-4 py-2.5 border-b last:border-0 items-center text-sm bg-card hover:bg-muted/20 transition-colors">
+                  <span className="col-span-2 font-mono text-xs text-muted-foreground truncate">{job.job_number || "—"}</span>
+                  <span className="col-span-3 font-medium truncate">{job.job_name}</span>
+                  <span className="col-span-2 text-muted-foreground truncate">{job.customer_name || "—"}</span>
+                  <span className="col-span-2 text-xs text-muted-foreground">
+                    {job.archived_at ? format(parseISO(job.archived_at), "MMM d, yyyy") : "—"}
+                  </span>
+                  <span className="col-span-2">
+                    {job.status && (
+                      <Badge variant="outline" className="text-[10px]">{job.status}</Badge>
+                    )}
+                  </span>
+                  <span className="col-span-1 flex justify-end">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => restoreMutation.mutate(job.id)}
+                    >
+                      <RotateCcw className="w-3 h-3" /> Restore
+                    </Button>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

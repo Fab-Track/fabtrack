@@ -1,13 +1,17 @@
 import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Users, Paintbrush, MoreHorizontal } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { CalendarDays, Users, Paintbrush, MoreHorizontal, Archive, Trash2, ArrowRightLeft } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { getJobHealth, getHealthBorder } from "@/lib/jobHelpers";
+import { SALES_STAGES, SHOP_STAGES, BILLING_STAGES, buildStageTransition } from "@/lib/pipelineHelpers";
 import { Link } from "react-router-dom";
 import DeleteJobModal from "@/components/jobs/DeleteJobModal";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 
 const PRODUCT_BADGE_COLORS = {
   Railing:      "bg-blue-100 text-blue-800 border-blue-200",
@@ -40,13 +44,31 @@ function ProductBadges({ instances }) {
   );
 }
 
+const FLOWS = { Sales: SALES_STAGES, Shop: SHOP_STAGES, Billing: BILLING_STAGES };
+
 export default function JobCard({ job, isDragging }) {
   const health = getJobHealth(job);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const { user } = useAuth();
+  const qc = useQueryClient();
   const effectiveRole = useEffectiveRole(user?.role || "admin");
-  const isOwner = effectiveRole.toLowerCase() === "owner";
-  const canDelete = isOwner;
+  const role = effectiveRole.toLowerCase();
+  const canManage = role === "owner" || role === "admin";
+
+  const archiveMutation = useMutation({
+    mutationFn: () => base44.entities.Job.update(job.id, { is_archived: true, archived_at: new Date().toISOString() }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["jobs"] }); toast.success("Job archived"); },
+    onError: (err) => toast.error(err?.message || "Failed to archive"),
+  });
+
+  const moveMutation = useMutation({
+    mutationFn: ({ toBoard, toStage }) => {
+      const payload = buildStageTransition(job, toBoard, toStage);
+      return base44.entities.Job.update(job.id, payload);
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["jobs"] }); toast.success("Job moved"); },
+    onError: (err) => toast.error(err?.message || "Failed to move job"),
+  });
 
   return (
     <>
@@ -58,7 +80,7 @@ export default function JobCard({ job, isDragging }) {
         <span className="text-xs font-mono text-muted-foreground">{job.job_number}</span>
         <div className="flex items-center gap-1">
           <ProductBadges instances={job.product_instances} />
-          {canDelete && (
+          {canManage && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -68,12 +90,46 @@ export default function JobCard({ job, isDragging }) {
                   <MoreHorizontal className="w-3.5 h-3.5" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="text-sm gap-2">
+                    <ArrowRightLeft className="w-3.5 h-3.5" /> Move to...
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent className="w-48">
+                      {Object.entries(FLOWS).map(([board, stages]) => (
+                        <DropdownMenuSub key={board}>
+                          <DropdownMenuSubTrigger className="text-sm">{board} Flow</DropdownMenuSubTrigger>
+                          <DropdownMenuPortal>
+                            <DropdownMenuSubContent className="w-56 max-h-64 overflow-y-auto">
+                              {stages.map(stage => (
+                                <DropdownMenuItem
+                                  key={stage}
+                                  className="text-sm"
+                                  onClick={e => { e.preventDefault(); e.stopPropagation(); moveMutation.mutate({ toBoard: board, toStage: stage }); }}
+                                >
+                                  {stage}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuPortal>
+                        </DropdownMenuSub>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
+                  className="text-sm gap-2"
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); archiveMutation.mutate(); }}
+                >
+                  <Archive className="w-3.5 h-3.5" /> Archive
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-sm gap-2 text-destructive focus:text-destructive"
                   onClick={e => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }}
                 >
-                  Delete Job
+                  <Trash2 className="w-3.5 h-3.5" /> Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

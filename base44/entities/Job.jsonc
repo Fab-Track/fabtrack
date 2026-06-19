@@ -97,9 +97,18 @@
       "default": "Estimate",
       "description": "Legacy status field (kept for compatibility)"
     },
-    "site_address": {
+    "is_archived": {
+      "type": "boolean",
+      "default": false,
+      "description": "Soft-delete flag \u2014 hides from active board but preserves all data"
+    },
+    "archived_at": {
       "type": "string",
-      "description": "Location / site address"
+      "format": "date-time",
+      "description": "When the job was archived"
+    },
+    "site_address": {
+      "type": "string"
     },
     "expected_install_date": {
       "type": "string",
@@ -107,61 +116,49 @@
     },
     "promised_install_date": {
       "type": "string",
-      "format": "date",
-      "description": "Customer-facing committed install date"
+      "format": "date"
     },
     "design_details": {
-      "type": "string",
-      "description": "Design details (free text)"
+      "type": "string"
     },
     "powder_coat_color": {
-      "type": "string",
-      "description": "Powder coat color name"
+      "type": "string"
     },
     "powder_coat_code": {
-      "type": "string",
-      "description": "RAL or color code"
+      "type": "string"
     },
     "tools_needed": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "Tools needed for install"
+      }
     },
     "special_considerations": {
-      "type": "string",
-      "description": "Special considerations"
+      "type": "string"
     },
     "assigned_crew": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "Assigned crew member IDs"
+      }
     },
     "assigned_crew_names": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "Assigned crew member names"
+      }
     },
     "assigned_estimator": {
-      "type": "string",
-      "description": "Estimator user ID"
+      "type": "string"
     },
     "assigned_estimator_name": {
-      "type": "string",
-      "description": "Estimator name"
+      "type": "string"
     },
     "assigned_rep_id": {
-      "type": "string",
-      "description": "Sales rep / estimator owner of this job for performance tracking"
+      "type": "string"
     },
     "assigned_rep_name": {
-      "type": "string",
-      "description": "Sales rep name (denormalized)"
+      "type": "string"
     },
     "customer_approval_status": {
       "type": "string",
@@ -173,35 +170,28 @@
       "default": "pending"
     },
     "internal_notes": {
-      "type": "string",
-      "description": "Internal notes"
+      "type": "string"
     },
     "estimate_total": {
-      "type": "number",
-      "description": "Estimate total amount"
+      "type": "number"
     },
     "actual_cost": {
       "type": "number",
-      "description": "Actual cost accumulated",
       "default": 0
     },
     "estimated_labor_hours": {
-      "type": "number",
-      "description": "Total estimated labor hours"
+      "type": "number"
     },
     "actual_labor_hours": {
       "type": "number",
-      "description": "Total actual labor hours logged",
       "default": 0
     },
     "last_activity_date": {
       "type": "string",
-      "format": "date-time",
-      "description": "Last status change or time entry date"
+      "format": "date-time"
     },
     "work_center_queue_order": {
-      "type": "object",
-      "description": "Priority order per work center"
+      "type": "object"
     },
     "lead_source": {
       "type": "string",
@@ -221,17 +211,14 @@
       "type": "string"
     },
     "second_half_invoice_id": {
-      "type": "string",
-      "description": "Invoice ID for the 2nd-half invoice in Billing flow"
+      "type": "string"
     },
     "invoice_sent_date": {
       "type": "string",
-      "format": "date",
-      "description": "Date the 2nd half invoice was sent"
+      "format": "date"
     },
     "lead_outcome": {
-      "type": "string",
-      "description": "Specific close reason e.g. Price - Too Expensive, Non-Responsive / Went Dark"
+      "type": "string"
     },
     "lead_outcome_category": {
       "type": "string",
@@ -241,44 +228,35 @@
         "Unqualified",
         "On Hold",
         "Other"
-      ],
-      "description": "Top-level outcome category for closed leads"
+      ]
     },
     "lead_close_reason": {
-      "type": "string",
-      "description": "Legacy close reason / notes"
+      "type": "string"
     },
     "lead_lost_to": {
-      "type": "string",
-      "description": "Competitor or alternative the job was lost to"
+      "type": "string"
     },
     "lead_closed_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "When the lead was closed"
+      "format": "date-time"
     },
     "is_lead_closed": {
       "type": "boolean",
-      "default": false,
-      "description": "True when lead is archived/closed from Sales board"
+      "default": false
     },
     "close_notes": {
-      "type": "string",
-      "description": "Free-text notes added when closing the lead"
+      "type": "string"
     },
     "follow_up_date": {
       "type": "string",
-      "format": "date",
-      "description": "Follow-up date set when closing with Not Ready - Follow Up Later"
+      "format": "date"
     },
     "follow_up_notified": {
       "type": "boolean",
-      "default": false,
-      "description": "Whether a reminder notification has been sent for this follow-up"
+      "default": false
     },
     "schedule_phases": {
       "type": "array",
-      "description": "Auto-generated production schedule phases",
       "items": {
         "type": "object",
         "properties": {
@@ -321,7 +299,6 @@
     },
     "product_instances": {
       "type": "array",
-      "description": "Per-product structured detail forms",
       "items": {
         "type": "object",
         "properties": {
@@ -348,7 +325,6 @@
     },
     "job_level_data": {
       "type": "object",
-      "description": "Job-level shared data: site_access, materials checklist, site_photos",
       "properties": {
         "site_access": {
           "type": "object"
