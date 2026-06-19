@@ -79,6 +79,7 @@ export default function MessageComposer({ channel, currentUser, onSent, replyTo,
     const mentions = mentionMatches.map(m => m.slice(1).trim());
 
     const payload = {
+      organization_id: currentUser?.organization_id || channel.organization_id,
       channel_id: channel.id,
       sender_id: currentUser?.id || currentUser?.email || "unknown",
       sender_name: currentUser?.full_name || currentUser?.email || "Unknown",
