@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { format, addDays, parseISO } from "date-fns";
 import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
 import { useAuth } from "@/lib/AuthContext";
+import { useWriteOrgId } from "@/lib/orgContext";
 import ProductServiceDropdown from "@/components/estimates/ProductServiceDropdown";
 import RailingInlineCalc from "@/components/estimates/RailingInlineCalc";
 import StaircaseInlineCalc from "@/components/estimates/StaircaseInlineCalc";
@@ -64,6 +65,7 @@ export default function EstimatePage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
+  const writeOrgId = useWriteOrgId();
   const isNew = estimateId === "new";
 
   const [activeTab, setActiveTab] = useState("edit");
@@ -158,6 +160,7 @@ export default function EstimatePage() {
     mutationFn: (nextStatus) => {
       const finalStatus = nextStatus || status;
       const payload = {
+        organization_id: writeOrgId,
         job_id: jobId,
         job_number: job?.job_number,
         status: finalStatus,
@@ -204,6 +207,7 @@ export default function EstimatePage() {
           const { inventoryItem } = matchProjectionToInventory(proj.material, proj.qty, allInventory, existingReservations);
           if (inventoryItem) {
             await base44.entities.MaterialReservation.create({
+              organization_id: writeOrgId,
               job_id: jobId,
               job_number: job?.job_number,
               job_name: job?.job_name,
