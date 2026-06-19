@@ -42,7 +42,8 @@ const PERSONAL_TRIGGERS = [
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // ── Owner shop-wide table ──────────────────────────────────────────────────────
-function ShopWideNotifications() {
+function ShopWideNotifications({ orgId }) {
+  const [saving, setSaving] = useState(false);
   const [toggles, setToggles] = useState(() =>
     Object.fromEntries(SHOP_TRIGGERS.map(t => [t.id, { sms: t.sms, email: t.email }]))
   );
@@ -55,6 +56,38 @@ function ShopWideNotifications() {
     Sat: { enabled: true, start: "09:00", end: "14:00" },
     Sun: { enabled: false, start: "08:00", end: "17:00" },
   });
+
+  // Load saved settings
+  useEffect(() => {
+    base44.entities.AppSettings.filter({ setting_key: "notifications", organization_id: orgId })
+      .then(records => {
+        if (records.length) {
+          const s = records[0];
+          if (s.shop_toggles) setToggles(s.shop_toggles);
+          if (s.business_hours) setQuietHours(s.business_hours);
+        }
+      });
+  }, [orgId]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const existing = await base44.entities.AppSettings.filter({ setting_key: "notifications", organization_id: orgId });
+    if (existing.length) {
+      await base44.entities.AppSettings.update(existing[0].id, {
+        shop_toggles: toggles,
+        business_hours: quietHours,
+      });
+    } else {
+      await base44.entities.AppSettings.create({
+        setting_key: "notifications",
+        organization_id: orgId,
+        shop_toggles: toggles,
+        business_hours: quietHours,
+      });
+    }
+    setSaving(false);
+    toast.success("Notification settings saved");
+  };
 
   return (
     <div className="space-y-6">
@@ -126,17 +159,34 @@ function ShopWideNotifications() {
         </div>
       </div>
 
-      <Button onClick={() => toast.success("Notification settings saved")} className="w-full sm:w-auto">Save Changes</Button>
+      <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
+        {saving ? "Saving..." : "Save Changes"}
+      </Button>
     </div>
   );
 }
 
 // ── Personal prefs ─────────────────────────────────────────────────────────────
-function PersonalNotifications({ userRole }) {
+function PersonalNotifications({ userRole, userId }) {
   const myTriggers = PERSONAL_TRIGGERS.filter(t => t.roles.includes(userRole));
+  const [saving, setSaving] = useState(false);
   const [prefs, setPrefs] = useState(() =>
     Object.fromEntries(myTriggers.map(t => [t.id, "push"]))
   );
+
+  // Load saved preferences
+  useEffect(() => {
+    base44.auth.me().then(user => {
+      if (user?.notification_prefs) setPrefs(user.notification_prefs);
+    });
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await base44.auth.updateMe({ notification_prefs: prefs });
+    setSaving(false);
+    toast.success("Preferences saved");
+  };
 
   return (
     <div className="space-y-4">
@@ -166,12 +216,16 @@ function PersonalNotifications({ userRole }) {
           ))}
         </div>
       )}
-      <Button onClick={() => toast.success("Preferences saved")} className="w-full sm:w-auto">Save Preferences</Button>
+      <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
+        {saving ? "Saving..." : "Save Preferences"}
+      </Button>
     </div>
   );
 }
 
 export default function NotificationsSection({ isOwner, userRole }) {
+  const { user } = useAuth();
+  const orgFilter = useOrgFilter();
   const [view, setView] = useState(isOwner ? "shop" : "personal");
 
   return (
@@ -198,7 +252,7 @@ export default function NotificationsSection({ isOwner, userRole }) {
         </div>
       )}
 
-      {view === "shop" ? <ShopWideNotifications /> : <PersonalNotifications userRole={userRole} />}
+      {view === "shop" ? <ShopWideNotifications orgId={orgFilter.organization_id || user?.organization_id} /> : <PersonalNotifications userRole={userRole} userId={user?.id} />}
     </div>
   );
 }
