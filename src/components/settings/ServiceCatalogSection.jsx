@@ -353,13 +353,15 @@ export default function ServiceCatalogSection() {
   }, [isLoading, catalog.length, seeded, orgId]);
 
   const createItem = useMutation({
-    mutationFn: (data) => base44.entities.ServiceCatalog.create({ ...data, is_active: true, sort_order: catalog.length }),
+    mutationFn: (data) => base44.entities.ServiceCatalog.create({ ...data, is_active: true, sort_order: catalog.length, organization_id: orgId }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["serviceCatalog"] }); setShowAdd(false); toast.success("Service added"); },
+    onError: (err) => toast.error(err?.message || "Failed to save"),
   });
 
   const updateItem = useMutation({
     mutationFn: ({ id, data }) => base44.entities.ServiceCatalog.update(id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["serviceCatalog"] }); setEditingId(null); toast.success("Saved"); },
+    onError: (err) => toast.error(err?.message || "Failed to save"),
   });
 
   const deleteItem = useMutation({
