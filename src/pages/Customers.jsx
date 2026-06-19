@@ -12,8 +12,9 @@ import { Separator } from "@/components/ui/separator";
 import {
   Plus, Search, Phone, Mail, MapPin, Building2,
   DollarSign, Briefcase, TrendingUp, ArrowLeft,
-  ChevronRight, ArrowUpDown, Send, Pencil
+  ChevronRight, ArrowUpDown, Send, Pencil, Trash2, Edit2
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import CustomerCommTab from "@/components/comms/CustomerCommTab";
 import MessageComposerModal from "@/components/comms/MessageComposerModal";
@@ -477,6 +478,9 @@ export default function Customers() {
   const [filterOutstanding, setFilterOutstanding] = useState(false);
   const [sortBy, setSortBy] = useState("name"); // name | outstanding | lastJob
   const [form, setForm] = useState({ name: "", type: "", company: "", phone: "", email: "", address: "", notes: "" });
+  const [editModeOpen, setEditModeOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const queryClient = useQueryClient();
   const orgFilter = useOrgFilter();
   const writeOrgId = useWriteOrgId();
@@ -504,6 +508,36 @@ export default function Customers() {
       setForm({ name: "", type: "", company: "", phone: "", email: "", address: "", notes: "" });
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (ids) => {
+      for (const id of ids) {
+        await base44.entities.Customer.delete(id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      setSelectedIds(new Set());
+      setDeleteConfirm(false);
+      setEditModeOpen(false);
+    },
+  });
+
+  function toggleSelect(id) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(c => c.id)));
+    }
+  }
 
   // Per-customer computed metrics for list
   const customerMetrics = useMemo(() => {
@@ -555,56 +589,61 @@ export default function Customers() {
           <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
           <p className="text-sm text-muted-foreground">{customers.length} contacts</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm"><Plus className="w-4 h-4 mr-1.5" /><span className="hidden sm:inline">Add Customer</span><span className="sm:hidden">Add</span></Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>New Customer</DialogTitle></DialogHeader>
-            <form onSubmit={e => { e.preventDefault(); createMutation.mutate(form); }} className="space-y-3">
-              <div>
-                <Label className="text-xs">Name *</Label>
-                <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => { setEditModeOpen(true); setSelectedIds(new Set()); }}>
+            <Edit2 className="w-4 h-4 mr-1.5" /><span className="hidden sm:inline">Edit Customers</span><span className="sm:hidden">Edit</span>
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm"><Plus className="w-4 h-4 mr-1.5" /><span className="hidden sm:inline">Add Customer</span><span className="sm:hidden">Add</span></Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>New Customer</DialogTitle></DialogHeader>
+              <form onSubmit={e => { e.preventDefault(); createMutation.mutate(form); }} className="space-y-3">
                 <div>
-                  <Label className="text-xs">Type</Label>
-                  <Select value={form.type} onValueChange={v => setForm({...form, type: v})}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent>
-                      {CUSTOMER_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-xs">Name *</Label>
+                  <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Type</Label>
+                    <Select value={form.type} onValueChange={v => setForm({...form, type: v})}>
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {CUSTOMER_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Company</Label>
+                    <Input value={form.company} onChange={e => setForm({...form, company: e.target.value})} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Phone</Label>
+                    <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Email</Label>
+                    <Input value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
+                  </div>
                 </div>
                 <div>
-                  <Label className="text-xs">Company</Label>
-                  <Input value={form.company} onChange={e => setForm({...form, company: e.target.value})} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Phone</Label>
-                  <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} />
+                  <Label className="text-xs">Address</Label>
+                  <Input value={form.address} onChange={e => setForm({...form, address: e.target.value})} />
                 </div>
                 <div>
-                  <Label className="text-xs">Email</Label>
-                  <Input value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
+                  <Label className="text-xs">Notes</Label>
+                  <Input value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} />
                 </div>
-              </div>
-              <div>
-                <Label className="text-xs">Address</Label>
-                <Input value={form.address} onChange={e => setForm({...form, address: e.target.value})} />
-              </div>
-              <div>
-                <Label className="text-xs">Notes</Label>
-                <Input value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} />
-              </div>
-              <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-                {createMutation.isPending ? "Creating..." : "Create Customer"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <Button type="submit" className="w-full" disabled={createMutation.isPending}>
+                  {createMutation.isPending ? "Creating..." : "Create Customer"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* AR Summary Bar */}
@@ -704,6 +743,88 @@ export default function Customers() {
           </div>
         )}
       </div>
+
+      {/* Edit / Delete Customers Sheet */}
+      <Sheet open={editModeOpen} onOpenChange={open => { setEditModeOpen(open); if (!open) { setSelectedIds(new Set()); setDeleteConfirm(false); } }}>
+        <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0">
+          <SheetHeader className="px-5 pt-5 pb-3 border-b">
+            <SheetTitle className="flex items-center gap-2">
+              <Trash2 className="w-4 h-4 text-destructive" /> Delete Customers
+            </SheetTitle>
+            <p className="text-xs text-muted-foreground">Select customers to delete, then confirm.</p>
+          </SheetHeader>
+
+          {/* Select All */}
+          <div className="flex items-center gap-3 px-5 py-3 border-b bg-muted/30">
+            <Checkbox
+              checked={filtered.length > 0 && selectedIds.size === filtered.length}
+              onCheckedChange={toggleSelectAll}
+              id="select-all"
+            />
+            <label htmlFor="select-all" className="text-sm font-medium cursor-pointer select-none">
+              Select All ({filtered.length})
+            </label>
+            {selectedIds.size > 0 && (
+              <span className="ml-auto text-xs text-muted-foreground">{selectedIds.size} selected</span>
+            )}
+          </div>
+
+          {/* Customer list */}
+          <div className="flex-1 overflow-y-auto divide-y">
+            {filtered.map(customer => (
+              <div
+                key={customer.id}
+                className={`flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-muted/30 transition-colors ${selectedIds.has(customer.id) ? "bg-destructive/5" : ""}`}
+                onClick={() => toggleSelect(customer.id)}
+              >
+                <Checkbox
+                  checked={selectedIds.has(customer.id)}
+                  onCheckedChange={() => toggleSelect(customer.id)}
+                  onClick={e => e.stopPropagation()}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{customer.name}</p>
+                  {customer.company && <p className="text-xs text-muted-foreground truncate">{customer.company}</p>}
+                  {customer.email && <p className="text-xs text-muted-foreground truncate">{customer.email}</p>}
+                </div>
+                {customer.type && <TypeBadge type={customer.type} />}
+              </div>
+            ))}
+          </div>
+
+          {/* Footer actions */}
+          <div className="px-5 py-4 border-t bg-background">
+            {!deleteConfirm ? (
+              <Button
+                variant="destructive"
+                className="w-full gap-2"
+                disabled={selectedIds.size === 0}
+                onClick={() => setDeleteConfirm(true)}
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete {selectedIds.size > 0 ? `${selectedIds.size} Customer${selectedIds.size > 1 ? "s" : ""}` : "Selected"}
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-destructive font-medium text-center">
+                  Are you sure? This will permanently delete {selectedIds.size} customer{selectedIds.size > 1 ? "s" : ""}.
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => setDeleteConfirm(false)}>Cancel</Button>
+                  <Button
+                    variant="destructive"
+                    className="flex-1"
+                    disabled={deleteMutation.isPending}
+                    onClick={() => deleteMutation.mutate([...selectedIds])}
+                  >
+                    {deleteMutation.isPending ? "Deleting…" : "Confirm Delete"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
