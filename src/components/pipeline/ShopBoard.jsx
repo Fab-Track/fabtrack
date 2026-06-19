@@ -2,17 +2,30 @@ import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { SHOP_STAGES, SHOP_COLORS, daysInStage, buildStageTransition } from "@/lib/pipelineHelpers";
+import { SHOP_STAGES, SHOP_COLORS, daysInStage, buildStageTransition, SALES_STAGES, BILLING_STAGES } from "@/lib/pipelineHelpers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { Clock, CalendarDays, Paintbrush, Users } from "lucide-react";
+import { Clock, CalendarDays, Paintbrush, Users, MoreHorizontal, Archive, Trash2, ArrowRightLeft } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import StageTransitionDialog from "./StageTransitionDialog";
+import DeleteJobModal from "@/components/jobs/DeleteJobModal";
+import { useAuth } from "@/lib/AuthContext";
+import { useEffectiveRole } from "@/lib/PreviewRoleContext";
+import { toast } from "sonner";
 import { format, parseISO, isValid } from "date-fns";
+
+const FLOWS = { Sales: SALES_STAGES, Shop: SHOP_STAGES, Billing: BILLING_STAGES };
 
 // ── Shop Card ──────────────────────────────────────────────────────────────────
 function ShopCard({ job, isDragging, onComplete, readOnly = false }) {
   const navigate = useNavigate();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const effectiveRole = useEffectiveRole(user?.role || "admin");
+  const role = effectiveRole.toLowerCase();
+  const canManage = role === "owner" || role === "admin";
   const days = daysInStage(job);
   const isStale = days > 5;
   const installDate = job.promised_install_date && isValid(parseISO(job.promised_install_date))
@@ -21,14 +34,86 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false }) {
       ? format(parseISO(job.expected_install_date), "MMM d")
       : null;
 
+  const archiveMutation = useMutation({
+    mutationFn: () => base44.entities.Job.update(job.id, { is_archived: true, archived_at: new Date().toISOString() }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["jobs"] }); toast.success("Job archived"); },
+    onError: (err) => toast.error(err?.message || "Failed to archive"),
+  });
+
+  const moveMutation = useMutation({
+    mutationFn: ({ toBoard, toStage }) => {
+      const payload = buildStageTransition(job, toBoard, toStage);
+      return base44.entities.Job.update(job.id, payload);
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["jobs"] }); toast.success("Job moved"); },
+    onError: (err) => toast.error(err?.message || "Failed to move job"),
+  });
+
   return (
+    <>
     <div
       className={`bg-card rounded-lg border p-3 hover:shadow-md transition-all ${isDragging ? "shadow-lg ring-2 ring-accent/50" : ""}`}
       onClick={() => navigate(`/jobs/${job.id}`)}
     >
       <div className="flex items-start justify-between mb-1">
         <span className="text-[10px] font-mono text-muted-foreground">{job.job_number}</span>
-        {job.job_type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.job_type}</Badge>}
+        <div className="flex items-center gap-1">
+          {job.job_type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.job_type}</Badge>}
+          {canManage && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="p-0.5 rounded hover:bg-muted text-muted-foreground ml-1"
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); }}
+                >
+                  <MoreHorizontal className="w-3.5 h-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="text-sm gap-2">
+                    <ArrowRightLeft className="w-3.5 h-3.5" /> Move to...
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent className="w-48">
+                      {Object.entries(FLOWS).map(([board, stages]) => (
+                        <DropdownMenuSub key={board}>
+                          <DropdownMenuSubTrigger className="text-sm">{board} Flow</DropdownMenuSubTrigger>
+                          <DropdownMenuPortal>
+                            <DropdownMenuSubContent className="w-56 max-h-64 overflow-y-auto">
+                              {stages.map(stage => (
+                                <DropdownMenuItem
+                                  key={stage}
+                                  className="text-sm"
+                                  onClick={e => { e.preventDefault(); e.stopPropagation(); moveMutation.mutate({ toBoard: board, toStage: stage }); }}
+                                >
+                                  {stage}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuPortal>
+                        </DropdownMenuSub>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-sm gap-2"
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); archiveMutation.mutate(); }}
+                >
+                  <Archive className="w-3.5 h-3.5" /> Archive
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-sm gap-2 text-destructive focus:text-destructive"
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }}
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
       <Link to={`/jobs/${job.id}`}>
         <h4 className="text-sm font-semibold leading-tight mb-0.5 line-clamp-2 hover:text-accent transition-colors">{job.job_name}</h4>
@@ -77,6 +162,14 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false }) {
         </Button>
       )}
     </div>
+
+    <DeleteJobModal
+      open={deleteOpen}
+      onClose={() => setDeleteOpen(false)}
+      job={job}
+      onDeleted={() => setDeleteOpen(false)}
+    />
+    </>
   );
 }
 
