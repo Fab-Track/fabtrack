@@ -33,30 +33,34 @@ export default function NewMessageDialog({ onClose, onCreated, currentUser }) {
   const handleSelectUser = async (otherUser) => {
     if (saving) return;
     setSaving(true);
-    const dmName = `dm-${[currentUser.id, otherUser.id].sort().join("-")}`;
-    const existing = await base44.entities.MessageChannel.filter({ name: dmName });
-    let channel;
-    if (existing.length > 0) {
-      channel = existing[0];
-    } else {
-      channel = await base44.entities.MessageChannel.create({
-        name: dmName,
-        display_name: `${currentUser.full_name} & ${otherUser.full_name}`,
-        channel_type: "dm",
-        member_ids: [currentUser.id, otherUser.id],
-        description: JSON.stringify({
-          participants: [
-            { id: currentUser.id, name: currentUser.full_name },
-            { id: otherUser.id, name: otherUser.full_name },
-          ],
-        }),
-        sort_order: 100,
-      });
+    try {
+      const dmName = `dm-${[currentUser.id, otherUser.id].sort().join("-")}`;
+      const existing = await base44.entities.MessageChannel.filter({ name: dmName });
+      let channel;
+      if (existing.length > 0) {
+        channel = existing[0];
+      } else {
+        channel = await base44.entities.MessageChannel.create({
+          name: dmName,
+          display_name: `${currentUser.full_name} & ${otherUser.full_name || otherUser.email}`,
+          channel_type: "dm",
+          organization_id: currentUser.organization_id,
+          member_ids: [currentUser.id, otherUser.id],
+          description: JSON.stringify({
+            participants: [
+              { id: currentUser.id, name: currentUser.full_name },
+              { id: otherUser.id, name: otherUser.full_name || otherUser.email },
+            ],
+          }),
+          sort_order: 100,
+        });
+      }
+      qc.invalidateQueries({ queryKey: ["channels"] });
+      onCreated?.(channel);
+      onClose();
+    } finally {
+      setSaving(false);
     }
-    qc.invalidateQueries({ queryKey: ["channels"] });
-    setSaving(false);
-    onCreated?.(channel);
-    onClose();
   };
 
   const handleCreateChannel = async () => {
