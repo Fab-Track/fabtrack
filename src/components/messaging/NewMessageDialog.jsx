@@ -86,6 +86,7 @@ export default function NewMessageDialog({ onClose, onCreated, currentUser }) {
     const slug = "#" + channelName.trim().toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-");
     const memberRoles = channelAccess === "management" ? MANAGEMENT_ROLES : GENERAL_ROLES;
     const channel = await base44.entities.MessageChannel.create({
+      organization_id: currentUser.organization_id,
       name: slug,
       display_name: channelName.trim(),
       description: channelDesc.trim(),

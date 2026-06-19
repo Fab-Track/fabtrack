@@ -31,6 +31,7 @@ Deno.serve(async (req) => {
     const channel = channels[0];
 
     await base44.asServiceRole.entities.Message.create({
+      organization_id: channel.organization_id,
       channel_id: channel.id,
       sender_id: "system",
       sender_name: "FabTrack",

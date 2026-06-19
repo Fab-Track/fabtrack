@@ -37,6 +37,7 @@ Deno.serve(async (req) => {
     for (const ch of channels) {
       // Post final system message
       await base44.asServiceRole.entities.Message.create({
+        organization_id: ch.organization_id,
         channel_id: ch.id,
         content: "✅ Job marked as Paid/Closed — channel archived.",
         sender_id: "system",

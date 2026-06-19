@@ -29,23 +29,23 @@ export default function Messages() {
   const { data: channels = [], isLoading, refetch: refetchChannels } = useQuery({
     queryKey: ["channels", orgFilter],
     queryFn: () => base44.entities.MessageChannel.filter(orgFilter, "sort_order", 200),
-    refetchInterval: 15000,
+    refetchInterval: 5000,
   });
 
   const { data: memberships = [] } = useQuery({
-    queryKey: ["memberships", user?.id, orgFilter],
+    queryKey: ["memberships", user?.id, orgFilter, user?.organization_id],
     queryFn: () => base44.entities.ChannelMembership.filter({
       ...orgFilter,
       user_id: user?.id || user?.email,
     }),
     enabled: !!user,
-    refetchInterval: 15000,
+    refetchInterval: 5000, // Faster refresh for real-time unread badges
   });
 
   const { data: allMessages = [] } = useQuery({
     queryKey: ["messages-unread", orgFilter],
     queryFn: () => base44.entities.Message.filter(orgFilter, "-created_date", 500),
-    refetchInterval: 15000,
+    refetchInterval: 5000,
   });
 
   // Compute unread counts per channel
@@ -75,27 +75,33 @@ export default function Messages() {
 
   const handleMarkRead = async (channelId) => {
     const uid = user?.id || user?.email;
-    if (!uid) return;
+    const orgId = user?.organization_id;
+    if (!uid || !orgId) return;
     const existing = await base44.entities.ChannelMembership.filter({
       channel_id: channelId,
       user_id: uid,
+      organization_id: orgId,
     });
+    const now = new Date().toISOString();
     if (existing.length > 0) {
       await base44.entities.ChannelMembership.update(existing[0].id, {
-        last_read_at: new Date().toISOString(),
+        last_read_at: now,
       });
     } else {
       await base44.entities.ChannelMembership.create({
+        organization_id: orgId,
         channel_id: channelId,
         user_id: uid,
         user_email: user?.email,
         user_name: user?.full_name || user?.email,
         user_role: user?.role,
-        last_read_at: new Date().toISOString(),
+        last_read_at: now,
       });
     }
     qc.invalidateQueries({ queryKey: ["memberships"] });
     qc.invalidateQueries({ queryKey: ["messages-unread"] });
+    qc.invalidateQueries({ queryKey: ["messages-sidebar-unread"] });
+    qc.invalidateQueries({ queryKey: ["channels"] });
   };
 
   const handleChannelUpdated = () => {

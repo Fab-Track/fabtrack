@@ -37,7 +37,9 @@ Deno.serve(async (req) => {
     if (job.assigned_estimator) memberIds.push(job.assigned_estimator);
     if (job.assigned_crew?.length) memberIds.push(...job.assigned_crew);
 
+    const orgId = job.organization_id;
     const channel = await base44.asServiceRole.entities.MessageChannel.create({
+      organization_id: orgId,
       name: slug,
       display_name: displayName,
       description: `Job channel for ${job.job_number} — ${job.job_name}`,
@@ -53,6 +55,7 @@ Deno.serve(async (req) => {
 
     // Post system message
     await base44.asServiceRole.entities.Message.create({
+      organization_id: orgId,
       channel_id: channel.id,
       sender_id: "system",
       sender_name: "FabTrack",

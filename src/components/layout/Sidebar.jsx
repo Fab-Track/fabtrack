@@ -225,25 +225,25 @@ export default function Sidebar() {
   const { data: channels = [] } = useQuery({
     queryKey: ["channels"],
     queryFn: () => base44.entities.MessageChannel.list("sort_order", 200),
-    refetchInterval: 30000,
+    refetchInterval: 10000,
     enabled: !!user,
   });
   const { data: memberships = [] } = useQuery({
     queryKey: ["memberships", user?.id],
-    queryFn: () => base44.entities.ChannelMembership.filter({ user_id: user?.id || user?.email }),
-    refetchInterval: 30000,
+    queryFn: () => base44.entities.ChannelMembership.filter({ user_id: user?.id || user?.email, organization_id: user?.organization_id }),
+    refetchInterval: 10000,
     enabled: !!user,
   });
   const { data: recentMessages = [] } = useQuery({
     queryKey: ["messages-sidebar-unread"],
     queryFn: () => base44.entities.Message.list("-created_date", 300),
-    refetchInterval: 30000,
+    refetchInterval: 10000,
     enabled: !!user,
   });
   const { data: customerMessages = [] } = useQuery({
     queryKey: ["commMessages-sidebar-unread"],
     queryFn: () => base44.entities.CommMessage.list("-created_date", 200),
-    refetchInterval: 30000,
+    refetchInterval: 10000,
     enabled: !!user,
   });
   const userId = user?.id || user?.email || "";

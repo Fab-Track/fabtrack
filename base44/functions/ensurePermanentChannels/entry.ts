@@ -42,7 +42,10 @@ Deno.serve(async (req) => {
     const created = [];
     for (const ch of PERMANENT_CHANNELS) {
       if (!existingNames.has(ch.name)) {
-        await base44.asServiceRole.entities.MessageChannel.create(ch);
+        await base44.asServiceRole.entities.MessageChannel.create({
+          ...ch,
+          organization_id: user.organization_id,
+        });
         created.push(ch.name);
       }
     }

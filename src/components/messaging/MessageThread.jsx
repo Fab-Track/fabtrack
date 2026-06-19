@@ -28,35 +28,41 @@ export default function MessageThread({ channel, currentUser, onBack, isMobile, 
     refetchInterval: 5000,
   });
 
-  // Mark read when thread opens
+  // Mark read when thread opens AND when new messages arrive while viewing
   useEffect(() => {
     if (!channel?.id || !currentUser) return;
     const markRead = async () => {
+      const orgId = currentUser?.organization_id || channel.organization_id;
+      const uid = currentUser?.id || currentUser?.email;
       const existing = await base44.entities.ChannelMembership.filter({
         channel_id: channel.id,
-        user_id: currentUser.id || currentUser.email,
+        user_id: uid,
+        organization_id: orgId,
       });
+      const now = new Date().toISOString();
       if (existing.length > 0) {
         await base44.entities.ChannelMembership.update(existing[0].id, {
-          last_read_at: new Date().toISOString(),
+          last_read_at: now,
         });
       } else {
         await base44.entities.ChannelMembership.create({
+          organization_id: orgId,
           channel_id: channel.id,
-          user_id: currentUser.id || currentUser.email,
-          user_email: currentUser.email,
-          user_name: currentUser.full_name || currentUser.email,
-          user_role: currentUser.role,
-          last_read_at: new Date().toISOString(),
+          user_id: uid,
+          user_email: currentUser?.email,
+          user_name: currentUser?.full_name || currentUser?.email,
+          user_role: currentUser?.role,
+          last_read_at: now,
         });
       }
       // Invalidate all membership + message queries so badges clear immediately everywhere
       queryClient.invalidateQueries({ queryKey: ["memberships"] });
       queryClient.invalidateQueries({ queryKey: ["messages-unread"] });
       queryClient.invalidateQueries({ queryKey: ["messages-sidebar-unread"] });
+      queryClient.invalidateQueries({ queryKey: ["channels"] });
     };
-    markRead().catch(() => {});
-  }, [channel?.id, currentUser]);
+    markRead();
+  }, [channel?.id, currentUser, messages.length]);
 
   // Smart auto-scroll: only scroll down if user is already near the bottom
   useEffect(() => {
