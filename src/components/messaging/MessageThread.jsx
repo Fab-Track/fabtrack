@@ -25,7 +25,7 @@ export default function MessageThread({ channel, currentUser, onBack, isMobile, 
     queryKey,
     queryFn: () => base44.entities.Message.filter({ channel_id: channel.id }, "created_date", 200),
     enabled: !!channel?.id,
-    refetchInterval: 5000,
+    refetchInterval: 15000,
   });
 
   const lastMarkReadRef = useRef(0);

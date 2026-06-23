@@ -29,7 +29,7 @@ export default function Messages() {
   const { data: channels = [], isLoading, refetch: refetchChannels } = useQuery({
     queryKey: ["channels", orgFilter],
     queryFn: () => base44.entities.MessageChannel.filter(orgFilter, "sort_order", 200),
-    refetchInterval: 5000,
+    refetchInterval: 15000,
   });
 
   const { data: memberships = [] } = useQuery({
@@ -39,13 +39,13 @@ export default function Messages() {
       user_id: user?.id || user?.email,
     }),
     enabled: !!user,
-    refetchInterval: 5000, // Faster refresh for real-time unread badges
+    refetchInterval: 15000,
   });
 
   const { data: allMessages = [] } = useQuery({
     queryKey: ["messages-unread", orgFilter],
     queryFn: () => base44.entities.Message.filter(orgFilter, "-created_date", 500),
-    refetchInterval: 5000,
+    refetchInterval: 15000,
   });
 
   // Compute unread counts per channel
