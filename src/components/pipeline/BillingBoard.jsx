@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link, useNavigate } from "react-router-dom";
 import { differenceInDays, parseISO, isValid } from "date-fns";
-import { DollarSign, Send, CheckCircle2, AlertCircle } from "lucide-react";
+import { DollarSign, Send, CheckCircle2, AlertCircle, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import DeleteJobModal from "@/components/jobs/DeleteJobModal";
+import { useAuth } from "@/lib/AuthContext";
+import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 
 // ── Summary bar ────────────────────────────────────────────────────────────────
 function BillingSummary({ jobs, invoiceMap }) {
@@ -54,7 +58,7 @@ function BillingSummary({ jobs, invoiceMap }) {
 }
 
 // ── Billing Card ───────────────────────────────────────────────────────────────
-function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder }) {
+function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder, onDeleteJob, canDelete }) {
   const navigate = useNavigate();
   const days = job.invoice_sent_date && isValid(parseISO(job.invoice_sent_date))
     ? differenceInDays(new Date(), parseISO(job.invoice_sent_date))
@@ -70,11 +74,30 @@ function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder }) {
     >
       <div className="flex items-start justify-between mb-1">
         <span className="text-[10px] font-mono text-muted-foreground">{job.job_number}</span>
-        {isOverdue && (
-          <span className={`text-xs font-bold ${days >= 30 ? "text-red-700" : days >= 20 ? "text-orange-600" : "text-yellow-700"}`}>
-            {days}d overdue
-          </span>
-        )}
+        <div className="flex items-center gap-1">
+          {isOverdue && (
+            <span className={`text-xs font-bold ${days >= 30 ? "text-red-700" : days >= 20 ? "text-orange-600" : "text-yellow-700"}`}>
+              {days}d overdue
+            </span>
+          )}
+          {canDelete && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="p-0.5 rounded hover:bg-black/5 text-muted-foreground" onClick={e => { e.preventDefault(); e.stopPropagation(); }} onMouseDown={e => e.stopPropagation()}>
+                  <MoreHorizontal className="w-3.5 h-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="text-sm">
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); onDeleteJob(job); }}
+                >
+                  Delete Job
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
       <Link to={`/jobs/${job.id}?from=billing`}>
         <h4 className="text-sm font-semibold leading-tight mb-0.5 line-clamp-1 hover:text-accent transition-colors">{job.job_name}</h4>
@@ -118,6 +141,12 @@ function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder }) {
 // ── Billing Board ──────────────────────────────────────────────────────────────
 export default function BillingBoard({ jobs = [], readOnly = false }) {
   const qc = useQueryClient();
+  const [deletingJob, setDeletingJob] = useState(null);
+  const { user } = useAuth();
+  const effectiveRole = useEffectiveRole(user?.role || "admin");
+  const isOwner = effectiveRole.toLowerCase() === "owner";
+  const isAdmin = effectiveRole.toLowerCase() === "admin";
+  const canDelete = isOwner || isAdmin;
 
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices-global"],
@@ -196,6 +225,8 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
                           invoice={invoiceMap[job.second_half_invoice_id]}
                           onMarkPaid={handleMarkPaid}
                           onSendReminder={handleSendReminder}
+                          onDeleteJob={setDeletingJob}
+                          canDelete={canDelete}
                         />
                       </div>
                     )}
@@ -216,6 +247,13 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
       <DragDropContext onDragEnd={readOnly ? () => {} : handleDragEnd}>
         {columnContent}
       </DragDropContext>
+
+      <DeleteJobModal
+        open={!!deletingJob}
+        onClose={() => setDeletingJob(null)}
+        job={deletingJob}
+        onDeleted={() => setDeletingJob(null)}
+      />
     </>
   );
 }
