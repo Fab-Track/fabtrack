@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole, usePreviewRole } from "@/lib/PreviewRoleContext";
 import { useImpersonation, canImpersonate } from "@/lib/ImpersonationContext";
 import { getUserRoles } from "@/lib/roleHelpers";
+import { canAccessChannel } from "@/lib/messagingHelpers";
 import PreviewRoleSelector from "./PreviewRoleSelector";
 import NotificationBell from "./NotificationBell";
 import ReportProblemModal from "@/components/super-admin/ReportProblemModal";
@@ -247,11 +248,18 @@ export default function Sidebar() {
     enabled: !!user,
   });
   const userId = user?.id || user?.email || "";
+  const userRole = user?.role || "user";
+  const userEmail = user?.email || "";
   const internalUnread = channels.reduce((acc, ch) => {
+    // Only count channels the user can actually see in the list — matches Messages page
+    if (ch.is_archived) return acc;
+    if (!canAccessChannel(ch, userRole, userId, userEmail)) return acc;
     const membership = memberships.find(m => m.channel_id === ch.id);
     const lastRead = membership?.last_read_at ? new Date(membership.last_read_at) : new Date(0);
     const unread = recentMessages.filter(m =>
-      m.channel_id === ch.id && new Date(m.created_date) > lastRead && m.sender_id !== userId
+      m.channel_id === ch.id &&
+      new Date(m.created_date) > lastRead &&
+      m.sender_id !== userId
     ).length;
     return acc + unread;
   }, 0);
