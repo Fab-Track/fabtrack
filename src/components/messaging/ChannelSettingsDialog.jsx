@@ -6,7 +6,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Separator } from "@/components/ui/separator";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Archive, ArchiveRestore, Trash2, CheckCheck } from "lucide-react";
+import { Archive, ArchiveRestore, Trash2, CheckCheck, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const PREFS = [
   { value: "all", label: "All Messages", desc: "Get notified for every message" },
@@ -17,6 +18,7 @@ const PREFS = [
 export default function ChannelSettingsDialog({ channel, currentUser, onClose, onChannelUpdated }) {
   const [pref, setPref] = useState("all");
   const [saving, setSaving] = useState(false);
+  const [markingRead, setMarkingRead] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const queryClient = useQueryClient();
 
@@ -24,55 +26,71 @@ export default function ChannelSettingsDialog({ channel, currentUser, onClose, o
   const isArchived = channel?.is_archived;
   const isPermanent = channel?.is_permanent;
   const isJobChannel = channel?.channel_type === "job";
+  const orgId = currentUser?.organization_id;
 
   const handleSavePrefs = async () => {
     setSaving(true);
     const uid = currentUser?.id || currentUser?.email;
-    const existing = await base44.entities.ChannelMembership.filter({
-      channel_id: channel.id,
-      user_id: uid,
-    });
-    if (existing.length > 0) {
-      await base44.entities.ChannelMembership.update(existing[0].id, { notification_pref: pref });
-    } else {
-      await base44.entities.ChannelMembership.create({
+    try {
+      const existing = await base44.entities.ChannelMembership.filter({
         channel_id: channel.id,
         user_id: uid,
-        user_email: currentUser?.email,
-        user_name: currentUser?.full_name || currentUser?.email,
-        user_role: currentUser?.role,
-        notification_pref: pref,
       });
+      if (existing.length > 0) {
+        await base44.entities.ChannelMembership.update(existing[0].id, { notification_pref: pref });
+      } else {
+        await base44.entities.ChannelMembership.create({
+          channel_id: channel.id,
+          user_id: uid,
+          organization_id: orgId,
+          user_email: currentUser?.email,
+          user_name: currentUser?.full_name || currentUser?.email,
+          user_role: currentUser?.role,
+          notification_pref: pref,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["memberships"] });
+      toast.success("Preferences saved");
+      onClose();
+    } catch (err) {
+      toast.error(err?.message || "Failed to save preferences");
+    } finally {
+      setSaving(false);
     }
-    queryClient.invalidateQueries({ queryKey: ["memberships"] });
-    setSaving(false);
-    onClose();
   };
 
   const handleMarkAllRead = async () => {
-    setSaving(true);
+    setMarkingRead(true);
     const uid = currentUser?.id || currentUser?.email;
-    const existing = await base44.entities.ChannelMembership.filter({
-      channel_id: channel.id,
-      user_id: uid,
-    });
-    if (existing.length > 0) {
-      await base44.entities.ChannelMembership.update(existing[0].id, {
-        last_read_at: new Date().toISOString(),
-      });
-    } else {
-      await base44.entities.ChannelMembership.create({
+    try {
+      const existing = await base44.entities.ChannelMembership.filter({
         channel_id: channel.id,
         user_id: uid,
-        user_email: currentUser?.email,
-        user_name: currentUser?.full_name || currentUser?.email,
-        user_role: currentUser?.role,
-        last_read_at: new Date().toISOString(),
       });
+      if (existing.length > 0) {
+        await base44.entities.ChannelMembership.update(existing[0].id, {
+          last_read_at: new Date().toISOString(),
+        });
+      } else {
+        await base44.entities.ChannelMembership.create({
+          channel_id: channel.id,
+          user_id: uid,
+          organization_id: orgId,
+          user_email: currentUser?.email,
+          user_name: currentUser?.full_name || currentUser?.email,
+          user_role: currentUser?.role,
+          last_read_at: new Date().toISOString(),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["memberships"] });
+      queryClient.invalidateQueries({ queryKey: ["messages-unread"] });
+      queryClient.invalidateQueries({ queryKey: ["messages", channel.id] });
+      toast.success("Marked all as read");
+    } catch (err) {
+      toast.error(err?.message || "Failed to mark as read");
+    } finally {
+      setMarkingRead(false);
     }
-    queryClient.invalidateQueries({ queryKey: ["memberships"] });
-    queryClient.invalidateQueries({ queryKey: ["messages-unread"] });
-    setSaving(false);
   };
 
   const handleToggleArchive = async () => {
@@ -161,10 +179,10 @@ export default function ChannelSettingsDialog({ channel, currentUser, onClose, o
                 size="sm"
                 className="w-full justify-start gap-2"
                 onClick={handleMarkAllRead}
-                disabled={saving}
+                disabled={markingRead || saving}
               >
-                <CheckCheck className="w-4 h-4" />
-                Mark All as Read
+                {markingRead ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCheck className="w-4 h-4" />}
+                {markingRead ? "Marking…" : "Mark All as Read"}
               </Button>
             </div>
 
