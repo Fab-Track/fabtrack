@@ -25,7 +25,7 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false }) {
   const qc = useQueryClient();
   const effectiveRole = useEffectiveRole(user?.role || "admin");
   const role = effectiveRole.toLowerCase();
-  const canManage = role === "owner" || role === "admin";
+  const canManage = role === "owner" || role === "admin" || role === "estimator";
   const days = daysInStage(job);
   const isStale = days > 5;
   const installDate = job.promised_install_date && isValid(parseISO(job.promised_install_date))

@@ -144,9 +144,7 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
   const [deletingJob, setDeletingJob] = useState(null);
   const { user } = useAuth();
   const effectiveRole = useEffectiveRole(user?.role || "admin");
-  const isOwner = effectiveRole.toLowerCase() === "owner";
-  const isAdmin = effectiveRole.toLowerCase() === "admin";
-  const canDelete = isOwner || isAdmin;
+  const canDelete = ["owner", "admin", "estimator"].includes(effectiveRole.toLowerCase());
 
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices-global"],
