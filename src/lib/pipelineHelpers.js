@@ -112,6 +112,22 @@ export const BILLING_CARD_BG = {
   "Paid / Closed":                  "bg-emerald-50",
 };
 
+// ── Derive which board a job belongs to ────────────────────────────────────────
+export function getBoardForJob(job) {
+  if (!job) return "Sales";
+  if (job.pipeline_board) return job.pipeline_board;
+  if (job.stage) {
+    if (SHOP_STAGES.includes(job.stage)) return "Shop";
+    if (BILLING_STAGES.includes(job.stage)) return "Billing";
+    if (SALES_STAGES.includes(job.stage)) return "Sales";
+  }
+  if (job.status) {
+    if (["Fab Queue", "In Fabrication", "Powder Coat", "Install Scheduled", "Install Complete"].includes(job.status)) return "Shop";
+    if (job.status === "Invoiced") return "Billing";
+  }
+  return "Sales";
+}
+
 // ── Days in stage ──────────────────────────────────────────────────────────────
 export function daysInStage(job) {
   if (!job.stage_entered_at) return 0;

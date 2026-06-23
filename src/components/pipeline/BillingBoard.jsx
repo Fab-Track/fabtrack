@@ -70,7 +70,7 @@ function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder, onD
   return (
     <div
       className={`${bg} rounded-lg border p-3 hover:shadow-md transition-all ${isDragging ? "shadow-lg ring-2 ring-accent/50" : ""}`}
-      onClick={() => navigate(`/jobs/${job.id}?from=billing`)}
+      onClick={() => navigate(`/jobs/${job.id}?board=Billing`)}
     >
       <div className="flex items-start justify-between mb-1">
         <span className="text-[10px] font-mono text-muted-foreground">{job.job_number}</span>
@@ -99,7 +99,7 @@ function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder, onD
           )}
         </div>
       </div>
-      <Link to={`/jobs/${job.id}?from=billing`}>
+      <Link to={`/jobs/${job.id}?board=Billing`}>
         <h4 className="text-sm font-semibold leading-tight mb-0.5 line-clamp-1 hover:text-accent transition-colors">{job.job_name}</h4>
       </Link>
       <p className="text-xs text-muted-foreground mb-2">{job.customer_name}</p>

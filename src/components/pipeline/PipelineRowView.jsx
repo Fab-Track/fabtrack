@@ -99,7 +99,7 @@ function PipelineJobRow({ job, index, board }) {
           {/* Job Name */}
           <div className="flex-1 min-w-0 pr-4">
             <Link
-              to={`/jobs/${job.id}`}
+              to={`/jobs/${job.id}?board=${board}`}
               className="text-sm font-medium hover:text-accent transition-colors line-clamp-1"
               onClick={e => e.stopPropagation()}
             >

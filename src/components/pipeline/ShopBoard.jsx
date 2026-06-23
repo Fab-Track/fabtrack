@@ -53,7 +53,7 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false }) {
     <>
     <div
       className={`bg-card rounded-lg border p-3 hover:shadow-md transition-all ${isDragging ? "shadow-lg ring-2 ring-accent/50" : ""}`}
-      onClick={() => navigate(`/jobs/${job.id}`)}
+      onClick={() => navigate(`/jobs/${job.id}?board=Shop`)}
     >
       <div className="flex items-start justify-between mb-1">
         <span className="text-[10px] font-mono text-muted-foreground">{job.job_number}</span>
@@ -115,7 +115,7 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false }) {
           )}
         </div>
       </div>
-      <Link to={`/jobs/${job.id}`}>
+      <Link to={`/jobs/${job.id}?board=Shop`}>
         <h4 className="text-sm font-semibold leading-tight mb-0.5 line-clamp-2 hover:text-accent transition-colors">{job.job_name}</h4>
       </Link>
       <p className="text-xs text-muted-foreground mb-2">{job.customer_name}</p>

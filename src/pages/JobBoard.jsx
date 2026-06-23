@@ -20,7 +20,7 @@ import { Plus, Filter, TrendingUp, Wrench, DollarSign, LayoutGrid, List, Archive
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO } from "date-fns";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 const BOARD_ICONS = {
   Sales:   TrendingUp,
@@ -48,9 +48,17 @@ export default function JobBoard() {
 
   const queryClient = useQueryClient();
   const orgFilter = useOrgFilter();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
-    setActiveBoard(getDefaultBoard(effectiveRole));
+    const boardParam = searchParams.get("board");
+    const allowed = getBoardsForRole(effectiveRole);
+    if (boardParam && allowed.includes(boardParam)) {
+      setActiveBoard(boardParam);
+    } else {
+      setActiveBoard(getDefaultBoard(effectiveRole));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveRole]);
 
   const [showArchived, setShowArchived] = useState(false);
@@ -177,7 +185,10 @@ export default function JobBoard() {
           return (
             <button
               key={board}
-              onClick={() => setActiveBoard(board)}
+              onClick={() => {
+                setActiveBoard(board);
+                setSearchParams(board !== getDefaultBoard(effectiveRole) ? { board } : {}, { replace: true });
+              }}
               className={`flex items-center gap-1.5 px-3 md:px-4 py-2.5 text-xs md:text-sm font-medium border-b-2 transition-all -mb-px whitespace-nowrap min-h-[44px] ${
                 isActive
                   ? `border-primary text-foreground ${BOARD_COLORS[board]}`

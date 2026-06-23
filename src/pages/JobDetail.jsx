@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { STATUS_COLORS, getJobHealth, getHealthDot } from "@/lib/jobHelpers";
+import { getBoardForJob } from "@/lib/pipelineHelpers";
 import { format, parseISO } from "date-fns";
 import { ArrowLeft, CalendarDays, MapPin, Paintbrush, Send, MoreHorizontal, Trash2 } from "lucide-react";
 import JobCustomerPanel from "@/components/jobs/JobCustomerPanel";
@@ -53,7 +54,7 @@ export default function JobDetail() {
   const navigate = useNavigate();
   const fromParam = searchParams.get("from");
   const fromSchedule = fromParam === "schedule";
-  const fromBilling = fromParam === "billing";
+  const boardParam = searchParams.get("board");
 
   const jobId = window.location.pathname.split("/jobs/")[1]?.split("?")[0];
 
@@ -104,6 +105,10 @@ export default function JobDetail() {
   const health = getJobHealth(job);
   const canDeleteJob = isOwner || (isEstimator && job?.stage && ["New Lead", "Estimate In Progress"].includes(job?.stage));
 
+  // Determine which board tab to return to
+  const returnBoard = boardParam || getBoardForJob(job);
+  const backTo = fromSchedule ? "/schedule" : `/jobs?board=${returnBoard}`;
+
   const isShopRole = ["fabricator", "design_specialist"].includes(effectiveRole.toLowerCase());
 
   // Fabricator / Design Specialist see only these tabs in this order
@@ -117,11 +122,11 @@ export default function JobDetail() {
     <div className="p-4 md:p-6 max-w-[1200px] mx-auto">
       {/* Back link */}
       <Link
-        to={fromSchedule ? "/schedule" : "/jobs"}
+        to={backTo}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"
       >
         <ArrowLeft className="w-4 h-4" />
-        {fromSchedule ? "Back to Schedule" : fromBilling ? "Back to Job Board" : "Back to Job Board"}
+        {fromSchedule ? "Back to Schedule" : "Back to Job Board"}
       </Link>
 
       {/* Header */}
@@ -278,7 +283,7 @@ export default function JobDetail() {
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
         job={job}
-        onDeleted={() => navigate("/jobs")}
+        onDeleted={() => navigate(`/jobs?board=${returnBoard}`)}
       />
     </div>
   );
