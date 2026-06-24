@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Kanban, Wrench, Clock,
   FileText, CalendarDays, Calendar, Users, Package,
   Trophy, ChevronLeft, ChevronRight,
-  Building2, Settings, Menu, X, BarChart2, MessageCircle, MessagesSquare, LogOut, Bug
+  Building2, Settings, Menu, X, BarChart2, MessageCircle, MessagesSquare, LogOut, Bug, Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -37,6 +37,7 @@ const ALL_ITEMS = {
   myTimesheet:    { label: "My Timesheet",     icon: Clock,           path: "/my-timesheet" },
   payroll:        { label: "Time & Payroll",   icon: Clock,           path: "/admin-payroll" },
   settings:       { label: "Settings",         icon: Settings,        path: "/settings" },
+  superAdmin:     { label: "Super Admin",      icon: Shield,          path: "/super-admin" },
 };
 
 // ── Role → grouped nav config ───────────────────────────────────────────────
@@ -217,6 +218,7 @@ export default function Sidebar() {
   const userRoles = getUserRoles(user);
   const effectiveRole = useEffectiveRole(userRoles[0] || "user");
   const isOwner = userRoles.some(r => OWNER_ROLES.includes(r));
+  const isSuperAdmin = userRoles.includes("super_admin");
   const userCanImpersonate = canImpersonate(userRoles[0] || "user");
 
   const navGroups = getUnionNavGroups(userRoles);
@@ -323,6 +325,17 @@ export default function Sidebar() {
           </div>
         ))}
       </nav>
+
+      {/* Super Admin — pinned link for platform owners only */}
+      {isSuperAdmin && (
+        <div className="px-2 pb-2 border-t border-sidebar-border/50 pt-2">
+          <NavLink
+            item={ALL_ITEMS["superAdmin"]}
+            collapsed={collapsed}
+            onClick={() => setMobileOpen(false)}
+          />
+        </div>
+      )}
 
       {/* Preview Role + Collapse + Logout — desktop only */}
       <div className="hidden md:block px-2 py-3 border-t border-sidebar-border space-y-1">
