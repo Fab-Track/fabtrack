@@ -14,6 +14,10 @@
       "type": "string",
       "description": "Employee name"
     },
+    "employee_email": {
+      "type": "string",
+      "description": "Employee email \u2014 used for RLS so employees can only read their own entries"
+    },
     "job_id": {
       "type": "string",
       "description": "Job ID (optional for shift-level entries)"
@@ -118,10 +122,142 @@
     "pay_period_label": {
       "type": "string",
       "description": "e.g. 2026-06-01_2026-06-15"
+    },
+    "is_flagged": {
+      "type": "boolean",
+      "default": false,
+      "description": "Auto-flagged for exceeding 12 consecutive hours without clock-out"
+    },
+    "flagged_reason": {
+      "type": "string",
+      "description": "Reason the entry was flagged"
+    },
+    "flagged_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the entry was flagged"
+    },
+    "is_resolved": {
+      "type": "boolean",
+      "default": false,
+      "description": "Admin has reviewed and resolved a flagged entry"
+    },
+    "resolved_by": {
+      "type": "string",
+      "description": "User ID of admin who resolved the flag"
+    },
+    "resolved_by_name": {
+      "type": "string",
+      "description": "Name of admin who resolved the flag"
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the flag was resolved"
+    },
+    "resolution_notes": {
+      "type": "string",
+      "description": "Admin notes explaining the correction"
     }
   },
   "required": [
     "employee_id",
     "organization_id"
-  ]
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "$or": [
+        {
+          "data.employee_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "owner"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "shop_manager"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "foreman"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "payroll"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "super_admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.employee_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "owner"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "shop_manager"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "foreman"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "payroll"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "super_admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "owner"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "super_admin"
+          }
+        }
+      ]
+    }
+  }
 }

@@ -1,19 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Clock, LogIn, LogOut, ArrowLeft, Check, Home } from "lucide-react";
+import { Clock, LogIn, LogOut, ArrowLeft, Check, Home, Coffee, AlertTriangle } from "lucide-react";
 import { formatDistanceToNow, parseISO } from "date-fns";
-import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 
 const WORK_CENTERS = ["Cut", "Fit", "Weld", "Grind", "Powder Coat", "Install", "Demo", "Design"];
 
+function formatElapsed(ms) {
+  if (ms < 0) ms = 0;
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
 export default function ShopKiosk() {
-  const [step, setStep] = useState("select-employee"); // select-employee, enter-pin, select-job, select-center, clocked-in, clock-out-summary
+  const [step, setStep] = useState("select-employee");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [pin, setPin] = useState("");
   const [pinError, setPinError] = useState(false);
@@ -21,6 +28,7 @@ export default function ShopKiosk() {
   const [selectedCenter, setSelectedCenter] = useState(null);
   const [clockOutSummary, setClockOutSummary] = useState(null);
   const [jobSearch, setJobSearch] = useState("");
+  const [actionError, setActionError] = useState("");
   const queryClient = useQueryClient();
   const searchInputRef = useRef(null);
 
@@ -34,47 +42,74 @@ export default function ShopKiosk() {
     queryFn: () => base44.entities.Job.list("-created_date", 200),
   });
 
-  const { data: activeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", "active"],
-    queryFn: () => base44.entities.TimeEntry.filter({ is_active: true }),
-    refetchInterval: 30000,
+  const { data: kioskStatusResp } = useQuery({
+    queryKey: ["kioskStatus"],
+    queryFn: () => base44.functions.invoke("kioskTimeAction", { action: "getStatus" }),
+    refetchInterval: 15000,
   });
+  const activeEntries = kioskStatusResp?.data?.activeEntries || [];
 
+  // ── Mutations (all via backend function) ──────────────────────────────────
   const clockInMutation = useMutation({
-    mutationFn: (data) => base44.entities.TimeEntry.create(data),
+    mutationFn: () => base44.functions.invoke("kioskTimeAction", {
+      action: "clockIn",
+      employee_id: selectedEmployee.id,
+      pin,
+      job_id: selectedJob?.id,
+      job_number: selectedJob?.job_number,
+      work_center: selectedCenter,
+    }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
-      setStep("clocked-in");
+      setActionError("");
+      queryClient.invalidateQueries({ queryKey: ["kioskStatus"] });
+    },
+    onError: (err) => {
+      setActionError(err?.response?.data?.error || err?.message || "Failed to clock in");
     },
   });
 
   const clockOutMutation = useMutation({
-    mutationFn: async (entry) => {
-      const now = new Date();
-      const clockIn = new Date(entry.clock_in);
-      const durationMs = now - clockIn;
-      const duration = durationMs / (1000 * 60 * 60);
-      await base44.entities.TimeEntry.update(entry.id, {
-        clock_out: now.toISOString(),
-        duration_hours: Math.round(duration * 100) / 100,
-        is_active: false,
-      });
-      const totalMins = Math.round(durationMs / 60000);
+    mutationFn: (entryId) => base44.functions.invoke("kioskTimeAction", {
+      action: "clockOut",
+      entry_id: entryId,
+    }),
+    onSuccess: (response) => {
+      setActionError("");
+      queryClient.invalidateQueries({ queryKey: ["kioskStatus"] });
+      const data = response.data;
+      const totalMins = Math.round((data.durationHours || 0) * 60);
       const h = Math.floor(totalMins / 60);
       const m = totalMins % 60;
-      return { entry, timeLabel: h > 0 ? `${h}h ${m}m` : `${m}m` };
-    },
-    onSuccess: ({ entry, timeLabel }) => {
-      queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
       setClockOutSummary({
-        employeeName: entry.employee_name,
-        jobNumber: entry.job_number,
-        jobName: jobs.find(j => j.id === entry.job_id)?.job_name || "",
-        workCenter: entry.work_center,
-        timeLabel,
+        employeeName: selectedEmployee?.name,
+        jobNumber: activeEntry?.job_number || selectedJob?.job_number,
+        jobName: jobs.find(j => j.id === (activeEntry?.job_id || selectedJob?.id))?.job_name || "",
+        workCenter: activeEntry?.work_center || selectedCenter,
+        timeLabel: h > 0 ? `${h}h ${m}m` : `${m}m`,
       });
       setStep("clock-out-summary");
     },
+    onError: (err) => {
+      setActionError(err?.response?.data?.error || err?.message || "Failed to clock out");
+    },
+  });
+
+  const startBreakMutation = useMutation({
+    mutationFn: (entryId) => base44.functions.invoke("kioskTimeAction", {
+      action: "startBreak",
+      entry_id: entryId,
+    }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["kioskStatus"] }),
+    onError: (err) => setActionError(err?.response?.data?.error || err?.message),
+  });
+
+  const endBreakMutation = useMutation({
+    mutationFn: (entryId) => base44.functions.invoke("kioskTimeAction", {
+      action: "endBreak",
+      entry_id: entryId,
+    }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["kioskStatus"] }),
+    onError: (err) => setActionError(err?.response?.data?.error || err?.message),
   });
 
   const reset = () => {
@@ -85,9 +120,9 @@ export default function ShopKiosk() {
     setSelectedJob(null);
     setSelectedCenter(null);
     setJobSearch("");
+    setActionError("");
   };
 
-  // Focus search input when entering job selection screen
   useEffect(() => {
     if (step === "select-job" && searchInputRef.current) {
       searchInputRef.current.focus();
@@ -95,7 +130,7 @@ export default function ShopKiosk() {
   }, [step]);
 
   const activeEmployees = employees.filter(e => e.is_active !== false);
-  const activeEntry = selectedEmployee 
+  const activeEntry = selectedEmployee
     ? activeEntries.find(e => e.employee_id === selectedEmployee.id)
     : null;
   const STAGE_PRIORITY = { "Fab Queue": 0, "In Fabrication": 1 };
@@ -108,7 +143,6 @@ export default function ShopKiosk() {
       return (a.job_number || "").localeCompare(b.job_number || "");
     });
 
-  // Filter jobs by search term
   const searchLower = jobSearch.toLowerCase();
   const filteredJobs = activeJobs.filter(j => {
     if (!searchLower) return true;
@@ -120,9 +154,10 @@ export default function ShopKiosk() {
 
   const handleEmployeeSelect = (emp) => {
     setSelectedEmployee(emp);
+    setActionError("");
     const existing = activeEntries.find(e => e.employee_id === emp.id);
     if (existing) {
-      setStep("clocked-in");
+      setStep("time-dashboard");
     } else {
       setStep("enter-pin");
     }
@@ -137,17 +172,9 @@ export default function ShopKiosk() {
     }
   };
 
-  const handleClockIn = () => {
-    clockInMutation.mutate({
-      employee_id: selectedEmployee.id,
-      employee_name: selectedEmployee.name,
-      job_id: selectedJob.id,
-      job_number: selectedJob.job_number,
-      work_center: selectedCenter,
-      clock_in: new Date().toISOString(),
-      is_active: true,
-      is_manual: false,
-    });
+  const handleWorkCenterSelect = (wc) => {
+    setSelectedCenter(wc);
+    setStep("time-dashboard");
   };
 
   return (
@@ -166,7 +193,7 @@ export default function ShopKiosk() {
             <p className="text-sm opacity-60">Clock In / Clock Out</p>
           </div>
         </div>
-        {step !== "select-employee" && (
+        {step !== "select-employee" && step !== "clock-out-summary" && (
           <Button variant="outline" size="lg" onClick={reset} className="text-foreground border-white/20 bg-white/10 hover:bg-white/20 min-h-[48px]">
             <ArrowLeft className="w-5 h-5 mr-2" /> Start Over
           </Button>
@@ -180,6 +207,7 @@ export default function ShopKiosk() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {activeEmployees.map(emp => {
               const isClocked = activeEntries.some(e => e.employee_id === emp.id);
+              const isOnBreak = activeEntries.some(e => e.employee_id === emp.id && e.is_on_break);
               return (
                 <button
                   key={emp.id}
@@ -189,7 +217,9 @@ export default function ShopKiosk() {
                   <p className="font-bold text-lg">{emp.name}</p>
                   <p className="text-sm opacity-70 capitalize">{emp.role}</p>
                   {isClocked && (
-                    <Badge className="mt-2 bg-white/20 text-white">Clocked In</Badge>
+                    <Badge className="mt-2 bg-white/20 text-white">
+                      {isOnBreak ? <><Coffee className="w-3 h-3 mr-1" />On Break</> : "Clocked In"}
+                    </Badge>
                   )}
                 </button>
               );
@@ -215,17 +245,17 @@ export default function ShopKiosk() {
           />
           {pinError && <p className="text-red-400 text-sm mb-4">Incorrect PIN. Try again.</p>}
           <div className="flex gap-3">
-            <Button 
-              variant="outline" 
-              size="lg" 
+            <Button
+              variant="outline"
+              size="lg"
               onClick={() => { setStep("select-employee"); setPinError(false); setPin(""); }}
               className="flex-1 min-h-[56px] text-lg border-white/20 bg-white/10 hover:bg-white/20 text-foreground"
             >
               <ArrowLeft className="w-5 h-5 mr-2" /> Back
             </Button>
-            <Button 
-              size="lg" 
-              onClick={handlePinSubmit} 
+            <Button
+              size="lg"
+              onClick={handlePinSubmit}
               className="flex-1 min-h-[56px] text-lg bg-accent text-accent-foreground hover:bg-accent/90"
             >
               Continue
@@ -244,7 +274,6 @@ export default function ShopKiosk() {
             </Button>
           </div>
 
-          {/* Search Bar */}
           <div className="mb-6">
             <div className="relative">
               <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50">
@@ -263,7 +292,6 @@ export default function ShopKiosk() {
             </div>
           </div>
 
-          {/* Job Cards or Empty State */}
           {filteredJobs.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {filteredJobs.map(job => (
@@ -304,7 +332,7 @@ export default function ShopKiosk() {
             {WORK_CENTERS.map(wc => (
               <button
                 key={wc}
-                onClick={() => { setSelectedCenter(wc); handleClockIn(); }}
+                onClick={() => handleWorkCenterSelect(wc)}
                 className="p-6 rounded-xl bg-white/10 hover:bg-accent hover:text-accent-foreground text-center transition-all min-h-[80px] font-bold text-lg"
               >
                 {wc}
@@ -314,48 +342,24 @@ export default function ShopKiosk() {
         </div>
       )}
 
-      {/* Step: Clocked In */}
-      {step === "clocked-in" && activeEntry && (
-        <div className="max-w-lg mx-auto text-center">
-          <div className="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center mx-auto mb-4">
-            <Check className="w-8 h-8" />
-          </div>
-          <p className="text-2xl font-bold mb-2">{selectedEmployee?.name}</p>
-          <p className="text-lg opacity-80 mb-1">{activeEntry.job_number} — {activeEntry.work_center}</p>
-          <p className="text-sm opacity-60 mb-8">
-            Clocked in {activeEntry.clock_in && formatDistanceToNow(parseISO(activeEntry.clock_in), { addSuffix: true })}
-          </p>
-          <div className="space-y-3 flex flex-col gap-3">
-            <Button
-              size="lg"
-              onClick={() => clockOutMutation.mutate(activeEntry)}
-              disabled={clockOutMutation.isPending}
-              className="min-h-[64px] text-xl px-12 bg-red-600 hover:bg-red-700 w-full"
-            >
-              <LogOut className="w-6 h-6 mr-3" />
-              {clockOutMutation.isPending ? "Clocking Out..." : "Clock Out"}
-            </Button>
-            <Link to="/">
-              <Button
-                size="lg"
-                variant="outline"
-                className="min-h-[56px] text-lg px-12 w-full border-white/20 bg-white/10 hover:bg-white/20 text-foreground"
-              >
-                <Home className="w-5 h-5 mr-2" />
-                Return to Dashboard
-              </Button>
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {step === "clocked-in" && !activeEntry && (
-        <div className="max-w-lg mx-auto text-center">
-          <p className="text-lg opacity-80 mb-4">Clock-in confirmed!</p>
-          <Button size="lg" onClick={reset} className="min-h-[56px] bg-accent text-accent-foreground">
-            Done
-          </Button>
-        </div>
+      {/* Step: Time Dashboard (new — replaces old "clocked-in" step) */}
+      {step === "time-dashboard" && (
+        <TimeDashboard
+          employee={selectedEmployee}
+          activeEntry={activeEntry}
+          selectedJob={selectedJob}
+          selectedCenter={selectedCenter}
+          jobs={jobs}
+          onClockIn={() => clockInMutation.mutate()}
+          onClockOut={(entryId) => clockOutMutation.mutate(entryId)}
+          onStartBreak={(entryId) => startBreakMutation.mutate(entryId)}
+          onEndBreak={(entryId) => endBreakMutation.mutate(entryId)}
+          clockInPending={clockInMutation.isPending}
+          clockOutPending={clockOutMutation.isPending}
+          breakPending={startBreakMutation.isPending || endBreakMutation.isPending}
+          actionError={actionError}
+          onReset={reset}
+        />
       )}
 
       {/* Step: Clock-Out Summary */}
@@ -366,6 +370,151 @@ export default function ShopKiosk() {
   );
 }
 
+// ── Time Dashboard Component ──────────────────────────────────────────────
+function TimeDashboard({
+  employee, activeEntry, selectedJob, selectedCenter, jobs,
+  onClockIn, onClockOut, onStartBreak, onEndBreak,
+  clockInPending, clockOutPending, breakPending, actionError, onReset,
+}) {
+  const [elapsed, setElapsed] = useState(0);
+
+  const isClockedIn = !!activeEntry;
+  const isOnBreak = activeEntry?.is_on_break;
+
+  useEffect(() => {
+    if (!activeEntry?.clock_in) {
+      setElapsed(0);
+      return;
+    }
+    const update = () => {
+      const start = new Date(activeEntry.clock_in).getTime();
+      const now = Date.now();
+      let total = now - start;
+      // Subtract accumulated break minutes
+      if (activeEntry.break_minutes) {
+        total -= activeEntry.break_minutes * 60000;
+      }
+      // Subtract current ongoing break
+      if (activeEntry.is_on_break && activeEntry.break_start) {
+        total -= (now - new Date(activeEntry.break_start).getTime());
+      }
+      setElapsed(total);
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [activeEntry]);
+
+  const jobInfo = activeEntry
+    ? { job_number: activeEntry.job_number, work_center: activeEntry.work_center }
+    : { job_number: selectedJob?.job_number, work_center: selectedCenter };
+
+  return (
+    <div className="max-w-lg mx-auto text-center">
+      <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${isClockedIn ? "bg-emerald-500" : "bg-white/10"}`}>
+        {isClockedIn ? <Check className="w-8 h-8" /> : <Clock className="w-8 h-8" />}
+      </div>
+      <p className="text-2xl font-bold mb-2">{employee?.name}</p>
+      <p className="text-lg opacity-80 mb-1">{jobInfo.job_number} — {jobInfo.work_center}</p>
+
+      {isClockedIn ? (
+        <p className="text-sm opacity-60 mb-2">
+          Clocked in {activeEntry.clock_in && formatDistanceToNow(parseISO(activeEntry.clock_in), { addSuffix: true })}
+        </p>
+      ) : (
+        <p className="text-sm opacity-60 mb-2">Ready to clock in</p>
+      )}
+
+      {/* Live Timer */}
+      {isClockedIn && (
+        <div className="mb-6">
+          <p className={`text-4xl font-mono font-bold ${isOnBreak ? "text-amber-400" : "text-emerald-400"}`}>
+            {formatElapsed(elapsed)}
+          </p>
+          {isOnBreak && (
+            <Badge className="mt-2 bg-amber-500/20 text-amber-300">
+              <Coffee className="w-3 h-3 mr-1" /> On Break
+            </Badge>
+          )}
+        </div>
+      )}
+
+      {/* Action Error */}
+      {actionError && (
+        <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/30 flex items-start gap-2 text-left">
+          <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+          <p className="text-sm text-red-200">{actionError}</p>
+        </div>
+      )}
+
+      {/* Toggle Buttons */}
+      <div className="space-y-3 flex flex-col gap-3">
+        {/* Clock In / Clock Out */}
+        {isClockedIn ? (
+          <Button
+            size="lg"
+            onClick={() => onClockOut(activeEntry.entry_id)}
+            disabled={clockOutPending}
+            className="min-h-[64px] text-xl px-12 bg-red-600 hover:bg-red-700 w-full"
+          >
+            <LogOut className="w-6 h-6 mr-3" />
+            {clockOutPending ? "Clocking Out..." : "Clock Out"}
+          </Button>
+        ) : (
+          <Button
+            size="lg"
+            onClick={onClockIn}
+            disabled={clockInPending}
+            className="min-h-[64px] text-xl px-12 bg-emerald-600 hover:bg-emerald-700 w-full"
+          >
+            <LogIn className="w-6 h-6 mr-3" />
+            {clockInPending ? "Clocking In..." : "Clock In"}
+          </Button>
+        )}
+
+        {/* Start Break / End Break */}
+        {isClockedIn && (
+          isOnBreak ? (
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => onEndBreak(activeEntry.entry_id)}
+              disabled={breakPending}
+              className="min-h-[56px] text-lg px-12 w-full border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300"
+            >
+              <Coffee className="w-5 h-5 mr-2" />
+              {breakPending ? "Ending Break..." : "End Break"}
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => onStartBreak(activeEntry.entry_id)}
+              disabled={breakPending}
+              className="min-h-[56px] text-lg px-12 w-full border-white/20 bg-white/10 hover:bg-white/20 text-foreground"
+            >
+              <Coffee className="w-5 h-5 mr-2" />
+              {breakPending ? "Starting Break..." : "Start Break"}
+            </Button>
+          )
+        )}
+
+        <Link to="/">
+          <Button
+            size="lg"
+            variant="outline"
+            className="min-h-[56px] text-lg px-12 w-full border-white/20 bg-white/10 hover:bg-white/20 text-foreground"
+          >
+            <Home className="w-5 h-5 mr-2" />
+            Return to Dashboard
+          </Button>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// ── Clock-Out Summary ─────────────────────────────────────────────────────
 function ClockOutSummary({ summary, onDone }) {
   const timerRef = useRef(null);
 

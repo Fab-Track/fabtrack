@@ -55,17 +55,13 @@ export default function AdminPayroll() {
     queryFn: () => base44.entities.Employee.filter(orgFilter, "-created_date", 100),
   });
 
-  const { data: allEntries = [], isLoading } = useQuery({
-    queryKey: ["timeEntries", "all", orgFilter],
-    queryFn: () => base44.entities.TimeEntry.filter(orgFilter, "-clock_in", 2000),
+  const { data: payrollResp, isLoading } = useQuery({
+    queryKey: ["payrollEntries", orgFilter],
+    queryFn: () => base44.functions.invoke('getPayrollEntries', orgFilter),
     refetchInterval: 30000,
   });
-
-  const { data: activeEntries = [] } = useQuery({
-    queryKey: ["timeEntries", "active", orgFilter],
-    queryFn: () => base44.entities.TimeEntry.filter({ ...orgFilter, is_active: true }),
-    refetchInterval: 15000,
-  });
+  const allEntries = payrollResp?.data?.entries || [];
+  const activeEntries = allEntries.filter(e => e.is_active);
 
   const { data: auditLogs = [] } = useQuery({
     queryKey: ["timeAuditLogs", orgFilter],
