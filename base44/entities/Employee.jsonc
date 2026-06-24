@@ -6,6 +6,10 @@
       "type": "string",
       "description": "Organization ID for multi-tenant isolation"
     },
+    "user_id": {
+      "type": "string",
+      "description": "Linked Base44 User ID \u2014 null until the user registers and is auto-matched by email"
+    },
     "name": {
       "type": "string",
       "description": "Full name"
@@ -31,9 +35,17 @@
         "estimator",
         "design_specialist",
         "accountant",
-        "owner"
+        "owner",
+        "shop_manager",
+        "installer",
+        "payroll"
       ],
-      "description": "Shop role"
+      "description": "Shop role \u2014 determines access level when linked to a User account"
+    },
+    "hire_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the employee was hired"
     },
     "work_center_primary": {
       "type": "string",

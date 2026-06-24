@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { getUserRoles, isOwnerLevel } from "@/lib/roleHelpers";
-import { Building2, Users, Bell, MessageSquare, Plug, LayoutDashboard, CreditCard, User, ClipboardList, Shield } from "lucide-react";
+import { Building2, Users, Bell, MessageSquare, Plug, LayoutDashboard, CreditCard, User, ClipboardList, Shield, UserPlus } from "lucide-react";
 import CompanySection from "@/components/settings/CompanySection";
 import UsersRolesSection from "@/components/settings/UsersRolesSection";
+import EmployeeInviteSection from "@/components/settings/EmployeeInviteSection";
 import NotificationsSection from "@/components/settings/NotificationsSection";
 import MessageTemplatesSection from "@/components/settings/MessageTemplatesSection";
 import IntegrationsSection from "@/components/settings/IntegrationsSection";
@@ -20,6 +21,7 @@ import StripeSettingsSection from "@/components/settings/StripeSettingsSection";
 const ALL_SECTIONS = [
   { id: "company",    label: "Company",             icon: Building2,       ownerOnly: true },
   { id: "users",      label: "Users & Roles",        icon: Users,           ownerOnly: true },
+  { id: "employees",  label: "Employees",             icon: UserPlus,        ownerOnly: true },
   { id: "notifications", label: "Notifications",    icon: Bell,            roles: ["owner","admin","shop_manager","estimator","fabricator","accountant"] },
   { id: "templates",  label: "Message Templates",    icon: MessageSquare,   roles: ["owner","admin","estimator"] },
   { id: "integrations", label: "Integrations",      icon: Plug,            ownerOnly: true },
@@ -62,6 +64,7 @@ export default function Settings() {
     switch (active) {
       case "company":      return <CompanySection />;
       case "users":        return <UsersRolesSection />;
+      case "employees":    return <EmployeeInviteSection />;
       case "notifications":return <NotificationsSection isOwner={isOwner} userRole={userRoles[0] || "user"} />;
       case "templates":    return <MessageTemplatesSection />;
       case "integrations": return <IntegrationsSection />;
