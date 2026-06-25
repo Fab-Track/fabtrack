@@ -24,13 +24,8 @@ export default function OnboardingGate({ children }) {
     const roles = getUserRoles(user);
     const isOwnerOrAdmin = roles.includes('owner') || roles.includes('admin');
     if (!isOwnerOrAdmin) {
-      setStatus('not_needed');
-      return;
-    }
-
-    // If already on /setup, let the page handle its own check
-    if (isOnSetupPage) {
-      setStatus('not_needed');
+      // Non-owner/admin: redirect away from /setup, otherwise let through
+      setStatus(isOnSetupPage ? 'done' : 'skip');
       return;
     }
 
@@ -41,10 +36,10 @@ export default function OnboardingGate({ children }) {
       .invoke('checkOnboardingStatus')
       .then((res) => {
         if (cancelled) return;
-        setStatus(res.data?.needs_onboarding ? 'needed' : 'not_needed');
+        setStatus(res.data?.needs_onboarding ? 'needed' : 'done');
       })
       .catch(() => {
-        if (!cancelled) setStatus('not_needed');
+        if (!cancelled) setStatus('done');
       });
 
     return () => { cancelled = true; };
@@ -58,8 +53,14 @@ export default function OnboardingGate({ children }) {
     );
   }
 
+  // Needs onboarding → redirect to /setup (unless already there)
   if (status === 'needed' && !isOnSetupPage) {
     return <Navigate to="/setup" replace />;
+  }
+
+  // Already onboarded (or not eligible) but sitting on /setup → send to /dashboard
+  if (status === 'done' && isOnSetupPage) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;

@@ -24,7 +24,7 @@ export default function CompletionStep({ job, orgName }) {
       icon: LayoutDashboard,
       title: 'Explore the dashboard',
       description: 'See your shop overview, metrics, and activity.',
-      to: '/',
+      to: '/dashboard',
     },
   ];
 

@@ -51,8 +51,8 @@ export default function OnboardingWizard() {
             default_hourly_rate: res.data.org.default_hourly_rate ?? null,
           }));
         } else {
-          // Already completed or not eligible — go home
-          navigate('/', { replace: true });
+          // Already completed or not eligible — go to dashboard
+          navigate('/dashboard', { replace: true });
         }
       })
       .catch(() => {
