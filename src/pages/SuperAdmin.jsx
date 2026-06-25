@@ -107,7 +107,6 @@ export default function SuperAdmin() {
 
   const handleImpersonate = async () => {
     if (!selectedOrg) return;
-    // Log impersonation start
     await base44.entities.SuperAdminAuditLog.create({
       admin_email: user?.email || '',
       admin_name: user?.full_name || user?.email || '',
@@ -117,8 +116,8 @@ export default function SuperAdmin() {
       action_detail: `Started viewing "${selectedOrg.name}" as super admin support session`,
     }).catch(() => {});
     startOrgImpersonation(selectedOrg.id, selectedOrg.name);
-    navigate('/');
-  };
+    navigate('/jobs');  // ← lands inside the org's job board
+};
 
   const handleDeleteOrg = () => {
     setSelectedOrg(null);
