@@ -118,7 +118,7 @@ export default function SuperAdmin() {
     startOrgImpersonation(selectedOrg.id, selectedOrg.name);
     navigate('/jobs');  // ← lands inside the org's job board
     };
-
+    
   const handleDeleteOrg = () => {
     setSelectedOrg(null);
   };
