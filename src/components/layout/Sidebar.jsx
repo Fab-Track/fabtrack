@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Kanban, Wrench, Clock,
   FileText, CalendarDays, Calendar, Users, Package,
   Trophy, ChevronLeft, ChevronRight,
-  Building2, Settings, Menu, X, BarChart2, MessageCircle, MessagesSquare, LogOut, Bug, Shield
+  Building2, Settings, Menu, X, BarChart2, MessageCircle, MessagesSquare, LogOut, Bug, Shield, CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -36,6 +36,7 @@ const ALL_ITEMS = {
   employees:      { label: "Employees",        icon: Building2,       path: "/employees" },
   myTimesheet:    { label: "My Timesheet",     icon: Clock,           path: "/my-timesheet" },
   payroll:        { label: "Time & Payroll",   icon: Clock,           path: "/admin-payroll" },
+  billing:        { label: "Billing",          icon: CreditCard,      path: "/billing" },
   settings:       { label: "Settings",         icon: Settings,        path: "/settings" },
   superAdmin:     { label: "Super Admin",      icon: Shield,          path: "/super-admin" },
 };
@@ -48,7 +49,7 @@ const ROLE_NAV = {
     { group: "OPERATIONS",  items: ["calendar", "reports", "schedule", "workCenters", "inventory"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "PAYROLL",     items: ["payroll"] },
-    { group: "ACCOUNT",     items: ["settings"] },
+    { group: "ACCOUNT",     items: ["billing", "settings"] },
   ],
   owner: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
@@ -56,7 +57,7 @@ const ROLE_NAV = {
     { group: "OPERATIONS",  items: ["calendar", "reports", "schedule", "workCenters", "inventory"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "PAYROLL",     items: ["payroll"] },
-    { group: "ACCOUNT",     items: ["settings"] },
+    { group: "ACCOUNT",     items: ["billing", "settings"] },
   ],
   shop_manager: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
