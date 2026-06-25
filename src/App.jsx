@@ -2,7 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { PreviewRoleProvider } from '@/lib/PreviewRoleContext';
@@ -17,14 +17,20 @@ import ErrorBoundary from '@/components/shared/ErrorBoundary';
 import { base44 } from '@/api/base44Client';
 import { Ban } from 'lucide-react';
 
-// Redirect /dashboard → /
-function DashboardRedirect() {
-  React.useEffect(() => { window.location.replace('/'); }, []);
-  return (
-    <div className="fixed inset-0 flex items-center justify-center bg-background">
-      <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
-    </div>
-  );
+// Role-aware root router: super admins → SuperAdmin, org users → /dashboard, unauthenticated → /login
+function RootRouter() {
+  const { user, isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const roles = (user?.roles || []).map((r) => (typeof r === 'string' ? r.toLowerCase() : ''));
+  if (roles.includes('super_admin')) {
+    return <SuperAdmin />;
+  }
+
+  return <Navigate to="/dashboard" replace />;
 }
 
 // Lazy-loaded pages for better initial load performance
@@ -211,9 +217,6 @@ const AuthenticatedApp = () => {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* Redirect /dashboard to / */}
-        <Route path="/dashboard" element={<DashboardRedirect />} />
-
         {/* Public pages - no sidebar */}
         <Route path="/kiosk" element={<ShopKiosk />} />
         <Route path="/lead" element={<LeadForm />} />
@@ -221,7 +224,7 @@ const AuthenticatedApp = () => {
         <Route path="/welcome" element={<OnboardingWelcome />} />
         <Route path="/setup" element={<OnboardingWizard />} />
         <Route path="/super-admin" element={<SuperAdmin />} />
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/" element={<RootRouter />} />
         <Route path="/estimate-view/:estimateId" element={<EstimateView />} />
         <Route path="/invoice-view/:invoiceId" element={<InvoiceView />} />
         
@@ -247,6 +250,7 @@ const AuthenticatedApp = () => {
           <Route path="/my-timesheet" element={<MyTimesheet />} />
           <Route path="/admin-payroll" element={<AdminPayroll />} />
           <Route path="/billing" element={<Billing />} />
+          <Route path="/dashboard" element={<Dashboard />} />
         </Route>
 
         <Route path="*" element={<PageNotFound />} />
