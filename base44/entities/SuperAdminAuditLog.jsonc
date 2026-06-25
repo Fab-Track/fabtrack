@@ -24,7 +24,9 @@
         "user_deactivated",
         "user_reactivated",
         "impersonation_started",
-        "impersonation_ended"
+        "impersonation_ended",
+        "demo_org_created",
+        "demo_org_reset"
       ],
       "description": "Type of super admin action"
     },

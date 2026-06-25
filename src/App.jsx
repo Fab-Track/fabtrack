@@ -11,6 +11,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import AppLayout from '@/components/layout/AppLayout';
 import SuperAdminBanner from '@/components/super-admin/SuperAdminBanner';
 import { isSuperAdminImpersonating } from '@/components/super-admin/SuperAdminBanner';
+import DemoBanner from '@/components/super-admin/DemoBanner';
 import OnboardingGate from '@/components/onboarding/OnboardingGate';
 import ErrorBoundary from '@/components/shared/ErrorBoundary';
 import { base44 } from '@/api/base44Client';
@@ -198,6 +199,7 @@ const AuthenticatedApp = () => {
   return (
     <ErrorBoundary>
     <OrgAccessGate>
+      <DemoBanner />
       <SuperAdminBanner />
       <OnboardingGate>
       <Suspense fallback={<PageLoader />}>

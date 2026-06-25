@@ -114,6 +114,21 @@
     "default_hourly_rate": {
       "type": "number",
       "description": "Default hourly labor rate \u2014 pre-populates job cost estimates"
+    },
+    "is_demo": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this is a pre-populated demo organization for sales demos"
+    },
+    "demo_created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the demo org was first created"
+    },
+    "demo_reset_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the demo org data was last reset"
     }
   },
   "required": [

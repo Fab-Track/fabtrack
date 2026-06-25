@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Building2, Plus, Users, Briefcase, User, Loader2, Shield, ArrowLeft, ChevronRight, Eye, LogOut, Bug, CheckCircle } from 'lucide-react';
+import { Building2, Plus, Users, Briefcase, User, Loader2, Shield, ArrowLeft, ChevronRight, Eye, LogOut, Bug, CheckCircle, Sparkles, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { startOrgImpersonation } from '@/components/super-admin/SuperAdminBanner';
@@ -63,6 +63,37 @@ export default function SuperAdmin() {
     }
     createOrgMutation.mutate({ name: name.trim(), ownerName: ownerName.trim(), ownerEmail: ownerEmail.trim() });
   };
+
+  const createDemoMutation = useMutation({
+    mutationFn: () => base44.functions.invoke('createDemoOrg', {}),
+    onSuccess: (res) => {
+      if (res.data?.success) {
+        toast.success(`Demo organization "${res.data.organization.name}" created with sample data.`);
+        queryClient.invalidateQueries({ queryKey: ['super-admin', 'organizations'] });
+      } else {
+        toast.error(res.data?.error || 'Failed to create demo org');
+      }
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.error || err.message || 'Failed to create demo org');
+    },
+  });
+
+  const resetDemoMutation = useMutation({
+    mutationFn: () => base44.functions.invoke('resetDemoOrg', {}),
+    onSuccess: (res) => {
+      if (res.data?.success) {
+        toast.success(res.data.message || 'Demo org reset successfully.');
+        queryClient.invalidateQueries({ queryKey: ['super-admin', 'organizations'] });
+        queryClient.invalidateQueries({ queryKey: ['super-admin', 'org-detail'] });
+      } else {
+        toast.error(res.data?.error || 'Failed to reset demo org');
+      }
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.error || err.message || 'Failed to reset demo org');
+    },
+  });
 
   const handleOrgClick = (org) => {
     setSelectedOrg(org);
@@ -161,6 +192,35 @@ export default function SuperAdmin() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Demo Org Quick Create */}
+              <div className="mb-4 p-4 rounded-lg border-2 border-dashed border-amber-400 bg-amber-50">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-amber-400 flex items-center justify-center shrink-0">
+                      <Sparkles className="w-5 h-5 text-amber-950" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-amber-950">Demo Organization</p>
+                      <p className="text-xs text-amber-800 mt-0.5">
+                        Instantly create a pre-populated demo shop with sample jobs, customers, and team members — perfect for sales demos.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="bg-amber-950 hover:bg-amber-900 text-amber-50 gap-1.5"
+                    onClick={() => createDemoMutation.mutate()}
+                    disabled={createDemoMutation.isPending}
+                  >
+                    {createDemoMutation.isPending ? (
+                      <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Creating Demo…</>
+                    ) : (
+                      <><Sparkles className="w-3.5 h-3.5" /> Create Demo Org</>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
               <form onSubmit={handleCreate} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="org-name">Organization Name</Label>
@@ -247,6 +307,11 @@ export default function SuperAdmin() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold truncate">{org.name}</h3>
+                            {org.is_demo && (
+                              <Badge className="bg-amber-100 text-amber-800 border-amber-300 shrink-0 gap-1">
+                                <Sparkles className="w-3 h-3" /> Demo
+                              </Badge>
+                            )}
                             <Badge className={statusBadgeColor[org.subscription_status || 'trial'] || ''}>
                               {org.subscription_status || (org.is_active ? 'active' : 'inactive')}
                             </Badge>

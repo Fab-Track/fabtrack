@@ -17,7 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import {
   Building2, Users, Briefcase, CalendarDays, Shield, Loader2,
-  Pencil, Save, X, Eye, LogOut,
+  Pencil, Save, X, Eye, LogOut, RotateCcw, Sparkles,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import OrgSubscriptionSection from '@/components/super-admin/OrgSubscriptionSection';
@@ -95,6 +95,22 @@ export default function OrgDetail({ org, onBack, onImpersonate, onDelete }) {
     deleteMutation.mutate();
   };
 
+  const resetDemoMutation = useMutation({
+    mutationFn: () => base44.functions.invoke('resetDemoOrg', {}),
+    onSuccess: (res) => {
+      if (res.data?.success) {
+        toast.success(res.data.message || 'Demo org reset successfully.');
+        queryClient.invalidateQueries({ queryKey: ['super-admin', 'organizations'] });
+        queryClient.invalidateQueries({ queryKey: ['super-admin', 'org-detail', org.id] });
+      } else {
+        toast.error(res.data?.error || 'Failed to reset demo org');
+      }
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.error || err.message || 'Failed to reset demo org');
+    },
+  });
+
   const statusColor = {
     trial: 'bg-blue-100 text-blue-700 border-blue-200',
     active: 'bg-green-100 text-green-700 border-green-200',
@@ -119,6 +135,11 @@ export default function OrgDetail({ org, onBack, onImpersonate, onDelete }) {
             />
           ) : (
             <h2 className="text-xl font-bold tracking-tight">{displayOrg.name}</h2>
+          )}
+          {displayOrg.is_demo && (
+            <Badge className="bg-amber-100 text-amber-800 border-amber-300 gap-1">
+              <Sparkles className="w-3 h-3" /> Demo
+            </Badge>
           )}
           <Badge className={statusColor[displayOrg.subscription_status || 'trial']}>
             {displayOrg.subscription_status || 'trial'}
@@ -157,6 +178,22 @@ export default function OrgDetail({ org, onBack, onImpersonate, onDelete }) {
             </>
           ) : (
             <>
+              {displayOrg.is_demo && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-amber-400 text-amber-700 hover:bg-amber-50 gap-1"
+                  onClick={() => resetDemoMutation.mutate()}
+                  disabled={resetDemoMutation.isPending}
+                >
+                  {resetDemoMutation.isPending ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  )}
+                  Reset Demo
+                </Button>
+              )}
               <Button size="sm" variant="outline" onClick={() => setEditMode(true)}>
                 <Pencil className="w-4 h-4 mr-1" /> Edit
               </Button>
