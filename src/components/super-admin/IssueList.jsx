@@ -1,44 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Loader2, Bug, AlertTriangle, User, Building2, ExternalLink, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
+import { Loader2, Bug, CheckCircle2, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
+import IssueRow from './IssueRow';
+import IssuePagination from './IssuePagination';
 
-const statusBadgeColors = {
-  open: 'bg-red-100 text-red-700 border-red-200',
-  in_progress: 'bg-amber-100 text-amber-700 border-amber-200',
-  resolved: 'bg-green-100 text-green-700 border-green-200',
-};
-
-const statusOptions = ['', 'open', 'in_progress', 'resolved'];
-const typeOptions = ['', 'user_report', 'system_error'];
+const PAGE_SIZE = 15;
 
 export default function IssueList() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState(null);
   const [adminNote, setAdminNote] = useState('');
+  const [selectedIds, setSelectedIds] = useState(new Set());
+
+  // Reset page + selection when filters change
+  useEffect(() => {
+    setPage(1);
+    setSelectedIds(new Set());
+  }, [statusFilter, typeFilter]);
+
+  // Clear selection when page changes
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['super-admin', 'issues', statusFilter, typeFilter],
+    queryKey: ['super-admin', 'issues', statusFilter, typeFilter, page],
     queryFn: async () => {
       const res = await base44.functions.invoke('listIssues', {
         status: statusFilter || undefined,
         type: typeFilter || undefined,
-        limit: 100,
+        limit: PAGE_SIZE,
+        skip: (page - 1) * PAGE_SIZE,
       });
-      return res.data || { issues: [], open_count: 0 };
+      return res.data || { issues: [], open_count: 0, total: 0, has_more: false };
     },
     refetchInterval: 30000,
   });
+
+  const issues = data?.issues || [];
+  const openCount = data?.open_count || 0;
+  const total = data?.total || 0;
+  const hasMore = data?.has_more || false;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // Pull back if we navigated beyond available data
+  useEffect(() => {
+    if (!isLoading && issues.length === 0 && page > 1) {
+      setPage(1);
+    }
+  }, [isLoading, issues.length, page]);
 
   const updateMutation = useMutation({
     mutationFn: (payload) => base44.functions.invoke('updateIssue', payload),
@@ -54,6 +74,22 @@ export default function IssueList() {
     onError: () => toast.error('Failed to update issue'),
   });
 
+  const bulkResolveMutation = useMutation({
+    mutationFn: (issueIds) =>
+      base44.functions.invoke('updateIssue', { issue_ids: issueIds, status: 'resolved' }),
+    onSuccess: (res) => {
+      if (res.data?.success) {
+        const count = res.data?.resolved_count || 0;
+        toast.success(`${count} issue${count !== 1 ? 's' : ''} resolved`);
+        setSelectedIds(new Set());
+        queryClient.invalidateQueries({ queryKey: ['super-admin', 'issues'] });
+      } else {
+        toast.error(res.data?.error || 'Bulk resolve failed');
+      }
+    },
+    onError: () => toast.error('Failed to resolve issues'),
+  });
+
   const handleStatusChange = (issueId, newStatus) => {
     updateMutation.mutate({ issue_id: issueId, status: newStatus });
   };
@@ -63,13 +99,49 @@ export default function IssueList() {
     updateMutation.mutate({ issue_id: issueId, admin_notes: adminNote.trim() });
   };
 
-  const issues = data?.issues || [];
-  const openCount = data?.open_count || 0;
-
   const toggleExpand = (id) => {
     setExpandedId(expandedId === id ? null : id);
     setAdminNote('');
   };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const allSelected = issues.length > 0 && issues.every((i) => selectedIds.has(i.id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        issues.forEach((i) => next.delete(i.id));
+      } else {
+        issues.forEach((i) => next.add(i.id));
+      }
+      return next;
+    });
+  };
+
+  const handleResolveSelected = () => {
+    bulkResolveMutation.mutate([...selectedIds]);
+  };
+
+  const handleResolveAllOnPage = () => {
+    const ids = issues.map((i) => i.id);
+    const wasHasMore = hasMore;
+    bulkResolveMutation.mutate(ids, {
+      onSuccess: () => {
+        if (wasHasMore) setPage((p) => p + 1);
+      },
+    });
+  };
+
+  const allOnPageSelected = issues.length > 0 && issues.every((i) => selectedIds.has(i.id));
+  const selectedCount = selectedIds.size;
 
   return (
     <Card>
@@ -108,6 +180,34 @@ export default function IssueList() {
         </div>
       </CardHeader>
       <CardContent>
+        {/* Bulk action bar — shown when items are selected */}
+        {selectedCount > 0 && (
+          <div className="flex items-center gap-3 mb-3 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20">
+            <span className="text-sm font-medium">{selectedCount} selected</span>
+            <Button
+              size="sm"
+              className="h-7"
+              onClick={handleResolveSelected}
+              disabled={bulkResolveMutation.isPending}
+            >
+              {bulkResolveMutation.isPending ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              )}
+              Resolve Selected
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 ml-auto"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Clear
+            </Button>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -118,152 +218,57 @@ export default function IssueList() {
             <p>No issues found.</p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {issues.map((issue) => {
-              const isExpanded = expandedId === issue.id;
-              const TypeIcon = issue.type === 'system_error' ? AlertTriangle : Bug;
-              const typeLabel = issue.type === 'system_error' ? 'System Error' : 'User Report';
+          <>
+            {/* Select-all header + Resolve All on Page */}
+            <div className="flex items-center gap-3 px-1 pb-2">
+              <Checkbox
+                checked={allOnPageSelected}
+                onCheckedChange={toggleSelectAll}
+                aria-label="Select all on page"
+              />
+              <span className="text-xs text-muted-foreground">
+                {allOnPageSelected ? `All ${issues.length} on page selected` : 'Select all on page'}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs ml-auto gap-1.5"
+                onClick={handleResolveAllOnPage}
+                disabled={bulkResolveMutation.isPending}
+              >
+                {bulkResolveMutation.isPending ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <ListChecks className="w-3.5 h-3.5" />
+                )}
+                Resolve All on Page
+              </Button>
+            </div>
 
-              return (
-                <div key={issue.id} className="rounded-lg border bg-card hover:bg-muted/20 transition-colors">
-                  <button
-                    onClick={() => toggleExpand(issue.id)}
-                    className="w-full text-left p-4 flex flex-col sm:flex-row sm:items-center gap-2"
-                  >
-                    <div className="flex items-center gap-2 shrink-0">
-                      <TypeIcon className="w-4 h-4 text-muted-foreground" />
-                      <Badge variant="outline" className="text-[10px]">{typeLabel}</Badge>
-                      <Badge className={statusBadgeColors[issue.status] || ''}>{issue.status}</Badge>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{issue.title}</p>
-                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5 text-[11px] text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Building2 className="w-3 h-3" /> {issue.organization_name}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <User className="w-3 h-3" /> {issue.user_name}
-                        </span>
-                        <span>{new Date(issue.created_date).toLocaleString()}</span>
-                      </div>
-                    </div>
-                    {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-                  </button>
+            <div className="space-y-2">
+              {issues.map((issue) => (
+                <IssueRow
+                  key={issue.id}
+                  issue={issue}
+                  isExpanded={expandedId === issue.id}
+                  isSelected={selectedIds.has(issue.id)}
+                  onToggleExpand={toggleExpand}
+                  onToggleSelect={toggleSelect}
+                  onStatusChange={handleStatusChange}
+                  onSaveNotes={handleSaveNotes}
+                  adminNote={adminNote}
+                  setAdminNote={setAdminNote}
+                  isUpdating={updateMutation.isPending}
+                />
+              ))}
+            </div>
 
-                  {isExpanded && (
-                    <div className="px-4 pb-4 space-y-3 border-t pt-3">
-                      {/* Full description */}
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Description</Label>
-                        <p className="text-sm whitespace-pre-wrap mt-1">{issue.description}</p>
-                      </div>
-
-                      {/* Context details */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                        <div>
-                          <span className="text-muted-foreground">Page:</span>
-                          <span className="ml-1 font-mono">{issue.page_route || '/'}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Role:</span>
-                          <span className="ml-1">{issue.user_role}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Org:</span>
-                          <span className="ml-1">{issue.organization_name}</span>
-                        </div>
-                        {issue.page_url && (
-                          <div className="col-span-2 sm:col-span-3">
-                            <span className="text-muted-foreground">URL:</span>
-                            <span className="ml-1 font-mono truncate">{issue.page_url}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Error stack */}
-                      {issue.error_stack && (
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Stack Trace</Label>
-                          <pre className="text-xs bg-muted/50 rounded p-2 mt-1 max-h-32 overflow-auto whitespace-pre-wrap font-mono">
-                            {issue.error_stack}
-                          </pre>
-                        </div>
-                      )}
-
-                      {/* Screenshot */}
-                      {issue.screenshot_url && (
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Screenshot</Label>
-                          <img
-                            src={issue.screenshot_url}
-                            alt="Issue screenshot"
-                            className="mt-1 max-h-48 rounded border object-contain"
-                          />
-                        </div>
-                      )}
-
-                      <Separator />
-
-                      {/* Admin actions */}
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Label className="text-xs text-muted-foreground shrink-0">Status:</Label>
-                          {statusOptions.filter(Boolean).map((s) => (
-                            <Button
-                              key={s}
-                              variant={issue.status === s ? 'default' : 'outline'}
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => handleStatusChange(issue.id, s)}
-                              disabled={updateMutation.isPending}
-                            >
-                              {s === 'open' ? 'Open' : s === 'in_progress' ? 'In Progress' : 'Resolved'}
-                            </Button>
-                          ))}
-                        </div>
-
-                        {/* Admin notes */}
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                            <MessageSquare className="w-3 h-3" /> Internal Notes
-                          </Label>
-                          {issue.admin_notes && (
-                            <p className="text-sm text-muted-foreground bg-muted/30 rounded p-2 whitespace-pre-wrap">
-                              {issue.admin_notes}
-                            </p>
-                          )}
-                          <div className="flex gap-2">
-                            <Textarea
-                              placeholder="Add notes about your investigation..."
-                              value={adminNote}
-                              onChange={(e) => setAdminNote(e.target.value)}
-                              rows={2}
-                              className="text-sm"
-                            />
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              disabled={!adminNote.trim() || updateMutation.isPending}
-                              onClick={() => handleSaveNotes(issue.id)}
-                              className="shrink-0"
-                            >
-                              {updateMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Save'}
-                            </Button>
-                          </div>
-                        </div>
-
-                        {issue.resolved_by && (
-                          <p className="text-xs text-muted-foreground">
-                            Resolved by {issue.resolved_by} on {new Date(issue.resolved_at).toLocaleDateString()}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+            <IssuePagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+            />
+          </>
         )}
       </CardContent>
     </Card>

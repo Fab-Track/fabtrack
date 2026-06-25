@@ -11,12 +11,9 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { issue_id, status, admin_notes } = body;
+    const { issue_id, issue_ids, status, admin_notes } = body;
 
-    if (!issue_id) {
-      return Response.json({ error: 'issue_id is required' }, { status: 400 });
-    }
-
+    // Build the update payload
     const updateData = {};
 
     if (status && ['open', 'in_progress', 'resolved'].includes(status)) {
@@ -29,6 +26,19 @@ Deno.serve(async (req) => {
 
     if (admin_notes !== undefined && admin_notes !== null) {
       updateData.admin_notes = String(admin_notes).slice(0, 3000);
+    }
+
+    // Bulk mode — resolve/update multiple issues at once
+    if (issue_ids && Array.isArray(issue_ids) && issue_ids.length > 0) {
+      const result = await base44.asServiceRole.entities.Issue.bulkUpdate(
+        issue_ids.map((id) => ({ id, ...updateData }))
+      );
+      return Response.json({ success: true, resolved_count: issue_ids.length });
+    }
+
+    // Single mode
+    if (!issue_id) {
+      return Response.json({ error: 'issue_id is required' }, { status: 400 });
     }
 
     const updated = await base44.asServiceRole.entities.Issue.update(issue_id, updateData);
