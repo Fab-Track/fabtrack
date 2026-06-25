@@ -16,6 +16,7 @@ import { startOrgImpersonation } from '@/components/super-admin/SuperAdminBanner
 import OrgDetail from '@/components/super-admin/OrgDetail';
 import SuperAdminAuditLog from '@/components/super-admin/SuperAdminAuditLog';
 import IssueList from '@/components/super-admin/IssueList';
+import PlatformAnalytics from '@/components/super-admin/PlatformAnalytics';
 
 export default function SuperAdmin() {
   const { user } = useAuth();
@@ -346,6 +347,11 @@ export default function SuperAdmin() {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Platform Analytics */}
+        <div className="mt-6">
+          <PlatformAnalytics />
         </div>
 
         {/* Issues & Bug Tracker */}
