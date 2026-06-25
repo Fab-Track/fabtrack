@@ -83,6 +83,37 @@
     "created_by_user_id": {
       "type": "string",
       "description": "User who created this organization"
+    },
+    "onboarding_completed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the org owner has completed the initial setup wizard"
+    },
+    "primary_trade": {
+      "type": "string",
+      "enum": [
+        "Structural Steel",
+        "Ornamental Iron",
+        "Miscellaneous Metals",
+        "Aluminum Fabrication",
+        "Sheet Metal",
+        "Mixed/Other"
+      ],
+      "description": "Primary trade / fabrication specialty"
+    },
+    "shop_size": {
+      "type": "string",
+      "enum": [
+        "Solo operator",
+        "2-5 employees",
+        "6-15 employees",
+        "16+ employees"
+      ],
+      "description": "Shop size / team headcount bracket"
+    },
+    "default_hourly_rate": {
+      "type": "number",
+      "description": "Default hourly labor rate \u2014 pre-populates job cost estimates"
     }
   },
   "required": [

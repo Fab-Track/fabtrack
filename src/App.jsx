@@ -11,6 +11,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import AppLayout from '@/components/layout/AppLayout';
 import SuperAdminBanner from '@/components/super-admin/SuperAdminBanner';
 import { isSuperAdminImpersonating } from '@/components/super-admin/SuperAdminBanner';
+import OnboardingGate from '@/components/onboarding/OnboardingGate';
 import ErrorBoundary from '@/components/shared/ErrorBoundary';
 import { base44 } from '@/api/base44Client';
 import { Ban } from 'lucide-react';
@@ -52,6 +53,7 @@ const Messages         = lazy(() => import('@/pages/Messages'));
 const Conversations    = lazy(() => import('@/pages/Conversations'));
 const CalendarPage     = lazy(() => import('@/pages/Calendar'));
 const OnboardingWelcome = lazy(() => import('@/pages/OnboardingWelcome'));
+const OnboardingWizard = lazy(() => import('@/pages/OnboardingWizard'));
 const SuperAdmin       = lazy(() => import('@/pages/SuperAdmin'));
 const Login            = lazy(() => import('@/pages/Login'));
 const Register         = lazy(() => import('@/pages/Register'));
@@ -196,6 +198,7 @@ const AuthenticatedApp = () => {
     <ErrorBoundary>
     <OrgAccessGate>
       <SuperAdminBanner />
+      <OnboardingGate>
       <Suspense fallback={<PageLoader />}>
       <AnimatedRoutes>
       <Routes>
@@ -213,6 +216,7 @@ const AuthenticatedApp = () => {
         <Route path="/lead" element={<LeadForm />} />
         <Route path="/onboarding" element={<OnboardingSurveyPage />} />
         <Route path="/welcome" element={<OnboardingWelcome />} />
+        <Route path="/setup" element={<OnboardingWizard />} />
         <Route path="/super-admin" element={<SuperAdmin />} />
         <Route path="/estimate-view/:estimateId" element={<EstimateView />} />
         <Route path="/invoice-view/:invoiceId" element={<InvoiceView />} />
@@ -245,6 +249,7 @@ const AuthenticatedApp = () => {
       </Routes>
       </AnimatedRoutes>
       </Suspense>
+      </OnboardingGate>
     </OrgAccessGate>
     </ErrorBoundary>
   );
