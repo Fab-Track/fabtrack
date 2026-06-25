@@ -221,12 +221,12 @@ const AuthenticatedApp = () => {
         <Route path="/welcome" element={<OnboardingWelcome />} />
         <Route path="/setup" element={<OnboardingWizard />} />
         <Route path="/super-admin" element={<SuperAdmin />} />
+        <Route path="/" element={<SuperAdmin />} />
         <Route path="/estimate-view/:estimateId" element={<EstimateView />} />
         <Route path="/invoice-view/:invoiceId" element={<InvoiceView />} />
         
         {/* Main app with sidebar layout */}
         <Route element={<AppLayout />}>
-          <Route path="/" element={<Dashboard />} />
           <Route path="/jobs" element={<JobBoard />} />
           <Route path="/jobs/new" element={<NewJob />} />
           <Route path="/jobs/:id" element={<JobDetail />} />
