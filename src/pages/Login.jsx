@@ -42,7 +42,7 @@ export default function Login() {
     setLoading(true);
     try {
       await base44.auth.loginViaEmailPassword(email, password);
-      window.location.href = "/";
+      window.location.href = "/dashboard";
     } catch (err) {
       const msg = err?.message || "";
       if (msg.toLowerCase().includes("locked")) {
