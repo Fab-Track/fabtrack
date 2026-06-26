@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
+import { AlertCircle, Loader2, CheckCircle2, Wrench, FileText, ClipboardList, Receipt } from "lucide-react";
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -49,14 +49,19 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top bar */}
       <header className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto w-full">
-        <img src="/fabtrack-logo.png" alt="FabTrack" className="max-w-[160px] w-full" />
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <Wrench className="w-4 h-4 text-primary-foreground" />
+          </div>
+          <span className="font-bold text-lg tracking-wide text-foreground">FABTRACK</span>
+        </div>
         <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
           Sign In
         </Button>
       </header>
 
       {/* Hero */}
-      <section className="flex-1 flex flex-col items-center justify-center text-center px-6 py-12 max-w-4xl mx-auto w-full">
+      <section className="flex-1 flex flex-col items-center justify-center text-center px-6 py-6 max-w-4xl mx-auto w-full">
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground">
           Shop Management Built for Fabrication Shops
         </h1>
@@ -74,14 +79,38 @@ export default function LandingPage() {
           >
             Schedule a Demo
           </Button>
-          <Button variant="secondary" className="w-full sm:w-auto" onClick={scrollToForm}>
+          <Button variant="ghost" className="w-full sm:w-auto" onClick={scrollToForm}>
             Request Access
           </Button>
         </div>
       </section>
 
+      {/* Feature row */}
+      <section className="px-6 py-6 max-w-4xl mx-auto w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="flex flex-col items-center text-center gap-2">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-primary" />
+            </div>
+            <span className="text-sm font-semibold text-foreground">Estimates &amp; Quotes</span>
+          </div>
+          <div className="flex flex-col items-center text-center gap-2">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <ClipboardList className="w-5 h-5 text-primary" />
+            </div>
+            <span className="text-sm font-semibold text-foreground">Job Tracking</span>
+          </div>
+          <div className="flex flex-col items-center text-center gap-2">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Receipt className="w-5 h-5 text-primary" />
+            </div>
+            <span className="text-sm font-semibold text-foreground">Invoicing &amp; Billing</span>
+          </div>
+        </div>
+      </section>
+
       {/* Request Access form */}
-      <section ref={formRef} className="px-6 py-12 max-w-md mx-auto w-full">
+      <section ref={formRef} className="px-6 py-6 max-w-md mx-auto w-full">
         <div className="rounded-2xl border bg-card p-6 shadow-sm">
           {submitted ? (
             <div className="text-center space-y-3 py-6">

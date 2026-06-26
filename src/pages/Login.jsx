@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Mail, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Mail, AlertCircle, Wrench } from "lucide-react";
 
 function PasswordInput({ value, onChange, placeholder = "Password", id }) {
   const [show, setShow] = useState(false);
@@ -58,10 +58,16 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-sm space-y-6">
+      <div className="w-full max-w-sm space-y-6 my-auto">
         {/* Logo / Branding */}
-        <div className="text-center">
-          <img src="/fabtrack-logo.png" alt="FabTrack" className="mx-auto max-w-[200px] w-full" />
+        <div className="text-center space-y-4">
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+              <Wrench className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <span className="font-bold text-xl tracking-wide text-foreground">FABTRACK</span>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome to FabTrack</h1>
         </div>
 
         {/* Email / Password form */}
