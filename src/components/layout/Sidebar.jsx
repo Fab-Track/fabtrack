@@ -290,6 +290,11 @@ export default function Sidebar() {
         {!collapsed && (
           <div className="flex flex-col">
             <span className="font-bold text-sm text-white tracking-wide">FABTRACK</span>
+            {(isSuperAdmin ? "Platform Owner" : user?.organization_name) && (
+              <span className="text-[11px] text-sidebar-foreground/60 font-medium leading-tight truncate">
+                {isSuperAdmin ? "Platform Owner" : user?.organization_name}
+              </span>
+            )}
             <span className="text-[10px] text-sidebar-foreground/60 uppercase tracking-widest">Operations</span>
           </div>
         )}
