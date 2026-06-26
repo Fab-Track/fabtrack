@@ -57,7 +57,7 @@ export default function Login() {
   }
 
   function handleSSO(provider) {
-    base44.auth.loginWithProvider(provider, "/");
+    base44.auth.loginWithProvider(provider, "/dashboard");
   }
 
   return (
