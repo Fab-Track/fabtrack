@@ -17,6 +17,7 @@ import PermissionsMatrix from "./permissions/PermissionsMatrix";
 import RolePreviewSection from "./permissions/RolePreviewSection";
 import PermissionAuditLog from "./permissions/PermissionAuditLog";
 import RoleSummaryCard from "./permissions/RoleSummaryCard";
+import OrgCombobox from "@/components/shared/OrgCombobox";
 import { ROLES as PERM_ROLES, ROLE_LABELS, DEFAULT_PERMISSIONS } from "@/lib/permissionsData";
 
 const ROLES = ["owner", "admin", "shop_manager", "estimator", "fabricator", "accountant", "design_specialist", "payroll"];
@@ -91,6 +92,8 @@ export default function UsersRolesSection() {
     await base44.entities.User.update(editUser.id, {
       roles: form.roles,
       role: form.roles[0] || "fabricator", // legacy field for backward compat
+      organization_id: form.organization_id || null,
+      organization_name: form.organization_name || null,
     });
     toast.success("User updated");
     qc.invalidateQueries({ queryKey: ["users"] });
@@ -353,7 +356,25 @@ export default function UsersRolesSection() {
 
 function EditUserSheet({ user, onClose, onSave }) {
   const initialRoles = (user.roles && user.roles.length > 0) ? user.roles : (user.role ? [user.role] : ["fabricator"]);
-  const [form, setForm] = React.useState({ roles: initialRoles });
+  const [form, setForm] = React.useState({
+    roles: initialRoles,
+    organization_id: user.organization_id || null,
+    organization_name: user.organization_name || "",
+  });
+
+  const { data: organizations = [] } = useQuery({
+    queryKey: ["all-organizations"],
+    queryFn: () => base44.entities.Organization.list(),
+  });
+
+  function handleOrgChange(org) {
+    setForm(p => ({
+      ...p,
+      organization_id: org?.id || null,
+      organization_name: org?.name || "",
+    }));
+  }
+
   return (
     <Sheet open onOpenChange={onClose}>
       <SheetContent>
@@ -362,6 +383,23 @@ function EditUserSheet({ user, onClose, onSave }) {
           <div>
             <Label className="text-xs">Email</Label>
             <Input className="h-8" value={user.email} disabled />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Organization</Label>
+            <OrgCombobox
+              organizations={organizations}
+              value={form.organization_id}
+              onChange={handleOrgChange}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Organization Name</Label>
+            <Input
+              className="h-8 bg-muted/50"
+              value={form.organization_name || ""}
+              disabled
+              placeholder="Auto-filled from organization selection"
+            />
           </div>
           <div>
             <Label className="text-xs">Roles (select multiple)</Label>
