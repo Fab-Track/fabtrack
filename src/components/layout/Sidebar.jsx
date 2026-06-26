@@ -20,7 +20,7 @@ import ReportProblemModal from "@/components/super-admin/ReportProblemModal";
 
 // ── All possible nav items ──────────────────────────────────────────────────
 const ALL_ITEMS = {
-  dashboard:      { label: "Dashboard",       icon: LayoutDashboard, path: "/" },
+  dashboard:      { label: "Dashboard",       icon: LayoutDashboard, path: "/dashboard" },
   messages:       { label: "Messages",         icon: MessageCircle,   path: "/messages" },
   jobBoard:       { label: "Job Board",        icon: Kanban,          path: "/jobs" },
   customers:      { label: "Customers",        icon: Users,           path: "/customers" },
