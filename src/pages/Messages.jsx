@@ -110,37 +110,32 @@ export default function Messages() {
     if (!uid || !orgId) return;
     const now = new Date().toISOString();
 
-    // Collect ALL accessible, non-archived channels (team, dm, job)
-    const accessibleChannels = channels.filter(ch =>
-      !ch.is_archived && canAccessChannel(ch, userRole, userId, user?.email)
+    // 1. Single API call: update ALL existing memberships for this user at once
+    await base44.entities.ChannelMembership.updateMany(
+      { user_id: uid, organization_id: orgId },
+      { $set: { last_read_at: now } }
     );
 
-    // Use the SAME proven logic as handleMarkRead: fresh server filter per channel
-    // (the cached memberships array can be stale/incomplete, causing missed channels)
-    const markOne = async (channelId) => {
-      const existing = await base44.entities.ChannelMembership.filter({
-        channel_id: channelId,
-        user_id: uid,
+    // 2. Create memberships for channels the user can access but has no membership yet
+    const accessibleChannelIds = channels
+      .filter(ch => !ch.is_archived && canAccessChannel(ch, userRole, userId, user?.email))
+      .map(ch => ch.id);
+    const existingChannelIds = new Set(memberships.map(m => m.channel_id));
+    const toCreate = accessibleChannelIds
+      .filter(cid => !existingChannelIds.has(cid))
+      .map(cid => ({
         organization_id: orgId,
-      });
-      if (existing.length > 0) {
-        return base44.entities.ChannelMembership.update(existing[0].id, {
-          last_read_at: now,
-        });
-      }
-      return base44.entities.ChannelMembership.create({
-        organization_id: orgId,
-        channel_id: channelId,
+        channel_id: cid,
         user_id: uid,
         user_email: user?.email,
         user_name: user?.full_name || user?.email,
         user_role: user?.role,
         last_read_at: now,
-      });
-    };
+      }));
 
-    // Process ALL channels in parallel; allSettled so one failure doesn't block others
-    await Promise.allSettled(accessibleChannels.map(ch => markOne(ch.id)));
+    if (toCreate.length > 0) {
+      await base44.entities.ChannelMembership.bulkCreate(toCreate);
+    }
 
     // Invalidate all relevant queries so both Messages page and Sidebar refetch
     qc.invalidateQueries({ queryKey: ["memberships"] });
