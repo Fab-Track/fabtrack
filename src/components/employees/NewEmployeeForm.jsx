@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,7 @@ const EMPLOYMENT_STATUSES = ["Full Time", "Part Time", "Seasonal"];
 
 export default function NewEmployeeForm({ onCreated, onCancel }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const [form, setForm] = useState({
     name: "",
     preferred_name: "",
@@ -47,6 +49,7 @@ export default function NewEmployeeForm({ onCreated, onCancel }) {
     setSaving(true);
     const created = await base44.entities.Employee.create({
       ...form,
+      organization_id: user?.organization_id,
       is_active: true,
       onboarding_completed: false,
     });
