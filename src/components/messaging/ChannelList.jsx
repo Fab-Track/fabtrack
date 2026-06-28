@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Hash, Pin, Briefcase, Search, Plus, Archive, MessageCircle, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { canAccessChannel, formatMessageTime } from "@/lib/messagingHelpers";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function ChannelList({
   channels,
@@ -14,8 +15,10 @@ export default function ChannelList({
   showArchived,
   onToggleArchived,
   onMarkRead,
+  onMarkAllRead,
 }) {
   const [search, setSearch] = useState("");
+  const [showMarkAllConfirm, setShowMarkAllConfirm] = useState(false);
 
   const userRole = user?.role || "user";
   const userId = user?.id || user?.email || "";
@@ -55,13 +58,23 @@ export default function ChannelList({
       <div className="px-4 pt-4 pb-2 border-b shrink-0">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-sm text-foreground">Messages</h2>
-          <button
-            onClick={onNewChannel}
-            className="p-1 rounded hover:bg-muted transition-colors"
-            aria-label="New message"
-          >
-            <Plus className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={() => setShowMarkAllConfirm(true)}
+              className="p-1 rounded hover:bg-muted transition-colors"
+              aria-label="Mark all channels as read"
+              title="Mark all as read"
+            >
+              <CheckCheck className="w-4 h-4 text-muted-foreground" />
+            </button>
+            <button
+              onClick={onNewChannel}
+              className="p-1 rounded hover:bg-muted transition-colors"
+              aria-label="New message"
+            >
+              <Plus className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
         </div>
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -140,6 +153,29 @@ export default function ChannelList({
           <p className="text-[10px] text-muted-foreground px-1 py-1">No archived channels</p>
         )}
       </div>
+
+      {/* Mark all as read confirmation */}
+      <AlertDialog open={showMarkAllConfirm} onOpenChange={setShowMarkAllConfirm}>
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark all channels as read?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
+              This will clear all unread message counts across every channel you belong to.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                onMarkAllRead?.();
+                setShowMarkAllConfirm(false);
+              }}
+            >
+              Mark All as Read
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

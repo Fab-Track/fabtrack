@@ -104,6 +104,44 @@ export default function Messages() {
     qc.invalidateQueries({ queryKey: ["channels"] });
   };
 
+  const handleMarkAllRead = async () => {
+    const uid = user?.id || user?.email;
+    const orgId = user?.organization_id;
+    if (!uid || !orgId) return;
+    const now = new Date().toISOString();
+
+    // Update all existing memberships for this user in one call
+    await base44.entities.ChannelMembership.updateMany(
+      { user_id: uid, organization_id: orgId },
+      { $set: { last_read_at: now } }
+    );
+
+    // For accessible channels without a membership record, create one
+    const channelIdsWithMembership = new Set(memberships.map(m => m.channel_id));
+    const channelsWithoutMembership = channels.filter(ch =>
+      canAccessChannel(ch, userRole, userId, user?.email) &&
+      !channelIdsWithMembership.has(ch.id)
+    );
+
+    if (channelsWithoutMembership.length > 0) {
+      await base44.entities.ChannelMembership.bulkCreate(
+        channelsWithoutMembership.map(ch => ({
+          organization_id: orgId,
+          channel_id: ch.id,
+          user_id: uid,
+          user_email: user?.email,
+          user_name: user?.full_name || user?.email,
+          user_role: user?.role,
+          last_read_at: now,
+        }))
+      );
+    }
+
+    qc.invalidateQueries({ queryKey: ["memberships"] });
+    qc.invalidateQueries({ queryKey: ["messages-unread"] });
+    qc.invalidateQueries({ queryKey: ["messages-sidebar-unread"] });
+  };
+
   const handleChannelUpdated = () => {
     refetchChannels();
     // Clear selection so the thread reloads with fresh data
@@ -139,6 +177,7 @@ export default function Messages() {
           showArchived={showArchived}
           onToggleArchived={() => setShowArchived(v => !v)}
           onMarkRead={handleMarkRead}
+          onMarkAllRead={handleMarkAllRead}
         />
       </div>
 
