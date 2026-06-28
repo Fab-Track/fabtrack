@@ -115,14 +115,16 @@ export default function Messages() {
       !ch.is_archived && canAccessChannel(ch, userRole, userId, user?.email)
     );
 
-    // Build a lookup of existing memberships by channel_id
-    const membershipByChannel = new Map(memberships.map(m => [m.channel_id, m]));
-
-    // Loop through EVERY channel and mark it read using the proven single-channel logic
+    // Use the SAME proven logic as handleMarkRead: fresh server filter per channel
+    // (the cached memberships array can be stale/incomplete, causing missed channels)
     const markOne = async (channelId) => {
-      const existing = membershipByChannel.get(channelId);
-      if (existing) {
-        return base44.entities.ChannelMembership.update(existing.id, {
+      const existing = await base44.entities.ChannelMembership.filter({
+        channel_id: channelId,
+        user_id: uid,
+        organization_id: orgId,
+      });
+      if (existing.length > 0) {
+        return base44.entities.ChannelMembership.update(existing[0].id, {
           last_read_at: now,
         });
       }
@@ -137,17 +139,10 @@ export default function Messages() {
       });
     };
 
-    // Execute all mark-read operations in parallel; allSettled so a failure on
-    // one channel doesn't block the others or the cache update
+    // Process ALL channels in parallel; allSettled so one failure doesn't block others
     await Promise.allSettled(accessibleChannels.map(ch => markOne(ch.id)));
 
-    // Immediately update cached membership data so the sidebar badge clears reactively
-    qc.setQueriesData({ queryKey: ["memberships"] }, (old) => {
-      if (!Array.isArray(old)) return old;
-      return old.map(m => ({ ...m, last_read_at: now }));
-    });
-
-    // Then invalidate to refetch fresh data from the server
+    // Invalidate all relevant queries so both Messages page and Sidebar refetch
     qc.invalidateQueries({ queryKey: ["memberships"] });
     qc.invalidateQueries({ queryKey: ["messages-unread"] });
     qc.invalidateQueries({ queryKey: ["messages-sidebar-unread"] });
