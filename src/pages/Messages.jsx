@@ -115,33 +115,31 @@ export default function Messages() {
       !ch.is_archived && canAccessChannel(ch, userRole, userId, user?.email)
     );
 
-    // Split into channels that have an existing membership and those that don't
+    // Build a lookup of existing memberships by channel_id
     const membershipByChannel = new Map(memberships.map(m => [m.channel_id, m]));
-    const toUpdate = [];
-    const toCreate = [];
 
-    accessibleChannels.forEach(ch => {
-      const existing = membershipByChannel.get(ch.id);
+    // Loop through EVERY channel and mark it read using the proven single-channel logic
+    const markOne = async (channelId) => {
+      const existing = membershipByChannel.get(channelId);
       if (existing) {
-        toUpdate.push({ id: existing.id, last_read_at: now });
-      } else {
-        toCreate.push({
-          organization_id: orgId,
-          channel_id: ch.id,
-          user_id: uid,
-          user_email: user?.email,
-          user_name: user?.full_name || user?.email,
-          user_role: user?.role,
+        return base44.entities.ChannelMembership.update(existing.id, {
           last_read_at: now,
         });
       }
-    });
+      return base44.entities.ChannelMembership.create({
+        organization_id: orgId,
+        channel_id: channelId,
+        user_id: uid,
+        user_email: user?.email,
+        user_name: user?.full_name || user?.email,
+        user_role: user?.role,
+        last_read_at: now,
+      });
+    };
 
-    // Execute both batch operations; allSettled ensures both always run
-    await Promise.allSettled([
-      toUpdate.length > 0 ? base44.entities.ChannelMembership.bulkUpdate(toUpdate) : null,
-      toCreate.length > 0 ? base44.entities.ChannelMembership.bulkCreate(toCreate) : null,
-    ]);
+    // Execute all mark-read operations in parallel; allSettled so a failure on
+    // one channel doesn't block the others or the cache update
+    await Promise.allSettled(accessibleChannels.map(ch => markOne(ch.id)));
 
     // Immediately update cached membership data so the sidebar badge clears reactively
     qc.setQueriesData({ queryKey: ["memberships"] }, (old) => {
