@@ -17,20 +17,15 @@ import ErrorBoundary from '@/components/shared/ErrorBoundary';
 import { base44 } from '@/api/base44Client';
 import { Ban } from 'lucide-react';
 
-// Role-aware root router: super admins → SuperAdmin, org users → /dashboard, unauthenticated → /login
+// Auth-aware root router: authenticated → /dashboard, unauthenticated → public landing page
 function RootRouter() {
   const { user, isAuthenticated } = useAuth();
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+  if (isAuthenticated && user) {
+    return <Navigate to="/dashboard" replace />;
   }
 
-  const roles = (user?.roles || []).map((r) => (typeof r === 'string' ? r.toLowerCase() : ''));
-  if (roles.includes('super_admin')) {
-    return <SuperAdmin />;
-  }
-
-  return <Navigate to="/dashboard" replace />;
+  return <LandingPage />;
 }
 
 // Lazy-loaded pages for better initial load performance
@@ -225,7 +220,7 @@ const AuthenticatedApp = () => {
         <Route path="/welcome" element={<OnboardingWelcome />} />
         <Route path="/setup" element={<OnboardingWizard />} />
         <Route path="/super-admin" element={<SuperAdmin />} />
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<RootRouter />} />
         <Route path="/estimate-view/:estimateId" element={<EstimateView />} />
         <Route path="/invoice-view/:invoiceId" element={<InvoiceView />} />
         
