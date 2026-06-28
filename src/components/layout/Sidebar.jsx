@@ -252,7 +252,7 @@ export default function Sidebar() {
   });
   const { data: memberships = [] } = useQuery({
     queryKey: ["memberships", user?.id],
-    queryFn: () => base44.entities.ChannelMembership.filter({ user_id: user?.id || user?.email, organization_id: user?.organization_id }),
+    queryFn: () => base44.entities.ChannelMembership.filter({ user_id: user?.id || user?.email, organization_id: user?.organization_id }, undefined, 500),
     refetchInterval: 30000,
     enabled: !!user,
   });
