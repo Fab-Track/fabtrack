@@ -1,8 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole, usePreviewRole } from "@/lib/PreviewRoleContext";
 import { useImpersonation } from "@/lib/ImpersonationContext";
 import { getUserRoles, getDashboardForRoles, isOwnerLevel } from "@/lib/roleHelpers";
+import { useCurrentEmployee } from "@/hooks/useCurrentEmployee";
+import CompleteProfileModal from "@/components/profile/CompleteProfileModal";
+import { Button } from "@/components/ui/button";
+import { AlertCircle } from "lucide-react";
 import DashboardGreeting from "@/components/dashboard/shared/DashboardGreeting";
 import OwnerDashboard from "./dashboard/OwnerDashboard";
 import ShopManagerDashboard from "./dashboard/ShopManagerDashboard";
@@ -62,6 +67,27 @@ export default function Dashboard() {
 
   const isRealOwner = isOwnerLevel(user);
   const defaultView = getDashboardForRoles(user);
+  const isOwnerRole = userRoles.includes("owner");
+
+  const qc = useQueryClient();
+  const { data: employee, isLoading: employeeLoading } = useCurrentEmployee();
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const autoOpenedRef = useRef(false);
+
+  const profileIncomplete =
+    !isOwnerRole && !employeeLoading && (!employee || !employee.profile_complete);
+
+  useEffect(() => {
+    if (profileIncomplete && !autoOpenedRef.current) {
+      autoOpenedRef.current = true;
+      setProfileModalOpen(true);
+    }
+  }, [profileIncomplete]);
+
+  const handleProfileSaved = () => {
+    qc.invalidateQueries({ queryKey: ["currentEmployee"] });
+    setProfileModalOpen(false);
+  };
 
   const [activeView, setActiveView] = useState(() => {
     if (!isRealOwner) return defaultView;
@@ -95,6 +121,22 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
+      {profileIncomplete && (
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">Your profile is incomplete</p>
+              <p className="text-xs text-muted-foreground">
+                Your shop admin uses this info for scheduling and team management.
+              </p>
+            </div>
+          </div>
+          <Button size="sm" onClick={() => setProfileModalOpen(true)}>
+            Complete Now
+          </Button>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <DashboardGreeting user={user} subtitle={subtitleMap[displayView]} />
@@ -113,6 +155,15 @@ export default function Dashboard() {
       {displayView === "design"     && <DesignDashboard />}
       {displayView === "fabricator" && (
         <FabricatorDashboard overrideEmployee={isImpersonating ? impersonatedEmployee : null} />
+      )}
+
+      {!isOwnerRole && (
+        <CompleteProfileModal
+          open={profileModalOpen}
+          onOpenChange={setProfileModalOpen}
+          employee={employee}
+          onSaved={handleProfileSaved}
+        />
       )}
     </div>
   );

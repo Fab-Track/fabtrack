@@ -58,7 +58,6 @@ const Employees        = lazy(() => import('@/pages/Employees'));
 const Documents        = lazy(() => import('@/pages/Documents'));
 const LeadForm         = lazy(() => import('@/pages/LeadForm'));
 const EmployeeProfilePage  = lazy(() => import('@/pages/EmployeeProfilePage'));
-const OnboardingSurveyPage = lazy(() => import('@/pages/OnboardingSurveyPage'));
 const Settings         = lazy(() => import('@/pages/Settings'));
 const EstimatePage     = lazy(() => import('@/pages/EstimatePage'));
 const EstimateView     = lazy(() => import('@/pages/EstimateView'));
@@ -231,7 +230,6 @@ const AuthenticatedApp = () => {
         {/* Public pages - no sidebar */}
         <Route path="/kiosk" element={<ShopKiosk />} />
         <Route path="/lead" element={<LeadForm />} />
-        <Route path="/onboarding" element={<OnboardingSurveyPage />} />
         <Route path="/welcome" element={<OnboardingWelcome />} />
         <Route path="/setup" element={<OnboardingWizard />} />
         <Route path="/super-admin" element={<SuperAdmin />} />

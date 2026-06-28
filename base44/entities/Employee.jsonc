@@ -193,6 +193,11 @@
       "type": "string",
       "format": "date-time"
     },
+    "profile_complete": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the user has completed the in-app profile completion flow"
+    },
     "previous_employers": {
       "type": "string"
     },
