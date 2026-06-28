@@ -110,21 +110,21 @@ export default function Messages() {
     if (!uid || !orgId) return;
     const now = new Date().toISOString();
 
-    // 1. Single API call: update ALL existing memberships for this user at once (DB-level)
-    await base44.entities.ChannelMembership.updateMany(
-      { user_id: uid, organization_id: orgId },
-      { $set: { last_read_at: now } }
-    );
-
-    // 2. Fetch FRESH memberships from the DB (not stale cache) to know which channels
-    //    already have a membership, so we only create truly missing ones
-    const freshMemberships = await base44.entities.ChannelMembership.filter({
+    // 1. Fetch ALL membership records for this user directly from the DB (limit 500)
+    const allMemberships = await base44.entities.ChannelMembership.filter({
       user_id: uid,
       organization_id: orgId,
-    });
-    const existingChannelIds = new Set(freshMemberships.map(m => m.channel_id));
+    }, undefined, 500);
+
+    // 2. Update every membership's last_read_at to now, in parallel
+    await Promise.all(
+      allMemberships.map(m =>
+        base44.entities.ChannelMembership.update(m.id, { last_read_at: now })
+      )
+    );
 
     // 3. Create memberships for accessible channels that have none yet
+    const existingChannelIds = new Set(allMemberships.map(m => m.channel_id));
     const accessibleChannelIds = channels
       .filter(ch => !ch.is_archived && canAccessChannel(ch, userRole, userId, user?.email))
       .map(ch => ch.id);
