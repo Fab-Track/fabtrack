@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { isWithinInterval, parseISO, format, differenceInDays, subMonths, startOfWeek, endOfWeek } from "date-fns";
+import { isWithinInterval, parseISO, format, subMonths } from "date-fns";
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -9,8 +9,7 @@ import {
 import KpiCard from "./shared/KpiCard";
 import EmptyState from "./shared/EmptyState";
 import ReportHeader from "./shared/ReportHeader";
-import { Link } from "react-router-dom";
-import { AlertTriangle, AlertCircle, Clock, FileText } from "lucide-react";
+
 import { useOrgFilter } from "@/lib/orgContext";
 
 const JOB_TYPE_COLORS = ["#1e3a5f", "#f59e0b", "#10b981", "#6366f1", "#f43f5e", "#06b6d4", "#8b5cf6"];
@@ -81,37 +80,6 @@ export default function OverviewReport({ onTabChange }) {
   });
   const pieData = Object.entries(typeMap).map(([name, value]) => ({ name, value }));
 
-  // ── Alerts ───────────────────────────────────────────────────────────
-  const today = new Date();
-  const overdueInvoices = invoices.filter(i => i.status !== "Paid" && i.balance_due > 0 && i.due_date && differenceInDays(today, parseISO(i.due_date)) > 0);
-  const overdueAmt = overdueInvoices.reduce((s, i) => s + (i.balance_due || 0), 0);
-  const staleEstimates = estimates.filter(e => e.status === "Sent" && e.created_date && differenceInDays(today, parseISO(e.created_date)) > 7);
-  const pastDueJobs = jobs.filter(j => j.expected_install_date && differenceInDays(today, parseISO(j.expected_install_date)) > 0 && !["Invoiced","Install Complete"].includes(j.status));
-  const uninvoicedComplete = jobs.filter(j => j.status === "Install Complete" && !invoices.find(i => i.job_id === j.id && i.status !== "Draft"));
-
-  const alerts = [
-    ...overdueInvoices.slice(0, 3).map(i => ({
-      icon: AlertCircle, color: "text-red-600", bg: "bg-red-50",
-      text: `Overdue invoice — ${i.customer_name || "Unknown"} · $${(i.balance_due || 0).toLocaleString()} · ${differenceInDays(today, parseISO(i.due_date))}d overdue`,
-      link: `/jobs/${i.job_id}`,
-    })),
-    ...staleEstimates.slice(0, 3).map(e => ({
-      icon: Clock, color: "text-amber-600", bg: "bg-amber-50",
-      text: `Estimate sent ${differenceInDays(today, parseISO(e.created_date))} days ago — no approval yet · ${jobs.find(j => j.id === e.job_id)?.job_name || "Unknown job"}`,
-      link: `/jobs/${e.job_id}`,
-    })),
-    ...pastDueJobs.slice(0, 2).map(j => ({
-      icon: AlertTriangle, color: "text-orange-600", bg: "bg-orange-50",
-      text: `Past estimated completion — ${j.job_name} (${differenceInDays(today, parseISO(j.expected_install_date))}d overdue)`,
-      link: `/jobs/${j.id}`,
-    })),
-    ...uninvoicedComplete.slice(0, 2).map(j => ({
-      icon: FileText, color: "text-blue-600", bg: "bg-blue-50",
-      text: `Install complete — no invoice sent yet · ${j.job_name}`,
-      link: `/jobs/${j.id}`,
-    })),
-  ];
-
   return (
     <div className="space-y-8">
       <ReportHeader onRangeChange={setRange} />
@@ -180,28 +148,6 @@ export default function OverviewReport({ onTabChange }) {
         </section>
       </div>
 
-      {/* Alerts */}
-      <section className="space-y-2">
-        <h2 className="font-semibold text-sm">Needs Attention</h2>
-        {alerts.length === 0 ? (
-          <div className="border rounded-xl p-4 text-sm text-muted-foreground text-center">All clear — no alerts right now.</div>
-        ) : (
-          <div className="space-y-1.5">
-            {alerts.map((a, i) => {
-              const Icon = a.icon;
-              return (
-                <Link key={i} to={a.link} className={`flex items-start gap-3 px-4 py-2.5 rounded-lg border ${a.bg} hover:opacity-80 transition-opacity`}>
-                  <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${a.color}`} />
-                  <span className="text-sm">{a.text}</span>
-                </Link>
-              );
-            })}
-            {overdueInvoices.length > 3 && (
-              <p className="text-xs text-muted-foreground pl-4">{overdueInvoices.length - 3} more overdue invoices — go to Financial tab.</p>
-            )}
-          </div>
-        )}
-      </section>
     </div>
   );
 }
