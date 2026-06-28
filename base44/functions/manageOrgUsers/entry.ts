@@ -60,17 +60,9 @@ Deno.serve(async (req) => {
 
     const targetUser = users[0];
 
-    // ASSIGN OWNER
+    // ASSIGN OWNER (additive — supports multiple owners)
     if (action === 'assign_owner') {
       const updatedRoles = [...new Set([...(targetUser.roles || []), 'owner'])];
-      // Also remove owner from previous owner if different
-      const currentOwners = await base44.asServiceRole.entities.User.filter({ organization_id: organizationId });
-      for (const u of currentOwners) {
-        if (u.id !== targetUser.id && (u.roles || []).includes('owner')) {
-          const newRoles = (u.roles || []).filter((r) => r !== 'owner');
-          await base44.asServiceRole.entities.User.update(u.id, { roles: newRoles });
-        }
-      }
 
       await base44.asServiceRole.entities.User.update(targetUser.id, {
         roles: updatedRoles,
@@ -90,7 +82,7 @@ Deno.serve(async (req) => {
 
       return Response.json({
         success: true,
-        message: `"${targetUser.full_name || targetEmail}" is now the owner of "${org.name}".`,
+        message: `"${targetUser.full_name || targetEmail}" is now an owner of "${org.name}".`,
         user: { email: targetEmail, roles: updatedRoles },
       });
     }
@@ -166,7 +158,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // CHANGE ROLE
+    // CHANGE ROLE (add a role)
     if (action === 'change_role') {
       if (!targetRole) {
         return Response.json({ error: 'targetRole is required for change_role action' }, { status: 400 });
@@ -193,6 +185,37 @@ Deno.serve(async (req) => {
       return Response.json({
         success: true,
         message: `Added "${targetRole}" role to "${targetEmail}".`,
+        user: { email: targetEmail, roles: updatedRoles },
+      });
+    }
+
+    // REMOVE ROLE
+    if (action === 'remove_role') {
+      if (!targetRole) {
+        return Response.json({ error: 'targetRole is required for remove_role action' }, { status: 400 });
+      }
+
+      const updatedRoles = (targetUser.roles || []).filter((r) => r !== targetRole);
+
+      await base44.asServiceRole.entities.User.update(targetUser.id, {
+        roles: updatedRoles,
+      });
+
+      await base44.asServiceRole.entities.SuperAdminAuditLog.create({
+        admin_email: user.email,
+        admin_name: user.full_name || user.email,
+        action_type: 'org_updated',
+        organization_id: organizationId,
+        organization_name: org.name,
+        affected_user_email: targetEmail,
+        affected_user_name: targetUser.full_name || targetEmail,
+        action_detail: `Removed role "${targetRole}" from "${targetUser.full_name || targetEmail}" in "${org.name}"`,
+        metadata: { previous_roles: targetUser.roles || [], new_roles: updatedRoles },
+      });
+
+      return Response.json({
+        success: true,
+        message: `Removed "${targetRole}" role from "${targetEmail}".`,
         user: { email: targetEmail, roles: updatedRoles },
       });
     }

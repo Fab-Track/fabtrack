@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import {
-  User, Crown, Mail, Loader2, Ban, Play, Clock,
+  User, Crown, Mail, Loader2, Ban, Play, Clock, X,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -122,6 +122,20 @@ export default function OrgUsersSection({ org }) {
     }).catch((err) => toast.error(err?.response?.data?.error || err.message || 'Failed'));
   };
 
+  const handleRemoveRole = (email, role) => {
+    base44.functions.invoke('manageOrgUsers', {
+      organizationId: org.id,
+      action: 'remove_role',
+      targetEmail: email,
+      targetRole: role,
+    }).then((res) => {
+      if (res.data?.success) {
+        toast.success(res.data.message);
+        queryClient.invalidateQueries({ queryKey: ['super-admin', 'org-users', org.id] });
+      } else toast.error(res.data?.error || 'Failed');
+    }).catch((err) => toast.error(err?.response?.data?.error || err.message || 'Failed'));
+  };
+
   const statusBadgeColor = {
     active: 'bg-green-100 text-green-700 border-green-200',
     invited: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -145,7 +159,7 @@ export default function OrgUsersSection({ org }) {
             <Crown className="w-4 h-4 text-accent" /> Assign Owner
           </h4>
           <p className="text-xs text-muted-foreground">
-            Enter the email of an existing user in this organization. They will be promoted to owner. Previous owner (if any) will be demoted.
+            Enter the email of an existing user in this organization. They will be promoted to owner. Multiple owners are supported.
           </p>
           <div className="flex gap-2">
             <Input
@@ -181,14 +195,28 @@ export default function OrgUsersSection({ org }) {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-sm truncate">{u.full_name || u.email}</span>
                     {u.is_owner && (
-                      <Badge className="bg-accent/10 text-accent border-accent/20">
-                        <Crown className="w-3 h-3 mr-1" /> Owner
+                      <Badge className="bg-accent/10 text-accent border-accent/20 gap-1">
+                        <Crown className="w-3 h-3" /> Owner
+                        <button
+                          onClick={() => handleRemoveRole(u.email, 'owner')}
+                          className="ml-0.5 hover:bg-accent/20 rounded-full p-0.5"
+                          title="Remove owner role"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
                       </Badge>
                     )}
                     {u.roles?.map((r) => (
                       r !== 'owner' && (
-                        <Badge key={r} variant="secondary" className="text-[10px] capitalize">
+                        <Badge key={r} variant="secondary" className="text-[10px] capitalize gap-1">
                           {r}
+                          <button
+                            onClick={() => handleRemoveRole(u.email, r)}
+                            className="ml-0.5 hover:bg-muted-foreground/20 rounded-full p-0.5"
+                            title={`Remove ${r} role`}
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
                         </Badge>
                       )
                     ))}
