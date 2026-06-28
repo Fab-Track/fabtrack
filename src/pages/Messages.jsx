@@ -28,7 +28,7 @@ export default function Messages() {
 
   const { data: channels = [], isLoading, refetch: refetchChannels } = useQuery({
     queryKey: ["channels", orgFilter],
-    queryFn: () => base44.entities.MessageChannel.filter(orgFilter, "sort_order", 200),
+    queryFn: () => base44.entities.MessageChannel.filter(orgFilter, "sort_order", 500),
     refetchInterval: 15000,
   });
 
