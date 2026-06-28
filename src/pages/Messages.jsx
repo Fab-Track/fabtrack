@@ -110,35 +110,38 @@ export default function Messages() {
     if (!uid || !orgId) return;
     const now = new Date().toISOString();
 
-    // Build a lookup of existing memberships by channel_id
-    const membershipByChannel = new Map(memberships.map(m => [m.channel_id, m]));
-
-    // Loop through EVERY accessible, non-archived channel (team, dm, job)
+    // Collect ALL accessible, non-archived channels (team, dm, job)
     const accessibleChannels = channels.filter(ch =>
       !ch.is_archived && canAccessChannel(ch, userRole, userId, user?.email)
     );
 
-    // For each channel, either update its existing membership or create a new one
-    const operations = accessibleChannels.map(ch => {
+    // Split into channels that have an existing membership and those that don't
+    const membershipByChannel = new Map(memberships.map(m => [m.channel_id, m]));
+    const toUpdate = [];
+    const toCreate = [];
+
+    accessibleChannels.forEach(ch => {
       const existing = membershipByChannel.get(ch.id);
       if (existing) {
-        return base44.entities.ChannelMembership.update(existing.id, {
+        toUpdate.push({ id: existing.id, last_read_at: now });
+      } else {
+        toCreate.push({
+          organization_id: orgId,
+          channel_id: ch.id,
+          user_id: uid,
+          user_email: user?.email,
+          user_name: user?.full_name || user?.email,
+          user_role: user?.role,
           last_read_at: now,
         });
       }
-      return base44.entities.ChannelMembership.create({
-        organization_id: orgId,
-        channel_id: ch.id,
-        user_id: uid,
-        user_email: user?.email,
-        user_name: user?.full_name || user?.email,
-        user_role: user?.role,
-        last_read_at: now,
-      });
     });
 
-    // Execute all mark-read operations in parallel
-    await Promise.all(operations);
+    // Execute both batch operations; allSettled ensures both always run
+    await Promise.allSettled([
+      toUpdate.length > 0 ? base44.entities.ChannelMembership.bulkUpdate(toUpdate) : null,
+      toCreate.length > 0 ? base44.entities.ChannelMembership.bulkCreate(toCreate) : null,
+    ]);
 
     // Immediately update cached membership data so the sidebar badge clears reactively
     qc.setQueriesData({ queryKey: ["memberships"] }, (old) => {
