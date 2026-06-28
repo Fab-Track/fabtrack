@@ -137,6 +137,12 @@ export default function Messages() {
       );
     }
 
+    // Immediately update cached membership data so sidebar badge clears reactively
+    qc.setQueriesData({ queryKey: ["memberships"] }, (old) => {
+      if (!Array.isArray(old)) return old;
+      return old.map(m => ({ ...m, last_read_at: now }));
+    });
+
     qc.invalidateQueries({ queryKey: ["memberships"] });
     qc.invalidateQueries({ queryKey: ["messages-unread"] });
     qc.invalidateQueries({ queryKey: ["messages-sidebar-unread"] });
