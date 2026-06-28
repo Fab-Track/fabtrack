@@ -110,39 +110,43 @@ export default function Messages() {
     if (!uid || !orgId) return;
     const now = new Date().toISOString();
 
-    // Update all existing memberships for this user in one batch
-    const updates = memberships.map(m => ({ id: m.id, last_read_at: now }));
-    if (updates.length > 0) {
-      await base44.entities.ChannelMembership.bulkUpdate(updates);
-    }
+    // Build a lookup of existing memberships by channel_id
+    const membershipByChannel = new Map(memberships.map(m => [m.channel_id, m]));
 
-    // For accessible channels without a membership record, create one
-    const channelIdsWithMembership = new Set(memberships.map(m => m.channel_id));
-    const channelsWithoutMembership = channels.filter(ch =>
-      canAccessChannel(ch, userRole, userId, user?.email) &&
-      !channelIdsWithMembership.has(ch.id)
+    // Loop through EVERY accessible, non-archived channel (team, dm, job)
+    const accessibleChannels = channels.filter(ch =>
+      !ch.is_archived && canAccessChannel(ch, userRole, userId, user?.email)
     );
 
-    if (channelsWithoutMembership.length > 0) {
-      await base44.entities.ChannelMembership.bulkCreate(
-        channelsWithoutMembership.map(ch => ({
-          organization_id: orgId,
-          channel_id: ch.id,
-          user_id: uid,
-          user_email: user?.email,
-          user_name: user?.full_name || user?.email,
-          user_role: user?.role,
+    // For each channel, either update its existing membership or create a new one
+    const operations = accessibleChannels.map(ch => {
+      const existing = membershipByChannel.get(ch.id);
+      if (existing) {
+        return base44.entities.ChannelMembership.update(existing.id, {
           last_read_at: now,
-        }))
-      );
-    }
+        });
+      }
+      return base44.entities.ChannelMembership.create({
+        organization_id: orgId,
+        channel_id: ch.id,
+        user_id: uid,
+        user_email: user?.email,
+        user_name: user?.full_name || user?.email,
+        user_role: user?.role,
+        last_read_at: now,
+      });
+    });
 
-    // Immediately update cached membership data so sidebar badge clears reactively
+    // Execute all mark-read operations in parallel
+    await Promise.all(operations);
+
+    // Immediately update cached membership data so the sidebar badge clears reactively
     qc.setQueriesData({ queryKey: ["memberships"] }, (old) => {
       if (!Array.isArray(old)) return old;
       return old.map(m => ({ ...m, last_read_at: now }));
     });
 
+    // Then invalidate to refetch fresh data from the server
     qc.invalidateQueries({ queryKey: ["memberships"] });
     qc.invalidateQueries({ queryKey: ["messages-unread"] });
     qc.invalidateQueries({ queryKey: ["messages-sidebar-unread"] });
