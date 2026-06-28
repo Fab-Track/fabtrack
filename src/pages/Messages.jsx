@@ -110,11 +110,11 @@ export default function Messages() {
     if (!uid || !orgId) return;
     const now = new Date().toISOString();
 
-    // Update all existing memberships for this user in one call
-    await base44.entities.ChannelMembership.updateMany(
-      { user_id: uid, organization_id: orgId },
-      { $set: { last_read_at: now } }
-    );
+    // Update all existing memberships for this user in one batch
+    const updates = memberships.map(m => ({ id: m.id, last_read_at: now }));
+    if (updates.length > 0) {
+      await base44.entities.ChannelMembership.bulkUpdate(updates);
+    }
 
     // For accessible channels without a membership record, create one
     const channelIdsWithMembership = new Set(memberships.map(m => m.channel_id));
@@ -140,6 +140,7 @@ export default function Messages() {
     qc.invalidateQueries({ queryKey: ["memberships"] });
     qc.invalidateQueries({ queryKey: ["messages-unread"] });
     qc.invalidateQueries({ queryKey: ["messages-sidebar-unread"] });
+    qc.invalidateQueries({ queryKey: ["channels"] });
   };
 
   const handleChannelUpdated = () => {
