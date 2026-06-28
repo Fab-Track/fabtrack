@@ -1,8 +1,8 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { PreviewRoleProvider } from '@/lib/PreviewRoleContext';
@@ -18,12 +18,27 @@ import { base44 } from '@/api/base44Client';
 import { Ban } from 'lucide-react';
 
 // Auth-aware root router: authenticated → /dashboard, unauthenticated → public landing page
+// Uses useEffect so the redirect fires after async auth state settles, fixing the
+// race where the landing page flashes for logged-in users (e.g. post-Google-OAuth).
 function RootRouter() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isLoadingAuth } = useAuth();
+  const navigate = useNavigate();
 
-  if (isAuthenticated && user) {
-    return <Navigate to="/dashboard" replace />;
+  useEffect(() => {
+    if (!isLoadingAuth && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, isLoadingAuth, navigate]);
+
+  if (isLoadingAuth) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
+      </div>
+    );
   }
+
+  if (user) return null; // redirect pending
 
   return <LandingPage />;
 }
