@@ -64,8 +64,14 @@ Deno.serve(async (req) => {
     if (action === 'assign_owner') {
       const updatedRoles = [...new Set([...(targetUser.roles || []), 'owner'])];
 
+      // Find the Owner Role record for this org to sync role_ids
+      const ownerRoleRecords = await base44.asServiceRole.entities.Role.filter({ org_id: organizationId, key: 'owner' });
+      const ownerRoleId = ownerRoleRecords.length > 0 ? ownerRoleRecords[0].id : null;
+      const updatedRoleIds = [...new Set([...(targetUser.role_ids || []), ...(ownerRoleId ? [ownerRoleId] : [])])];
+
       await base44.asServiceRole.entities.User.update(targetUser.id, {
         roles: updatedRoles,
+        role_ids: updatedRoleIds,
         organization_name: org.name,
       });
 
@@ -166,8 +172,14 @@ Deno.serve(async (req) => {
 
       const updatedRoles = [...new Set([...(targetUser.roles || []), targetRole])];
 
+      // Find the Role record for this key to sync role_ids
+      const roleRecords = await base44.asServiceRole.entities.Role.filter({ org_id: organizationId, key: targetRole });
+      const roleId = roleRecords.length > 0 ? roleRecords[0].id : null;
+      const updatedRoleIds = [...new Set([...(targetUser.role_ids || []), ...(roleId ? [roleId] : [])])];
+
       await base44.asServiceRole.entities.User.update(targetUser.id, {
         roles: updatedRoles,
+        role_ids: updatedRoleIds,
       });
 
       await base44.asServiceRole.entities.SuperAdminAuditLog.create({
@@ -197,8 +209,16 @@ Deno.serve(async (req) => {
 
       const updatedRoles = (targetUser.roles || []).filter((r) => r !== targetRole);
 
+      // Find the Role record for this key to sync role_ids
+      const roleRecords = await base44.asServiceRole.entities.Role.filter({ org_id: organizationId, key: targetRole });
+      const roleId = roleRecords.length > 0 ? roleRecords[0].id : null;
+      const updatedRoleIds = roleId
+        ? (targetUser.role_ids || []).filter((id) => id !== roleId)
+        : (targetUser.role_ids || []);
+
       await base44.asServiceRole.entities.User.update(targetUser.id, {
         roles: updatedRoles,
+        role_ids: updatedRoleIds,
       });
 
       await base44.asServiceRole.entities.SuperAdminAuditLog.create({

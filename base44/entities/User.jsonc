@@ -17,6 +17,7 @@
         "super_admin",
         "owner",
         "admin",
+        "manager",
         "shop_manager",
         "estimator",
         "fabricator",
@@ -28,13 +29,14 @@
     },
     "roles": {
       "type": "array",
-      "description": "Multi-role array \u2014 a user can hold multiple roles simultaneously. Access is the union of all roles.",
+      "description": "Multi-role array \u2014 a user can hold multiple roles simultaneously. Access is the union of all roles. This is a denormalized cache synced from role_ids (the source of truth).",
       "items": {
         "type": "string",
         "enum": [
           "super_admin",
           "owner",
           "admin",
+          "manager",
           "shop_manager",
           "estimator",
           "fabricator",
@@ -43,6 +45,13 @@
           "design_specialist",
           "payroll"
         ]
+      }
+    },
+    "role_ids": {
+      "type": "array",
+      "description": "IDs of Role entity records this user holds. This is the source of truth for role assignment \u2014 the 'roles' array is kept in sync with these records' key fields.",
+      "items": {
+        "type": "string"
       }
     },
     "account_status": {

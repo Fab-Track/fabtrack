@@ -56,6 +56,22 @@ Deno.serve(async (req) => {
       stripe_mode: '',
     });
 
+    // 2a. Seed default Role records for this org
+    const defaultRoleDefs = [
+      { key: 'owner',       name: 'Owner',       archetype: 'admin',      description: 'Full access — organization owner' },
+      { key: 'manager',     name: 'Manager',     archetype: 'admin',      description: 'Administrative access to manage users and settings' },
+      { key: 'fabricator',  name: 'Fabricator',  archetype: 'shop_floor', description: 'Shop floor fabrication and installation' },
+    ];
+    const createdRoles = {};
+    for (const role of defaultRoleDefs) {
+      const record = await base44.asServiceRole.entities.Role.create({
+        ...role,
+        org_id: org.id,
+        is_default: true,
+      });
+      createdRoles[role.key] = record.id;
+    }
+
     // 3. Invite or update the owner user
     let ownerUser = null;
     const existingUsers = await base44.asServiceRole.entities.User.filter({ email: ownerEmail });
@@ -67,6 +83,8 @@ Deno.serve(async (req) => {
         organization_id: org.id,
         organization_name: name,
         full_name: ownerName,
+        roles: ['owner'],
+        role_ids: [createdRoles['owner']],
       });
     } else {
       // New user — invite them as admin (platform only supports 'user'/'admin')
@@ -81,6 +99,7 @@ Deno.serve(async (req) => {
           organization_name: name,
           full_name: ownerName,
           roles: ['owner'],
+          role_ids: [createdRoles['owner']],
         });
       }
     }

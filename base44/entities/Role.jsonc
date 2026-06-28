@@ -1,0 +1,102 @@
+{
+  "name": "Role",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Display name e.g. 'Shop Manager'"
+    },
+    "key": {
+      "type": "string",
+      "description": "Snake_case identifier used in code e.g. 'shop_manager'"
+    },
+    "description": {
+      "type": "string",
+      "description": "Short summary of what this role does"
+    },
+    "archetype": {
+      "type": "string",
+      "enum": [
+        "shop_floor",
+        "sales",
+        "finance",
+        "admin"
+      ],
+      "description": "Role archetype for categorization"
+    },
+    "org_id": {
+      "type": "string",
+      "description": "Organization ID this role belongs to"
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this role is a system default that came with the org"
+    }
+  },
+  "required": [
+    "name",
+    "key",
+    "org_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "owner"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "super_admin"
+          }
+        }
+      ]
+    },
+    "read": true,
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "owner"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "super_admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "owner"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "super_admin"
+          }
+        }
+      ]
+    }
+  }
+}

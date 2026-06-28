@@ -61,6 +61,20 @@ Deno.serve(async (req) => {
       stripe_mode: '',
     });
 
+    // 2a. Seed default Role records for this org
+    const defaultRoleDefs = [
+      { key: 'owner',       name: 'Owner',       archetype: 'admin',      description: 'Full access — organization owner' },
+      { key: 'manager',     name: 'Manager',     archetype: 'admin',      description: 'Administrative access to manage users and settings' },
+      { key: 'fabricator',  name: 'Fabricator',  archetype: 'shop_floor', description: 'Shop floor fabrication and installation' },
+    ];
+    for (const role of defaultRoleDefs) {
+      await base44.asServiceRole.entities.Role.create({
+        ...role,
+        org_id: org.id,
+        is_default: true,
+      });
+    }
+
     // 3. Create default Attachment Categories
     const attachmentCategories = [
       'Cut List', 'Shop Drawings', 'Site Photos', 'Inspiration Photos', 'POs / Receipts', 'Miscellaneous',

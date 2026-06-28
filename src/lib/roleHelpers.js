@@ -12,6 +12,7 @@
 export const ALL_ROLES = [
   "owner",
   "admin",
+  "manager",
   "shop_manager",
   "estimator",
   "fabricator",
@@ -22,7 +23,7 @@ export const ALL_ROLES = [
 ];
 
 /** Roles that count as owner-level (full access) */
-export const OWNER_LEVEL_ROLES = ["owner", "admin"];
+export const OWNER_LEVEL_ROLES = ["owner", "admin", "manager"];
 
 /** Roles that have payroll access (approve, export, corrections) */
 export const PAYROLL_ROLES = ["owner", "admin", "payroll"];
@@ -77,6 +78,7 @@ export function getDashboardForRoles(user) {
   if (roles.length === 0) return "owner";
   if (roles.some(r => OWNER_LEVEL_ROLES.includes(r))) return "owner";
   const r = roles[0];
+  if (["shop_manager", "foreman", "manager"].includes(r)) return "owner";
   if (["shop_manager", "foreman"].includes(r)) return "shop";
   if (r === "estimator") return "estimator";
   if (r === "accountant" || r === "payroll") return "accountant";
