@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { UserPlus, Pencil, MailOpen, Eye, Table2, Clock, ChevronRight, Ban, CheckCircle2, RefreshCw, KeyRound, X, Users } from "lucide-react";
+import { UserPlus, Pencil, MailOpen, Eye, Table2, Clock, ChevronRight, Ban, CheckCircle2, RefreshCw, KeyRound, X, Users, Shield } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useUserCapCheck } from "@/hooks/useUserCapCheck";
 import { format } from "date-fns";
@@ -17,6 +17,7 @@ import PermissionsMatrix from "./permissions/PermissionsMatrix";
 import RolePreviewSection from "./permissions/RolePreviewSection";
 import PermissionAuditLog from "./permissions/PermissionAuditLog";
 import RoleSummaryCard from "./permissions/RoleSummaryCard";
+import RolesTab from "./RolesTab";
 import OrgCombobox from "@/components/shared/OrgCombobox";
 import { ROLES as PERM_ROLES, ROLE_LABELS, DEFAULT_PERMISSIONS } from "@/lib/permissionsData";
 
@@ -39,6 +40,7 @@ function loadPermissions() {
 
 const TABS = [
   { id: "users",   label: "Users",              icon: UserPlus },
+  { id: "roles",   label: "Roles",              icon: Shield },
   { id: "matrix",  label: "Permissions Matrix", icon: Table2 },
   { id: "preview", label: "Preview Role",        icon: Eye },
   { id: "audit",   label: "Audit Log",           icon: Clock },
@@ -267,6 +269,9 @@ export default function UsersRolesSection() {
           </div>
         </div>
       )}
+
+      {/* Roles tab */}
+      {tab === "roles" && <RolesTab />}
 
       {/* Matrix tab */}
       {tab === "matrix" && <PermissionsMatrix />}
