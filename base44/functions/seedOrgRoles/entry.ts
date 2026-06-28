@@ -2,9 +2,9 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 // Default roles seeded for every new org
 const DEFAULT_ROLES = [
-  { key: 'owner',      name: 'Owner',      archetype: 'admin',      description: 'Full access — organization owner' },
-  { key: 'manager',    name: 'Manager',    archetype: 'admin',      description: 'Administrative access to manage users and settings' },
-  { key: 'fabricator', name: 'Fabricator', archetype: 'shop_floor', description: 'Shop floor fabrication and installation' },
+  { key: 'owner',      name: 'Owner',      archetype: 'admin',      description: 'Full access to all features and settings.' },
+  { key: 'manager',    name: 'Manager',    archetype: 'admin',      description: 'Manages jobs, schedules, and team. Can view reports.' },
+  { key: 'fabricator', name: 'Fabricator', archetype: 'shop_floor', description: 'Sees assigned jobs, clocks in/out, and accesses the shop floor.' },
 ];
 
 Deno.serve(async (req) => {
