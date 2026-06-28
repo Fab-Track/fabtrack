@@ -139,6 +139,24 @@ function getNavGroups(role) {
   return ROLE_NAV[role] || ROLE_NAV["user"];
 }
 
+/** Returns the highest-priority role label for display, capitalized. */
+const ROLE_PRIORITY = ["owner", "admin", "shop_manager", "estimator", "technician"];
+function getPrimaryRoleLabel(roles) {
+  for (const r of ROLE_PRIORITY) {
+    if (roles.includes(r)) {
+      if (r === "shop_manager") return "Shop manager";
+      return r.charAt(0).toUpperCase() + r.slice(1);
+    }
+  }
+  // Fallback: capitalize the first role the user has
+  if (roles.length > 0) {
+    const r = roles[0];
+    if (r === "shop_manager") return "Shop manager";
+    return r.charAt(0).toUpperCase() + r.slice(1);
+  }
+  return "User";
+}
+
 /** Union of nav groups across multiple roles */
 function getUnionNavGroups(roles) {
   if (!roles || roles.length === 0) return ROLE_NAV["user"];
@@ -290,12 +308,12 @@ export default function Sidebar() {
         {!collapsed && (
           <div className="flex flex-col">
             <span className="font-bold text-sm text-white tracking-wide">FABTRACK</span>
-            {(isSuperAdmin ? "Platform Owner" : user?.organization_name) && (
-              <span className="text-[11px] text-sidebar-foreground/60 font-medium leading-tight truncate">
-                {isSuperAdmin ? "Platform Owner" : user?.organization_name}
-              </span>
-            )}
-            <span className="text-[10px] text-sidebar-foreground/60 uppercase tracking-widest">Operations</span>
+            <span className="text-[11px] text-sidebar-foreground/60 font-medium leading-tight truncate">
+              {isSuperAdmin ? "Platform Owner" : (user?.organization_name || "My Organization")}
+            </span>
+            <span className="text-[10px] text-sidebar-foreground/50 font-medium leading-tight">
+              {isSuperAdmin ? "Super Admin" : getPrimaryRoleLabel(userRoles)}
+            </span>
           </div>
         )}
       </div>
