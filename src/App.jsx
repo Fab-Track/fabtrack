@@ -95,7 +95,7 @@ function AnimatedRoutes({ children }) {
     <div
       key={key}
       className="animate-slide-in"
-      style={{ animationDuration: "180ms", animationFillMode: "both" }}
+      style={{ animationDuration: "180ms", animationFillMode: "backwards" }}
     >
       {children}
     </div>
