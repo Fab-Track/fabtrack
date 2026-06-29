@@ -84,7 +84,7 @@ const ROLE_NAV = {
   fabricator: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
     { group: "JOBS",        items: ["jobBoard"] },
-    { group: "SHOP",        items: ["calendar", "schedule", "shopFloor"] },
+    { group: "SHOP",        items: ["schedule", "shopFloor"] },
     { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
@@ -184,7 +184,7 @@ function getUnionNavGroups(roles) {
 
 // Top 4 items for mobile bottom bar (flattened, skipping settings)
 function getMobileItems(groups) {
-  const flat = groups.flatMap(g => g.items).filter(k => k !== "settings");
+  const flat = groups.flatMap(g => g.items).filter(k => k !== "settings" && k !== "calendar");
   return flat.slice(0, 4).map(k => ALL_ITEMS[k]);
 }
 
