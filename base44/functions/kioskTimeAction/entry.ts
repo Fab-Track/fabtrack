@@ -36,17 +36,14 @@ Deno.serve(async (req) => {
       return Response.json({ activeEntries });
     }
 
-    // ── Write actions: verify employee + PIN ───────────────────────────────
-    const employee = await base44.asServiceRole.entities.Employee.get(body.employee_id);
-    if (!employee) return Response.json({ error: "Employee not found" }, { status: 404 });
-    if (employee.pin && body.pin !== employee.pin) {
-      return Response.json({ error: "Invalid PIN" }, { status: 403 });
-    }
-
-    const orgId = employee.organization_id;
-
-    // ── clockIn ─────────────────────────────────────────────────────────────
+    // ── clockIn — verify employee + PIN ─────────────────────────────────────
     if (action === "clockIn") {
+      const employee = await base44.asServiceRole.entities.Employee.get(body.employee_id);
+      if (!employee) return Response.json({ error: "Employee not found" }, { status: 404 });
+      if (employee.pin && body.pin !== employee.pin) {
+        return Response.json({ error: "Invalid PIN" }, { status: 403 });
+      }
+
       // Block if employee has an unresolved flagged entry
       const flagged = await base44.asServiceRole.entities.TimeEntry.filter({
         employee_id: body.employee_id,
@@ -66,7 +63,7 @@ Deno.serve(async (req) => {
         job_id: body.job_id || null,
         job_number: body.job_number || "",
         work_center: body.work_center || "General",
-        organization_id: orgId,
+        organization_id: employee.organization_id,
         entry_type: "shift",
         clock_in: new Date().toISOString(),
         is_active: true,
