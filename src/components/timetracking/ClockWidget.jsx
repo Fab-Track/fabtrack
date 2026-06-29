@@ -20,6 +20,7 @@ async function doClockIn(employee) {
     organization_id: employee.organization_id,
     employee_id: employee.id || null,
     employee_name: employee.name,
+    employee_email: employee.email || employee.user_email || null,
     entry_type: "shift",
     work_center: employee.work_center_primary || "General",
     clock_in: now.toISOString(),
