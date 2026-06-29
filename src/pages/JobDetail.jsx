@@ -113,7 +113,7 @@ export default function JobDetail() {
   const isShopRole = ["fabricator", "design_specialist"].includes(effectiveRole.toLowerCase());
 
   // Fabricator / Design Specialist see only these tabs in this order
-  const SHOP_TABS = ["overview", "schedule", "project-details", "attachments", "messages", "shop-log", "appointments", "todos"];
+  const SHOP_TABS = ["overview", "estimate", "schedule", "project-details", "attachments", "messages", "shop-log", "appointments", "todos"];
   // All other roles see all tabs in this order
   const ALL_TABS = ["overview", "estimate", "schedule", "project-details", "attachments", "messages", "shop-log", "appointments", "todos", "documents", "costing", "communications", "history"];
 
