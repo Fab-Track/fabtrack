@@ -1,7 +1,10 @@
 /**
  * JobClockSection — Inline job clock-in/out on the Time Card / Dashboard.
- * Shows active job cards (multiple simultaneously) and an inline flow
- * to clock into a new job: search → select job → select activity.
+ *
+ * One-at-a-time rule: only one job clock can be running at any time.
+ * Clocking into a new job auto-pauses any currently running job.
+ * Resuming a paused job auto-pauses any other running job first.
+ * Paused jobs stay in the list with a "Paused" badge and a Resume button.
  *
  * Activities: Measure, Draw, Cut, Fab, Install (only).
  */
@@ -11,9 +14,9 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { LogOut, LogIn, Clock, Search, Briefcase, AlertTriangle, X } from "lucide-react";
+import { LogOut, LogIn, Clock, Search, Briefcase, AlertTriangle, X, Play } from "lucide-react";
 import { parseISO, differenceInSeconds, format } from "date-fns";
-import { payPeriodLabel, getWorkweekStart } from "@/lib/timeTrackingHelpers";
+import { payPeriodLabel, getWorkweekStart, getLiveElapsedSeconds } from "@/lib/timeTrackingHelpers";
 
 const ACTIVITIES = ["Measure", "Draw", "Cut", "Fab", "Install"];
 
@@ -25,45 +28,86 @@ function formatElapsed(seconds) {
   return `${m}m ${s}s`;
 }
 
-function ActiveJobCard({ entry, job, onClockOut, isPending }) {
+// Pause a running job entry — set break state (stops the live timer)
+async function pauseEntry(entry, now) {
+  if (entry.is_on_break) return;
+  return base44.entities.TimeEntry.update(entry.id, {
+    is_on_break: true,
+    break_start: now.toISOString(),
+  });
+}
+
+// Resume a paused job entry — accumulate break_minutes, clear break state
+async function resumeEntry(entry, now) {
+  if (!entry.is_on_break) return;
+  let additionalBreak = 0;
+  if (entry.break_start) {
+    additionalBreak = differenceInSeconds(now, parseISO(entry.break_start)) / 60;
+  }
+  return base44.entities.TimeEntry.update(entry.id, {
+    is_on_break: false,
+    break_start: null,
+    break_minutes: Math.round((entry.break_minutes || 0) + additionalBreak),
+  });
+}
+
+function ActiveJobCard({ entry, job, onClockOut, onResume, isPending }) {
   const [elapsed, setElapsed] = useState(0);
+  const isPaused = !!entry.is_on_break;
 
   useEffect(() => {
-    if (!entry?.clock_in) { setElapsed(0); return; }
+    // getLiveElapsedSeconds accounts for break_minutes + ongoing break
     const tick = () => {
-      setElapsed(Math.max(0, differenceInSeconds(new Date(), parseISO(entry.clock_in))));
+      setElapsed(getLiveElapsedSeconds(entry));
     };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [entry?.clock_in]);
+  }, [entry]);
 
   const jobName = job?.job_name || entry.job_number || "Unknown Job";
   const jobNumber = job?.job_number || entry.job_number || "";
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-lg border bg-card">
+    <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-lg border bg-card ${isPaused ? "border-amber-300 bg-amber-50/40" : ""}`}>
       <div className="space-y-1">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-mono text-muted-foreground">{jobNumber}</span>
           <Badge className="bg-green-100 text-green-700 border-green-200">{entry.work_center}</Badge>
+          {isPaused && (
+            <Badge className="bg-amber-100 text-amber-700 border-amber-200">Paused</Badge>
+          )}
         </div>
         <p className="text-base font-semibold text-foreground">{jobName}</p>
         <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-accent" />
-          <span className="text-lg font-mono font-bold text-accent">{formatElapsed(elapsed)}</span>
-          <span className="text-sm text-muted-foreground">— active now</span>
+          <Clock className={`w-4 h-4 ${isPaused ? "text-amber-500" : "text-accent"}`} />
+          <span className={`text-lg font-mono font-bold ${isPaused ? "text-amber-600" : "text-accent"}`}>{formatElapsed(elapsed)}</span>
+          <span className="text-sm text-muted-foreground">— {isPaused ? "paused" : "active now"}</span>
         </div>
       </div>
-      <Button
-        size="sm"
-        onClick={() => onClockOut(entry)}
-        disabled={isPending}
-        className="bg-red-600 hover:bg-red-700 text-white gap-2 shrink-0"
-      >
-        <LogOut className="w-4 h-4" />
-        Clock Out of Job
-      </Button>
+      <div className="flex gap-2 shrink-0">
+        {isPaused && (
+          <Button
+            size="sm"
+            onClick={() => onResume(entry)}
+            disabled={isPending}
+            className="bg-green-600 hover:bg-green-700 text-white gap-2"
+          >
+            <Play className="w-4 h-4" />
+            Resume
+          </Button>
+        )}
+        <Button
+          size="sm"
+          onClick={() => onClockOut(entry)}
+          disabled={isPending}
+          variant="outline"
+          className="border-red-300 text-red-700 hover:bg-red-50 gap-2"
+        >
+          <LogOut className="w-4 h-4" />
+          Clock Out
+        </Button>
+      </div>
     </div>
   );
 }
@@ -74,9 +118,14 @@ export default function JobClockSection({ employee, masterEntry, activeEntries =
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedJob, setSelectedJob] = useState(null);
 
+  // Running = not on break (timer ticking); these get auto-paused before a new/resumed clock starts
+  const runningEntries = activeEntries.filter(e => !e.is_on_break);
+
   const clockInJobMutation = useMutation({
-    mutationFn: async ({ job, activity }) => {
+    mutationFn: async ({ job, activity, entriesToPause }) => {
       const now = new Date();
+      // Pause all currently running job entries before starting the new one
+      await Promise.all((entriesToPause || []).map(e => pauseEntry(e, now)));
       return base44.entities.TimeEntry.create({
         organization_id: employee.organization_id,
         employee_id: employee.id || null,
@@ -107,10 +156,18 @@ export default function JobClockSection({ employee, masterEntry, activeEntries =
       const now = new Date();
       const clockIn = parseISO(entry.clock_in);
       const duration = differenceInSeconds(now, clockIn) / 3600;
+      // Finalize break time if currently paused
+      let breakMinutes = entry.break_minutes || 0;
+      if (entry.is_on_break && entry.break_start) {
+        breakMinutes += differenceInSeconds(now, parseISO(entry.break_start)) / 60;
+      }
       await base44.entities.TimeEntry.update(entry.id, {
         clock_out: now.toISOString(),
         duration_hours: Math.round(duration * 100) / 100,
         is_active: false,
+        is_on_break: false,
+        break_start: null,
+        break_minutes: Math.round(breakMinutes),
       });
     },
     onSuccess: () => {
@@ -118,7 +175,20 @@ export default function JobClockSection({ employee, masterEntry, activeEntries =
     },
   });
 
-  const isBusy = clockInJobMutation.isPending || clockOutJobMutation.isPending;
+  const resumeJobMutation = useMutation({
+    mutationFn: async ({ entry, entriesToPause }) => {
+      const now = new Date();
+      // Pause all currently running job entries first (one-at-a-time rule)
+      await Promise.all((entriesToPause || []).map(e => pauseEntry(e, now)));
+      // Resume the target entry
+      return resumeEntry(entry, now);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+    },
+  });
+
+  const isBusy = clockInJobMutation.isPending || clockOutJobMutation.isPending || resumeJobMutation.isPending;
 
   // Not clocked in for the day — show warning
   if (!masterEntry) {
@@ -149,6 +219,9 @@ export default function JobClockSection({ employee, masterEntry, activeEntries =
       })
     : searchableJobs.slice(0, 10);
 
+  // Badge counts
+  const pausedCount = activeEntries.length - runningEntries.length;
+
   return (
     <div className="bg-card border-2 border-accent/30 rounded-xl p-5 space-y-4">
       {/* Header */}
@@ -157,7 +230,9 @@ export default function JobClockSection({ employee, masterEntry, activeEntries =
           <Briefcase className="w-4 h-4 text-accent" />
           <h3 className="text-sm font-semibold text-foreground">Clock Into a Job</h3>
           {activeEntries.length > 0 && (
-            <Badge className="bg-green-100 text-green-700 border-green-200">{activeEntries.length} active</Badge>
+            <Badge className="bg-green-100 text-green-700 border-green-200">
+              {activeEntries.length} open · {runningEntries.length} running{pausedCount > 0 ? ` · ${pausedCount} paused` : ""}
+            </Badge>
           )}
         </div>
         {!showSearch && (
@@ -168,16 +243,20 @@ export default function JobClockSection({ employee, masterEntry, activeEntries =
         )}
       </div>
 
-      {/* Active job cards — multiple shown simultaneously */}
+      {/* Active job cards — running first, then paused */}
       {activeEntries.length > 0 && (
         <div className="space-y-3">
-          {activeEntries.map(entry => (
+          {[...activeEntries].sort((a, b) => (a.is_on_break ? 1 : 0) - (b.is_on_break ? 1 : 0)).map(entry => (
             <ActiveJobCard
               key={entry.id}
               entry={entry}
               job={jobs.find(j => j.id === entry.job_id)}
               onClockOut={(e) => clockOutJobMutation.mutate(e)}
-              isPending={clockOutJobMutation.isPending}
+              onResume={(e) => resumeJobMutation.mutate({
+                entry: e,
+                entriesToPause: activeEntries.filter(other => other.id !== e.id && !other.is_on_break),
+              })}
+              isPending={isBusy}
             />
           ))}
         </div>
@@ -244,7 +323,11 @@ export default function JobClockSection({ employee, masterEntry, activeEntries =
                   <Button
                     key={activity}
                     variant="outline"
-                    onClick={() => clockInJobMutation.mutate({ job: selectedJob, activity })}
+                    onClick={() => clockInJobMutation.mutate({
+                      job: selectedJob,
+                      activity,
+                      entriesToPause: runningEntries,
+                    })}
                     disabled={isBusy}
                     className="h-14 font-semibold gap-1.5 min-h-[44px]"
                   >

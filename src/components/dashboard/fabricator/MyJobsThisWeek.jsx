@@ -1,6 +1,7 @@
 import React from "react";
 import { startOfWeek, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { getNetHours } from "@/lib/timeTrackingHelpers";
 
 export default function MyJobsThisWeek({ employee, timeEntries, activeEntry, activeElapsedSeconds = 0, qcInspections, jobs }) {
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
@@ -23,7 +24,7 @@ export default function MyJobsThisWeek({ employee, timeEntries, activeEntry, act
         isActive: false,
       };
     }
-    grouped[key].hours += e.duration_hours || 0;
+    grouped[key].hours += getNetHours(e);
   });
 
   // Merge active session into grouped rows

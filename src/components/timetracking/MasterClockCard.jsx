@@ -69,11 +69,20 @@ async function doClockOut(entry) {
   for (const jobEntry of activeJobEntries) {
     if (jobEntry.job_id) {
       const jGrossSecs = Math.max(0, (now - parseISO(jobEntry.clock_in)) / 1000);
+      // Finalize accumulated break time (including ongoing pause)
+      let jobBreakSecs = (jobEntry.break_minutes || 0) * 60;
+      if (jobEntry.is_on_break && jobEntry.break_start) {
+        jobBreakSecs += Math.max(0, (now - parseISO(jobEntry.break_start)) / 1000);
+      }
+      const jNetSecs = Math.max(0, jGrossSecs - jobBreakSecs);
       await base44.entities.TimeEntry.update(jobEntry.id, {
         clock_out: now.toISOString(),
         duration_hours: Math.round((jGrossSecs / 3600) * 100) / 100,
-        net_hours: Math.round((jGrossSecs / 3600) * 100) / 100,
+        net_hours: Math.round((jNetSecs / 3600) * 100) / 100,
         is_active: false,
+        is_on_break: false,
+        break_start: null,
+        break_minutes: Math.round(jobBreakSecs / 60),
         notes: "Auto-stopped: master clock out",
       });
     }
