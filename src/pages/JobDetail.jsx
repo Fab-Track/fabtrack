@@ -36,6 +36,7 @@ import ProjectDetailsTab from "@/components/jobs/ProjectDetailsTab";
 import JobMessagesTab from "@/components/jobs/JobMessagesTab";
 import JobCommunicationsTab from "@/components/jobs/JobCommunicationsTab";
 import JobTodosTab from "@/components/jobs/JobTodosTab";
+import JobEstimatesTab from "@/components/jobs/JobEstimatesTab";
 import JobEventsList from "@/components/events/JobEventsList";
 import QueuedMessageBanner from "@/components/comms/QueuedMessageBanner";
 import MessageComposerModal from "@/components/comms/MessageComposerModal";
@@ -114,7 +115,7 @@ export default function JobDetail() {
   // Fabricator / Design Specialist see only these tabs in this order
   const SHOP_TABS = ["overview", "schedule", "project-details", "attachments", "messages", "shop-log", "appointments", "todos"];
   // All other roles see all tabs in this order
-  const ALL_TABS = ["overview", "schedule", "project-details", "attachments", "messages", "shop-log", "appointments", "todos", "documents", "costing", "communications", "history"];
+  const ALL_TABS = ["overview", "estimate", "schedule", "project-details", "attachments", "messages", "shop-log", "appointments", "todos", "documents", "costing", "communications", "history"];
 
   const visibleTabs = isShopRole ? SHOP_TABS : ALL_TABS;
 
@@ -219,6 +220,11 @@ export default function JobDetail() {
           style={{ scrollbarWidth: "none" }}
         >
           {visibleTabs.includes("overview") && <TabsTrigger value="overview" className="shrink-0">Overview</TabsTrigger>}
+          {visibleTabs.includes("estimate") && (
+            <TabsTrigger value="estimate" className="shrink-0">
+              Estimate
+            </TabsTrigger>
+          )}
           {visibleTabs.includes("schedule") && (
             <TabsTrigger value="schedule" className="shrink-0">
               Schedule
@@ -260,6 +266,7 @@ export default function JobDetail() {
         </TabsList>
 
         <TabsContent value="overview"><JobOverviewTab job={job} /></TabsContent>
+        <TabsContent value="estimate"><JobEstimatesTab job={job} /></TabsContent>
         <TabsContent value="schedule"><ProductionSchedule job={job} readOnly={isShopRole} /></TabsContent>
         <TabsContent value="project-details"><ProjectDetailsTab job={job} userRole={effectiveRole} /></TabsContent>
         <TabsContent value="attachments"><JobAttachmentsTab job={job} /></TabsContent>
