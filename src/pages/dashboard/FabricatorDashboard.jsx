@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import FabricatorStatsRow from "@/components/dashboard/fabricator/FabricatorStatsRow";
-import MyCurrentJob from "@/components/dashboard/fabricator/MyCurrentJob";
+import JobClockSection from "@/components/timetracking/JobClockSection";
 import MyJobsThisWeek from "@/components/dashboard/fabricator/MyJobsThisWeek";
 import MyScoreBreakdown from "@/components/dashboard/fabricator/MyScoreBreakdown";
 import MyMonthComparison from "@/components/dashboard/fabricator/MyMonthComparison";
@@ -138,13 +138,13 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
         qcInspections={qcInspections}
       />
 
-      {/* ── JOB CLOCK (Shop Floor / job costing only) ── */}
-      <MyCurrentJob
+      {/* ── JOB CLOCK ── */}
+      <JobClockSection
+        employee={myEmployee || { id: null, name: user?.full_name, email: user?.email, work_center_primary: "General", organization_id: user?.organization_id }}
+        masterEntry={masterEntry}
         activeEntries={jobActiveEntries}
-        activeElapsedSeconds={activeElapsedSeconds}
         allTimeEntries={allTimeEntries}
         jobs={jobs}
-        masterEntry={masterEntry}
       />
 
       {/* Jobs this week */}

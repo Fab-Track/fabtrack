@@ -49,7 +49,7 @@ const JobBoard         = lazy(() => import('@/pages/JobBoard'));
 const JobDetail        = lazy(() => import('@/pages/JobDetail'));
 const NewJob           = lazy(() => import('@/pages/NewJob'));
 const WorkCenters      = lazy(() => import('@/pages/WorkCenters'));
-const ShopKiosk        = lazy(() => import('@/pages/ShopKiosk'));
+const TimeCard         = lazy(() => import('@/pages/TimeCard'));
 const Schedule         = lazy(() => import('@/pages/Schedule'));
 const Customers        = lazy(() => import('@/pages/Customers'));
 const Inventory        = lazy(() => import('@/pages/Inventory'));
@@ -228,7 +228,6 @@ const AuthenticatedApp = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Public pages - no sidebar */}
-        <Route path="/kiosk" element={<ShopKiosk />} />
         <Route path="/lead" element={<LeadForm />} />
         <Route path="/welcome" element={<OnboardingWelcome />} />
         <Route path="/setup" element={<OnboardingWizard />} />
@@ -259,6 +258,7 @@ const AuthenticatedApp = () => {
           <Route path="/my-timesheet" element={<MyTimesheet />} />
           <Route path="/admin-payroll" element={<AdminPayroll />} />
           <Route path="/billing" element={<Billing />} />
+          <Route path="/time-card" element={<TimeCard />} />
           <Route path="/dashboard" element={<Dashboard />} />
         </Route>
 

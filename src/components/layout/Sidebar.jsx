@@ -31,7 +31,7 @@ const ALL_ITEMS = {
   schedule:       { label: "Schedule",         icon: CalendarDays,    path: "/schedule" },
   workCenters:    { label: "Work Centers",     icon: Wrench,          path: "/work-centers" },
   inventory:      { label: "Inventory",        icon: Package,         path: "/inventory" },
-  shopFloor:      { label: "Time Card",        icon: Clock,           path: "/kiosk" },
+  shopFloor:      { label: "Time Card",        icon: Clock,           path: "/time-card" },
   craftsmanScore: { label: "Craftsman Score",  icon: Trophy,          path: "/craftsman" },
   employees:      { label: "Employees",        icon: Building2,       path: "/employees" },
   myTimesheet:    { label: "My Timesheet",     icon: Clock,           path: "/my-timesheet" },

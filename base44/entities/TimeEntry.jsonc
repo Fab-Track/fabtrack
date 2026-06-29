@@ -29,17 +29,20 @@
     "work_center": {
       "type": "string",
       "enum": [
+        "Measure",
+        "Draw",
         "Cut",
+        "Fab",
+        "Install",
         "Fit",
         "Weld",
         "Grind",
         "Powder Coat",
-        "Install",
         "Demo",
         "Design",
         "General"
       ],
-      "description": "Work center"
+      "description": "Work center / activity"
     },
     "entry_type": {
       "type": "string",
