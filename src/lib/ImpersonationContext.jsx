@@ -13,6 +13,7 @@ export function ImpersonationProvider({ children }) {
     setAdminUser(currentUser);
     // Log start
     await base44.entities.AdminActivityLog.create({
+      organization_id: currentUser?.organization_id || "",
       admin_user_email: currentUser?.email || "",
       admin_user_name: currentUser?.full_name || currentUser?.email || "",
       impersonated_employee_id: employee.id,
@@ -25,6 +26,7 @@ export function ImpersonationProvider({ children }) {
   const exitImpersonation = useCallback(async () => {
     if (impersonatedEmployee && adminUser) {
       await base44.entities.AdminActivityLog.create({
+        organization_id: adminUser?.organization_id || "",
         admin_user_email: adminUser?.email || "",
         admin_user_name: adminUser?.full_name || adminUser?.email || "",
         impersonated_employee_id: impersonatedEmployee.id,
@@ -40,6 +42,7 @@ export function ImpersonationProvider({ children }) {
   const logAction = useCallback(async ({ actionType, actionDetail, metadata }) => {
     if (!impersonatedEmployee || !adminUser) return;
     await base44.entities.AdminActivityLog.create({
+      organization_id: adminUser?.organization_id || "",
       admin_user_email: adminUser?.email || "",
       admin_user_name: adminUser?.full_name || adminUser?.email || "",
       impersonated_employee_id: impersonatedEmployee.id,
