@@ -267,7 +267,7 @@ export default function JobDetail() {
 
         <TabsContent value="overview"><JobOverviewTab job={job} /></TabsContent>
         <TabsContent value="estimate"><JobEstimatesTab job={job} /></TabsContent>
-        <TabsContent value="schedule"><ProductionSchedule job={job} readOnly={isShopRole} /></TabsContent>
+        <TabsContent value="schedule"><ProductionSchedule job={job} /></TabsContent>
         <TabsContent value="project-details"><ProjectDetailsTab job={job} userRole={effectiveRole} /></TabsContent>
         <TabsContent value="attachments"><JobAttachmentsTab job={job} /></TabsContent>
         <TabsContent value="messages"><JobMessagesTab job={job} /></TabsContent>
