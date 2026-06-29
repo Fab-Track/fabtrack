@@ -226,7 +226,7 @@ export default function JobClockSection({ employee, masterEntry, activeEntries =
             <Badge className="bg-green-100 text-green-700 border-green-200">{activeEntries.length} active</Badge>
           )}
         </div>
-        {!showSearch && (
+        {!showSearch && activeEntries.length === 0 && (
           <Button variant="outline" size="sm" onClick={() => setShowSearch(true)} className="gap-2 min-h-[44px]">
             <LogIn className="w-4 h-4" />
             Clock Into a Job
@@ -234,7 +234,7 @@ export default function JobClockSection({ employee, masterEntry, activeEntries =
         )}
       </div>
 
-      {/* Active job cards — multiple shown simultaneously */}
+      {/* Active job cards — only one job active at a time */}
       {activeEntries.length > 0 && (
         <div className="space-y-3">
           {activeEntries.map(entry => (
@@ -247,6 +247,10 @@ export default function JobClockSection({ employee, masterEntry, activeEntries =
               isPending={isBusy}
             />
           ))}
+          <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm text-amber-800">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            Clock out of this job before clocking into another one.
+          </div>
         </div>
       )}
 
