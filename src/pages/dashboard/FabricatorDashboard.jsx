@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import FabricatorStatsRow from "@/components/dashboard/fabricator/FabricatorStatsRow";
+
 import JobClockSection from "@/components/timetracking/JobClockSection";
 import MyJobsThisWeek from "@/components/dashboard/fabricator/MyJobsThisWeek";
 import MyScoreBreakdown from "@/components/dashboard/fabricator/MyScoreBreakdown";
@@ -122,21 +122,13 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
             employee={myEmployee}
             timeEntries={allTimeEntries}
             activeEntry={masterEntry}
+            qcInspections={qcInspections}
           />
         )}
       </div>
 
       {/* ── To-Dos ── */}
       <DashboardTodosWidget />
-
-      {/* Large stat cards */}
-      <FabricatorStatsRow
-        employee={myEmployee}
-        timeEntries={allTimeEntries}
-        activeEntry={masterEntry}
-        activeElapsedSeconds={activeElapsedSeconds}
-        qcInspections={qcInspections}
-      />
 
       {/* ── JOB CLOCK ── */}
       <JobClockSection

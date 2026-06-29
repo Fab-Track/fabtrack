@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import MasterClockCard from "@/components/timetracking/MasterClockCard";
-import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
+
 import JobClockSection from "@/components/timetracking/JobClockSection";
 import { useOrgFilter } from "@/lib/orgContext";
 import { differenceInSeconds, parseISO } from "date-fns";
@@ -105,13 +105,6 @@ export default function TimeCard() {
           employee={myEmployee || fallbackEmployee}
           masterEntry={masterEntry}
         />
-        {myEmployee && (
-          <HoursStatsRow
-            employee={myEmployee}
-            timeEntries={allTimeEntries}
-            activeEntry={masterEntry}
-          />
-        )}
       </div>
 
       {/* Job clock — inline search, activity selection, multiple active cards */}

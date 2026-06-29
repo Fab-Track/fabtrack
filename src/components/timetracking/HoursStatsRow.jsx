@@ -6,17 +6,17 @@ import React from "react";
 import { getCurrentPayPeriod, aggregateHours, getLiveElapsedSeconds, formatHours } from "@/lib/timeTrackingHelpers";
 import { parseISO, startOfDay, startOfWeek } from "date-fns";
 
-function Tile({ label, value, sub, highlight }) {
+function Tile({ label, value, sub, highlight, valueColor = "text-foreground" }) {
   return (
     <div className={`rounded-xl border p-4 flex flex-col gap-1 ${highlight ? "border-accent bg-accent/5" : "bg-card"}`}>
       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
-      <p className="text-3xl font-bold tracking-tight">{value}</p>
+      <p className={`text-3xl font-bold tracking-tight ${valueColor}`}>{value}</p>
       {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
     </div>
   );
 }
 
-export default function HoursStatsRow({ employee, timeEntries = [], activeEntry }) {
+export default function HoursStatsRow({ employee, timeEntries = [], activeEntry, qcInspections }) {
   const now = new Date();
   const todayStart = startOfDay(now);
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
@@ -54,8 +54,23 @@ export default function HoursStatsRow({ employee, timeEntries = [], activeEntry 
   const weekHours  = completedWeek  + (isMyActive && activeEntry.clock_in && parseISO(activeEntry.clock_in) >= weekStart  ? liveHours : 0);
   const ppHours    = completedPP    + (isMyActive && activeEntry.clock_in && parseISO(activeEntry.clock_in) >= pp.start    ? liveHours : 0);
 
+  // QC / Craftsman Score (30-day rolling average)
+  const hasQC = Array.isArray(qcInspections);
+  let avgScore = null;
+  let scoreColor = "text-muted-foreground";
+  if (hasQC) {
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const myQC = qcInspections.filter(
+      q => q.employee_id === employee?.id && q.created_date && parseISO(q.created_date) >= thirtyDaysAgo
+    );
+    if (myQC.length > 0) {
+      avgScore = Math.round(myQC.reduce((s, q) => s + (q.quality_score || 0), 0) / myQC.length);
+      scoreColor = avgScore >= 80 ? "text-green-500" : avgScore >= 60 ? "text-yellow-500" : "text-red-500";
+    }
+  }
+
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className={`grid gap-3 ${hasQC ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3"}`}>
       <Tile
         label="Today"
         value={formatHours(todayHours)}
@@ -72,6 +87,14 @@ export default function HoursStatsRow({ employee, timeEntries = [], activeEntry 
         value={formatHours(ppHours)}
         sub={pp.label}
       />
+      {hasQC && (
+        <Tile
+          label="Craftsman Score"
+          value={avgScore !== null ? avgScore : "—"}
+          sub="30-day rolling avg / 100"
+          valueColor={scoreColor}
+        />
+      )}
     </div>
   );
 }
