@@ -11,7 +11,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { LogOut, LogIn, Clock, Search, Briefcase, AlertTriangle, X, Pause, Play } from "lucide-react";
+import { LogOut, LogIn, Clock, Search, Briefcase, AlertTriangle, X } from "lucide-react";
 import { parseISO, differenceInSeconds, format } from "date-fns";
 import { payPeriodLabel, getWorkweekStart } from "@/lib/timeTrackingHelpers";
 
@@ -25,32 +25,18 @@ function formatElapsed(seconds) {
   return `${m}m ${s}s`;
 }
 
-function ActiveJobCard({ entry, job, onClockOut, onPauseToggle, isPending }) {
+function ActiveJobCard({ entry, job, onClockOut, isPending }) {
   const [elapsed, setElapsed] = useState(0);
-  const [breakElapsed, setBreakElapsed] = useState(0);
-  const isPaused = !!entry.is_on_break;
 
   useEffect(() => {
     if (!entry?.clock_in) { setElapsed(0); return; }
     const tick = () => {
-      // When paused, freeze the work timer at the break_start moment
-      const ref = isPaused && entry.break_start ? parseISO(entry.break_start) : new Date();
-      setElapsed(Math.max(0, differenceInSeconds(ref, parseISO(entry.clock_in)) - (entry.break_minutes || 0) * 60));
+      setElapsed(Math.max(0, differenceInSeconds(new Date(), parseISO(entry.clock_in))));
     };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [entry?.clock_in, entry?.break_start, entry?.break_minutes, isPaused]);
-
-  useEffect(() => {
-    if (!isPaused || !entry?.break_start) { setBreakElapsed(0); return; }
-    const tick = () => {
-      setBreakElapsed(Math.max(0, differenceInSeconds(new Date(), parseISO(entry.break_start))));
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [isPaused, entry?.break_start]);
+  }, [entry?.clock_in]);
 
   const jobName = job?.job_name || entry.job_number || "Unknown Job";
   const jobNumber = job?.job_number || entry.job_number || "";
@@ -60,40 +46,24 @@ function ActiveJobCard({ entry, job, onClockOut, onPauseToggle, isPending }) {
       <div className="space-y-1">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-mono text-muted-foreground">{jobNumber}</span>
-          <Badge className={isPaused
-            ? "bg-amber-100 text-amber-700 border-amber-200"
-            : "bg-green-100 text-green-700 border-green-200"}>
-            {entry.work_center}
-          </Badge>
+          <Badge className="bg-green-100 text-green-700 border-green-200">{entry.work_center}</Badge>
         </div>
         <p className="text-base font-semibold text-foreground">{jobName}</p>
         <div className="flex items-center gap-2">
-          <Clock className={`w-4 h-4 ${isPaused ? "text-amber-500" : "text-accent"}`} />
-          <span className={`text-lg font-mono font-bold ${isPaused ? "text-amber-500" : "text-accent"}`}>{formatElapsed(elapsed)}</span>
-          <span className="text-sm text-muted-foreground">{isPaused ? `— paused (${formatElapsed(breakElapsed)})` : "— active now"}</span>
+          <Clock className="w-4 h-4 text-accent" />
+          <span className="text-lg font-mono font-bold text-accent">{formatElapsed(elapsed)}</span>
+          <span className="text-sm text-muted-foreground">— active now</span>
         </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => onPauseToggle(entry)}
-          disabled={isPending}
-          className="gap-2 border-amber-300 text-amber-700 hover:bg-amber-50 min-h-[44px]"
-        >
-          {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-          {isPaused ? "Resume" : "Pause"}
-        </Button>
-        <Button
-          size="sm"
-          onClick={() => onClockOut(entry)}
-          disabled={isPending}
-          className="bg-red-600 hover:bg-red-700 text-white gap-2 shrink-0 min-h-[44px]"
-        >
-          <LogOut className="w-4 h-4" />
-          Clock Out of Job
-        </Button>
-      </div>
+      <Button
+        size="sm"
+        onClick={() => onClockOut(entry)}
+        disabled={isPending}
+        className="bg-red-600 hover:bg-red-700 text-white gap-2 shrink-0"
+      >
+        <LogOut className="w-4 h-4" />
+        Clock Out of Job
+      </Button>
     </div>
   );
 }
@@ -136,22 +106,11 @@ export default function JobClockSection({ employee, masterEntry, activeEntries =
     mutationFn: async (entry) => {
       const now = new Date();
       const clockIn = parseISO(entry.clock_in);
-      const grossSecs = Math.max(0, (now - clockIn) / 1000);
-      let extraBreakSecs = 0;
-      if (entry.is_on_break && entry.break_start) {
-        extraBreakSecs = Math.max(0, (now - parseISO(entry.break_start)) / 1000);
-      }
-      const totalBreakSecs = (entry.break_minutes || 0) * 60 + extraBreakSecs;
-      const grossHours = grossSecs / 3600;
-      const netHours = Math.max(0, (grossSecs - totalBreakSecs) / 3600);
+      const duration = differenceInSeconds(now, clockIn) / 3600;
       await base44.entities.TimeEntry.update(entry.id, {
         clock_out: now.toISOString(),
-        duration_hours: Math.round(grossHours * 100) / 100,
-        net_hours: Math.round(netHours * 100) / 100,
-        break_minutes: Math.round(((entry.break_minutes || 0) * 60 + extraBreakSecs) / 60),
+        duration_hours: Math.round(duration * 100) / 100,
         is_active: false,
-        is_on_break: false,
-        break_start: null,
       });
     },
     onSuccess: () => {
@@ -159,32 +118,7 @@ export default function JobClockSection({ employee, masterEntry, activeEntries =
     },
   });
 
-  const pauseJobMutation = useMutation({
-    mutationFn: async (entry) => {
-      if (entry.is_on_break) {
-        // Resume: accumulate break time, clear break_start
-        const now = new Date();
-        const addedMins = Math.max(0, (now - parseISO(entry.break_start)) / (1000 * 60));
-        const totalMins = (entry.break_minutes || 0) + addedMins;
-        await base44.entities.TimeEntry.update(entry.id, {
-          is_on_break: false,
-          break_start: null,
-          break_minutes: Math.round(totalMins * 10) / 10,
-        });
-      } else {
-        // Pause: set break_start
-        await base44.entities.TimeEntry.update(entry.id, {
-          is_on_break: true,
-          break_start: new Date().toISOString(),
-        });
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
-    },
-  });
-
-  const isBusy = clockInJobMutation.isPending || clockOutJobMutation.isPending || pauseJobMutation.isPending;
+  const isBusy = clockInJobMutation.isPending || clockOutJobMutation.isPending;
 
   // Not clocked in for the day — show warning
   if (!masterEntry) {
@@ -243,8 +177,7 @@ export default function JobClockSection({ employee, masterEntry, activeEntries =
               entry={entry}
               job={jobs.find(j => j.id === entry.job_id)}
               onClockOut={(e) => clockOutJobMutation.mutate(e)}
-              onPauseToggle={(e) => pauseJobMutation.mutate(e)}
-              isPending={isBusy}
+              isPending={clockOutJobMutation.isPending}
             />
           ))}
         </div>
