@@ -1,7 +1,7 @@
 import React from "react";
 import { format, parseISO, differenceInCalendarDays, isSameDay, startOfDay, eachDayOfInterval } from "date-fns";
 import { Link } from "react-router-dom";
-import { PHASE_COLORS, PHASE_SHORT, buildFabHeatmap, getHeatColor } from "@/lib/scheduleUtils";
+import { PHASE_COLORS, PHASE_SHORT, buildFabHeatmap, getHeatColor, getPhaseColorByName } from "@/lib/scheduleUtils";
 import { cn } from "@/lib/utils";
 
 const TODAY = startOfDay(new Date());
@@ -64,7 +64,7 @@ function CrewRow({ name, entries, days, windowStart, windowEnd, isUnassigned }) 
           const clampedEnd = e > windowEnd ? windowEnd : e;
           const leftPct = (differenceInCalendarDays(clampedStart, windowStart) / totalDays) * 100;
           const widthPct = Math.max(0.5, ((differenceInCalendarDays(clampedEnd, clampedStart) + 1) / totalDays) * 100);
-          const colors = PHASE_COLORS[entry.phase.name] || PHASE_COLORS["Fabrication"];
+          const colors = getPhaseColorByName(entry.phase.name);
           const faded = entry.phase.status === "complete";
 
           return (
