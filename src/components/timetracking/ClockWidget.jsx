@@ -18,7 +18,7 @@ async function doClockIn(employee) {
   const now = new Date();
   return base44.entities.TimeEntry.create({
     organization_id: employee.organization_id,
-    employee_id: employee.id,
+    employee_id: employee.id || null,
     employee_name: employee.name,
     entry_type: "shift",
     work_center: employee.work_center_primary || "General",

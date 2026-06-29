@@ -51,13 +51,16 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
     queryFn: () => base44.entities.QCInspection.filter(orgFilter, "-created_date", 200),
   });
 
-  // Use impersonated employee if provided, otherwise match logged-in user by email
+  // Use impersonated employee if provided, otherwise find via fallback chain:
+  // 1. Match by user_id  2. Match by email
   const myEmployee = overrideEmployee
     ? (employees.find(e => e.id === overrideEmployee.id) || overrideEmployee)
-    : (employees.find(e => e.email === user?.email) || null);
+    : (employees.find(e => e.user_id === user?.id) ||
+       employees.find(e => e.email === user?.email) ||
+       null);
 
-  // All active entries for this employee (fall back to user.id if no Employee record)
-  const myId = myEmployee?.id || user?.id;
+  // All active entries for this employee (null if no Employee record linked)
+  const myId = myEmployee?.id || null;
   const myActiveEntries = myId
     ? activeEntries.filter(e => e.employee_id === myId)
     : [];
@@ -111,7 +114,7 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
       {/* ── MASTER / PAYROLL CLOCK ── top of dashboard, always visible */}
       <div className="space-y-3">
         <MasterClockCard
-          employee={myEmployee || { id: user?.id, name: user?.full_name, work_center_primary: "General", organization_id: user?.organization_id }}
+          employee={myEmployee || { id: null, name: user?.full_name, work_center_primary: "General", organization_id: user?.organization_id }}
           masterEntry={masterEntry}
         />
         {myEmployee && (

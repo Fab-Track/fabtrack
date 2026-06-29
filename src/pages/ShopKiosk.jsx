@@ -7,8 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Clock, LogIn, LogOut, ArrowLeft, Check, Home, Coffee, AlertTriangle } from "lucide-react";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/lib/AuthContext";
 
 const WORK_CENTERS = ["Cut", "Fit", "Weld", "Grind", "Powder Coat", "Install", "Demo", "Design"];
+
+function formatRole(key) {
+  if (!key) return "Employee";
+  return key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
 
 function formatElapsed(ms) {
   if (ms < 0) ms = 0;
@@ -20,6 +26,8 @@ function formatElapsed(ms) {
 }
 
 export default function ShopKiosk() {
+  const { user } = useAuth();
+  const orgId = user?.organization_id || null;
   const [step, setStep] = useState("select-employee");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [pin, setPin] = useState("");
@@ -33,18 +41,22 @@ export default function ShopKiosk() {
   const searchInputRef = useRef(null);
 
   const { data: employees = [] } = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => base44.entities.Employee.list("-created_date", 100),
+    queryKey: ["employees", orgId],
+    queryFn: () => orgId
+      ? base44.entities.Employee.filter({ organization_id: orgId }, "-created_date", 100)
+      : base44.entities.Employee.list("-created_date", 100),
   });
 
   const { data: jobs = [] } = useQuery({
-    queryKey: ["jobs"],
-    queryFn: () => base44.entities.Job.list("-created_date", 200),
+    queryKey: ["jobs", orgId],
+    queryFn: () => orgId
+      ? base44.entities.Job.filter({ organization_id: orgId }, "-created_date", 200)
+      : base44.entities.Job.list("-created_date", 200),
   });
 
   const { data: kioskStatusResp } = useQuery({
-    queryKey: ["kioskStatus"],
-    queryFn: () => base44.functions.invoke("kioskTimeAction", { action: "getStatus" }),
+    queryKey: ["kioskStatus", orgId],
+    queryFn: () => base44.functions.invoke("kioskTimeAction", { action: "getStatus", organization_id: orgId }),
     refetchInterval: 15000,
   });
   const activeEntries = kioskStatusResp?.data?.activeEntries || [];
@@ -130,8 +142,9 @@ export default function ShopKiosk() {
   }, [step]);
 
   const activeEmployees = employees.filter(e => e.is_active !== false);
+  const today = new Date().toISOString().split("T")[0];
   const activeEntry = selectedEmployee
-    ? activeEntries.find(e => e.employee_id === selectedEmployee.id)
+    ? activeEntries.find(e => e.employee_id === selectedEmployee.id && e.is_active === true && e.clock_in?.startsWith(today))
     : null;
   const STAGE_PRIORITY = { "Fab Queue": 0, "In Fabrication": 1 };
   const activeJobs = jobs
@@ -155,7 +168,8 @@ export default function ShopKiosk() {
   const handleEmployeeSelect = (emp) => {
     setSelectedEmployee(emp);
     setActionError("");
-    const existing = activeEntries.find(e => e.employee_id === emp.id);
+    const todayStr = new Date().toISOString().split("T")[0];
+    const existing = activeEntries.find(e => e.employee_id === emp.id && e.is_active === true && e.clock_in?.startsWith(todayStr));
     if (existing) {
       setStep("time-dashboard");
     } else {
@@ -206,7 +220,7 @@ export default function ShopKiosk() {
           <p className="text-lg font-medium mb-4 opacity-80">Who are you?</p>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {activeEmployees.map(emp => {
-              const isClocked = activeEntries.some(e => e.employee_id === emp.id);
+              const isClocked = activeEntries.some(e => e.employee_id === emp.id && e.is_active === true && e.clock_in?.startsWith(today));
               const isOnBreak = activeEntries.some(e => e.employee_id === emp.id && e.is_on_break);
               return (
                 <button
@@ -215,7 +229,7 @@ export default function ShopKiosk() {
                   className={`p-5 rounded-xl text-left transition-all min-h-[80px] ${isClocked ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-white/10 hover:bg-white/20'}`}
                 >
                   <p className="font-bold text-lg">{emp.name}</p>
-                  <p className="text-sm opacity-70 capitalize">{emp.role}</p>
+                  <p className="text-sm opacity-70">{formatRole(emp.role)}</p>
                   {isClocked && (
                     <Badge className="mt-2 bg-white/20 text-white">
                       {isOnBreak ? <><Coffee className="w-3 h-3 mr-1" />On Break</> : "Clocked In"}

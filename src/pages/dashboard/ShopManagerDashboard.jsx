@@ -53,8 +53,8 @@ export default function ShopManagerDashboard() {
     refetchInterval: 30000,
   });
 
-  const myEmployee = employees.find(e => e.email === user?.email || e.personal_email === user?.email || e.created_by_id === user?.id) || null;
-  const myId = myEmployee?.id || user?.id;
+  const myEmployee = employees.find(e => e.user_id === user?.id || e.email === user?.email || e.personal_email === user?.email) || null;
+  const myId = myEmployee?.id || null;
   const myActiveEntries = myId ? activeEntries.filter(e => e.employee_id === myId) : [];
   const masterEntry = myActiveEntries.find(e => !e.job_id) || null;
 
@@ -120,7 +120,7 @@ export default function ShopManagerDashboard() {
     <div className="space-y-6">
       {/* ── CLOCK IN ── */}
       <div className="space-y-3">
-        <MasterClockCard employee={myEmployee || { id: user?.id, name: user?.full_name, work_center_primary: "General" }} masterEntry={masterEntry} />
+        <MasterClockCard employee={myEmployee || { id: null, name: user?.full_name, work_center_primary: "General", organization_id: user?.organization_id }} masterEntry={masterEntry} />
         {myEmployee && <HoursStatsRow employee={myEmployee} timeEntries={allTimeEntries} activeEntry={masterEntry} />}
       </div>
 
