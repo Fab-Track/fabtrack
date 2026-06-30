@@ -70,6 +70,16 @@ export default function JobBoard() {
     queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 500),
   });
 
+  const q = searchQuery.trim().toLowerCase();
+  const matchesSearch = (j) => {
+    if (!q) return true;
+    return (
+      (j.job_number || "").toLowerCase().includes(q) ||
+      (j.customer_name || "").toLowerCase().includes(q) ||
+      (j.job_name || "").toLowerCase().includes(q)
+    );
+  };
+
   // Active jobs: not archived. Archived jobs: is_archived === true
   const jobs = allJobs.filter(j => !j.is_archived);
   const totalArchived = allJobs.filter(j => j.is_archived);
@@ -91,16 +101,6 @@ export default function JobBoard() {
     Sales:   jobs.filter(j => (j.pipeline_board === "Sales"   || (!j.pipeline_board && SALES_STAGES.includes(j.stage)) || (!j.pipeline_board && !j.stage && (j.status === "Estimate" || j.status === "Approved")))),
     Shop:    jobs.filter(j => j.pipeline_board === "Shop"    || (!j.pipeline_board && SHOP_STAGES.includes(j.stage))   || (!j.pipeline_board && !j.stage && ["Fab Queue","In Fabrication","Powder Coat","Install Scheduled","Install Complete"].includes(j.status))),
     Billing: jobs.filter(j => j.pipeline_board === "Billing" || (!j.pipeline_board && BILLING_STAGES.includes(j.stage)) || (!j.pipeline_board && !j.stage && j.status === "Invoiced")),
-  };
-
-  const q = searchQuery.trim().toLowerCase();
-  const matchesSearch = (j) => {
-    if (!q) return true;
-    return (
-      (j.job_number || "").toLowerCase().includes(q) ||
-      (j.customer_name || "").toLowerCase().includes(q) ||
-      (j.job_name || "").toLowerCase().includes(q)
-    );
   };
 
   const filtered = {};
