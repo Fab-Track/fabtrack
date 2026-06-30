@@ -1,9 +1,10 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Wrench, FileText, CheckSquare } from "lucide-react";
+import { FileText } from "lucide-react";
 import JobScopeSection from "@/components/jobs/JobScopeSection";
 import JobMaterialsSection from "@/components/jobs/JobMaterialsSection";
+import KeyDatesCard from "@/components/jobs/KeyDatesCard";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 
@@ -70,43 +71,7 @@ export default function JobOverviewTab({ job }) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Wrench className="w-4 h-4 text-muted-foreground" />
-            Crew & Tools
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground mb-1.5">Assigned Crew</p>
-            {job.assigned_crew_names?.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {job.assigned_crew_names.map((name, i) => (
-                  <Badge key={i} variant="outline" className="text-xs">{name}</Badge>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No crew assigned</p>
-            )}
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground mb-1.5">Tools Needed</p>
-            {job.tools_needed?.length > 0 ? (
-              <div className="space-y-1">
-                {job.tools_needed.map((tool, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm">
-                    <CheckSquare className="w-3.5 h-3.5 text-muted-foreground" />
-                    {tool}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">None specified</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <KeyDatesCard job={job} />
 
       {job.internal_notes && !isFabricator && (
         <Card className="md:col-span-2">
