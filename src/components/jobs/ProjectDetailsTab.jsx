@@ -3,25 +3,21 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Save, Loader2 } from "lucide-react";
-import JobLevelSections from "@/components/jobs/JobLevelSections";
 import { useToast } from "@/components/ui/use-toast";
+import { useJobDetailConfig } from "@/hooks/useJobDetailConfig";
+import ProductDetailsSection from "@/components/jobs/ProductDetailsSection";
+import InstallDetailsSection from "@/components/jobs/InstallDetailsSection";
+import SiteAccessSection from "@/components/jobs/SiteAccessSection";
 
-function getViewFilter(role) {
-  const r = (role || "").toLowerCase();
-  if (r === "fabricator" || r === "installer") return "installer";
-  if (r === "design_specialist") return "designer";
-  return "all";
-}
-
-export default function ProjectDetailsTab({ job, userRole }) {
+export default function ProjectDetailsTab({ job }) {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const [jobLevelData, setJobLevelData] = useState(job.job_level_data || {});
-  const viewFilter = getViewFilter(userRole);
+  const { config, isLoading } = useJobDetailConfig();
+  const [data, setData] = useState(job.job_level_data || {});
   const [dirty, setDirty] = useState(false);
 
   const saveMutation = useMutation({
-    mutationFn: () => base44.entities.Job.update(job.id, { job_level_data: jobLevelData }),
+    mutationFn: () => base44.entities.Job.update(job.id, { job_level_data: data }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["job", job.id] });
       setDirty(false);
@@ -29,10 +25,18 @@ export default function ProjectDetailsTab({ job, userRole }) {
     },
   });
 
-  const updateJobLevel = useCallback((section, val) => {
-    setJobLevelData(prev => ({ ...prev, [section]: val }));
+  const updateSection = useCallback((section, val) => {
+    setData(prev => ({ ...prev, [section]: val }));
     setDirty(true);
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -51,12 +55,19 @@ export default function ProjectDetailsTab({ job, userRole }) {
         )}
       </div>
 
-      {/* Job-level sections */}
-      <JobLevelSections
-        job={job}
-        data={jobLevelData}
-        onChangeField={updateJobLevel}
-        viewFilter={viewFilter}
+      <ProductDetailsSection
+        entries={data.product_details || []}
+        config={config}
+        onChange={(val) => updateSection("product_details", val)}
+      />
+      <InstallDetailsSection
+        data={data.install_details || {}}
+        config={config}
+        onChange={(val) => updateSection("install_details", val)}
+      />
+      <SiteAccessSection
+        data={data.site_access || {}}
+        onChange={(val) => updateSection("site_access", val)}
       />
     </div>
   );

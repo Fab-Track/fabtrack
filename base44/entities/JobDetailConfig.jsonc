@@ -1,0 +1,122 @@
+{
+  "name": "JobDetailConfig",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
+    "products": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Product type options for the Details tab"
+    },
+    "railing_styles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Railing style options"
+    },
+    "powdercoat_colors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Powdercoat color options"
+    },
+    "stair_styles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Stair style options"
+    },
+    "stair_materials": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Stair material options"
+    },
+    "stair_tread_materials": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Stair tread material options"
+    },
+    "surfaces": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Surface type options for install details"
+    }
+  },
+  "required": [
+    "organization_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "owner"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "super_admin"
+          }
+        }
+      ]
+    },
+    "read": true,
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "owner"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "super_admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "owner"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "super_admin"
+          }
+        }
+      ]
+    }
+  }
+}
