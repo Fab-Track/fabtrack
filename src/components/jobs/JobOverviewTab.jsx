@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FileText } from "lucide-react";
 import JobScopeSection from "@/components/jobs/JobScopeSection";
-import JobMaterialsSection from "@/components/jobs/JobMaterialsSection";
 import KeyDatesCard from "@/components/jobs/KeyDatesCard";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
@@ -89,8 +88,6 @@ export default function JobOverviewTab({ job }) {
         <JobScopeSection job={job} isFabricator={isFabricator} />
       </div>
 
-      {/* Materials — reserved inventory for this job */}
-      <JobMaterialsSection jobId={job.id} />
     </div>
   );
 }
