@@ -16,8 +16,9 @@ import BillingBoard from "@/components/pipeline/BillingBoard";
 import PipelineRowView from "@/components/pipeline/PipelineRowView";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Filter, TrendingUp, Wrench, DollarSign, LayoutGrid, List, Archive, RotateCcw } from "lucide-react";
+import { Plus, Filter, TrendingUp, Wrench, DollarSign, LayoutGrid, List, Archive, RotateCcw, Search, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO } from "date-fns";
 import { Link, useSearchParams } from "react-router-dom";
@@ -42,6 +43,7 @@ export default function JobBoard() {
   const isAccountant = hasRole(user, "accountant");
 
   const [filterType, setFilterType] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [activeBoard, setActiveBoard] = useState(null);
   // Per-board view: "kanban" | "row"
   const [viewMode, setViewMode] = useState({ Sales: "kanban", Shop: "kanban", Billing: "kanban" });
@@ -71,7 +73,7 @@ export default function JobBoard() {
   // Active jobs: not archived. Archived jobs: is_archived === true
   const jobs = allJobs.filter(j => !j.is_archived);
   const totalArchived = allJobs.filter(j => j.is_archived);
-  const archivedJobs = showArchived ? totalArchived : [];
+  const archivedJobs = showArchived ? (q ? totalArchived.filter(matchesSearch) : totalArchived) : [];
 
   const { containerRef: pullRef, isPulling, pullDistance } = usePullToRefresh({
     onRefresh: () => refetchJobs(),
@@ -91,13 +93,25 @@ export default function JobBoard() {
     Billing: jobs.filter(j => j.pipeline_board === "Billing" || (!j.pipeline_board && BILLING_STAGES.includes(j.stage)) || (!j.pipeline_board && !j.stage && j.status === "Invoiced")),
   };
 
+  const q = searchQuery.trim().toLowerCase();
+  const matchesSearch = (j) => {
+    if (!q) return true;
+    return (
+      (j.job_number || "").toLowerCase().includes(q) ||
+      (j.customer_name || "").toLowerCase().includes(q) ||
+      (j.job_name || "").toLowerCase().includes(q)
+    );
+  };
+
   const filtered = {};
   Object.keys(boardJobs).forEach(board => {
-    filtered[board] = filterType === "all"
+    let list = filterType === "all"
       ? boardJobs[board]
       : boardJobs[board].filter(j =>
           j.product_instances?.some(i => i.product_type === filterType)
         );
+    if (q) list = list.filter(matchesSearch);
+    filtered[board] = list;
   });
 
   if (isLoading || !activeBoard) {
@@ -123,6 +137,26 @@ export default function JobBoard() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <Input
+              type="text"
+              placeholder="Search job #, name, customer…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="h-9 w-44 md:w-56 pl-8 pr-8 text-sm"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                title="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
           <Select value={filterType} onValueChange={setFilterType}>
             <SelectTrigger className="w-36 h-9 text-sm">
               <Filter className="w-3.5 h-3.5 mr-1.5 shrink-0" />
@@ -181,7 +215,7 @@ export default function JobBoard() {
         {allowedBoards.map(board => {
           const Icon = BOARD_ICONS[board];
           const isActive = activeBoard === board;
-          const count = boardJobs[board].length;
+          const count = filtered[board].length;
           return (
             <button
               key={board}
