@@ -12,6 +12,12 @@ export default function JobOverviewTab({ job }) {
   const effectiveRole = useEffectiveRole(user?.role || "admin");
   const isFabricator = ["fabricator", "installer"].includes(effectiveRole.toLowerCase());
 
+  const productEntries = job.job_level_data?.product_details || [];
+  const productsList = productEntries
+    .map(e => e.product)
+    .filter(Boolean)
+    .join(", ") || null;
+
   return (
     <div className="grid md:grid-cols-2 gap-4">
       <Card>
@@ -22,7 +28,7 @@ export default function JobOverviewTab({ job }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <DetailRow label="Job Type" value={job.job_type} />
+          <DetailRow label="Products" value={productsList} />
           <DetailRow label="Site Address" value={job.site_address} />
           {job.lead_outcome && (
             <DetailRow label="Lead Outcome" value={
