@@ -285,6 +285,11 @@
           },
           "color": {
             "type": "string"
+          },
+          "manuallyEdited": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether this phase date was manually overridden by a user"
           }
         }
       }

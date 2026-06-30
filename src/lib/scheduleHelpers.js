@@ -1,50 +1,28 @@
-import { addDays, subDays, parseISO, isValid, format, isBefore, isAfter, isSameDay, differenceInCalendarDays } from "date-fns";
+import { addDays, addWeeks, subWeeks, parseISO, isValid, format, isBefore, isSameDay } from "date-fns";
 
-// Phase definitions (ordered from latest to earliest — we work backwards)
+// Phase definitions in chronological order.
+// weeksToNext = gap (in weeks) between this phase's date and the next phase's date.
 export const PHASE_DEFS = [
-  { name: "Install",      businessDays: 2,  color: "emerald", tailwind: "bg-emerald-500", border: "border-emerald-500", text: "text-emerald-700", light: "bg-emerald-100" },
-  { name: "Powder Coat",  businessDays: 5,  color: "blue",    tailwind: "bg-blue-500",    border: "border-blue-500",    text: "text-blue-700",   light: "bg-blue-100" },
-  { name: "Fabricate",    businessDays: 10, color: "orange",  tailwind: "bg-orange-500",  border: "border-orange-500",  text: "text-orange-700", light: "bg-orange-100" },
-  { name: "Draw",         businessDays: 4,  color: "purple",  tailwind: "bg-purple-500",  border: "border-purple-500",  text: "text-purple-700", light: "bg-purple-100" },
-  { name: "Measure",      businessDays: 2,  color: "sky",     tailwind: "bg-sky-500",     border: "border-sky-500",     text: "text-sky-700",    light: "bg-sky-100" },
+  { name: "Measure",     weeksToNext: 1, color: "sky",     tailwind: "bg-sky-500",     text: "text-sky-700",     light: "bg-sky-100" },
+  { name: "Draw/Design", weeksToNext: 1, color: "purple",  tailwind: "bg-purple-500",  text: "text-purple-700",  light: "bg-purple-100" },
+  { name: "Fab",         weeksToNext: 3, color: "orange",  tailwind: "bg-orange-500",  text: "text-orange-700",  light: "bg-orange-100" },
+  { name: "Powder Coat", weeksToNext: 1, color: "blue",    tailwind: "bg-blue-500",    text: "text-blue-700",    light: "bg-blue-100" },
+  { name: "Install",     weeksToNext: 0, color: "emerald", tailwind: "bg-emerald-500", text: "text-emerald-700", light: "bg-emerald-100" },
 ];
 
-export const STANDARD_RUNWAY = 24; // standard ~4 weeks of business days total
+export const TOTAL_WEEKS = 6;
 
-// Add N business days to a date
-export function addBusinessDays(date, n) {
-  let d = new Date(date);
-  let added = 0;
-  while (added < n) {
-    d = addDays(d, 1);
-    if (d.getDay() !== 0 && d.getDay() !== 6) added++;
-  }
-  return d;
+// Map old phase names to new ones for backward compatibility
+const PHASE_NAME_MAP = {
+  "Fabricate": "Fab",
+  "Draw": "Draw/Design",
+};
+
+export function normalizePhaseName(name) {
+  return PHASE_NAME_MAP[name] || name;
 }
 
-// Subtract N business days from a date
-export function subtractBusinessDays(date, n) {
-  let d = new Date(date);
-  let subtracted = 0;
-  while (subtracted < n) {
-    d = subDays(d, 1);
-    if (d.getDay() !== 0 && d.getDay() !== 6) subtracted++;
-  }
-  return d;
-}
-
-// Count business days between two dates (inclusive)
-export function countBusinessDays(start, end) {
-  let count = 0;
-  let d = new Date(start);
-  while (d <= end) {
-    if (d.getDay() !== 0 && d.getDay() !== 6) count++;
-    d = addDays(d, 1);
-  }
-  return count;
-}
-
-// Bump a weekend date to next Monday
+// Bump a weekend date to the next Monday
 export function ensureWeekday(date) {
   const d = new Date(date);
   if (d.getDay() === 6) return addDays(d, 2); // Saturday → Monday
@@ -53,64 +31,98 @@ export function ensureWeekday(date) {
 }
 
 // Calculate phase status relative to today
-export function getPhaseStatus(startDate, endDate) {
+export function getPhaseStatus(dateStr) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const s = parseISO(startDate);
-  const e = parseISO(endDate);
-  if (isBefore(e, today)) return "complete";
-  if (isBefore(s, today) || isSameDay(s, today)) return "in_progress";
+  const d = parseISO(dateStr);
+  if (isBefore(d, today)) return "complete";
+  if (isSameDay(d, today)) return "in_progress";
   return "upcoming";
 }
 
+function buildPhases(dates) {
+  return PHASE_DEFS.map(def => {
+    const status = getPhaseStatus(dates[def.name]);
+    return {
+      name: def.name,
+      startDate: dates[def.name],
+      endDate: dates[def.name],
+      status,
+      completedAt: status === "complete" ? new Date().toISOString() : null,
+      color: def.color,
+      manuallyEdited: false,
+    };
+  });
+}
+
 /**
- * Generate production schedule phases working backwards from promisedInstallDate.
- * Returns array of phase objects with startDate, endDate, name, color, status.
+ * Calculate all phase dates working backward from an install date.
+ * Powder Coat = Install - 1 week
+ * Fab = Powder Coat - 3 weeks
+ * Draw/Design = Fab - 1 week
+ * Measure = Draw/Design - 1 week
  */
-export function generateSchedule(promisedInstallDateStr) {
-  let installDate = parseISO(promisedInstallDateStr);
+export function calculateFromInstallDate(installDateStr) {
+  let installDate = parseISO(installDateStr);
   if (!isValid(installDate)) return null;
 
-  // Bump weekend to Monday
   const bumped = ensureWeekday(installDate);
   const wasBumped = !isSameDay(bumped, installDate);
   installDate = bumped;
 
-  // Total required business days
-  const totalRequired = PHASE_DEFS.reduce((sum, p) => sum + p.businessDays, 0); // 24
-  const availableBusinessDays = countBusinessDays(new Date(), installDate);
-  const isTight = availableBusinessDays < totalRequired;
+  const dates = {};
+  let currentDate = new Date(installDate);
 
-  const phases = [];
-  let currentEnd = new Date(installDate);
-
-  for (const def of PHASE_DEFS) {
-    let days = def.businessDays;
-
-    // Compress proportionally if tight
-    if (isTight && totalRequired > 0) {
-      days = Math.max(1, Math.round((def.businessDays / totalRequired) * availableBusinessDays));
+  // Work backward through phases (Install → Powder Coat → Fab → Draw/Design → Measure)
+  for (let i = PHASE_DEFS.length - 1; i >= 0; i--) {
+    const def = PHASE_DEFS[i];
+    dates[def.name] = format(currentDate, "yyyy-MM-dd");
+    if (i > 0) {
+      const gap = PHASE_DEFS[i - 1].weeksToNext;
+      currentDate = ensureWeekday(subWeeks(currentDate, gap));
     }
-
-    const endDate = new Date(currentEnd);
-    const startDate = subtractBusinessDays(endDate, days - 1);
-
-    const existingStatus = getPhaseStatus(format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"));
-
-    phases.push({
-      name: def.name,
-      startDate: format(startDate, "yyyy-MM-dd"),
-      endDate: format(endDate, "yyyy-MM-dd"),
-      status: existingStatus,
-      completedAt: existingStatus === "complete" ? new Date().toISOString() : null,
-      color: def.color,
-    });
-
-    // Next phase ends one business day before this one starts
-    currentEnd = subtractBusinessDays(startDate, 1);
   }
 
-  return { phases: phases.reverse(), isTight, wasBumped, bumpedDate: format(installDate, "yyyy-MM-dd") };
+  return { phases: buildPhases(dates), wasBumped, bumpedDate: format(installDate, "yyyy-MM-dd") };
+}
+
+/**
+ * Calculate all phase dates working forward from a measure date.
+ * Draw/Design = Measure + 1 week
+ * Fab = Draw/Design + 1 week
+ * Powder Coat = Fab + 3 weeks
+ * Install = Powder Coat + 1 week
+ */
+export function calculateFromMeasureDate(measureDateStr) {
+  let measureDate = parseISO(measureDateStr);
+  if (!isValid(measureDate)) return null;
+
+  const bumped = ensureWeekday(measureDate);
+  const wasBumped = !isSameDay(bumped, measureDate);
+  measureDate = bumped;
+
+  const dates = {};
+  let currentDate = new Date(measureDate);
+
+  for (let i = 0; i < PHASE_DEFS.length; i++) {
+    const def = PHASE_DEFS[i];
+    dates[def.name] = format(currentDate, "yyyy-MM-dd");
+    if (i < PHASE_DEFS.length - 1) {
+      currentDate = ensureWeekday(addWeeks(currentDate, def.weeksToNext));
+    }
+  }
+
+  return { phases: buildPhases(dates), wasBumped, bumpedDate: format(measureDate, "yyyy-MM-dd") };
+}
+
+// Migrate/normalize stored schedule_phases to current format
+export function normalizePhases(phases) {
+  if (!phases || !Array.isArray(phases)) return [];
+  return phases.map(p => ({
+    ...p,
+    name: normalizePhaseName(p.name),
+    manuallyEdited: p.manuallyEdited || false,
+  }));
 }
 
 export function getPhaseColors(color) {
@@ -120,7 +132,7 @@ export function getPhaseColors(color) {
     orange:  { bg: "bg-orange-500",  light: "bg-orange-100",  text: "text-orange-700",  border: "border-orange-400",  hex: "#f97316" },
     purple:  { bg: "bg-purple-500",  light: "bg-purple-100",  text: "text-purple-700",  border: "border-purple-400",  hex: "#a855f7" },
     sky:     { bg: "bg-sky-500",     light: "bg-sky-100",     text: "text-sky-700",     border: "border-sky-400",     hex: "#0ea5e9" },
-    // legacy aliases kept for old stored schedules
+    // legacy aliases
     lime:    { bg: "bg-emerald-500", light: "bg-emerald-100", text: "text-emerald-700", border: "border-emerald-400", hex: "#10b981" },
   };
   return map[color] || map.blue;
