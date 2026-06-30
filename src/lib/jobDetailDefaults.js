@@ -5,7 +5,7 @@
  */
 export const JOB_DETAIL_DEFAULTS = {
   products: [
-    "Railing", "Grab Rails", "Staircase", "Spiral", "Structural",
+    "Railing", "Grab Rails", "Staircase", "Structural",
     "Awning", "Planter Box", "Ladder", "Fireplace", "Wall Wrap",
     "Pergola", "Gate", "Dumpster Gate", "Chimney Cap", "Other",
   ],
@@ -20,7 +20,7 @@ export const JOB_DETAIL_DEFAULTS = {
     "Silk Grey", "Galvanized", "Other",
   ],
   stair_styles: [
-    "Mono", "Spiral", "Double Stringer", "Double Mono",
+    "Mono", "Spiral", "Double Stringer", "Twin Stringer",
     "Platform", "Bridge", "Other",
   ],
   stair_materials: [

@@ -64,10 +64,10 @@ Deno.serve(async (req) => {
     // 1b. Seed JobDetailConfig with default option lists
     await base44.asServiceRole.entities.JobDetailConfig.create({
       organization_id: org.id,
-      products: ['Railing', 'Grab Rails', 'Staircase', 'Spiral', 'Structural', 'Awning', 'Planter Box', 'Ladder', 'Fireplace', 'Wall Wrap', 'Pergola', 'Gate', 'Dumpster Gate', 'Chimney Cap', 'Other'],
+      products: ['Railing', 'Grab Rails', 'Staircase', 'Structural', 'Awning', 'Planter Box', 'Ladder', 'Fireplace', 'Wall Wrap', 'Pergola', 'Gate', 'Dumpster Gate', 'Chimney Cap', 'Other'],
       railing_styles: ['Columbia', 'Clearwater', 'Uptown', 'Bremerton', 'Kennewick', 'Handford', 'Longview', 'Rainer', 'Tacoma', 'The Craftsman', 'Cable', 'Custom'],
       powdercoat_colors: ['Matte Black', 'Semi Gloss Black', 'Matte White', 'Gloss White', 'Oil Rubbed Bronze', 'Wrinkle Black', 'Dark Bronze', 'Black Brown', 'Silk Grey', 'Galvanized', 'Other'],
-      stair_styles: ['Mono', 'Spiral', 'Double Stringer', 'Double Mono', 'Platform', 'Bridge', 'Other'],
+      stair_styles: ['Mono', 'Spiral', 'Double Stringer', 'Twin Stringer', 'Platform', 'Bridge', 'Other'],
       stair_materials: ['Spiral Post 4.5" OD', 'C-Channel 2"x10"', 'C-Channel 1.5"x10"', 'Rec Tube 2"x10"x3/16"', '6"x8" Rec Tube', 'Other'],
       stair_tread_materials: ['Galvanized Safety Treads', 'Wood Steps', 'Expanded Metal', 'Metal Grating', '1/4" Flat Plate', 'Metal Bent Pans', 'Other'],
       surfaces: ['Wood Floors', 'Trex', 'Waterproofed Deck', 'Tile Floor', 'Bricks', 'Concrete', 'Steel', 'Asphalt', 'Metal Siding', 'Other'],
