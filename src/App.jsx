@@ -52,7 +52,6 @@ const WorkCenters      = lazy(() => import('@/pages/WorkCenters'));
 const TimeCard         = lazy(() => import('@/pages/TimeCard'));
 const Schedule         = lazy(() => import('@/pages/Schedule'));
 const Customers        = lazy(() => import('@/pages/Customers'));
-const Inventory        = lazy(() => import('@/pages/Inventory'));
 const CraftsmanScore   = lazy(() => import('@/pages/CraftsmanScore'));
 const Employees        = lazy(() => import('@/pages/Employees'));
 const Documents        = lazy(() => import('@/pages/Documents'));
@@ -249,7 +248,6 @@ const AuthenticatedApp = () => {
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/conversations" element={<Conversations />} />
           <Route path="/customers" element={<Customers />} />
-          <Route path="/inventory" element={<Inventory />} />
           <Route path="/craftsman" element={<CraftsmanScore />} />
           <Route path="/employees" element={<Employees />} />
           <Route path="/employees/:id" element={<EmployeeProfilePage />} />
