@@ -348,6 +348,15 @@
               }
             }
           }
+        },
+        "product_details": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "install_details": {
+          "type": "object"
         }
       }
     }
