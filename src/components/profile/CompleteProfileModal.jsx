@@ -87,12 +87,35 @@ export default function CompleteProfileModal({ open, onOpenChange, employee, onS
       if (employee?.id) {
         await base44.entities.Employee.update(employee.id, payload);
       } else {
+        // For new Employee records, we need a valid organization_id string.
+        // writeOrgId may be null on first load if the user's org assignment
+        // hasn't propagated to the frontend yet — re-fetch the user to get
+        // the latest value before creating.
+        let orgId = writeOrgId;
+        if (!orgId || typeof orgId !== "string") {
+          try {
+            const freshUser = await base44.auth.me();
+            orgId = freshUser?.organization_id || null;
+          } catch {
+            // fall through to the validation check below
+          }
+        }
+        // Handle edge case where organization_id comes back as a populated object
+        if (orgId && typeof orgId === "object") {
+          orgId = orgId.id || orgId._id || null;
+        }
+        if (!orgId || typeof orgId !== "string") {
+          throw new Error(
+            "We couldn't determine your organization. Please refresh the page and try again."
+          );
+        }
+
         await base44.entities.Employee.create({
           ...payload,
           name: user?.full_name || user?.email,
           email: user?.email,
           user_id: user?.id,
-          organization_id: writeOrgId,
+          organization_id: orgId,
         });
       }
 
