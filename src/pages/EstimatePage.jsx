@@ -385,13 +385,13 @@ export default function EstimatePage() {
                       <p className="text-sm font-medium mt-0.5">{customer?.name || job.customer_name || "—"}</p>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <div>
+                      <div className="min-w-0">
                         <Label className="text-xs text-muted-foreground">Email</Label>
-                        <p className="text-sm mt-0.5">{customer?.email || "—"}</p>
+                        <p className="text-sm mt-0.5 break-all">{customer?.email || "—"}</p>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <Label className="text-xs text-muted-foreground">Phone</Label>
-                        <p className="text-sm mt-0.5">{customer?.phone || "—"}</p>
+                        <p className="text-sm mt-0.5 break-all">{customer?.phone || "—"}</p>
                       </div>
                     </div>
                     {customer?.address && (
