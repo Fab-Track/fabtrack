@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
 import EditCustomerSheet from "@/components/jobs/EditCustomerSheet";
 import EditJobSheet from "@/components/jobs/EditJobSheet";
+import { formatPhoneDisplay } from "@/lib/phoneFormat";
 
 // A small info cell: label + value
 function InfoCell({ label, value, icon: Icon }) {
@@ -112,7 +113,7 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
           <div className="flex items-start gap-5 flex-wrap pl-2 border-l border-border">
             {customer?.type && <InfoCell label="Type" icon={Tag} value={customer.type} />}
             {displayEmail && <InfoCell label="Email" icon={Mail} value={displayEmail} />}
-            {displayPhone && <InfoCell label="Phone" icon={Phone} value={displayPhone} />}
+            {displayPhone && <InfoCell label="Phone" icon={Phone} value={formatPhoneDisplay(displayPhone)} />}
             {displayAddress && <InfoCell label="Billing Address" icon={MapPin} value={displayAddress} />}
           </div>
         )}

@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { useAuth } from "@/lib/AuthContext";
 import { useWriteOrgId } from "@/lib/orgContext";
 
@@ -136,9 +137,10 @@ export default function CompleteProfileModal({ open, onOpenChange, employee, onS
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Emergency Contact Phone</Label>
-              <Input
+              <PhoneInput
                 value={form.emergency_contact_phone}
                 onChange={(e) => set("emergency_contact_phone", e.target.value)}
+                placeholder="000-000-0000"
               />
             </div>
           </div>

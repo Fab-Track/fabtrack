@@ -3,6 +3,7 @@ import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle2, Lock } from "lucide-react";
+import { formatPhoneDisplay } from "@/lib/phoneFormat";
 
 const STATUS_COLORS = {
   Draft: "bg-muted text-muted-foreground",
@@ -77,7 +78,7 @@ export default function EstimateCustomerView({ estimate, job, customer, business
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Bill To</p>
             <p className="font-semibold">{customer?.name || job?.customer_name || "—"}</p>
             {customer?.email && <p className="text-sm text-muted-foreground">{customer.email}</p>}
-            {customer?.phone && <p className="text-sm text-muted-foreground">{customer.phone}</p>}
+            {customer?.phone && <p className="text-sm text-muted-foreground">{formatPhoneDisplay(customer.phone)}</p>}
             {customer?.address && <p className="text-sm text-muted-foreground">{customer.address}</p>}
           </div>
           <div className="text-right space-y-1">

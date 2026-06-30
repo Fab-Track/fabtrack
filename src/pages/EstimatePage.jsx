@@ -17,6 +17,7 @@ import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
 import { useAuth } from "@/lib/AuthContext";
 import { useWriteOrgId } from "@/lib/orgContext";
 import ProductServiceDropdown from "@/components/estimates/ProductServiceDropdown";
+import { formatPhoneDisplay } from "@/lib/phoneFormat";
 import RailingInlineCalc from "@/components/estimates/RailingInlineCalc";
 import StaircaseInlineCalc from "@/components/estimates/StaircaseInlineCalc";
 import EstimateCustomerView from "@/components/estimates/EstimateCustomerView";
@@ -391,7 +392,7 @@ export default function EstimatePage() {
                       </div>
                       <div className="min-w-0">
                         <Label className="text-xs text-muted-foreground">Phone</Label>
-                        <p className="text-sm mt-0.5 break-all">{customer?.phone || "—"}</p>
+                        <p className="text-sm mt-0.5 break-all">{customer?.phone ? formatPhoneDisplay(customer.phone) : "—"}</p>
                       </div>
                     </div>
                     {customer?.address && (

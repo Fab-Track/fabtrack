@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Pencil, Phone, Mail, User } from "lucide-react";
+import { PhoneInput } from "@/components/ui/PhoneInput";
+import { formatPhoneDisplay } from "@/lib/phoneFormat";
 
 function ContactCard({ title, name, email, phone, onEdit, emptyLabel }) {
   const hasData = name || email || phone;
@@ -40,7 +42,7 @@ function ContactCard({ title, name, email, phone, onEdit, emptyLabel }) {
           {phone && (
             <div className="flex items-center gap-1.5 text-sm">
               <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-              <span>{phone}</span>
+              <span>{formatPhoneDisplay(phone)}</span>
             </div>
           )}
         </div>
@@ -165,7 +167,7 @@ export default function CustomerContactsSection({ customer, onUpdated }) {
                   {effectiveBillingPhone && (
                     <div className="flex items-center gap-1.5 text-sm">
                       <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                      <span>{effectiveBillingPhone}</span>
+                      <span>{formatPhoneDisplay(effectiveBillingPhone)}</span>
                     </div>
                   )}
                 </div>
@@ -196,7 +198,7 @@ export default function CustomerContactsSection({ customer, onUpdated }) {
             </div>
             <div>
               <Label className="text-xs">Phone</Label>
-              <Input value={jobForm.job_contact_phone} onChange={e => setJobForm(p => ({ ...p, job_contact_phone: e.target.value }))} placeholder="(555) 123-4567" />
+              <PhoneInput value={jobForm.job_contact_phone} onChange={e => setJobForm(p => ({ ...p, job_contact_phone: e.target.value }))} placeholder="000-000-0000" />
             </div>
             <div className="flex gap-2 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setJobSheetOpen(false)}>Cancel</Button>
@@ -240,7 +242,7 @@ export default function CustomerContactsSection({ customer, onUpdated }) {
                 </div>
                 <div>
                   <Label className="text-xs">Phone</Label>
-                  <Input value={billingForm.billing_contact_phone} onChange={e => setBillingForm(p => ({ ...p, billing_contact_phone: e.target.value }))} placeholder="(555) 123-4567" />
+                  <PhoneInput value={billingForm.billing_contact_phone} onChange={e => setBillingForm(p => ({ ...p, billing_contact_phone: e.target.value }))} placeholder="000-000-0000" />
                 </div>
               </>
             )}

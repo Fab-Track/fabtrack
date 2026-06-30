@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CreditCard, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import { formatPhoneDisplay } from "@/lib/phoneFormat";
 
 const STATUS_COLORS = {
   Unpaid: "bg-amber-100 text-amber-800",
@@ -74,7 +75,7 @@ export default function InvoiceCustomerView({ invoice, job, customer, lines, sub
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Bill To</p>
             <p className="font-semibold">{customer?.name || job?.customer_name || "—"}</p>
             {customer?.email && <p className="text-sm text-muted-foreground">{customer.email}</p>}
-            {customer?.phone && <p className="text-sm text-muted-foreground">{customer.phone}</p>}
+            {customer?.phone && <p className="text-sm text-muted-foreground">{formatPhoneDisplay(customer.phone)}</p>}
             {customer?.address && <p className="text-sm text-muted-foreground">{customer.address}</p>}
           </div>
           <div className="text-right space-y-1">

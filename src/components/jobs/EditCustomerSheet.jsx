@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Building2, User, Mail, Phone, MapPin, Tag, StickyNote, Users } from "lucide-react";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 
 const CUSTOMER_TYPES = [
   "Homeowner", "General Contractor", "Builder / Developer",
@@ -142,7 +143,7 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
             </div>
             <div>
               <Label className="text-xs">Phone</Label>
-              <Input value={form.phone || ""} onChange={e => f("phone", e.target.value)} placeholder="(555) 123-4567" />
+              <PhoneInput value={form.phone || ""} onChange={e => f("phone", e.target.value)} placeholder="000-000-0000" />
             </div>
             <div>
               <Label className="text-xs">Billing Address</Label>
@@ -167,7 +168,7 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
               </div>
               <div>
                 <Label className="text-xs">Phone</Label>
-                <Input value={form.job_contact_phone || ""} onChange={e => f("job_contact_phone", e.target.value)} placeholder="(555) 000-0000" />
+                <PhoneInput value={form.job_contact_phone || ""} onChange={e => f("job_contact_phone", e.target.value)} placeholder="000-000-0000" />
               </div>
             </div>
           </fieldset>
@@ -198,7 +199,7 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
                 </div>
                 <div>
                   <Label className="text-xs">Phone</Label>
-                  <Input value={form.billing_contact_phone || ""} onChange={e => f("billing_contact_phone", e.target.value)} placeholder="(555) 000-0000" />
+                  <PhoneInput value={form.billing_contact_phone || ""} onChange={e => f("billing_contact_phone", e.target.value)} placeholder="000-000-0000" />
                 </div>
               </div>
             )}

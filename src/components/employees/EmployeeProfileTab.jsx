@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload, Save } from "lucide-react";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 
 const TSHIRT_SIZES = ["XS","S","M","L","XL","XXL","XXXL"];
 const EMPLOYMENT_STATUSES = ["Full Time","Part Time","Seasonal","Terminated"];
@@ -85,7 +86,7 @@ export default function EmployeeProfileTab({ employee, canEdit }) {
         </div>
         <div className="space-y-1">
           <Label className="text-xs font-semibold">Personal Phone</Label>
-          <Input value={form.phone} onChange={e => set("phone", e.target.value)} disabled={!canEdit} />
+          <PhoneInput value={form.phone} onChange={e => set("phone", e.target.value)} disabled={!canEdit} placeholder="000-000-0000" />
         </div>
         <div className="space-y-1">
           <Label className="text-xs font-semibold">Personal Email</Label>
@@ -101,7 +102,7 @@ export default function EmployeeProfileTab({ employee, canEdit }) {
         </div>
         <div className="space-y-1">
           <Label className="text-xs font-semibold">Emergency Contact Phone</Label>
-          <Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} disabled={!canEdit} />
+          <PhoneInput value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} disabled={!canEdit} placeholder="000-000-0000" />
         </div>
         <div className="space-y-1">
           <Label className="text-xs font-semibold">Emergency Contact Relationship</Label>

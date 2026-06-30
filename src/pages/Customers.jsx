@@ -29,6 +29,8 @@ import QuickActionsBar from "@/components/customers/QuickActionsBar";
 import CustomerARSummaryBar from "@/components/customers/CustomerARSummaryBar";
 import CustomerContactsSection from "@/components/customers/CustomerContactsSection";
 import { useOrgFilter, useWriteOrgId } from "@/lib/orgContext";
+import { PhoneInput } from "@/components/ui/PhoneInput";
+import { formatPhoneDisplay } from "@/lib/phoneFormat";
 
 const JOB_TYPE_COLORS = ["#3b82f6", "#f97316", "#a855f7", "#10b981", "#84cc16", "#ef4444"];
 
@@ -190,7 +192,7 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
                 <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5 flex items-center gap-1">
                   <Phone className="w-3 h-3" />Phone
                 </p>
-                <p className="text-sm font-medium">{customer.phone}</p>
+                <p className="text-sm font-medium">{formatPhoneDisplay(customer.phone)}</p>
               </div>
             )}
             {customer.email && (
@@ -236,7 +238,7 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
             </div>
             <div>
               <Label className="text-xs">Phone</Label>
-              <Input value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} placeholder="(555) 123-4567" />
+              <PhoneInput value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} placeholder="000-000-0000" />
             </div>
             <div>
               <Label className="text-xs">Email</Label>
@@ -622,7 +624,7 @@ export default function Customers() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs">Phone</Label>
-                    <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} />
+                    <PhoneInput value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="000-000-0000" />
                   </div>
                   <div>
                     <Label className="text-xs">Email</Label>
@@ -734,7 +736,7 @@ export default function Customers() {
                     )}
                   </div>
                   <div className="space-y-0.5">
-                    {customer.phone && <div className="flex items-center gap-1 text-xs text-muted-foreground"><Phone className="w-3 h-3" />{customer.phone}</div>}
+                    {customer.phone && <div className="flex items-center gap-1 text-xs text-muted-foreground"><Phone className="w-3 h-3" />{formatPhoneDisplay(customer.phone)}</div>}
                     {customer.email && <div className="flex items-center gap-1 text-xs text-muted-foreground truncate"><Mail className="w-3 h-3" />{customer.email}</div>}
                   </div>
                 </div>

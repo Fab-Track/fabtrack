@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Upload, Building2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -140,7 +141,7 @@ export default function CompanySection() {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label className="text-xs">Primary Phone</Label>
-            <Input className="h-9" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} />
+            <PhoneInput className="h-9" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="000-000-0000" />
           </div>
           <div>
             <Label className="text-xs">Primary Email</Label>

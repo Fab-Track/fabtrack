@@ -1,6 +1,7 @@
 import React from "react";
 import { MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -57,7 +58,7 @@ export default function SiteAccessSection({ data = {}, onChange }) {
             <Input className="h-8 text-xs" value={data.onsite_contact_name || ""} onChange={e => set("onsite_contact_name", e.target.value)} placeholder="Name" />
           </FieldRow>
           <FieldRow label="On-Site Contact Phone">
-            <Input className="h-8 text-xs" value={data.onsite_contact_phone || ""} onChange={e => set("onsite_contact_phone", e.target.value)} placeholder="Phone" />
+            <PhoneInput className="h-8 text-xs" value={data.onsite_contact_phone || ""} onChange={e => set("onsite_contact_phone", e.target.value)} placeholder="000-000-0000" />
           </FieldRow>
         </div>
 

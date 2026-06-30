@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Upload, CheckCircle2, Circle, RefreshCw, Trash2, Eye, EyeOff, LogOut } from "lucide-react";
 import EmployeeProfileView from "@/components/employees/EmployeeProfileView";
 import PasswordStrengthIndicator from "@/components/auth/PasswordStrengthIndicator";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -159,7 +160,7 @@ export default function MyAccountSection() {
 
       <div>
         <Label className="text-xs">Phone Number</Label>
-        <Input className="h-8" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="+1..." />
+        <PhoneInput className="h-8" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="000-000-0000" />
       </div>
 
       {/* Employee Profile Card — opens sheet */}

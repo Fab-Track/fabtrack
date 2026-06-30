@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Save } from "lucide-react";
 import { Link } from "react-router-dom";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 
 const ROLES = [
   "welder", "fitter", "cutter", "fabricator", "foreman",
@@ -113,7 +114,7 @@ export default function NewEmployeeForm({ onCreated, onCancel }) {
             </div>
             <div className="space-y-1">
               <Label className="text-xs font-semibold">Phone</Label>
-              <Input value={form.phone} onChange={e => set("phone", e.target.value)} placeholder="Phone number" />
+              <PhoneInput value={form.phone} onChange={e => set("phone", e.target.value)} placeholder="000-000-0000" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs font-semibold">Home Address</Label>
@@ -152,7 +153,7 @@ export default function NewEmployeeForm({ onCreated, onCancel }) {
               </div>
               <div className="space-y-1">
                 <Label className="text-xs font-semibold">Phone</Label>
-                <Input value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} />
+                <PhoneInput value={form.emergency_contact_phone} onChange={e => set("emergency_contact_phone", e.target.value)} placeholder="000-000-0000" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs font-semibold">Relationship</Label>

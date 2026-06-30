@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2 } from "lucide-react";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 
 const JOB_TYPES = ["Fence", "Gate", "Railing", "Staircase", "Custom Structure", "Other"];
 
@@ -61,7 +62,7 @@ export default function LeadForm() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">Phone *</Label>
-              <Input value={form.phone} onChange={e => f("phone", e.target.value)} placeholder="(555) 123-4567" required />
+              <PhoneInput value={form.phone} onChange={e => f("phone", e.target.value)} placeholder="000-000-0000" required />
             </div>
             <div>
               <Label className="text-xs">Email *</Label>
