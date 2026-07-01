@@ -34,18 +34,9 @@
       "type": "string",
       "description": "Email address"
     },
-    "street": {
+    "address": {
       "type": "string",
-      "description": "Street address"
-    },
-    "city": {
-      "type": "string"
-    },
-    "state": {
-      "type": "string"
-    },
-    "zip": {
-      "type": "string"
+      "description": "Address"
     },
     "notes": {
       "type": "string",

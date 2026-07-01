@@ -107,16 +107,7 @@
       "format": "date-time",
       "description": "When the job was archived"
     },
-    "site_street": {
-      "type": "string"
-    },
-    "site_city": {
-      "type": "string"
-    },
-    "site_state": {
-      "type": "string"
-    },
-    "site_zip": {
+    "site_address": {
       "type": "string"
     },
     "expected_install_date": {

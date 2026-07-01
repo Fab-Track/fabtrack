@@ -9,7 +9,6 @@ import CustomerCombobox from "@/components/customers/CustomerCombobox";
 import EditCustomerSheet from "@/components/jobs/EditCustomerSheet";
 import EditJobSheet from "@/components/jobs/EditJobSheet";
 import { formatPhoneDisplay } from "@/lib/phoneFormat";
-import { formatAddressFromRecord } from "@/lib/addressFormat";
 
 // A small info cell: label + value
 function InfoCell({ label, value, icon: Icon }) {
@@ -92,7 +91,7 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
   // Display info (use fetched customer for details, fall back to job fields)
   const displayEmail = customer?.email || null;
   const displayPhone = customer?.phone || null;
-  const displayAddress = formatAddressFromRecord(customer) || null;
+  const displayAddress = customer?.address || null;
 
   return (
     <>

@@ -4,7 +4,7 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json();
-    const { name, phone, email, street, city, state, zip, project_type, description } = body;
+    const { name, phone, email, address, project_type, description } = body;
 
     if (!name || !phone || !email || !description) {
       return Response.json({ error: "Missing required fields" }, { status: 400 });
@@ -24,10 +24,7 @@ Deno.serve(async (req) => {
       customer_name: name,
       lead_customer_phone: phone,
       lead_customer_email: email,
-      site_street: street || "",
-      site_city: city || "",
-      site_state: state || "",
-      site_zip: zip || "",
+      site_address: address || "",
       design_details: description,
       pipeline_board: "Sales",
       stage: "New Lead",
