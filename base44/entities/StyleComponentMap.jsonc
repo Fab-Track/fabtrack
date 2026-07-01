@@ -1,0 +1,39 @@
+{
+  "name": "StyleComponentMap",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
+    "style_name": {
+      "type": "string",
+      "description": "Railing style name (links to RailingStyleLibrary.style_name)"
+    },
+    "components": {
+      "type": "array",
+      "description": "Ordered list of component materials that make up this railing style",
+      "items": {
+        "type": "object",
+        "properties": {
+          "component_label": {
+            "type": "string",
+            "description": "Slot/role this material fills (e.g. Top Rail, Bottom Rail, Posts, Pickets)"
+          },
+          "material_id": {
+            "type": "string",
+            "description": "Reference to MaterialPriceList record"
+          },
+          "material_name": {
+            "type": "string",
+            "description": "Denormalized material name for display"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "style_name",
+    "organization_id"
+  ]
+}

@@ -24,9 +24,22 @@
       ],
       "default": "Other"
     },
+    "component_type": {
+      "type": "string",
+      "enum": [
+        "Top Rail",
+        "Bottom Rail",
+        "Post",
+        "Picket",
+        "Cap",
+        "Other"
+      ],
+      "default": "Other",
+      "description": "Which part of a railing this material typically serves as (display-only spec; pricing is handled by the Service Catalog cost model)"
+    },
     "cost_per_foot": {
       "type": "number",
-      "description": "Cost per linear foot in USD",
+      "description": "Cost per linear foot in USD (legacy reference only \u2014 not used for pricing)",
       "default": 0
     }
   },
