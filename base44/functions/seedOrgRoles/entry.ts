@@ -3,6 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 // Default roles seeded for every new org
 const DEFAULT_ROLES = [
   { key: 'owner',      name: 'Owner',      archetype: 'admin',      description: 'Full access to all features and settings.' },
+  { key: 'admin',      name: 'Admin',      archetype: 'admin',      description: 'Full access to all features and settings, same as Owner.' },
   { key: 'manager',    name: 'Manager',    archetype: 'admin',      description: 'Manages jobs, schedules, and team. Can view reports.' },
   { key: 'fabricator', name: 'Fabricator', archetype: 'shop_floor', description: 'Sees assigned jobs, clocks in/out, and accesses the shop floor.' },
 ];

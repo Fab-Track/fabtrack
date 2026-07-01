@@ -2,9 +2,10 @@
 // FabTrack Permissions Data
 // ─────────────────────────────────────────────────────────────────
 
-export const ROLES = ["shop_manager", "estimator", "design_specialist", "fabricator", "accountant", "payroll"];
+export const ROLES = ["admin", "shop_manager", "estimator", "design_specialist", "fabricator", "accountant", "payroll"];
 export const ROLE_LABELS = {
   owner: "Owner",
+  admin: "Admin",
   shop_manager: "Shop Manager",
   estimator: "Estimator",
   design_specialist: "Design Specialist",
@@ -14,6 +15,7 @@ export const ROLE_LABELS = {
 };
 
 export const ROLE_SUMMARIES = {
+  admin: "Full access to all features and settings, same as Owner.",
   shop_manager: "Sees Job Board, Schedule, Shop Floor, Work Centers, Inventory",
   estimator: "Sees Estimates, Customers, Sales Pipeline, Invoices",
   design_specialist: "Sees Job Board, Schedule, Drawing Queue, Documents",
@@ -196,6 +198,29 @@ export const PERMISSION_GROUPS = [
 // Default permissions for each non-owner role
 // Key: permission row id → access level value (3/2/1/0)
 export const DEFAULT_PERMISSIONS = {
+  // Admin — full control on every row, same as Owner, but remains an editable column
+  admin: {
+    dash_own: 3, dash_other: 3, messages: 3, reports_overview: 3, reports_sales: 3,
+    reports_financial: 3, reports_production: 3, reports_customers: 3,
+    jobs_view: 3, jobs_create: 3, jobs_edit: 3, jobs_delete: 3, jobs_move: 3,
+    jobs_costing: 3, jobs_contact: 3,
+    est_view: 3, est_create: 3, est_edit_draft: 3, est_edit_sent: 3, est_send: 3,
+    est_approve: 3, est_delete: 3,
+    inv_view: 3, inv_create: 3, inv_edit: 3, inv_send: 3, inv_paid: 3, inv_delete: 3,
+    co_view: 3, co_create: 3, co_edit: 3, co_send: 3, co_approve: 3, co_delete: 3,
+    cust_view_list: 3, cust_view_profile: 3, cust_view_financial: 3, cust_view_transactions: 3,
+    cust_create: 3, cust_edit: 3, cust_delete: 3,
+    docs_view: 3, docs_financial: 3, docs_create: 3, docs_delete: 3,
+    sched_own: 3, sched_all: 3, sched_edit: 3, sched_assign: 3,
+    shop_clock: 3, shop_live: 3, shop_manual: 3, shop_edit_time: 3, shop_log: 3,
+    score_own: 3, score_all: 3, score_detail: 3, score_notes: 3,
+    emp_list: 3, emp_profile: 3, emp_rates: 3, emp_edit: 3, emp_deactivate: 3,
+    inv_view_items: 3, inv_edit_items: 3, inv_delete_items: 3, inv_po: 3,
+    wc_view: 3, wc_edit: 3,
+    comm_send: 3, comm_all: 3, comm_own: 3, comm_templates: 3,
+    set_company: 3, set_users: 3, set_notif_shop: 3, set_notif_self: 3,
+    set_templates: 3, set_integrations: 3, set_jobboard: 3, set_billing: 3, set_account: 3,
+  },
   shop_manager: {
     dash_own: 3, dash_other: 1, messages: 3, reports_overview: 1, reports_sales: 0,
     reports_financial: 0, reports_production: 3, reports_customers: 0,
