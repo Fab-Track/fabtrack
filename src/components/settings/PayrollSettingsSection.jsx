@@ -6,9 +6,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Info } from "lucide-react";
+import { Info, Wrench, Truck } from "lucide-react";
 
 const DAY_OPTIONS = [
   { value: 0, label: "Sunday" },
@@ -24,6 +25,8 @@ export default function PayrollSettingsSection() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [weekStart, setWeekStart] = useState(1);
+  const [fabRate, setFabRate] = useState(0);
+  const [installRate, setInstallRate] = useState(0);
   const [saving, setSaving] = useState(false);
 
   const [orgId, setOrgId] = useState(null);
@@ -42,15 +45,26 @@ export default function PayrollSettingsSection() {
     if (settings?.payroll_workweek_start_day != null) {
       setWeekStart(settings.payroll_workweek_start_day);
     }
+    if (settings?.labor_fab_rate != null) {
+      setFabRate(settings.labor_fab_rate);
+    }
+    if (settings?.labor_install_rate != null) {
+      setInstallRate(settings.labor_install_rate);
+    }
   }, [settings]);
 
   const save = async () => {
     if (!orgId) return toast({ title: "Organization not loaded", variant: "destructive" });
     setSaving(true);
+    const payload = {
+      payroll_workweek_start_day: weekStart,
+      labor_fab_rate: parseFloat(fabRate) || 0,
+      labor_install_rate: parseFloat(installRate) || 0,
+    };
     if (settings) {
-      await base44.entities.AppSettings.update(settings.id, { payroll_workweek_start_day: weekStart });
+      await base44.entities.AppSettings.update(settings.id, payload);
     } else {
-      await base44.entities.AppSettings.create({ setting_key: "main", payroll_workweek_start_day: weekStart, organization_id: orgId });
+      await base44.entities.AppSettings.create({ setting_key: "main", ...payload, organization_id: orgId });
     }
     qc.invalidateQueries({ queryKey: ["appSettings"] });
     toast({ title: "Payroll settings saved" });
@@ -93,6 +107,48 @@ export default function PayrollSettingsSection() {
         <Button onClick={save} disabled={saving} className="w-full sm:w-auto">
           {saving ? "Saving…" : "Save Settings"}
         </Button>
+      </div>
+
+      {/* Labor Rates */}
+      <div className="border rounded-xl p-5 bg-card space-y-5">
+        <div className="space-y-1">
+          <h3 className="font-semibold text-base">Labor Rates</h3>
+          <p className="text-xs text-muted-foreground">
+            Global hourly rates used by the Service Catalog cost model to compute fabrication and install costs per unit.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium flex items-center gap-1.5">
+              <Wrench className="w-3.5 h-3.5 text-muted-foreground" /> Fabrication Rate ($/hr)
+            </Label>
+            <Input
+              type="number"
+              step="0.01"
+              className="h-9"
+              value={fabRate}
+              onChange={e => setFabRate(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium flex items-center gap-1.5">
+              <Truck className="w-3.5 h-3.5 text-muted-foreground" /> Install Rate ($/hr)
+            </Label>
+            <Input
+              type="number"
+              step="0.01"
+              className="h-9"
+              value={installRate}
+              onChange={e => setInstallRate(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex gap-2">
+          <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+          <p className="text-xs text-blue-700">
+            These rates feed the live cost model preview in <strong>Settings → Service Catalog</strong>. Each catalog item uses them to compute hard cost and price per unit.
+          </p>
+        </div>
       </div>
     </div>
   );

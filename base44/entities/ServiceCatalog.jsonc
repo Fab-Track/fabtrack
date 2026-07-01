@@ -20,7 +20,8 @@
     },
     "default_unit_price": {
       "type": "number",
-      "default": 0
+      "default": 0,
+      "description": "Legacy default price \u2014 kept for backward compat; cost model is the new source of truth"
     },
     "default_description": {
       "type": "string",
@@ -42,6 +43,40 @@
       "type": "boolean",
       "default": false,
       "description": "If true, volume discount tiers are applied based on lnft quantity"
+    },
+    "cost_primary_unit": {
+      "type": "string",
+      "description": "Display label for the primary pricing unit (e.g. 'Linear Foot', 'Riser', 'sqft')"
+    },
+    "cost_materials_per_unit": {
+      "type": "number",
+      "default": 0,
+      "description": "Materials cost per primary unit ($/unit)"
+    },
+    "cost_fab_hours_per_unit": {
+      "type": "number",
+      "default": 0,
+      "description": "Fabrication hours per primary unit"
+    },
+    "cost_powder_coat_per_unit": {
+      "type": "number",
+      "default": 0,
+      "description": "Powder coat cost per primary unit ($/unit)"
+    },
+    "cost_install_crew_size": {
+      "type": "number",
+      "default": 0,
+      "description": "Install crew size (number of people)"
+    },
+    "cost_install_hours_per_unit": {
+      "type": "number",
+      "default": 0,
+      "description": "Install hours per primary unit (per crew member)"
+    },
+    "cost_markup_multiplier": {
+      "type": "number",
+      "default": 1.5,
+      "description": "Markup multiplier applied to hard cost (e.g. 1.5 = 50% markup)"
     }
   },
   "required": [

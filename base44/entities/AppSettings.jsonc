@@ -68,6 +68,16 @@
       "default": 1,
       "description": "Day the workweek starts: 0=Sunday, 1=Monday (FLSA default)"
     },
+    "labor_fab_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Global fabrication labor rate ($/hour) used by the Service Catalog cost model"
+    },
+    "labor_install_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Global install labor rate ($/hour) used by the Service Catalog cost model"
+    },
     "stripe_secret_key": {
       "type": "string",
       "description": "Stripe secret key (sk_live_... or sk_test_...)"

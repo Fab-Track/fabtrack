@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Check, X, EyeOff, Eye, Camera, Settings2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, EyeOff, Eye, Camera, Settings2, Calculator } from "lucide-react";
 import { toast } from "sonner";
 import { DEFAULT_SERVICE_CATALOG, CATALOG_CATEGORIES as DEFAULT_CATEGORIES } from "@/lib/serviceCatalogData";
+import CostModelEditor from "@/components/settings/CostModelEditor";
 
 const UNITS = ["lnft", "sqft", "ea", "ls", "per tread", "per inch elevation", "hr", "other"];
 
@@ -242,7 +243,7 @@ function PhotoCell({ photoUrl, onUpload, onRemove }) {
 }
 
 // ── Item form ─────────────────────────────────────────────────────────────────
-function CatalogItemForm({ initial = {}, categories, onSave, onCancel }) {
+function CatalogItemForm({ initial = {}, categories, onSave, onCancel, fabRate = 0, installRate = 0 }) {
   const [name, setName] = useState(initial.name || "");
   const [category, setCategory] = useState(initial.category || categories[0] || "Other");
   const [unit, setUnit] = useState(initial.unit || "ls");
@@ -251,6 +252,25 @@ function CatalogItemForm({ initial = {}, categories, onSave, onCancel }) {
   const [photoUrl, setPhotoUrl] = useState(initial.photo_url || "");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
+  const costModelRef = useRef({});
+  const [showCostModel, setShowCostModel] = useState(false);
+
+  // Initialize cost model ref from the item
+  useEffect(() => {
+    costModelRef.current = {
+      cost_primary_unit: initial.cost_primary_unit || "Linear Foot",
+      cost_materials_per_unit: initial.cost_materials_per_unit ?? 0,
+      cost_fab_hours_per_unit: initial.cost_fab_hours_per_unit ?? 0,
+      cost_powder_coat_per_unit: initial.cost_powder_coat_per_unit ?? 0,
+      cost_install_crew_size: initial.cost_install_crew_size ?? 0,
+      cost_install_hours_per_unit: initial.cost_install_hours_per_unit ?? 0,
+      cost_markup_multiplier: initial.cost_markup_multiplier ?? 1.5,
+    };
+    // Auto-expand cost model if item already has cost data
+    if (initial.cost_materials_per_unit || initial.cost_fab_hours_per_unit || initial.cost_markup_multiplier) {
+      setShowCostModel(true);
+    }
+  }, [initial]);
 
   async function handleFile(e) {
     const file = e.target.files?.[0];
@@ -304,10 +324,39 @@ function CatalogItemForm({ initial = {}, categories, onSave, onCancel }) {
         )}
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFile} />
       </div>
+
+      {/* Cost Model toggle + editor */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowCostModel(p => !p)}
+          className="text-xs font-medium text-blue-700 hover:text-blue-800 flex items-center gap-1"
+        >
+          <Calculator className="w-3.5 h-3.5" />
+          {showCostModel ? "Hide Cost Model" : "Configure Cost Model"}
+        </button>
+        {showCostModel && (
+          <div className="mt-2">
+            <CostModelEditor
+              initial={initial}
+              fabRate={fabRate}
+              installRate={installRate}
+              onChange={(cm) => { costModelRef.current = cm; }}
+            />
+          </div>
+        )}
+      </div>
+
       <div className="flex gap-2 justify-end">
         <Button
           size="sm" className="h-7 text-xs gap-1"
-          onClick={() => onSave({ name, category, unit, default_unit_price: parseFloat(unitPrice) || 0, default_description: description, photo_url: photoUrl || null })}
+          onClick={() => onSave({
+            name, category, unit,
+            default_unit_price: parseFloat(unitPrice) || 0,
+            default_description: description,
+            photo_url: photoUrl || null,
+            ...costModelRef.current,
+          })}
           disabled={!name.trim()}
         >
           <Check className="w-3 h-3" /> Save
@@ -338,6 +387,15 @@ export default function ServiceCatalogSection() {
     queryFn: () => orgId ? base44.entities.ServiceCatalog.filter({ organization_id: orgId }, "sort_order") : [],
     enabled: !!orgId,
   });
+
+  // Fetch global labor rates for the cost model live preview
+  const { data: settingsArr = [] } = useQuery({
+    queryKey: ["appSettings", "main", orgId],
+    queryFn: () => orgId ? base44.entities.AppSettings.filter({ setting_key: "main", organization_id: orgId }) : [],
+    enabled: !!orgId,
+  });
+  const fabRate = settingsArr[0]?.labor_fab_rate ?? 0;
+  const installRate = settingsArr[0]?.labor_install_rate ?? 0;
 
   // Derive categories from DB (unique) merged with defaults and any newly created ones
   const dbCategories = [...new Set(catalog.map(i => i.category).filter(Boolean))];
@@ -434,6 +492,8 @@ export default function ServiceCatalogSection() {
       {showAdd && (
         <CatalogItemForm
           categories={categories}
+          fabRate={fabRate}
+          installRate={installRate}
           onSave={(data) => createItem.mutate(data)}
           onCancel={() => setShowAdd(false)}
         />
@@ -461,6 +521,8 @@ export default function ServiceCatalogSection() {
                     <CatalogItemForm
                       initial={item}
                       categories={categories}
+                      fabRate={fabRate}
+                      installRate={installRate}
                       onSave={(data) => updateItem.mutate({ id: item.id, data })}
                       onCancel={() => setEditingId(null)}
                     />
