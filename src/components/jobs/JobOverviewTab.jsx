@@ -6,6 +6,7 @@ import JobScopeSection from "@/components/jobs/JobScopeSection";
 import KeyDatesCard from "@/components/jobs/KeyDatesCard";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
+import { formatAddressFromRecord } from "@/lib/addressFormat";
 
 export default function JobOverviewTab({ job }) {
   const { user } = useAuth();
@@ -29,7 +30,7 @@ export default function JobOverviewTab({ job }) {
         </CardHeader>
         <CardContent className="space-y-3">
           <DetailRow label="Products" value={productsList} />
-          <DetailRow label="Site Address" value={job.site_address} />
+          <DetailRow label="Site Address" value={formatAddressFromRecord(job, "site_")} />
           {job.lead_outcome && (
             <DetailRow label="Lead Outcome" value={
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${

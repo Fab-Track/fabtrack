@@ -14,9 +14,18 @@
       "type": "string",
       "description": "Company logo image URL"
     },
-    "address": {
+    "street": {
       "type": "string",
-      "description": "Company address"
+      "description": "Company street address"
+    },
+    "city": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "zip": {
+      "type": "string"
     },
     "phone": {
       "type": "string",

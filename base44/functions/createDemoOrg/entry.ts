@@ -41,7 +41,10 @@ Deno.serve(async (req) => {
       primary_trade: 'Miscellaneous Metals',
       shop_size: '6-15 employees',
       default_hourly_rate: 85,
-      address: '1450 Industrial Blvd, Denver, CO 80202',
+      street: '1450 Industrial Blvd',
+      city: 'Denver',
+      state: 'CO',
+      zip: '80202',
       phone: '(303) 555-0142',
       email: 'info@examplefabrication.com',
     });

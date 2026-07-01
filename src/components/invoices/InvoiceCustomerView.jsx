@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CreditCard, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { formatPhoneDisplay } from "@/lib/phoneFormat";
+import { formatAddressFromRecord } from "@/lib/addressFormat";
 
 const STATUS_COLORS = {
   Unpaid: "bg-amber-100 text-amber-800",
@@ -76,17 +77,17 @@ export default function InvoiceCustomerView({ invoice, job, customer, lines, sub
             <p className="font-semibold">{customer?.name || job?.customer_name || "—"}</p>
             {customer?.email && <p className="text-sm text-muted-foreground">{customer.email}</p>}
             {customer?.phone && <p className="text-sm text-muted-foreground">{formatPhoneDisplay(customer.phone)}</p>}
-            {customer?.address && <p className="text-sm text-muted-foreground">{customer.address}</p>}
+            {formatAddressFromRecord(customer) && <p className="text-sm text-muted-foreground">{formatAddressFromRecord(customer)}</p>}
           </div>
           <div className="text-right space-y-1">
             <div>
               <span className="text-xs text-muted-foreground">Job: </span>
               <span className="text-sm font-medium">{job?.job_name}</span>
             </div>
-            {job?.site_address && (
+            {formatAddressFromRecord(job, "site_") && (
               <div>
                 <span className="text-xs text-muted-foreground">Site: </span>
-                <span className="text-sm">{job.site_address}</span>
+                <span className="text-sm">{formatAddressFromRecord(job, "site_")}</span>
               </div>
             )}
             {issuedDate && (

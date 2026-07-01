@@ -106,7 +106,16 @@
     "personal_email": {
       "type": "string"
     },
-    "home_address": {
+    "home_street": {
+      "type": "string"
+    },
+    "home_city": {
+      "type": "string"
+    },
+    "home_state": {
+      "type": "string"
+    },
+    "home_zip": {
       "type": "string"
     },
     "emergency_contact_name": {

@@ -27,7 +27,16 @@
     "customer_name": {
       "type": "string"
     },
-    "site_address": {
+    "site_street": {
+      "type": "string"
+    },
+    "site_city": {
+      "type": "string"
+    },
+    "site_state": {
+      "type": "string"
+    },
+    "site_zip": {
       "type": "string"
     },
     "service_category": {

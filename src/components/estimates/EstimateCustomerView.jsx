@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle2, Lock } from "lucide-react";
 import { formatPhoneDisplay } from "@/lib/phoneFormat";
+import { formatAddressFromRecord } from "@/lib/addressFormat";
 
 const STATUS_COLORS = {
   Draft: "bg-muted text-muted-foreground",
@@ -60,7 +61,7 @@ export default function EstimateCustomerView({ estimate, job, customer, business
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-xl font-bold">High Country Metal Works</h1>
-            {businessInfo?.address && <p className="text-sm opacity-80 mt-0.5">{businessInfo.address}</p>}
+            {formatAddressFromRecord(businessInfo) && <p className="text-sm opacity-80 mt-0.5">{formatAddressFromRecord(businessInfo)}</p>}
             {businessInfo?.phone && <p className="text-sm opacity-80">{businessInfo.phone}</p>}
           </div>
           <div className="text-right">
@@ -79,7 +80,7 @@ export default function EstimateCustomerView({ estimate, job, customer, business
             <p className="font-semibold">{customer?.name || job?.customer_name || "—"}</p>
             {customer?.email && <p className="text-sm text-muted-foreground">{customer.email}</p>}
             {customer?.phone && <p className="text-sm text-muted-foreground">{formatPhoneDisplay(customer.phone)}</p>}
-            {customer?.address && <p className="text-sm text-muted-foreground">{customer.address}</p>}
+            {formatAddressFromRecord(customer) && <p className="text-sm text-muted-foreground">{formatAddressFromRecord(customer)}</p>}
           </div>
           <div className="text-right space-y-1">
             <div>
