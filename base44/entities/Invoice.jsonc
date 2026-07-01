@@ -124,6 +124,32 @@
           "install_location": {
             "type": "string"
           },
+          "_hard_cost_per_unit": {
+            "type": "number",
+            "description": "Carried from estimate (internal only)"
+          },
+          "_cost_components": {
+            "type": "object",
+            "description": "Carried from estimate (internal only)",
+            "properties": {
+              "materials": {
+                "type": "number"
+              },
+              "fabrication": {
+                "type": "number"
+              },
+              "powder_coat": {
+                "type": "number"
+              },
+              "install": {
+                "type": "number"
+              }
+            }
+          },
+          "_markup_multiplier": {
+            "type": "number",
+            "description": "Carried from estimate (internal only)"
+          },
           "_est_line_idx": {
             "type": "number",
             "description": "Source estimate line index for invoicing tracking"

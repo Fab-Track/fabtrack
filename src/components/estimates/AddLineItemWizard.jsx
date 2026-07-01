@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Check, PenLine } from "lucide-react";
-import RailingInlineCalc from "./RailingInlineCalc";
-import StaircaseInlineCalc from "./StaircaseInlineCalc";
+import CostModelPricing from "./CostModelPricing";
 
 const INSTALL_LOCATIONS = [
   "Interior — Main Staircase",
@@ -43,15 +42,9 @@ const STEP_STYLE = 1;
 const STEP_PRICING = 2;   // calculator OR manual price entry
 const STEP_LOCATION = 3;
 
-function getCalculatorType(category, item) {
-  const cat = (category || "").toLowerCase();
-  const name = (item?.name || "").toLowerCase();
-  if (cat === "railing" || item?.is_railing) return "railing";
-  if (cat === "staircase") {
-    if (name.includes("spiral")) return "staircase_spiral";
-    return "staircase";
-  }
-  return null;
+// Cost model detection — replaces old calculator type logic
+function itemHasCostModel(item) {
+  return !!(item?.cost_materials_per_unit || item?.cost_fab_hours_per_unit || item?.cost_powder_coat_per_unit || item?.cost_install_crew_size || item?.cost_install_hours_per_unit);
 }
 
 function StepDots({ step }) {
@@ -84,12 +77,21 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
   const [quantity, setQuantity] = useState("1");
   const [calcPrice, setCalcPrice] = useState(null);
   const [calcQty, setCalcQty] = useState(null);
+  const [calcBreakdown, setCalcBreakdown] = useState(null);
   const [installLocation, setInstallLocation] = useState("");
 
   const { data: catalog = [] } = useQuery({
     queryKey: ["serviceCatalog", "active"],
     queryFn: () => base44.entities.ServiceCatalog.filter({ is_active: true }),
   });
+
+  // Fetch global labor rates for cost model pricing
+  const { data: settings = [] } = useQuery({
+    queryKey: ["appSettings", "main"],
+    queryFn: () => base44.entities.AppSettings.filter({ setting_key: "main" }),
+  });
+  const fabRate = settings[0]?.labor_fab_rate ?? 0;
+  const installRate = settings[0]?.labor_install_rate ?? 0;
 
   // Unique categories sorted by sort_order
   const categories = [...new Set(
@@ -104,8 +106,7 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
     .filter(i => i.category === selectedCategory)
     .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
-  const calcType = getCalculatorType(selectedCategory, selectedItem);
-  const hasCalculator = !!calcType;
+  const hasCostModel = itemHasCostModel(selectedItem);
 
   function reset() {
     setStep(STEP_CATEGORY);
@@ -117,6 +118,7 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
     setQuantity("1");
     setCalcPrice(null);
     setCalcQty(null);
+    setCalcBreakdown(null);
     setInstallLocation("");
   }
 
@@ -140,6 +142,7 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
     setQuantity("1");
     setCalcPrice(null);
     setCalcQty(null);
+    setCalcBreakdown(null);
     setStep(STEP_PRICING);
   }
 
@@ -152,14 +155,15 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
     setStep(STEP_PRICING);
   }
 
-  function handleCalcPriceChange(price, qty) {
-    setCalcPrice(price);
+  function handleCalcPriceChange(pricePerUnit, qty, breakdown) {
+    setCalcPrice(pricePerUnit);
     setCalcQty(qty);
+    setCalcBreakdown(breakdown);
   }
 
   function handleFinish() {
-    const finalUnitCost = hasCalculator ? (calcPrice || 0) : (parseFloat(unitCost) || 0);
-    const finalQty = hasCalculator ? (calcQty || 1) : (parseFloat(quantity) || 1);
+    const finalUnitCost = hasCostModel ? (calcPrice || 0) : (parseFloat(unitCost) || 0);
+    const finalQty = hasCostModel ? (calcQty || 1) : (parseFloat(quantity) || 1);
 
     onAdd({
       _id: Math.random().toString(36).slice(2),
@@ -173,20 +177,26 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
       total: finalQty * finalUnitCost,
       photo_url: selectedItem?.photo_url || null,
       show_photo: true,
+      // Cost model snapshot (if applicable)
+      ...(hasCostModel && calcBreakdown ? {
+        _hard_cost_per_unit: calcBreakdown.hardCostPerUnit,
+        _cost_components: calcBreakdown.costComponents,
+        _markup_multiplier: calcBreakdown.markup,
+      } : {}),
       // Material projection flags — required by projectMaterials()
-      ...(calcType === "railing" ? {
+      ...((selectedItem?.is_railing || selectedCategory === "Railing") ? {
         _is_railing: true,
         _railing_style: selectedItem?.name || null,
       } : {}),
-      ...(calcType === "staircase" || calcType === "staircase_spiral" ? {
+      ...(selectedCategory === "Staircase" ? {
         _is_staircase: true,
-        _staircase_type: calcType === "staircase_spiral" ? "spiral" : "mono",
+        _staircase_type: (selectedItem?.name || "").toLowerCase().includes("spiral") ? "spiral" : "mono",
       } : {}),
     });
     handleClose();
   }
 
-  const canProceedFromPricing = hasCalculator
+  const canProceedFromPricing = hasCostModel
     ? calcPrice != null && calcPrice > 0
     : (parseFloat(unitCost) || 0) > 0 || isCustom; // allow $0 custom items if description filled
 
@@ -294,33 +304,25 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
               />
             </div>
 
-            {/* Calculator for railing / staircase */}
-            {hasCalculator && (
+            {/* Cost model calculator */}
+            {hasCostModel && (
               <>
-                {calcType === "railing" && (
-                  <RailingInlineCalc
-                    styleName={selectedItem?.name}
-                    onPriceChange={handleCalcPriceChange}
-                    defaultExpanded={true}
-                  />
-                )}
-                {(calcType === "staircase" || calcType === "staircase_spiral") && (
-                  <StaircaseInlineCalc
-                    staircaseType={calcType === "staircase_spiral" ? "spiral" : "mono"}
-                    onPriceChange={handleCalcPriceChange}
-                    defaultExpanded={true}
-                  />
-                )}
+                <CostModelPricing
+                  catalogItem={selectedItem}
+                  fabRate={fabRate}
+                  installRate={installRate}
+                  onPriceChange={handleCalcPriceChange}
+                />
                 {calcPrice != null && calcPrice > 0 && (
                   <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-sm text-emerald-800 font-semibold">
-                    Calculated total: ${calcPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                    Price: ${calcPrice.toLocaleString("en-US", { maximumFractionDigits: 2 })}/unit
                   </div>
                 )}
               </>
             )}
 
             {/* Manual price entry for non-calculator items */}
-            {!hasCalculator && (
+            {!hasCostModel && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-medium">Unit Cost ($)</Label>
@@ -358,7 +360,7 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
                 size="sm"
                 className="gap-1"
                 onClick={() => setStep(STEP_LOCATION)}
-                disabled={hasCalculator ? !canProceedFromPricing : (!description.trim() && isCustom)}
+                disabled={hasCostModel ? !canProceedFromPricing : (!description.trim() && isCustom)}
               >
                 Next — Install Location <ChevronRight className="w-3.5 h-3.5" />
               </Button>
@@ -375,8 +377,8 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
               <p className="text-sm font-semibold">{description || selectedItem?.name || "Custom item"}</p>
               <p className="text-xs text-muted-foreground">
                 {selectedCategory}{selectedItem ? ` — ${selectedItem.name}` : ""}
-                {hasCalculator && calcPrice
-                  ? ` · $${calcPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })}`
+                {hasCostModel && calcPrice
+                  ? ` · ${calcQty} ${selectedItem?.cost_primary_unit || selectedItem?.unit || "unit"} @ $${calcPrice.toLocaleString("en-US", { maximumFractionDigits: 2 })}/unit`
                   : unitCost
                     ? ` · $${(parseFloat(unitCost) * parseFloat(quantity || 1)).toLocaleString("en-US", { maximumFractionDigits: 0 })}`
                     : ""}

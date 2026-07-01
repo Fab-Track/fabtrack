@@ -88,6 +88,32 @@
           },
           "show_photo": {
             "type": "boolean"
+          },
+          "_hard_cost_per_unit": {
+            "type": "number",
+            "description": "Snapshot of computed hard cost per unit (internal only)"
+          },
+          "_cost_components": {
+            "type": "object",
+            "description": "Snapshot of cost breakdown (internal only)",
+            "properties": {
+              "materials": {
+                "type": "number"
+              },
+              "fabrication": {
+                "type": "number"
+              },
+              "powder_coat": {
+                "type": "number"
+              },
+              "install": {
+                "type": "number"
+              }
+            }
+          },
+          "_markup_multiplier": {
+            "type": "number",
+            "description": "Markup multiplier used for this line (internal only, editable per line)"
           }
         }
       }

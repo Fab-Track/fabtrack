@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Trash2, CheckCircle2, FileText, LayoutList, AlignJustify, AlertCircle, ImageOff, Image, Lock } from "lucide-react";
 import AddLineItemWizard from "./AddLineItemWizard";
+import LineItemCostBreakdown from "./LineItemCostBreakdown";
 import { useJobDetailConfig } from "@/hooks/useJobDetailConfig";
 import { toast } from "sonner";
 import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
@@ -206,7 +207,12 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
   function updateLine(idx, field, value) {
     setLines(prev => {
       const next = [...prev];
-      next[idx] = calcLine({ ...next[idx], [field]: field === "quantity" || field === "unit_cost" ? parseFloat(value) || 0 : value });
+      let updated = { ...next[idx], [field]: field === "quantity" || field === "unit_cost" || field === "_markup_multiplier" ? parseFloat(value) || 0 : value };
+      // If markup changed and line has cost model, recompute unit_cost from stored hard cost
+      if (field === "_markup_multiplier" && updated._hard_cost_per_unit) {
+        updated.unit_cost = Math.round(updated._hard_cost_per_unit * (parseFloat(value) || 1) * 100) / 100;
+      }
+      next[idx] = calcLine(updated);
       return next;
     });
   }
@@ -433,6 +439,7 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                         </button>
                       </div>
                     )}
+                    <LineItemCostBreakdown line={line} onMarkupChange={v => updateLine(idx, "_markup_multiplier", v)} disabled={isLocked && !!estimate?.id} />
                   </div>
                 ))}
               </div>
@@ -518,6 +525,7 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                         </button>
                       </div>
                     )}
+                    <LineItemCostBreakdown line={line} onMarkupChange={v => updateLine(idx, "_markup_multiplier", v)} disabled={isLocked && !!estimate?.id} />
                   </div>
                 ))}
               </div>
