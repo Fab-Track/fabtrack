@@ -44,7 +44,6 @@ const INSTALL_LOCATIONS = [
 
 const blankLine = () => ({
   _id: Math.random().toString(36).slice(2),
-  category: "All",
   description: "",
   install_location: "N/A",
   color: "",

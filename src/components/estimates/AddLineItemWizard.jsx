@@ -167,7 +167,6 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
 
     onAdd({
       _id: Math.random().toString(36).slice(2),
-      category: selectedCategory || "Other",
       description: description || selectedItem?.name || "",
       install_location: installLocation || "N/A",
       color: "",
@@ -183,12 +182,12 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
         _cost_components: calcBreakdown.costComponents,
         _markup_multiplier: calcBreakdown.markup,
       } : {}),
-      // Material projection flags — required by projectMaterials()
-      ...((selectedItem?.is_railing || selectedCategory === "Railing") ? {
+      // Material projection flags — driven by catalog item properties, not category string
+      ...(selectedItem?.is_railing ? {
         _is_railing: true,
         _railing_style: selectedItem?.name || null,
       } : {}),
-      ...(selectedCategory === "Staircase" ? {
+      ...(selectedItem?.category === "Staircase" ? {
         _is_staircase: true,
         _staircase_type: (selectedItem?.name || "").toLowerCase().includes("spiral") ? "spiral" : "mono",
       } : {}),
@@ -243,7 +242,7 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
         {step === STEP_STYLE && (
           <div className="space-y-2 py-2">
             <p className="text-xs text-muted-foreground mb-3">
-              Category: <strong>{selectedCategory}</strong>
+              {selectedCategory}
             </p>
             <div className="space-y-1.5">
               {itemsForCategory.map(item => (
@@ -376,7 +375,7 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
               <p className="text-xs text-muted-foreground">Adding to estimate</p>
               <p className="text-sm font-semibold">{description || selectedItem?.name || "Custom item"}</p>
               <p className="text-xs text-muted-foreground">
-                {selectedCategory}{selectedItem ? ` — ${selectedItem.name}` : ""}
+                {selectedItem ? selectedItem.name : "Custom item"}
                 {hasCostModel && calcPrice
                   ? ` · ${calcQty} ${selectedItem?.cost_primary_unit || selectedItem?.unit || "unit"} @ $${calcPrice.toLocaleString("en-US", { maximumFractionDigits: 2 })}/unit`
                   : unitCost
