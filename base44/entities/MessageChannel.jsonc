@@ -26,6 +26,15 @@
       ],
       "default": "team"
     },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "public",
+        "private"
+      ],
+      "default": "public",
+      "description": "Channel visibility \u2014 public = all org members have access, private = only member_ids can see and post"
+    },
     "is_permanent": {
       "type": "boolean",
       "default": false
@@ -42,14 +51,14 @@
       "items": {
         "type": "string"
       },
-      "description": "Roles that auto-have access"
+      "description": "Deprecated \u2014 kept for backward compat. Access is now controlled by visibility + member_ids."
     },
     "member_ids": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "Explicit user/employee IDs with access"
+      "description": "For private channels: the explicit member list (user IDs). For DM channels: the two participants. Not used for public channels."
     },
     "last_message_at": {
       "type": "string",

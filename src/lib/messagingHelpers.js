@@ -2,6 +2,8 @@
  * Shared helpers for the FabTrack messaging system.
  */
 
+import { isOwnerLevel, getUserRoles } from "@/lib/roleHelpers";
+
 export const MANAGEMENT_ROLES = ["admin", "owner", "shop_manager", "estimator", "accountant"];
 export const ALL_ROLES = ["admin", "owner", "shop_manager", "estimator", "accountant", "fabricator", "installer", "design_specialist"];
 export const GENERAL_ROLES = ALL_ROLES; // everyone
@@ -35,46 +37,43 @@ export function jobChannelDisplayName(jobNumber, jobName) {
 }
 
 /**
- * Returns true if a user with the given role can see a given channel.
+ * Returns true if a user can see a given channel.
+ *
+ * Access model:
+ * - DM channels: only the two participants in member_ids
+ * - Public channels (default): everyone in the org
+ * - Private channels: only users in member_ids
  */
 export function canAccessChannel(channel, userRole, userId, userEmail) {
   if (!channel) return false;
 
-  // Permanent team channels
-  if (channel.is_permanent) {
-    if (channel.name === "#management") {
-      return MANAGEMENT_ROLES.includes(userRole);
-    }
-    return true; // #general, #pictures, custom
-  }
-
-  // Additional team channels — check member_roles or member_ids
-  if (channel.channel_type === "team") {
-    if (channel.member_roles?.includes(userRole)) return true;
-    if (channel.member_ids?.includes(userId)) return true;
-    if (channel.member_ids?.includes(userEmail)) return true;
-    return false;
-  }
-
-  // DM channels — user must be in member_ids
+  // DM channels — user must be a participant
   if (channel.channel_type === "dm") {
     if (channel.member_ids?.includes(userId)) return true;
     if (channel.member_ids?.includes(userEmail)) return true;
     return false;
   }
 
-  // Job channels — all active team roles see all job channels
-  if (channel.channel_type === "job") {
-    if (["admin", "owner", "shop_manager", "fabricator", "installer", "estimator", "design_specialist", "accountant"].includes(userRole)) return true;
+  // Private channels — only explicit members
+  if (channel.visibility === "private") {
     if (channel.member_ids?.includes(userId)) return true;
     if (channel.member_ids?.includes(userEmail)) return true;
     return false;
   }
 
-  // Fallback: check member_ids
-  if (channel.member_ids?.includes(userId)) return true;
-  if (channel.member_ids?.includes(userEmail)) return true;
-  return false;
+  // Public channels (default) — everyone in the org
+  return true;
+}
+
+/**
+ * Returns true if the user can manage a channel's membership and visibility.
+ * Only Owner or Manager level roles (per the existing role system).
+ */
+export function canManageChannel(user) {
+  if (!user) return false;
+  const roles = getUserRoles(user);
+  if (roles.includes("super_admin")) return true;
+  return isOwnerLevel(user);
 }
 
 export const REACTION_EMOJIS = ["👍", "✅", "👀", "🔨", "🔥", "❤️"];
@@ -97,6 +96,7 @@ export const PERMANENT_CHANNELS = [
     display_name: "general",
     description: "Company-wide chat for the whole High Country Metal Works team",
     channel_type: "team",
+    visibility: "public",
     is_permanent: true,
     member_roles: GENERAL_ROLES,
     sort_order: 1,
@@ -106,6 +106,7 @@ export const PERMANENT_CHANNELS = [
     display_name: "management",
     description: "Management discussion — leadership team only",
     channel_type: "team",
+    visibility: "public",
     is_permanent: true,
     member_roles: MANAGEMENT_ROLES,
     sort_order: 2,
@@ -115,6 +116,7 @@ export const PERMANENT_CHANNELS = [
     display_name: "pictures",
     description: "Share job photos, finished work, and team moments",
     channel_type: "team",
+    visibility: "public",
     is_permanent: true,
     member_roles: GENERAL_ROLES,
     sort_order: 3,

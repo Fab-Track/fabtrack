@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Hash, Briefcase, Users, ArrowLeft, ExternalLink, Settings } from "lucide-react";
+import { Hash, Briefcase, Users, ArrowLeft, ExternalLink, Settings, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { format, parseISO } from "date-fns";
@@ -128,7 +128,7 @@ export default function MessageThread({ channel, currentUser, onBack, isMobile, 
           </button>
         )}
         <div className="flex items-center gap-1.5 text-muted-foreground shrink-0">
-          {isJobChannel ? <Briefcase className="w-4 h-4" /> : <Hash className="w-4 h-4" />}
+          {isJobChannel ? <Briefcase className="w-4 h-4" /> : channel.visibility === "private" ? <Lock className="w-4 h-4" /> : <Hash className="w-4 h-4" />}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -150,7 +150,7 @@ export default function MessageThread({ channel, currentUser, onBack, isMobile, 
             <p className="text-xs text-muted-foreground truncate">{channel.description}</p>
           )}
         </div>
-        {channel.member_ids?.length > 0 && (
+        {(channel.visibility === "private" || channel.channel_type === "dm") && channel.member_ids?.length > 0 && (
           <span className="text-[10px] text-muted-foreground shrink-0 bg-muted px-1.5 py-0.5 rounded-full">
             {channel.member_ids.length} {channel.member_ids.length === 1 ? "member" : "members"}
           </span>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Hash, Pin, Briefcase, Search, Plus, Archive, MessageCircle, CheckCheck } from "lucide-react";
+import { Hash, Pin, Briefcase, Search, Plus, Archive, MessageCircle, CheckCheck, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { canAccessChannel, formatMessageTime } from "@/lib/messagingHelpers";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -214,6 +214,8 @@ function ChannelRow({ channel, isSelected, unread, onClick, currentUserId, onMar
       <div className="shrink-0 mt-0.5 relative">
         {isDm ? (
           <MessageCircle className="w-3.5 h-3.5 text-muted-foreground" />
+        ) : channel.visibility === "private" ? (
+          <Lock className="w-3.5 h-3.5 text-muted-foreground" />
         ) : channel.channel_type === "job" ? (
           <Briefcase className="w-3.5 h-3.5 text-muted-foreground" />
         ) : (

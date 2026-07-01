@@ -32,11 +32,6 @@ Deno.serve(async (req) => {
     const slug = jobChannelSlug(job.job_number, job.job_name);
     const displayName = job.job_number + " — " + (job.job_name || "").replace(/[^a-zA-Z0-9\s\-]/g, "").trim().split(/\s+/).slice(0,4).join(" ");
 
-    // Build member_ids: assigned estimator + crew
-    const memberIds = [];
-    if (job.assigned_estimator) memberIds.push(job.assigned_estimator);
-    if (job.assigned_crew?.length) memberIds.push(...job.assigned_crew);
-
     const orgId = job.organization_id;
     const channel = await base44.asServiceRole.entities.MessageChannel.create({
       organization_id: orgId,
@@ -44,11 +39,10 @@ Deno.serve(async (req) => {
       display_name: displayName,
       description: `Job channel for ${job.job_number} — ${job.job_name}`,
       channel_type: "job",
+      visibility: "public",
       is_permanent: false,
       job_id: job.id,
       job_number: job.job_number,
-      member_roles: ["admin", "owner", "shop_manager"],
-      member_ids: memberIds,
       is_archived: false,
       sort_order: 100,
     });

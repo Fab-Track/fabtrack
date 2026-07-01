@@ -4,12 +4,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
-import { GENERAL_ROLES, MANAGEMENT_ROLES } from "@/lib/messagingHelpers";
+import { Lock, Globe } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function NewChannelDialog({ onClose, onCreated }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [access, setAccess] = useState("all");
+  const [visibility, setVisibility] = useState("public");
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
 
@@ -17,14 +18,14 @@ export default function NewChannelDialog({ onClose, onCreated }) {
     if (!name.trim()) return;
     setSaving(true);
     const slug = "#" + name.trim().toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-");
-    const memberRoles = access === "management" ? MANAGEMENT_ROLES : GENERAL_ROLES;
     const channel = await base44.entities.MessageChannel.create({
       name: slug,
       display_name: name.trim(),
       description: description.trim(),
       channel_type: "team",
+      visibility,
       is_permanent: true,
-      member_roles: memberRoles,
+      member_ids: [],
       sort_order: 50,
     });
     queryClient.invalidateQueries({ queryKey: ["channels"] });
@@ -59,17 +60,34 @@ export default function NewChannelDialog({ onClose, onCreated }) {
             />
           </div>
           <div>
-            <Label className="text-xs">Access</Label>
+            <Label className="text-xs">Visibility</Label>
             <div className="mt-1 space-y-1.5">
-              {[
-                { value: "all", label: "All Team Members" },
-                { value: "management", label: "Management Only (Owner, Manager, Estimator, Accountant)" },
-              ].map(opt => (
-                <label key={opt.value} className="flex items-center gap-2 cursor-pointer text-sm">
-                  <input type="radio" name="access" value={opt.value} checked={access === opt.value} onChange={() => setAccess(opt.value)} />
-                  {opt.label}
-                </label>
-              ))}
+              <label className={cn(
+                "flex items-start gap-2 cursor-pointer text-sm p-2 rounded-md border transition-colors",
+                visibility === "public" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+              )}>
+                <input type="radio" name="vis" value="public" checked={visibility === "public"} onChange={() => setVisibility("public")} className="mt-0.5" />
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="font-medium">Public</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Everyone in your organization can see and post</p>
+                </div>
+              </label>
+              <label className={cn(
+                "flex items-start gap-2 cursor-pointer text-sm p-2 rounded-md border transition-colors",
+                visibility === "private" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+              )}>
+                <input type="radio" name="vis" value="private" checked={visibility === "private"} onChange={() => setVisibility("private")} className="mt-0.5" />
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="font-medium">Private</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Only invited members can see and post</p>
+                </div>
+              </label>
             </div>
           </div>
           <button
