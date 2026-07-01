@@ -21,7 +21,7 @@ import RolesTab from "./RolesTab";
 import OrgCombobox from "@/components/shared/OrgCombobox";
 import { ROLES as PERM_ROLES, ROLE_LABELS, DEFAULT_PERMISSIONS } from "@/lib/permissionsData";
 
-const ROLES = ["owner", "admin", "shop_manager", "estimator", "fabricator", "accountant", "design_specialist", "payroll"];
+const ROLES = ["owner", "admin", "shop_manager", "estimator", "fabricator", "accountant", "design_specialist"];
 
 function statusBadge(status) {
   if (status === "active") return <Badge className="bg-green-100 text-green-700 text-xs border-0">Active</Badge>;

@@ -37,8 +37,7 @@
         "accountant",
         "owner",
         "shop_manager",
-        "installer",
-        "payroll"
+        "installer"
       ],
       "description": "Shop role \u2014 determines access level when linked to a User account"
     },

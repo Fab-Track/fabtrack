@@ -23,8 +23,7 @@
         "fabricator",
         "installer",
         "accountant",
-        "design_specialist",
-        "payroll"
+        "design_specialist"
       ]
     },
     "roles": {
@@ -42,8 +41,7 @@
           "fabricator",
           "installer",
           "accountant",
-          "design_specialist",
-          "payroll"
+          "design_specialist"
         ]
       }
     },
