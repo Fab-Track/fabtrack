@@ -61,6 +61,10 @@
           "description": {
             "type": "string"
           },
+          "color": {
+            "type": "string",
+            "description": "Powdercoat color for this line item (from org config)"
+          },
           "quantity": {
             "type": "number"
           },

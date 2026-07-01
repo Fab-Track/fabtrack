@@ -5,10 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Layers, CheckCircle2 } from "lucide-react";
 
 /**
- * Fabricator-friendly read-only scope view pulled from the approved estimate.
- * Hides all dollar amounts.
+ * Shop-facing read-only scope view pulled from the approved estimate + change orders.
+ * Shows only Item (description), Qty, Color, and Install Location — no pricing.
  */
-export default function JobScopeSection({ job, isFabricator = false }) {
+export default function JobScopeSection({ job }) {
   const { data: estimates = [] } = useQuery({
     queryKey: ["estimates", job.id],
     queryFn: () => base44.entities.Estimate.filter({ job_id: job.id }),
@@ -51,40 +51,30 @@ export default function JobScopeSection({ job, isFabricator = false }) {
             <thead className="bg-muted/30 border-b">
               <tr>
                 <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground">Item</th>
-                <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground">Description</th>
                 <th className="text-right px-4 py-2 text-xs font-semibold text-muted-foreground">Qty</th>
-                <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground">Unit</th>
+                <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground">Color</th>
                 <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground">Install Location</th>
-                {!isFabricator && (
-                  <th className="text-right px-4 py-2 text-xs font-semibold text-muted-foreground">Amount</th>
-                )}
               </tr>
             </thead>
             <tbody>
               {allLines.map((line, i) => (
                 <tr key={i} className="border-b last:border-0 hover:bg-muted/20">
                   <td className="px-4 py-2.5 font-medium">
-                    {line.description?.split("—")[0]?.trim() || line.description || "—"}
+                    {line.description || "—"}
                     {line._co_label && (
                       <Badge className="ml-2 text-xs bg-amber-100 text-amber-700 border-transparent">{line._co_label}</Badge>
                     )}
                   </td>
-                  <td className="px-4 py-2.5 text-muted-foreground text-xs max-w-xs">{line.description || "—"}</td>
                   <td className="px-4 py-2.5 text-right">{line.quantity ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{line.unit || "—"}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground">{line.color || "—"}</td>
                   <td className="px-4 py-2.5 text-muted-foreground text-xs">
                     {line.install_location && line.install_location !== "N/A" ? line.install_location : "—"}
                   </td>
-                  {!isFabricator && (
-                    <td className="px-4 py-2.5 text-right font-semibold">
-                      ${(line.total || (line.quantity || 0) * (line.unit_cost || 0)).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                    </td>
-                  )}
                 </tr>
               ))}
               {allLines.length === 0 && (
                 <tr>
-                  <td colSpan={isFabricator ? 5 : 6} className="px-4 py-8 text-center text-muted-foreground text-sm">
+                  <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground text-sm">
                     No line items on the approved estimate.
                   </td>
                 </tr>

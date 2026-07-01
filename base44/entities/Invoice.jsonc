@@ -105,6 +105,10 @@
           "description": {
             "type": "string"
           },
+          "color": {
+            "type": "string",
+            "description": "Powdercoat color for this line item (carried from estimate)"
+          },
           "quantity": {
             "type": "number"
           },
@@ -116,6 +120,9 @@
           },
           "total": {
             "type": "number"
+          },
+          "install_location": {
+            "type": "string"
           },
           "_est_line_idx": {
             "type": "number",

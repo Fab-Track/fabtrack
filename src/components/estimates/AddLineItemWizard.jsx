@@ -166,6 +166,7 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
       category: selectedCategory || "Other",
       description: description || selectedItem?.name || "",
       install_location: installLocation || "N/A",
+      color: "",
       quantity: finalQty,
       unit: selectedItem?.unit || "ls",
       unit_cost: finalUnitCost,

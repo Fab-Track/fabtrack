@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Trash2, CheckCircle2, FileText, LayoutList, AlignJustify, AlertCircle, ImageOff, Image, Lock } from "lucide-react";
 import AddLineItemWizard from "./AddLineItemWizard";
+import { useJobDetailConfig } from "@/hooks/useJobDetailConfig";
 import { toast } from "sonner";
 import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
 
@@ -45,6 +46,7 @@ const blankLine = () => ({
   category: "All",
   description: "",
   install_location: "N/A",
+  color: "",
   quantity: 1,
   unit: "ea",
   unit_cost: 0,
@@ -82,6 +84,8 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
   // Only lock editing when the estimate is already saved as Approved in the DB
   const isLocked = estimate?.status === "Approved" && !!estimate?.id;
   const [wizardOpen, setWizardOpen] = useState(false);
+  const { config: detailConfig } = useJobDetailConfig();
+  const powdercoatColors = detailConfig.powdercoat_colors || [];
   const [editorView, setEditorView] = useState("detail"); // always start in detail for editing
   const [viewMode, setViewMode] = useState(estimate?.view_mode || "summary"); // customer-facing saved mode
   const stylePhotoUrl = isNew ? prefillData?.stylePhotoUrl : estimate?.style_photo_url;
@@ -359,34 +363,42 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
             <>
               {/* Desktop: grid layout */}
               <div className="hidden md:block overflow-x-auto -mx-1 px-1">
-              <div style={{ minWidth: 540 }}>
-              <div className="grid grid-cols-[2fr_1.5fr_0.7fr_1fr_1fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
-                <span>Description</span>
-                <span>Install Location</span>
-                <span>Qty</span>
-                <span>Unit Cost</span>
-                <span>Total</span>
-                <span></span>
-              </div>
+              <div style={{ minWidth: 640 }}>
+              <div className="grid grid-cols-[2fr_1.5fr_1fr_0.7fr_1fr_1fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
+                 <span>Description</span>
+                 <span>Install Location</span>
+                 <span>Color</span>
+                 <span>Qty</span>
+                 <span>Unit Cost</span>
+                 <span>Total</span>
+                 <span></span>
+               </div>
               <div className="space-y-2">
                 {lines.map((line, idx) => (
                   <div key={line._id} className="space-y-1">
-                    <div className="grid grid-cols-[2fr_1.5fr_0.7fr_1fr_1fr_auto] gap-1.5 items-center">
-                      <Input
-                        className="h-8 text-xs"
-                        placeholder="Description"
-                        value={line.description}
-                        onChange={e => updateLine(idx, "description", e.target.value)}
-                        disabled={isLocked && !!estimate?.id}
-                      />
-                      <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)} disabled={isLocked && !!estimate?.id}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
-                      </Select>
-                      <Input
-                        className="h-8 text-xs"
-                        type="number"
-                        value={line.quantity}
+                    <div className="grid grid-cols-[2fr_1.5fr_1fr_0.7fr_1fr_1fr_auto] gap-1.5 items-center">
+                       <Input
+                         className="h-8 text-xs"
+                         placeholder="Description"
+                         value={line.description}
+                         onChange={e => updateLine(idx, "description", e.target.value)}
+                         disabled={isLocked && !!estimate?.id}
+                       />
+                       <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)} disabled={isLocked && !!estimate?.id}>
+                         <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                         <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
+                       </Select>
+                       <Select value={line.color || "__none__"} onValueChange={v => updateLine(idx, "color", v === "__none__" ? "" : v)} disabled={isLocked && !!estimate?.id}>
+                         <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="None" /></SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="__none__" className="text-xs">None</SelectItem>
+                           {powdercoatColors.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}
+                         </SelectContent>
+                       </Select>
+                       <Input
+                         className="h-8 text-xs"
+                         type="number"
+                         value={line.quantity}
                         onChange={e => updateLine(idx, "quantity", e.target.value)}
                         disabled={isLocked && !!estimate?.id}
                       />
@@ -448,6 +460,16 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                         <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
+                    <div>
+                      <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Color</Label>
+                      <Select value={line.color || "__none__"} onValueChange={v => updateLine(idx, "color", v === "__none__" ? "" : v)} disabled={isLocked && !!estimate?.id}>
+                        <SelectTrigger className="h-9 text-sm w-full mt-0.5"><SelectValue placeholder="None" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
+                          {powdercoatColors.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Qty</Label>
@@ -503,26 +525,28 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
           ) : (
             <>
               {/* Summary header */}
-              <div className="grid gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1" style={{ gridTemplateColumns: "2fr 0.6fr 1.5fr 1fr auto" }}>
-                <span>Description</span>
-                <span className="text-right">Qty</span>
-                <span>Install Location</span>
-                <span className="text-right">Amount</span>
-                <span></span>
-              </div>
+              <div className="grid gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1" style={{ gridTemplateColumns: "2fr 0.6fr 1.5fr 1fr 1fr auto" }}>
+                 <span>Description</span>
+                 <span className="text-right">Qty</span>
+                 <span>Install Location</span>
+                 <span>Color</span>
+                 <span className="text-right">Amount</span>
+                 <span></span>
+               </div>
               <div className="space-y-1">
                 {lines.map((line, idx) => (
                   <div
                     key={line._id}
                     className="grid gap-1.5 items-center py-2 px-1 rounded hover:bg-muted/50 cursor-pointer group"
-                    style={{ gridTemplateColumns: "2fr 0.6fr 1.5fr 1fr auto" }}
-                    onClick={() => setEditorView("detail")}
-                    title="Click to switch to Detail view and edit"
-                  >
-                    <span className="text-sm truncate">{line.description || <span className="text-muted-foreground italic">No description</span>}</span>
-                    <span className="text-sm text-muted-foreground text-right">{line.quantity}</span>
-                    <span className="text-xs text-muted-foreground truncate">{line.install_location !== "N/A" ? line.install_location : "—"}</span>
-                    <span className="text-sm font-semibold text-right">
+                     style={{ gridTemplateColumns: "2fr 0.6fr 1.5fr 1fr 1fr auto" }}
+                     onClick={() => setEditorView("detail")}
+                     title="Click to switch to Detail view and edit"
+                    >
+                     <span className="text-sm truncate">{line.description || <span className="text-muted-foreground italic">No description</span>}</span>
+                     <span className="text-sm text-muted-foreground text-right">{line.quantity}</span>
+                     <span className="text-xs text-muted-foreground truncate">{line.install_location !== "N/A" ? line.install_location : "—"}</span>
+                     <span className="text-xs text-muted-foreground truncate">{line.color || "—"}</span>
+                     <span className="text-sm font-semibold text-right">
                       ${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                     {!(isLocked && !!estimate?.id) && (

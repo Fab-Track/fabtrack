@@ -43,6 +43,10 @@
           "description": {
             "type": "string"
           },
+          "color": {
+            "type": "string",
+            "description": "Powdercoat color for this line item"
+          },
           "quantity": {
             "type": "number"
           },

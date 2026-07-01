@@ -11,6 +11,7 @@ import { Trash2, AlignJustify, LayoutList, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import InvoiceCustomerView from "@/components/invoices/InvoiceCustomerView";
 import InvoiceReviewSend from "@/components/invoices/InvoiceReviewSend";
+import { useJobDetailConfig } from "@/hooks/useJobDetailConfig";
 
 const LABEL_STYLES = {
   "Deposit Invoice (50%)":  "bg-blue-100 text-blue-800 border-blue-200",
@@ -36,6 +37,8 @@ function calcLine(line) {
 export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimates = [], changeOrders = [], prefill = null, onClose, currentUser, customer }) {
   const qc = useQueryClient();
   const isNew = !invoice?.id;
+  const { config: detailConfig } = useJobDetailConfig();
+  const powdercoatColors = detailConfig.powdercoat_colors || [];
   const [shopPrompt, setShopPrompt] = useState(false);
   const [activeTab, setActiveTab] = useState("edit");
   const [showReviewSend, setShowReviewSend] = useState(false);
@@ -405,19 +408,26 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
                 <h3 className="font-semibold text-sm">Line Items</h3>
               </div>
               <div className="overflow-x-auto -mx-1 px-1">
-              <div style={{ minWidth: 560 }}>
-              <div className="grid grid-cols-[1fr_1.5fr_0.8fr_0.7fr_0.9fr_0.9fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
-                <span>Group</span><span>Description</span><span>Qty</span><span>Unit</span><span>Unit Cost</span><span>Total</span><span></span>
-              </div>
-              <div className="space-y-1.5">
-                {lines.map((line, idx) => (
-                  <div key={line._id} className="grid grid-cols-[1fr_1.5fr_0.8fr_0.7fr_0.9fr_0.9fr_auto] gap-1.5 items-center">
-                    <Select value={line.group} onValueChange={v => updateLine(idx, "group", v)}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>{GROUPS.map(g => <SelectItem key={g} value={g} className="text-xs">{g}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <Input className="h-8 text-xs" placeholder="Description" value={line.description} onChange={e => updateLine(idx, "description", e.target.value)} />
-                    <Input className="h-8 text-xs" type="number" value={line.quantity} onChange={e => updateLine(idx, "quantity", e.target.value)} />
+              <div style={{ minWidth: 660 }}>
+              <div className="grid grid-cols-[1fr_1.5fr_1fr_0.8fr_0.7fr_0.9fr_0.9fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
+                 <span>Group</span><span>Description</span><span>Color</span><span>Qty</span><span>Unit</span><span>Unit Cost</span><span>Total</span><span></span>
+               </div>
+               <div className="space-y-1.5">
+                 {lines.map((line, idx) => (
+                   <div key={line._id} className="grid grid-cols-[1fr_1.5fr_1fr_0.8fr_0.7fr_0.9fr_0.9fr_auto] gap-1.5 items-center">
+                     <Select value={line.group} onValueChange={v => updateLine(idx, "group", v)}>
+                       <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                       <SelectContent>{GROUPS.map(g => <SelectItem key={g} value={g} className="text-xs">{g}</SelectItem>)}</SelectContent>
+                     </Select>
+                     <Input className="h-8 text-xs" placeholder="Description" value={line.description} onChange={e => updateLine(idx, "description", e.target.value)} />
+                     <Select value={line.color || "__none__"} onValueChange={v => updateLine(idx, "color", v === "__none__" ? "" : v)}>
+                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="None" /></SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="__none__" className="text-xs">None</SelectItem>
+                         {powdercoatColors.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}
+                       </SelectContent>
+                     </Select>
+                     <Input className="h-8 text-xs" type="number" value={line.quantity} onChange={e => updateLine(idx, "quantity", e.target.value)} />
                     <Input className="h-8 text-xs" placeholder="ea" value={line.unit} onChange={e => updateLine(idx, "unit", e.target.value)} />
                     <Input className="h-8 text-xs" type="number" placeholder="0.00" value={line.unit_cost} onChange={e => updateLine(idx, "unit_cost", e.target.value)} />
                     <span className="text-sm font-semibold text-right">${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
