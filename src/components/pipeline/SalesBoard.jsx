@@ -115,7 +115,7 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], onCloseLead, on
         <Button
           size="sm"
           className="w-full mt-2 h-7 text-xs bg-emerald-600 hover:bg-emerald-700"
-          onClick={e => { e.preventDefault(); onPromote(job); }}
+          onClick={e => { e.preventDefault(); e.stopPropagation(); onPromote(job); }}
         >
           Move to Shop Flow →
         </Button>
