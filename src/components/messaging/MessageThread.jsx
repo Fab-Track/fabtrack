@@ -146,7 +146,7 @@ export default function MessageThread({ channel, currentUser, onBack, isMobile, 
               <Badge variant="outline" className="text-[10px] text-muted-foreground">Archived</Badge>
             )}
           </div>
-          {channel.description && (
+          {channel.channel_type !== "dm" && channel.description && (
             <p className="text-xs text-muted-foreground truncate">{channel.description}</p>
           )}
         </div>

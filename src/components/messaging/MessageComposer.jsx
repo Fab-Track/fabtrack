@@ -185,7 +185,11 @@ export default function MessageComposer({ channel, currentUser, onSent, replyTo,
           value={text}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder={`Message #${channel?.display_name || "channel"}…`}
+          placeholder={
+            channel?.channel_type === "dm"
+              ? `Message ${channel?.display_name || "user"}…`
+              : `Message #${channel?.display_name || "channel"}…`
+          }
           rows={1}
           disabled={sending}
           className="flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring min-h-[38px] max-h-32 overflow-y-auto"

@@ -82,12 +82,7 @@ export default function NewMessageDialog({ onClose, onCreated, currentUser }) {
           channel_type: "dm",
           organization_id: currentUser.organization_id,
           member_ids: [currentUser.id, otherUser.id],
-          description: JSON.stringify({
-            participants: [
-              { id: currentUser.id, name: currentUser.full_name },
-              { id: otherUser.id, name: otherUser.full_name || otherUser.email },
-            ],
-          }),
+          description: "",
           sort_order: 100,
         });
       }
