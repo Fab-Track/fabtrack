@@ -31,23 +31,26 @@ export default function ChannelMembersSection({ channel: initialChannel, current
     enabled: !!channel?.id,
   });
 
-  // Fetch org users for the member picker
+  // Fetch org users for the member picker — uses Employee records filtered by org,
+  // mapping user_id (not Employee id) so member_ids stores User IDs that canAccessChannel can match.
   const { data: orgUsers = [] } = useQuery({
-    queryKey: ["org-users-members"],
+    queryKey: ["org-users-members", orgId],
     queryFn: async () => {
-      try {
-        const userList = await base44.entities.User.list();
-        if (userList.length > 0) return userList;
-      } catch {}
-      const employees = await base44.entities.Employee.list("-created_date", 200);
-      return employees.map(e => ({
-        id: e.id,
-        full_name: e.name,
-        email: e.email || "",
-        role: e.role || "team_member",
-      }));
+      const employees = await base44.entities.Employee.filter(
+        { organization_id: orgId, is_active: true },
+        "-created_date",
+        200
+      );
+      return employees
+        .filter(e => e.user_id)
+        .map(e => ({
+          id: e.user_id,
+          full_name: e.name,
+          email: e.email || "",
+          role: e.role || "team_member",
+        }));
     },
-    enabled: showAddMember && canManage,
+    enabled: showAddMember && canManage && !!orgId,
   });
 
   const currentMemberIds = channel?.member_ids || [];
