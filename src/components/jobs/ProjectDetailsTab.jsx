@@ -8,6 +8,9 @@ import { useJobDetailConfig } from "@/hooks/useJobDetailConfig";
 import ProductDetailsSection from "@/components/jobs/ProductDetailsSection";
 import InstallDetailsSection from "@/components/jobs/InstallDetailsSection";
 import SiteAccessSection from "@/components/jobs/SiteAccessSection";
+import JobNotesSection from "@/components/jobs/JobNotesSection";
+import CollapsibleSection from "@/components/jobs/CollapsibleSection";
+import { StickyNote } from "lucide-react";
 
 const AUTOSAVE_DELAY_MS = 1500;
 
@@ -91,6 +94,9 @@ export default function ProjectDetailsTab({ job }) {
         data={data.site_access || {}}
         onChange={(val) => updateSection("site_access", val)}
       />
+      <CollapsibleSection title="Notes" icon={StickyNote}>
+        <JobNotesSection job={job} />
+      </CollapsibleSection>
     </div>
   );
 }

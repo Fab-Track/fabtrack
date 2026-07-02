@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +50,7 @@ export default function NewJob() {
     last_activity_date: new Date().toISOString(),
     assigned_rep_id: user?.id || "",
     assigned_rep_name: user?.full_name || "",
+    notes_text: "",
   });
 
   const createMutation = useMutation({
@@ -74,7 +76,11 @@ export default function NewJob() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    createMutation.mutate({ ...form, organization_id: writeOrgId });
+    const { notes_text, ...rest } = form;
+    const notes = notes_text?.trim()
+      ? [{ text: notes_text.trim(), author_id: user?.id || "", author_name: user?.full_name || "Unknown", created_at: new Date().toISOString() }]
+      : [];
+    createMutation.mutate({ ...rest, notes, organization_id: writeOrgId });
   };
 
   return (
@@ -170,6 +176,16 @@ export default function NewJob() {
                 placeholder="Sales rep name"
               />
               <p className="text-[10px] text-muted-foreground mt-0.5">This rep gets credit for all estimates and revenue on this job.</p>
+            </div>
+
+            <div>
+              <Label className="text-xs">Notes</Label>
+              <Textarea
+                value={form.notes_text}
+                onChange={e => updateField("notes_text", e.target.value)}
+                placeholder="Optional note to log at job creation…"
+                rows={3}
+              />
             </div>
           </CardContent>
         </Card>

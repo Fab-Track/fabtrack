@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { FileText } from "lucide-react";
 import JobScopeSection from "@/components/jobs/JobScopeSection";
 import KeyDatesCard from "@/components/jobs/KeyDatesCard";
+import JobNotesSection from "@/components/jobs/JobNotesSection";
+import { StickyNote } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 
@@ -87,6 +89,18 @@ export default function JobOverviewTab({ job }) {
       <div className="md:col-span-2">
         <JobScopeSection job={job} isFabricator={isFabricator} />
       </div>
+
+      <Card className="md:col-span-2">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <StickyNote className="w-4 h-4 text-muted-foreground" />
+            Notes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <JobNotesSection job={job} />
+        </CardContent>
+      </Card>
 
     </div>
   );
