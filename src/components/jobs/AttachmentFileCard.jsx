@@ -86,9 +86,15 @@ export default function AttachmentFileCard({ file, isLatest = false, jobId }) {
   };
 
   const isImage = file.file_type?.startsWith("image/");
-  const uploadedLabel = file.created_date
-    ? `Uploaded ${format(parseISO(file.created_date), "MMM d, yyyy, h:mm a")}`
+  // created_date comes back from the backend as a UTC timestamp but sometimes without
+  // a "Z"/offset suffix — parseISO treats offset-less strings as local time, which
+  // silently shifts the displayed time by the browser's UTC offset. Force UTC parsing
+  // when no timezone designator is present so the local time shown is accurate.
+  const hasTzDesignator = file.created_date && /[Zz]|[+-]\d{2}:?\d{2}$/.test(file.created_date);
+  const uploadedDate = file.created_date
+    ? parseISO(hasTzDesignator ? file.created_date : `${file.created_date}Z`)
     : null;
+  const uploadedLabel = uploadedDate ? `Uploaded ${format(uploadedDate, "MMM d, yyyy, h:mm a")}` : null;
 
   return (
     <>
