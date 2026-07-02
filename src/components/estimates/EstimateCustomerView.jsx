@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle2, Lock } from "lucide-react";
 import { formatPhoneDisplay } from "@/lib/phoneFormat";
+import ComponentsSpec from "./ComponentsSpec";
 
 const STATUS_COLORS = {
   Draft: "bg-muted text-muted-foreground",
@@ -117,8 +118,11 @@ export default function EstimateCustomerView({ estimate, job, customer, business
               <div className="divide-y">
                 {lines.map((line, i) => (
                   <div key={i}>
-                    <div className="py-2.5 grid gap-3 text-sm items-center" style={{ gridTemplateColumns: "2fr 0.6fr 1.5fr 1fr" }}>
-                      <span>{line.description || "—"}</span>
+                    <div className="py-2.5 grid gap-3 text-sm items-start" style={{ gridTemplateColumns: "2fr 0.6fr 1.5fr 1fr" }}>
+                      <div>
+                        <span>{line.description || "—"}</span>
+                        <ComponentsSpec components={line.components} />
+                      </div>
                       <span className="text-right text-muted-foreground text-xs">{line.quantity}</span>
                       <span className="text-muted-foreground text-xs">{line.install_location !== "N/A" ? line.install_location : "—"}</span>
                       <span className="font-medium text-right">${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>

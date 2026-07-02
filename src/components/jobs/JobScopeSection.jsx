@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Badge } from "@/components/ui/badge";
 import { Layers, CheckCircle2 } from "lucide-react";
+import ComponentsSpec from "@/components/estimates/ComponentsSpec";
 
 /**
  * Shop-facing read-only scope view pulled from the approved estimate + change orders.
@@ -64,6 +65,7 @@ export default function JobScopeSection({ job }) {
                     {line._co_label && (
                       <Badge className="ml-2 text-xs bg-amber-100 text-amber-700 border-transparent">{line._co_label}</Badge>
                     )}
+                    <ComponentsSpec components={line.components} />
                   </td>
                   <td className="px-4 py-2.5 text-right">{line.quantity ?? "—"}</td>
                   <td className="px-4 py-2.5 text-muted-foreground">{line.color || "—"}</td>
