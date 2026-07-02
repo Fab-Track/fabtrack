@@ -77,7 +77,6 @@ export default function InvoiceCustomerView({ invoice, job, customer, lines, sub
             <p className="font-semibold">{customer?.name || job?.customer_name || "—"}</p>
             {customer?.email && <p className="text-sm text-muted-foreground">{customer.email}</p>}
             {customer?.phone && <p className="text-sm text-muted-foreground">{formatPhoneDisplay(customer.phone)}</p>}
-            {customer?.address && <p className="text-sm text-muted-foreground">{customer.address}</p>}
           </div>
           <div className="text-right space-y-1">
             <div>

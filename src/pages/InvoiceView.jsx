@@ -3,7 +3,6 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import InvoiceCustomerView from "@/components/invoices/InvoiceCustomerView";
-import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2, XCircle, CreditCard } from "lucide-react";
 
 export default function InvoiceView() {
@@ -14,23 +13,23 @@ export default function InvoiceView() {
   const [payLoading, setPayLoading] = useState(false);
   const [payError, setPayError] = useState(null);
 
-  const { data: invoice, isLoading: loadingInv } = useQuery({
+  const { data, isLoading: loadingInv } = useQuery({
     queryKey: ["invoice-public", invoiceId],
-    queryFn: () => base44.entities.Invoice.list().then(invs => invs.find(i => i.id === invoiceId)),
+    queryFn: async () => {
+      try {
+        const res = await base44.functions.invoke("getPublicDocument", { type: "invoice", id: invoiceId });
+        return res.data;
+      } catch {
+        return null;
+      }
+    },
     enabled: !!invoiceId,
+    retry: false,
   });
 
-  const { data: job } = useQuery({
-    queryKey: ["job-public", invoice?.job_id],
-    queryFn: () => base44.entities.Job.list().then(js => js.find(j => j.id === invoice.job_id)),
-    enabled: !!invoice?.job_id,
-  });
-
-  const { data: customer } = useQuery({
-    queryKey: ["customer-public", job?.customer_id],
-    queryFn: () => base44.entities.Customer.list().then(cs => cs.find(c => c.id === job.customer_id)),
-    enabled: !!job?.customer_id,
-  });
+  const invoice = data?.document;
+  const job = data?.job;
+  const customer = data?.customer;
 
   const handlePayNow = async () => {
     setPayLoading(true);

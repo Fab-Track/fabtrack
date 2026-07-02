@@ -2,7 +2,6 @@ import React from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
 import EstimateCustomerView from "@/components/estimates/EstimateCustomerView";
 import { toast } from "sonner";
 
@@ -10,58 +9,33 @@ export default function EstimateView() {
   const { estimateId } = useParams();
   const qc = useQueryClient();
 
-  const { data: estimate, isLoading: loadingEst } = useQuery({
+  const { data, isLoading: loadingEst } = useQuery({
     queryKey: ["estimate-public", estimateId],
-    queryFn: () => base44.entities.Estimate.list().then(es => es.find(e => e.id === estimateId)),
+    queryFn: async () => {
+      try {
+        const res = await base44.functions.invoke("getPublicDocument", { type: "estimate", id: estimateId });
+        return res.data;
+      } catch {
+        return null;
+      }
+    },
     enabled: !!estimateId,
+    retry: false,
   });
 
-  const { data: job } = useQuery({
-    queryKey: ["job-public", estimate?.job_id],
-    queryFn: () => base44.entities.Job.list().then(js => js.find(j => j.id === estimate.job_id)),
-    enabled: !!estimate?.job_id,
-  });
-
-  const { data: customer } = useQuery({
-    queryKey: ["customer-public", job?.customer_id],
-    queryFn: () => base44.entities.Customer.list().then(cs => cs.find(c => c.id === job.customer_id)),
-    enabled: !!job?.customer_id,
-  });
-
-  const { data: contractSettings = [] } = useQuery({
-    queryKey: ["appSettings", "estimate_settings"],
-    queryFn: () => base44.entities.AppSettings.filter({ setting_key: "estimate_settings" }),
-  });
-  const contractText = contractSettings[0]?.estimate_contract_text || null;
+  const estimate = data?.document;
+  const job = data?.job;
+  const customer = data?.customer;
+  const contractText = data?.contract_text || null;
 
   const approve = useMutation({
-    mutationFn: (customerName) => {
-      const now = new Date().toISOString();
-      return base44.entities.Estimate.update(estimateId, {
-        status: "Approved",
-        customer_signature: customerName,
-        customer_printed_name: customerName,
-        approved_date: now.split("T")[0],
-        approved_at: now,
-        approval_method: "Customer Signed",
-      });
-    },
-    onSuccess: async (_, customerName) => {
-      // Update job and trigger pipeline move
-      if (job) {
-        await base44.entities.Job.update(job.id, {
-          estimate_total: estimate?.total,
-          customer_approval_status: "approved",
-        });
-        await autoMoveSalesStage(
-          { ...job, estimate_total: estimate?.total },
-          "Awaiting Deposit",
-          `Estimate approved by ${customerName} via customer link`,
-          customerName
-        );
-      }
-      qc.invalidateQueries(["estimate-public", estimateId]);
+    mutationFn: (customerName) => base44.functions.invoke("approvePublicEstimate", { estimateId, customerName }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["estimate-public", estimateId] });
       toast.success("Estimate approved — thank you!");
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.error || "Failed to approve estimate. Please try again.");
     },
   });
 
