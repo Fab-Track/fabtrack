@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { SALES_STAGES, SALES_COLORS, daysInStage, buildStageTransition, sortColumnJobs } from "@/lib/pipelineHelpers";
+import { SALES_STAGES, SALES_COLORS, daysInStage, buildStageTransition, sortColumnJobs, closePriorityGap, reorderColumnPriority } from "@/lib/pipelineHelpers";
 import PriorityBadge from "./PriorityBadge";
 import PriorityMenuItems from "./PriorityMenuItems";
 import { Badge } from "@/components/ui/badge";
@@ -202,7 +202,7 @@ export default function SalesBoard({ jobs = [] }) {
   });
 
   const moveMutation = useMutation({
-    mutationFn: ({ job, toBoard, toStage, note, repId }) => {
+    mutationFn: async ({ job, toBoard, toStage, note, repId }) => {
       const update = buildStageTransition(job, toBoard, toStage, note);
       if (repId) {
         const rep = estimatorReps.find(r => r.id === repId);
@@ -211,7 +211,11 @@ export default function SalesBoard({ jobs = [] }) {
         update.assigned_estimator = repId;
         update.assigned_estimator_name = rep?.name || null;
       }
-      return base44.entities.Job.update(job.id, update);
+      await base44.entities.Job.update(job.id, update);
+      const gapUpdates = closePriorityGap(columns[job.stage] || [], job.stage, job.id);
+      if (gapUpdates.length) {
+        await base44.entities.Job.bulkUpdate(gapUpdates.map(u => ({ id: u.jobId, stage_priority: u.stage_priority })));
+      }
     },
     onSuccess: async (_, vars) => {
       // Reverse sync: job dragged to "Estimate Sent" → update Draft estimate to Sent
@@ -232,10 +236,15 @@ export default function SalesBoard({ jobs = [] }) {
 
   function handleDragEnd(result) {
     if (!result.destination) return;
-    const { draggableId, destination } = result;
+    const { draggableId, source, destination } = result;
     const newStage = destination.droppableId;
     const job = jobs.find(j => j.id === draggableId);
-    if (!job || job.stage === newStage) return;
+    if (!job) return;
+    if (job.stage === newStage) {
+      if (source.index === destination.index) return;
+      priorityMutation.mutate(reorderColumnPriority(columns[newStage], source.index, destination.index, newStage));
+      return;
+    }
     moveMutation.mutate({ job, toBoard: "Sales", toStage: newStage, note: "" });
   }
 

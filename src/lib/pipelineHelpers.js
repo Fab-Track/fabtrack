@@ -257,6 +257,31 @@ export function computePriorityChange(sortedColumnJobs, job, stage, direction) {
   return [];
 }
 
+// Closes the rank gap left behind in a stage's column after a job leaves it
+// (moved to another stage). Remaining ranked jobs are renumbered 1..N with no gaps.
+export function closePriorityGap(columnJobs, stage, movedJobId) {
+  const remaining = columnJobs
+    .filter(j => j.id !== movedJobId && typeof j.stage_priority?.[stage] === "number")
+    .sort((a, b) => a.stage_priority[stage] - b.stage_priority[stage]);
+  const updates = [];
+  remaining.forEach((j, idx) => {
+    const newRank = idx + 1;
+    if (j.stage_priority[stage] !== newRank) {
+      updates.push({ jobId: j.id, stage_priority: { ...j.stage_priority, [stage]: newRank } });
+    }
+  });
+  return updates;
+}
+
+// Computes the full re-ranking for a column after a same-stage drag reorder —
+// every job in the column gets an explicit rank matching its new position.
+export function reorderColumnPriority(columnJobs, sourceIndex, destIndex, stage) {
+  const reordered = Array.from(columnJobs);
+  const [moved] = reordered.splice(sourceIndex, 1);
+  reordered.splice(destIndex, 0, moved);
+  return reordered.map((j, idx) => ({ jobId: j.id, stage_priority: { ...(j.stage_priority || {}), [stage]: idx + 1 } }));
+}
+
 // ── Billing overdue stage calculator ──────────────────────────────────────────
 export function calcBillingStage(invoiceSentDate, amountPaid, total) {
   // If there's no invoice yet, the job still needs one created

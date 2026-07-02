@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { BILLING_STAGES, BILLING_COLORS, BILLING_CARD_BG, daysInStage, buildStageTransition, sortColumnJobs } from "@/lib/pipelineHelpers";
+import { BILLING_STAGES, BILLING_COLORS, BILLING_CARD_BG, daysInStage, buildStageTransition, sortColumnJobs, closePriorityGap, reorderColumnPriority } from "@/lib/pipelineHelpers";
 import PriorityBadge from "./PriorityBadge";
 import PriorityMenuItems from "./PriorityMenuItems";
 import { Badge } from "@/components/ui/badge";
@@ -168,8 +168,13 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
   BILLING_STAGES.forEach(s => { columns[s] = sortColumnJobs(columns[s], s); });
 
   const moveMutation = useMutation({
-    mutationFn: ({ job, toStage, extra = {} }) =>
-      base44.entities.Job.update(job.id, { ...buildStageTransition(job, "Billing", toStage), ...extra }),
+    mutationFn: async ({ job, toStage, extra = {} }) => {
+      await base44.entities.Job.update(job.id, { ...buildStageTransition(job, "Billing", toStage), ...extra });
+      const gapUpdates = closePriorityGap(columns[job.stage] || [], job.stage, job.id);
+      if (gapUpdates.length) {
+        await base44.entities.Job.bulkUpdate(gapUpdates.map(u => ({ id: u.jobId, stage_priority: u.stage_priority })));
+      }
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
   });
 
@@ -184,10 +189,15 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
 
   function handleDragEnd(result) {
     if (!result.destination) return;
-    const { draggableId, destination } = result;
+    const { draggableId, source, destination } = result;
     const newStage = destination.droppableId;
     const job = jobs.find(j => j.id === draggableId);
-    if (!job || job.stage === newStage) return;
+    if (!job) return;
+    if (job.stage === newStage) {
+      if (source.index === destination.index) return;
+      priorityMutation.mutate(reorderColumnPriority(columns[newStage], source.index, destination.index, newStage));
+      return;
+    }
     moveMutation.mutate({ job, toStage: newStage });
   }
 
