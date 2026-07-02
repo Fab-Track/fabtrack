@@ -8,13 +8,14 @@ import { computePriorityChange } from "@/lib/pipelineHelpers";
  * set/change priority here — this is intentionally the only way to change it,
  * so accidental drags never affect the saved column ranking.
  */
-export default function PriorityMenuItems({ job, stage, columnJobs, onApply }) {
+export default function PriorityMenuItems({ job, stage, columnJobs, onApply, closeMenu }) {
   const rank = job.stage_priority?.[stage];
   const isRanked = typeof rank === "number";
 
   function apply(e, direction) {
     e.preventDefault();
     e.stopPropagation();
+    closeMenu?.();
     const updates = computePriorityChange(columnJobs, job, stage, direction);
     if (updates.length) onApply(updates);
   }

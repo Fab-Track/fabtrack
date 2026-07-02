@@ -51,6 +51,8 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
     onError: (err) => toast.error(err?.message || "Failed to move job"),
   });
 
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <>
     <div
@@ -63,7 +65,7 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
           <PriorityBadge rank={job.stage_priority?.[stage]} />
           {job.job_type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.job_type}</Badge>}
           {canManage && (
-            <DropdownMenu>
+            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
               <DropdownMenuTrigger asChild>
                 <button
                   className="p-0.5 rounded hover:bg-muted text-muted-foreground ml-1"
@@ -88,7 +90,7 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
                                 <DropdownMenuItem
                                   key={stage}
                                   className="text-sm"
-                                  onClick={e => { e.preventDefault(); e.stopPropagation(); moveMutation.mutate({ toBoard: board, toStage: stage }); }}
+                                  onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); moveMutation.mutate({ toBoard: board, toStage: stage }); }}
                                 >
                                   {stage}
                                 </DropdownMenuItem>
@@ -103,17 +105,17 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-sm gap-2"
-                  onClick={e => { e.preventDefault(); e.stopPropagation(); archiveMutation.mutate(); }}
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); archiveMutation.mutate(); }}
                 >
                   <Archive className="w-3.5 h-3.5" /> Archive
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-sm gap-2 text-destructive focus:text-destructive"
-                  onClick={e => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }}
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); setDeleteOpen(true); }}
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Delete
                 </DropdownMenuItem>
-                <PriorityMenuItems job={job} stage={stage} columnJobs={columnJobs} onApply={onPriorityChange} />
+                <PriorityMenuItems job={job} stage={stage} columnJobs={columnJobs} onApply={onPriorityChange} closeMenu={() => setMenuOpen(false)} />
               </DropdownMenuContent>
             </DropdownMenu>
           )}

@@ -41,6 +41,8 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], onCloseLead, on
     && latestEst.created_date
     && differenceInDays(new Date(), parseISO(latestEst.created_date)) > 7;
 
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <div
       className={`bg-card rounded-lg border p-3 hover:shadow-md transition-all ${isDragging ? "shadow-lg ring-2 ring-accent/50" : ""} ${job.is_lead_closed ? "opacity-50" : ""}`}
@@ -51,7 +53,7 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], onCloseLead, on
         <div className="flex items-center gap-1">
           <PriorityBadge rank={job.stage_priority?.[stage]} />
           {job.job_type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.job_type}</Badge>}
-          <DropdownMenu>
+          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger asChild>
               <button className="p-0.5 rounded hover:bg-muted text-muted-foreground" onClick={e => { e.preventDefault(); e.stopPropagation(); }} onMouseDown={e => e.stopPropagation()}>
                 <MoreHorizontal className="w-3.5 h-3.5" />
@@ -59,19 +61,19 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], onCloseLead, on
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="text-sm">
               {!job.is_lead_closed && (
-                <DropdownMenuItem onClick={e => { e.preventDefault(); e.stopPropagation(); onCloseLead(job); }}>
+                <DropdownMenuItem onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); onCloseLead(job); }}>
                   <X className="w-3.5 h-3.5 mr-2" /> Close Lead
                 </DropdownMenuItem>
               )}
               {canDelete && (
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
-                  onClick={e => { e.preventDefault(); e.stopPropagation(); onDeleteJob(job); }}
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); onDeleteJob(job); }}
                 >
                   Delete Job
                 </DropdownMenuItem>
               )}
-              <PriorityMenuItems job={job} stage={stage} columnJobs={columnJobs} onApply={onPriorityChange} />
+              <PriorityMenuItems job={job} stage={stage} columnJobs={columnJobs} onApply={onPriorityChange} closeMenu={() => setMenuOpen(false)} />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

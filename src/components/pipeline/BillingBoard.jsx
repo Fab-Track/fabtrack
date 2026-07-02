@@ -68,6 +68,7 @@ function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder, onD
 
   const bg = BILLING_CARD_BG[job.stage] || "bg-card";
   const isOverdue = days !== null && days > 0 && job.stage !== "Paid / Closed";
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <div
@@ -83,7 +84,7 @@ function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder, onD
               {days}d overdue
             </span>
           )}
-          <DropdownMenu>
+          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger asChild>
               <button className="p-0.5 rounded hover:bg-black/5 text-muted-foreground" onClick={e => { e.preventDefault(); e.stopPropagation(); }} onMouseDown={e => e.stopPropagation()}>
                 <MoreHorizontal className="w-3.5 h-3.5" />
@@ -93,12 +94,12 @@ function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder, onD
               {canDelete && (
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
-                  onClick={e => { e.preventDefault(); e.stopPropagation(); onDeleteJob(job); }}
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); onDeleteJob(job); }}
                 >
                   Delete Job
                 </DropdownMenuItem>
               )}
-              <PriorityMenuItems job={job} stage={stage} columnJobs={columnJobs} onApply={onPriorityChange} />
+              <PriorityMenuItems job={job} stage={stage} columnJobs={columnJobs} onApply={onPriorityChange} closeMenu={() => setMenuOpen(false)} />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
