@@ -12,8 +12,6 @@ import { Clock, CalendarDays, Paintbrush, Users, MoreHorizontal, Archive, Trash2
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import StageTransitionDialog from "./StageTransitionDialog";
 import DeleteJobModal from "@/components/jobs/DeleteJobModal";
-import { useAuth } from "@/lib/AuthContext";
-import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 import { toast } from "sonner";
 import { format, parseISO, isValid } from "date-fns";
 
@@ -23,11 +21,7 @@ const FLOWS = { Sales: SALES_STAGES, Shop: SHOP_STAGES, Billing: BILLING_STAGES 
 function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, columnJobs, onPriorityChange }) {
   const navigate = useNavigate();
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const { user } = useAuth();
   const qc = useQueryClient();
-  const effectiveRole = useEffectiveRole(user?.role || "admin");
-  const role = effectiveRole.toLowerCase();
-  const canManage = role === "owner" || role === "admin" || role === "estimator";
   const days = daysInStage(job);
   const isStale = days > 5;
   const installDate = job.promised_install_date && isValid(parseISO(job.promised_install_date))
@@ -64,61 +58,59 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
         <div className="flex items-center gap-1">
           <PriorityBadge rank={job.stage_priority?.[stage]} />
           {job.job_type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.job_type}</Badge>}
-          {canManage && (
-            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className="p-0.5 rounded hover:bg-muted text-muted-foreground ml-1"
-                  onClick={e => { e.preventDefault(); e.stopPropagation(); }}
-                >
-                  <MoreHorizontal className="w-3.5 h-3.5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="text-sm gap-2">
-                    <ArrowRightLeft className="w-3.5 h-3.5" /> Move to...
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuPortal>
-                    <DropdownMenuSubContent className="w-48">
-                      {Object.entries(FLOWS).map(([board, stages]) => (
-                        <DropdownMenuSub key={board}>
-                          <DropdownMenuSubTrigger className="text-sm">{board} Flow</DropdownMenuSubTrigger>
-                          <DropdownMenuPortal>
-                            <DropdownMenuSubContent className="w-56 max-h-64 overflow-y-auto">
-                              {stages.map(stage => (
-                                <DropdownMenuItem
-                                  key={stage}
-                                  className="text-sm"
-                                  onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); moveMutation.mutate({ toBoard: board, toStage: stage }); }}
-                                >
-                                  {stage}
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuSubContent>
-                          </DropdownMenuPortal>
-                        </DropdownMenuSub>
-                      ))}
-                    </DropdownMenuSubContent>
-                  </DropdownMenuPortal>
-                </DropdownMenuSub>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-sm gap-2"
-                  onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); archiveMutation.mutate(); }}
-                >
-                  <Archive className="w-3.5 h-3.5" /> Archive
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-sm gap-2 text-destructive focus:text-destructive"
-                  onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); setDeleteOpen(true); }}
-                >
-                  <Trash2 className="w-3.5 h-3.5" /> Delete
-                </DropdownMenuItem>
-                <PriorityMenuItems job={job} stage={stage} columnJobs={columnJobs} onApply={onPriorityChange} closeMenu={() => setMenuOpen(false)} />
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="p-0.5 rounded hover:bg-muted text-muted-foreground ml-1"
+                onClick={e => { e.preventDefault(); e.stopPropagation(); }}
+              >
+                <MoreHorizontal className="w-3.5 h-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="text-sm gap-2">
+                  <ArrowRightLeft className="w-3.5 h-3.5" /> Move to...
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="w-48">
+                    {Object.entries(FLOWS).map(([board, stages]) => (
+                      <DropdownMenuSub key={board}>
+                        <DropdownMenuSubTrigger className="text-sm">{board} Flow</DropdownMenuSubTrigger>
+                        <DropdownMenuPortal>
+                          <DropdownMenuSubContent className="w-56 max-h-64 overflow-y-auto">
+                            {stages.map(stage => (
+                              <DropdownMenuItem
+                                key={stage}
+                                className="text-sm"
+                                onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); moveMutation.mutate({ toBoard: board, toStage: stage }); }}
+                              >
+                                {stage}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuPortal>
+                      </DropdownMenuSub>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-sm gap-2"
+                onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); archiveMutation.mutate(); }}
+              >
+                <Archive className="w-3.5 h-3.5" /> Archive
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-sm gap-2 text-destructive focus:text-destructive"
+                onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); setDeleteOpen(true); }}
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Delete
+              </DropdownMenuItem>
+              <PriorityMenuItems job={job} stage={stage} columnJobs={columnJobs} onApply={onPriorityChange} closeMenu={() => setMenuOpen(false)} />
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       <Link to={`/jobs/${job.id}?board=Shop`}>
