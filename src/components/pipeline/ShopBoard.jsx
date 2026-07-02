@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { SHOP_STAGES, SHOP_COLORS, daysInStage, buildStageTransition, SALES_STAGES, BILLING_STAGES } from "@/lib/pipelineHelpers";
+import { SHOP_STAGES, SHOP_COLORS, daysInStage, buildStageTransition, SALES_STAGES, BILLING_STAGES, sortColumnJobs } from "@/lib/pipelineHelpers";
+import PriorityBadge from "./PriorityBadge";
+import PriorityMenuItems from "./PriorityMenuItems";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -18,7 +20,7 @@ import { format, parseISO, isValid } from "date-fns";
 const FLOWS = { Sales: SALES_STAGES, Shop: SHOP_STAGES, Billing: BILLING_STAGES };
 
 // ── Shop Card ──────────────────────────────────────────────────────────────────
-function ShopCard({ job, isDragging, onComplete, readOnly = false }) {
+function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, columnJobs, onPriorityChange }) {
   const navigate = useNavigate();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const { user } = useAuth();
@@ -58,6 +60,7 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false }) {
       <div className="flex items-start justify-between mb-1">
         <span className="text-[10px] font-mono text-muted-foreground">{job.job_number}</span>
         <div className="flex items-center gap-1">
+          <PriorityBadge rank={job.stage_priority?.[stage]} />
           {job.job_type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.job_type}</Badge>}
           {canManage && (
             <DropdownMenu>
@@ -110,6 +113,7 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false }) {
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Delete
                 </DropdownMenuItem>
+                <PriorityMenuItems job={job} stage={stage} columnJobs={columnJobs} onApply={onPriorityChange} />
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -185,11 +189,17 @@ export default function ShopBoard({ jobs = [], readOnly = false }) {
     if (columns[stage]) columns[stage].push(j);
     else columns["New Jobs Landed — Needs Approval"].push(j);
   });
+  SHOP_STAGES.forEach(s => { columns[s] = sortColumnJobs(columns[s], s); });
 
   const moveMutation = useMutation({
     mutationFn: ({ job, toBoard, toStage, note }) =>
       base44.entities.Job.update(job.id, buildStageTransition(job, toBoard, toStage, note)),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["jobs"] }); setCompleting(null); },
+  });
+
+  const priorityMutation = useMutation({
+    mutationFn: (updates) => base44.entities.Job.bulkUpdate(updates.map(u => ({ id: u.jobId, stage_priority: u.stage_priority }))),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
   });
 
   function handleDragEnd(result) {
@@ -229,7 +239,15 @@ export default function ShopBoard({ jobs = [], readOnly = false }) {
                       <Draggable key={job.id} draggableId={job.id} index={index} isDragDisabled={readOnly}>
                         {(prov, snap) => (
                           <div ref={prov.innerRef} {...prov.draggableProps} {...(!readOnly ? prov.dragHandleProps : {})}>
-                            <ShopCard job={job} isDragging={snap.isDragging} onComplete={readOnly ? undefined : setCompleting} readOnly={readOnly} />
+                            <ShopCard
+                              job={job}
+                              isDragging={snap.isDragging}
+                              onComplete={readOnly ? undefined : setCompleting}
+                              readOnly={readOnly}
+                              stage={stage}
+                              columnJobs={columns[stage]}
+                              onPriorityChange={(updates) => priorityMutation.mutate(updates)}
+                            />
                           </div>
                         )}
                       </Draggable>

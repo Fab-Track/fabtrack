@@ -192,6 +192,71 @@ export function buildStageTransition(job, toBoard, toStage, note = "") {
   };
 }
 
+// ── Per-column priority ranking ────────────────────────────────────────────────
+// Jobs carry a `stage_priority` object keyed by stage name → rank (1 = highest).
+// Ranked jobs sort to the top of their column (ascending rank); unranked jobs
+// keep the existing default order beneath them. Priority is only ever changed
+// via explicit controls (never by drag), so accidental drags can't corrupt it.
+export function sortColumnJobs(jobs, stage) {
+  const ranked = jobs
+    .filter(j => typeof j.stage_priority?.[stage] === "number")
+    .sort((a, b) => a.stage_priority[stage] - b.stage_priority[stage]);
+  const unranked = jobs.filter(j => typeof j.stage_priority?.[stage] !== "number");
+  return [...ranked, ...unranked];
+}
+
+// Computes the Job.update payload(s) needed to apply a priority change.
+// `sortedColumnJobs` must be the current (sortColumnJobs-sorted) list for that stage.
+// direction: "top" | "up" | "down" | "clear"
+// Returns an array of { jobId, stage_priority } updates to apply (0-2 records).
+export function computePriorityChange(sortedColumnJobs, job, stage, direction) {
+  const rankedJobs = sortedColumnJobs.filter(j => typeof j.stage_priority?.[stage] === "number");
+  const currentRank = job.stage_priority?.[stage];
+
+  if (direction === "clear") {
+    if (typeof currentRank !== "number") return [];
+    const rest = { ...(job.stage_priority || {}) };
+    delete rest[stage];
+    return [{ jobId: job.id, stage_priority: rest }];
+  }
+
+  if (direction === "top") {
+    const updates = [{ jobId: job.id, stage_priority: { ...(job.stage_priority || {}), [stage]: 1 } }];
+    rankedJobs.filter(j => j.id !== job.id).forEach(j => {
+      updates.push({ jobId: j.id, stage_priority: { ...j.stage_priority, [stage]: j.stage_priority[stage] + 1 } });
+    });
+    return updates;
+  }
+
+  if (direction === "up") {
+    if (typeof currentRank !== "number") {
+      const newRank = rankedJobs.length + 1;
+      return [{ jobId: job.id, stage_priority: { ...(job.stage_priority || {}), [stage]: newRank } }];
+    }
+    if (currentRank <= 1) return [];
+    const swapWith = rankedJobs.find(j => j.stage_priority[stage] === currentRank - 1);
+    const updates = [{ jobId: job.id, stage_priority: { ...job.stage_priority, [stage]: currentRank - 1 } }];
+    if (swapWith) updates.push({ jobId: swapWith.id, stage_priority: { ...swapWith.stage_priority, [stage]: currentRank } });
+    return updates;
+  }
+
+  if (direction === "down") {
+    if (typeof currentRank !== "number") return [];
+    const maxRank = rankedJobs.length;
+    if (currentRank >= maxRank) {
+      const rest = { ...(job.stage_priority || {}) };
+      delete rest[stage];
+      return [{ jobId: job.id, stage_priority: rest }];
+    }
+    const swapWith = rankedJobs.find(j => j.stage_priority[stage] === currentRank + 1);
+    const updates = [{ jobId: job.id, stage_priority: { ...job.stage_priority, [stage]: currentRank + 1 } }];
+    if (swapWith) updates.push({ jobId: swapWith.id, stage_priority: { ...swapWith.stage_priority, [stage]: currentRank } });
+    return updates;
+  }
+
+  return [];
+}
+
 // ── Billing overdue stage calculator ──────────────────────────────────────────
 export function calcBillingStage(invoiceSentDate, amountPaid, total) {
   // If there's no invoice yet, the job still needs one created

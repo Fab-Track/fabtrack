@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { BILLING_STAGES, BILLING_COLORS, BILLING_CARD_BG, daysInStage, buildStageTransition } from "@/lib/pipelineHelpers";
+import { BILLING_STAGES, BILLING_COLORS, BILLING_CARD_BG, daysInStage, buildStageTransition, sortColumnJobs } from "@/lib/pipelineHelpers";
+import PriorityBadge from "./PriorityBadge";
+import PriorityMenuItems from "./PriorityMenuItems";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -58,7 +60,7 @@ function BillingSummary({ jobs, invoiceMap }) {
 }
 
 // ── Billing Card ───────────────────────────────────────────────────────────────
-function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder, onDeleteJob, canDelete }) {
+function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder, onDeleteJob, canDelete, stage, columnJobs, onPriorityChange }) {
   const navigate = useNavigate();
   const days = job.invoice_sent_date && isValid(parseISO(job.invoice_sent_date))
     ? differenceInDays(new Date(), parseISO(job.invoice_sent_date))
@@ -75,28 +77,30 @@ function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder, onD
       <div className="flex items-start justify-between mb-1">
         <span className="text-[10px] font-mono text-muted-foreground">{job.job_number}</span>
         <div className="flex items-center gap-1">
+          <PriorityBadge rank={job.stage_priority?.[stage]} />
           {isOverdue && (
             <span className={`text-xs font-bold ${days >= 30 ? "text-red-700" : days >= 20 ? "text-orange-600" : "text-yellow-700"}`}>
               {days}d overdue
             </span>
           )}
-          {canDelete && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="p-0.5 rounded hover:bg-black/5 text-muted-foreground" onClick={e => { e.preventDefault(); e.stopPropagation(); }} onMouseDown={e => e.stopPropagation()}>
-                  <MoreHorizontal className="w-3.5 h-3.5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="text-sm">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-0.5 rounded hover:bg-black/5 text-muted-foreground" onClick={e => { e.preventDefault(); e.stopPropagation(); }} onMouseDown={e => e.stopPropagation()}>
+                <MoreHorizontal className="w-3.5 h-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="text-sm">
+              {canDelete && (
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={e => { e.preventDefault(); e.stopPropagation(); onDeleteJob(job); }}
                 >
                   Delete Job
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+              )}
+              <PriorityMenuItems job={job} stage={stage} columnJobs={columnJobs} onApply={onPriorityChange} />
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       <Link to={`/jobs/${job.id}?board=Billing`}>
@@ -160,10 +164,16 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
     if (columns[stage]) columns[stage].push(j);
     else columns["Needs 2nd Half Invoice Created"].push(j);
   });
+  BILLING_STAGES.forEach(s => { columns[s] = sortColumnJobs(columns[s], s); });
 
   const moveMutation = useMutation({
     mutationFn: ({ job, toStage, extra = {} }) =>
       base44.entities.Job.update(job.id, { ...buildStageTransition(job, "Billing", toStage), ...extra }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
+  });
+
+  const priorityMutation = useMutation({
+    mutationFn: (updates) => base44.entities.Job.bulkUpdate(updates.map(u => ({ id: u.jobId, stage_priority: u.stage_priority }))),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
   });
 
@@ -225,6 +235,9 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
                           onSendReminder={handleSendReminder}
                           onDeleteJob={setDeletingJob}
                           canDelete={canDelete}
+                          stage={stage}
+                          columnJobs={columns[stage]}
+                          onPriorityChange={(updates) => priorityMutation.mutate(updates)}
                         />
                       </div>
                     )}

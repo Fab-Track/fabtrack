@@ -194,6 +194,10 @@
         }
       }
     },
+    "stage_priority": {
+      "type": "object",
+      "description": "Per-stage priority rank map, keyed by stage name \u2192 rank (1 = highest). Set only via explicit UI controls, never by drag, so it survives accidental card drags."
+    },
     "estimate_total": {
       "type": "number"
     },

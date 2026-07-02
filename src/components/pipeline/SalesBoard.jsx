@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { SALES_STAGES, SALES_COLORS, daysInStage, buildStageTransition } from "@/lib/pipelineHelpers";
+import { SALES_STAGES, SALES_COLORS, daysInStage, buildStageTransition, sortColumnJobs } from "@/lib/pipelineHelpers";
+import PriorityBadge from "./PriorityBadge";
+import PriorityMenuItems from "./PriorityMenuItems";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -23,7 +25,7 @@ const EST_PILL = {
 };
 
 // ── Sales Card ─────────────────────────────────────────────────────────────────
-function SalesCard({ job, isDragging, onPromote, estimates = [], onCloseLead, onDeleteJob, canDelete }) {
+function SalesCard({ job, isDragging, onPromote, estimates = [], onCloseLead, onDeleteJob, canDelete, stage, columnJobs, onPriorityChange }) {
   const navigate = useNavigate();
   const days = daysInStage(job);
   const isStale = days > 7 && job.stage !== "Deposit Received / Sale Won";
@@ -47,6 +49,7 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], onCloseLead, on
       <div className="flex items-start justify-between mb-1">
         <span className="text-[10px] font-mono text-muted-foreground">{job.job_number}</span>
         <div className="flex items-center gap-1">
+          <PriorityBadge rank={job.stage_priority?.[stage]} />
           {job.job_type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.job_type}</Badge>}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -68,6 +71,7 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], onCloseLead, on
                   Delete Job
                 </DropdownMenuItem>
               )}
+              <PriorityMenuItems job={job} stage={stage} columnJobs={columnJobs} onApply={onPriorityChange} />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -188,6 +192,12 @@ export default function SalesBoard({ jobs = [] }) {
     if (columns[stage]) columns[stage].push(j);
     else columns["New Lead"].push(j);
   });
+  SALES_STAGES.forEach(s => { columns[s] = sortColumnJobs(columns[s], s); });
+
+  const priorityMutation = useMutation({
+    mutationFn: (updates) => base44.entities.Job.bulkUpdate(updates.map(u => ({ id: u.jobId, stage_priority: u.stage_priority }))),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
+  });
 
   const moveMutation = useMutation({
     mutationFn: ({ job, toBoard, toStage, note, repId }) => {
@@ -281,6 +291,9 @@ export default function SalesBoard({ jobs = [] }) {
                               onCloseLead={setClosingLead}
                               onDeleteJob={setDeletingJob}
                               canDelete={canDeleteJob(job)}
+                              stage={stage}
+                              columnJobs={columns[stage]}
+                              onPriorityChange={(updates) => priorityMutation.mutate(updates)}
                             />
                           </div>
                         )}
