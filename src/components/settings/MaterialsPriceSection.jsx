@@ -9,6 +9,7 @@ import { Plus, Save, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { DEFAULT_MATERIALS } from "@/lib/railingData";
 import AddMaterialDialog from "./AddMaterialDialog";
+import CategorySelect from "./CategorySelect";
 
 const CATEGORIES = ["Square Tube", "Rectangle Tube", "Flat Bar", "HR Channel", "Angle", "Round Bar", "Stair", "Other"];
 const COMPONENT_TYPES = ["Top Rail", "Bottom Rail", "Post", "Picket", "Cap", "Other"];
@@ -92,13 +93,11 @@ export default function MaterialsPriceSection() {
     setDeleteId(null);
   }
 
-  const grouped = CATEGORIES.reduce((acc, cat) => {
+  const allCategories = [...new Set([...CATEGORIES, ...materials.map(m => m.category).filter(Boolean)])];
+  const grouped = allCategories.reduce((acc, cat) => {
     acc[cat] = materials.filter(m => (m.category || "Other") === cat);
     return acc;
   }, {});
-  // Also catch any materials with non-standard categories
-  const uncategorized = materials.filter(m => !CATEGORIES.includes(m.category));
-  if (uncategorized.length > 0) grouped["Other"] = [...(grouped["Other"] || []), ...uncategorized];
 
   return (
     <div className="space-y-4">
@@ -120,7 +119,7 @@ export default function MaterialsPriceSection() {
         <p className="text-sm text-muted-foreground py-6">Seeding default materials…</p>
       ) : (
         <div className="space-y-5">
-          {CATEGORIES.filter(cat => grouped[cat]?.length > 0).map(cat => (
+          {allCategories.filter(cat => grouped[cat]?.length > 0).map(cat => (
             <div key={cat}>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{cat}</h3>
               <div className="border rounded-lg overflow-hidden">
@@ -146,13 +145,12 @@ export default function MaterialsPriceSection() {
                         value={getField(mat, "name")}
                         onChange={e => setField(mat.id, "name", e.target.value)}
                       />
-                      <Select
+                      <CategorySelect
+                        categories={allCategories}
                         value={getField(mat, "category")}
-                        onValueChange={v => setField(mat.id, "category", v)}
-                      >
-                        <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                      </Select>
+                        onChange={v => setField(mat.id, "category", v)}
+                        className="h-7"
+                      />
                       <Select
                         value={getField(mat, "component_type")}
                         onValueChange={v => setField(mat.id, "component_type", v)}

@@ -12,17 +12,8 @@
     },
     "category": {
       "type": "string",
-      "enum": [
-        "Square Tube",
-        "Rectangle Tube",
-        "Flat Bar",
-        "HR Channel",
-        "Angle",
-        "Round Bar",
-        "Stair",
-        "Other"
-      ],
-      "default": "Other"
+      "default": "Other",
+      "description": "Material category \u2014 used to group materials in Settings. Org can add new categories freely."
     },
     "component_type": {
       "type": "string",
