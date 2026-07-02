@@ -2,33 +2,19 @@ import React, { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import AttachmentFileCard from "./AttachmentFileCard";
 
-export default function AttachmentCategoryGroup({ categoryName, files, usesVersioning, jobId }) {
+export default function AttachmentCategoryGroup({ categoryName, files, jobId }) {
   const [collapsed, setCollapsed] = useState(false);
 
   if (!files || files.length === 0) return null;
 
-  let displayFiles = files;
+  // Every upload is its own entry — sort newest first, no version merging.
+  const sortedFiles = [...files].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
 
-  if (usesVersioning) {
-    // Group by version_group, show newest first
-    const versionMap = {};
-    files.forEach(f => {
-      const group = f.version_group || f.file_name;
-      if (!versionMap[group]) versionMap[group] = [];
-      versionMap[group].push(f);
-    });
-
-    // Build display list: one card per version group (newest version shown, rest in history)
-    displayFiles = Object.values(versionMap).map(group => {
-      // Sort by version descending (v2 > v1)
-      const sorted = [...group].sort((a, b) => {
-        const vA = parseInt(String(a.version).replace(/\D/g, "")) || 1;
-        const vB = parseInt(String(b.version).replace(/\D/g, "")) || 1;
-        return vB - vA;
-      });
-      return sorted;
-    });
-  }
+  // The most recent upload per same-named file group is badged "Latest".
+  const latestIdByName = {};
+  sortedFiles.forEach(f => {
+    if (!(f.file_name in latestIdByName)) latestIdByName[f.file_name] = f.id;
+  });
 
   return (
     <div>
@@ -48,26 +34,14 @@ export default function AttachmentCategoryGroup({ categoryName, files, usesVersi
 
       {!collapsed && (
         <div className="space-y-1.5 ml-2">
-          {usesVersioning
-            ? displayFiles.map((versionGroup, idx) => (
-                <AttachmentFileCard
-                  key={versionGroup[0].id}
-                  file={versionGroup[0]}
-                  versionHistory={versionGroup.length > 1 ? versionGroup.slice(1) : []}
-                  categories={null}
-                  jobId={jobId}
-                />
-              ))
-            : files.map(f => (
-                <AttachmentFileCard
-                  key={f.id}
-                  file={f}
-                  versionHistory={[]}
-                  categories={null}
-                  jobId={jobId}
-                />
-              ))
-          }
+          {sortedFiles.map(f => (
+            <AttachmentFileCard
+              key={f.id}
+              file={f}
+              isLatest={latestIdByName[f.file_name] === f.id}
+              jobId={jobId}
+            />
+          ))}
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,13 +11,11 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  ExternalLink, Download, Trash2, ChevronDown, ChevronRight,
-  Image, FileText, File, MoreVertical, FolderOpen
+  ExternalLink, Download, Trash2, Image, FileText, File, MoreVertical, FolderOpen
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 
 function FileIcon({ type }) {
   if (type?.startsWith("image/")) return <Image className="w-5 h-5 text-purple-400 shrink-0" />;
@@ -24,16 +23,12 @@ function FileIcon({ type }) {
   return <File className="w-5 h-5 text-muted-foreground shrink-0" />;
 }
 
-export default function AttachmentFileCard({ file, versionHistory = [], categories, jobId }) {
+export default function AttachmentFileCard({ file, isLatest = false, jobId }) {
   const qc = useQueryClient();
-  const [showHistory, setShowHistory] = useState(false);
   const [showRecategorize, setShowRecategorize] = useState(false);
   const [newCategory, setNewCategory] = useState(file.category || "");
   const [deleting, setDeleting] = useState(false);
-
-  // Fetch categories if not provided
-  const [fetchedCategories, setFetchedCategories] = useState(null);
-  const catList = categories || fetchedCategories || [];
+  const [catList, setCatList] = useState([]);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -55,19 +50,14 @@ export default function AttachmentFileCard({ file, versionHistory = [], categori
   const openRecategorize = async () => {
     if (!catList.length) {
       const cats = await base44.entities.AttachmentCategory.filter({ is_active: true }, "sort_order", 50);
-      setFetchedCategories(cats);
+      setCatList(cats);
       setNewCategory(file.category || "");
     }
     setShowRecategorize(true);
   };
 
   const handleView = () => {
-    // For images, open in new tab; for others, download
-    if (file.file_type?.startsWith("image/")) {
-      window.open(file.file_url, "_blank", "noopener,noreferrer");
-    } else {
-      window.open(file.file_url, "_blank", "noopener,noreferrer");
-    }
+    window.open(file.file_url, "_blank", "noopener,noreferrer");
   };
 
   const handleDownload = () => {
@@ -81,8 +71,10 @@ export default function AttachmentFileCard({ file, versionHistory = [], categori
     document.body.removeChild(a);
   };
 
-  const hasVersions = versionHistory.length > 0;
   const isImage = file.file_type?.startsWith("image/");
+  const uploadedLabel = file.created_date
+    ? `Uploaded ${format(parseISO(file.created_date), "MMM d, yyyy, h:mm a")}`
+    : null;
 
   return (
     <>
@@ -103,19 +95,13 @@ export default function AttachmentFileCard({ file, versionHistory = [], categori
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <p className="text-sm font-medium truncate">{file.file_name}</p>
-            {file.version && (
-              <Badge variant="outline" className="text-[10px] shrink-0">{file.version}</Badge>
-            )}
-            {hasVersions && (
-              <button
-                onClick={() => setShowHistory(!showHistory)}
-                className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 shrink-0"
-              >
-                {showHistory ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                {versionHistory.length} older
-              </button>
+            {isLatest && (
+              <Badge className="text-[10px] shrink-0 bg-success text-success-foreground">Latest</Badge>
             )}
           </div>
+          {uploadedLabel && (
+            <p className="text-xs text-muted-foreground mt-0.5">{uploadedLabel}</p>
+          )}
           {file.notes && (
             <p className="text-xs text-muted-foreground truncate mt-0.5">{file.notes}</p>
           )}
@@ -172,39 +158,6 @@ export default function AttachmentFileCard({ file, versionHistory = [], categori
           </div>
         </div>
       </div>
-
-      {/* Version history */}
-      {hasVersions && showHistory && (
-        <div className="ml-6 pl-4 border-l-2 border-muted space-y-1 mt-1">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Version History</p>
-          {versionHistory.map(v => (
-            <div key={v.id} className="flex items-center gap-2 p-1.5 rounded bg-muted/30 text-xs group/v">
-              <FileIcon type={v.file_type} />
-              <span className="flex-1 truncate text-muted-foreground">{v.file_name}</span>
-              {v.version && <Badge variant="outline" className="text-[10px]">{v.version}</Badge>}
-              <a
-                href={v.file_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="opacity-0 group-hover/v:opacity-100 transition-opacity"
-              >
-                <Button variant="ghost" size="icon" className="h-6 w-6">
-                  <ExternalLink className="w-3 h-3" />
-                </Button>
-              </a>
-              <a
-                href={v.file_url}
-                download={v.file_name}
-                className="opacity-0 group-hover/v:opacity-100 transition-opacity"
-              >
-                <Button variant="ghost" size="icon" className="h-6 w-6">
-                  <Download className="w-3 h-3" />
-                </Button>
-              </a>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Re-categorize dialog */}
       <Dialog open={showRecategorize} onOpenChange={setShowRecategorize}>

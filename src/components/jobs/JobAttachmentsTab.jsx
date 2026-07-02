@@ -34,6 +34,12 @@ export default function JobAttachmentsTab({ job }) {
     ? categories
     : DEFAULT_CATEGORIES;
 
+  // Dedupe by name — protects against duplicate category records with the same name
+  // (e.g. defaults seeded twice) rendering as two separate groups/dropdown entries.
+  const dedupedCategories = Array.from(
+    new Map(activeCategories.map(c => [c.name.trim(), c])).values()
+  );
+
   // Pick file(s) — category must be selected first
   const triggerFilePick = () => {
     if (!selectedCategory) {
@@ -52,9 +58,6 @@ export default function JobAttachmentsTab({ job }) {
     }
     if (!fileList || fileList.length === 0) return;
 
-    const cat = activeCategories.find(c => c.name === selectedCategory);
-    const usesVersioning = cat?.uses_versioning || false;
-
     setUploading(true);
     setUploadProgress(0);
     setUploadStatus(null);
@@ -69,20 +72,7 @@ export default function JobAttachmentsTab({ job }) {
         const { file_url } = await base44.integrations.Core.UploadFile({ file });
         const fileName = file.name;
 
-        let versionLabel = "v1";
-        let versionGroup = fileName.replace(/\.[^/.]+$/, ""); // strip extension
-
-        if (usesVersioning) {
-          // Check for existing versions in this category for this job
-          const existing = attachments.filter(
-            a => a.category === selectedCategory && a.version_group === versionGroup
-          );
-          if (existing.length > 0) {
-            const nextV = existing.length + 1;
-            versionLabel = `v${nextV}`;
-          }
-        }
-
+        // Every upload is its own dated entry — no version merging/stacking.
         await base44.entities.JobAttachment.create({
           job_id: job.id,
           job_number: job.job_number,
@@ -91,8 +81,6 @@ export default function JobAttachmentsTab({ job }) {
           file_url,
           file_name: fileName,
           file_type: file.type || "application/octet-stream",
-          version: versionLabel,
-          version_group: versionGroup,
           uploaded_by: "me",
         });
         succeeded++;
@@ -120,7 +108,7 @@ export default function JobAttachmentsTab({ job }) {
     // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = "";
     setTimeout(() => setUploadStatus(null), 4000);
-  }, [selectedCategory, activeCategories, attachments, job, qc]);
+  }, [selectedCategory, job, qc]);
 
   // Drag-and-drop handlers
   const onDragOver = (e) => { e.preventDefault(); setDragOver(true); };
@@ -145,8 +133,8 @@ export default function JobAttachmentsTab({ job }) {
     grouped[cat].push(a);
   });
 
-  // Sort categories by order from activeCategories
-  const sortedCategoryNames = activeCategories
+  // Sort categories by order — deduped so no category appears twice
+  const sortedCategoryNames = dedupedCategories
     .filter(c => grouped[c.name]?.length > 0)
     .map(c => c.name);
 
@@ -173,10 +161,9 @@ export default function JobAttachmentsTab({ job }) {
               <SelectValue placeholder="Select a category…" />
             </SelectTrigger>
             <SelectContent>
-              {activeCategories.map(cat => (
+              {dedupedCategories.map(cat => (
                 <SelectItem key={cat.name} value={cat.name} className="text-xs">
                   {cat.name}
-                  {cat.uses_versioning && <span className="ml-2 text-[10px] text-muted-foreground">(versioned)</span>}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -260,19 +247,14 @@ export default function JobAttachmentsTab({ job }) {
         </div>
       ) : (
         <div className="space-y-4">
-          {sortedCategoryNames.map(catName => {
-            const files = grouped[catName];
-            const cat = activeCategories.find(c => c.name === catName);
-            return (
-              <AttachmentCategoryGroup
-                key={catName}
-                categoryName={catName}
-                files={files}
-                usesVersioning={cat?.uses_versioning || false}
-                jobId={job.id}
-              />
-            );
-          })}
+          {sortedCategoryNames.map(catName => (
+            <AttachmentCategoryGroup
+              key={catName}
+              categoryName={catName}
+              files={grouped[catName]}
+              jobId={job.id}
+            />
+          ))}
         </div>
       )}
     </div>
