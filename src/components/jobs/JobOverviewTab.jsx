@@ -13,7 +13,7 @@ import { StickyNote } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 
-export default function JobOverviewTab({ job }) {
+export default function JobOverviewTab({ job, highlightNoteId }) {
   const { user } = useAuth();
   const effectiveRole = useEffectiveRole(user?.role || "admin");
   const isFabricator = ["fabricator", "installer"].includes(effectiveRole.toLowerCase());
@@ -102,7 +102,7 @@ export default function JobOverviewTab({ job }) {
         <JobScopeSection job={job} isFabricator={isFabricator} />
       </div>
 
-      <Card className="md:col-span-2">
+      <Card className="md:col-span-2" id="job-notes-section">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <StickyNote className="w-4 h-4 text-muted-foreground" />
@@ -110,7 +110,7 @@ export default function JobOverviewTab({ job }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <JobNotesSection job={job} />
+          <JobNotesSection job={job} highlightNoteId={highlightNoteId} />
         </CardContent>
       </Card>
 

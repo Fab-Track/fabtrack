@@ -37,14 +37,15 @@ export default function JobDetail() {
   const isAccountant = effectiveRole.toLowerCase() === "accountant";
   const isOwner = effectiveRole.toLowerCase() === "owner";
   const isEstimator = effectiveRole.toLowerCase() === "estimator";
-  const [activeTab, setActiveTab] = useState("overview");
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "overview");
   const [composerOpen, setComposerOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const fromParam = searchParams.get("from");
   const fromSchedule = fromParam === "schedule";
   const boardParam = searchParams.get("board");
+  const highlightNoteId = searchParams.get("note") || null;
 
   const jobId = window.location.pathname.split("/jobs/")[1]?.split("?")[0];
 
@@ -234,7 +235,7 @@ export default function JobDetail() {
           )}
         </TabsList>
 
-        <TabsContent value="overview"><JobOverviewTab job={job} /></TabsContent>
+        <TabsContent value="overview"><JobOverviewTab job={job} highlightNoteId={highlightNoteId} /></TabsContent>
         <TabsContent value="schedule"><ProductionSchedule job={job} /></TabsContent>
         <TabsContent value="project-details"><ProjectDetailsTab job={job} userRole={effectiveRole} /></TabsContent>
         <TabsContent value="attachments"><JobAttachmentsTab job={job} /></TabsContent>

@@ -7,7 +7,8 @@ import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, ChevronRight, User } from "lucide-react";
+import { Check, ChevronRight, User, CalendarDays } from "lucide-react";
+import { format, parseISO } from "date-fns";
 
 /**
  * Dashboard-wide To-Do list, sourced from To-Do notes across all jobs.
@@ -90,7 +91,7 @@ export default function DashboardTodoList() {
           {filtered.slice(0, 20).map(todo => (
             <Link
               key={todo.id}
-              to={`/jobs/${todo.job_id}`}
+              to={`/jobs/${todo.job_id}?tab=overview&note=${todo.id}#job-notes-section`}
               className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition-colors group"
             >
               <button
@@ -109,6 +110,11 @@ export default function DashboardTodoList() {
                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   {todo.job_number && <span className="text-[10px] font-mono text-muted-foreground">{todo.job_number}</span>}
                   {todo.job_name && <span className="text-[10px] text-muted-foreground truncate max-w-[160px]">{todo.job_name}</span>}
+                  {todo.due_date && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded-full">
+                      <CalendarDays className="w-3 h-3" /> Due {format(parseISO(todo.due_date), "MMM d")}
+                    </span>
+                  )}
                 </div>
               </div>
 

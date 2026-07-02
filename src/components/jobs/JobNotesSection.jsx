@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { format, parseISO } from "date-fns";
  * Any org user can view and add. A note can optionally be marked as a To-Do,
  * with an optional assignee and due date, and checked off when complete.
  */
-export default function JobNotesSection({ job }) {
+export default function JobNotesSection({ job, highlightNoteId }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [text, setText] = useState("");
@@ -22,6 +22,14 @@ export default function JobNotesSection({ job }) {
   const [assigneeId, setAssigneeId] = useState("");
   const [assigneeName, setAssigneeName] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const highlightRef = useRef(null);
+
+  useEffect(() => {
+    if (highlightNoteId && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlightNoteId]);
 
   const { data: employees = [] } = useQuery({
     queryKey: ["employees"],
@@ -145,11 +153,17 @@ export default function JobNotesSection({ job }) {
         {sortedNotes.length === 0 ? (
           <p className="text-sm text-muted-foreground">No notes yet.</p>
         ) : (
-          sortedNotes.map((note) => (
+          sortedNotes.map((note) => {
+            const isHighlighted = highlightNoteId && note.id === highlightNoteId;
+            const isEditing = editingId === note.id;
+            return (
             <div
               key={note.id || note.created_at}
-              className={`rounded-lg border p-3 flex items-start gap-2.5 ${
-                note.is_todo
+              ref={isHighlighted ? highlightRef : null}
+              className={`rounded-lg border p-3 flex items-start gap-2.5 transition-colors ${
+                isHighlighted
+                  ? "bg-accent/20 border-accent ring-2 ring-accent/50"
+                  : note.is_todo
                   ? note.is_completed ? "bg-muted/30 border-muted" : "bg-accent/5 border-accent/30"
                   : "bg-muted/30 border-border"
               }`}
@@ -171,17 +185,12 @@ export default function JobNotesSection({ job }) {
                   {note.text}
                 </p>
                 <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-xs text-muted-foreground">
-                  <span className="font-medium">{note.author_name}</span>
+                  <span className="font-medium">Added by {note.author_name}</span>
                   <span>·</span>
                   <span>{note.created_at ? format(parseISO(note.created_at), "MMM d, yyyy 'at' h:mm a") : ""}</span>
-                  {note.is_todo && (
-                    <span className="inline-flex items-center gap-1 text-[10px] bg-accent/20 text-accent-foreground px-1.5 py-0.5 rounded-full border border-accent/30">
-                      <ListTodo className="w-3 h-3" /> {note.assignee_name || "Unassigned"}
-                    </span>
-                  )}
                   {note.is_todo && note.due_date && (
-                    <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
-                      <CalendarDays className="w-3 h-3" /> {format(parseISO(note.due_date), "MMM d")}
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded-full">
+                      <CalendarDays className="w-3 h-3" /> Due {format(parseISO(note.due_date), "MMM d, yyyy")}
                     </span>
                   )}
                   {!note.is_todo && (
@@ -193,9 +202,56 @@ export default function JobNotesSection({ job }) {
                     </button>
                   )}
                 </div>
+
+                {note.is_todo && (
+                  isEditing ? (
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                      <Select
+                        value={note.assignee_id || ""}
+                        onValueChange={(val) => {
+                          const emp = employees.find(e => e.id === val);
+                          updateNote(note.id, { assignee_id: val, assignee_name: emp ? (emp.name || "Team Member") : "" });
+                        }}
+                      >
+                        <SelectTrigger className="w-40 h-8 text-xs">
+                          <User className="w-3 h-3 mr-1" />
+                          <SelectValue placeholder="Unassigned" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {employees.map(emp => (
+                            <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="date"
+                        value={note.due_date || ""}
+                        onChange={(e) => updateNote(note.id, { due_date: e.target.value })}
+                        className="w-36 h-8 text-xs"
+                      />
+                      <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setEditingId(null)}>Done</Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                      <button
+                        onClick={() => setEditingId(note.id)}
+                        className="inline-flex items-center gap-1 text-[10px] bg-accent/20 text-accent-foreground px-1.5 py-0.5 rounded-full border border-accent/30 hover:bg-accent/30"
+                      >
+                        <ListTodo className="w-3 h-3" /> {note.assignee_name || "Unassigned"}
+                      </button>
+                      <button
+                        onClick={() => setEditingId(note.id)}
+                        className="text-[10px] underline hover:text-foreground text-muted-foreground"
+                      >
+                        Edit assignee / due date
+                      </button>
+                    </div>
+                  )
+                )}
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
