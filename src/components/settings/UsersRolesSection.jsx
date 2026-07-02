@@ -57,6 +57,7 @@ export default function UsersRolesSection() {
   const [invite, setInvite] = useState({ first_name: "", last_name: "", email: "", roles: ["fabricator"], phone: "" });
   const [inviting, setInviting] = useState(false);
   const [summaryRole, setSummaryRole] = useState(null);
+  const [showDeactivated, setShowDeactivated] = useState(false);
 
   const orgId = currentUser?.organization_id;
 
@@ -135,6 +136,15 @@ export default function UsersRolesSection() {
         </div>
         {tab === "users" && (
           <div className="flex items-center gap-2">
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showDeactivated}
+                onChange={e => setShowDeactivated(e.target.checked)}
+                className="h-3.5 w-3.5"
+              />
+              Show deactivated
+            </label>
             {userCap !== null && (
               <span className={`text-xs ${atCap ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                 <Users className="w-3 h-3 inline mr-0.5" />
@@ -186,9 +196,14 @@ export default function UsersRolesSection() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {users.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center py-8 text-muted-foreground text-sm">No users yet.</td></tr>
-                ) : users.map(u => {
+                {(() => {
+                  const visibleUsers = showDeactivated
+                    ? users
+                    : users.filter(u => (u.account_status || "active") !== "deactivated");
+                  if (visibleUsers.length === 0) {
+                    return <tr><td colSpan={6} className="text-center py-8 text-muted-foreground text-sm">No users yet.</td></tr>;
+                  }
+                  return visibleUsers.map(u => {
                   const userRoleList = (u.roles && u.roles.length > 0) ? u.roles : (u.role ? [u.role] : []);
                   const primaryRoleKey = (userRoleList[0] || "").toLowerCase().replace(/ /g, "_");
                   const status = u.account_status || "active";
@@ -263,7 +278,8 @@ export default function UsersRolesSection() {
                       </td>
                     </tr>
                   );
-                })}
+                  });
+                })()}
               </tbody>
             </table>
           </div>
