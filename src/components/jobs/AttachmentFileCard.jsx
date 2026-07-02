@@ -23,6 +23,20 @@ function FileIcon({ type }) {
   return <File className="w-5 h-5 text-muted-foreground shrink-0" />;
 }
 
+// Some older records were saved with the storage file's raw UUID as file_name
+// instead of the original uploaded filename (the original name was never captured).
+// Detect that pattern and show a clean fallback instead of the raw UUID.
+const UUID_NAME_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\.[a-zA-Z0-9]+)?$/i;
+
+function getDisplayName(file) {
+  const name = file.file_name || "";
+  if (UUID_NAME_RE.test(name)) {
+    const ext = name.includes(".") ? name.slice(name.lastIndexOf(".")) : "";
+    return `Untitled file${ext}`;
+  }
+  return name || "Untitled file";
+}
+
 export default function AttachmentFileCard({ file, isLatest = false, jobId }) {
   const qc = useQueryClient();
   const [showRecategorize, setShowRecategorize] = useState(false);
@@ -94,7 +108,7 @@ export default function AttachmentFileCard({ file, isLatest = false, jobId }) {
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <p className="text-sm font-medium truncate">{file.file_name}</p>
+            <p className="text-sm font-medium truncate">{getDisplayName(file)}</p>
             {isLatest && (
               <Badge className="text-[10px] shrink-0 bg-success text-success-foreground">Latest</Badge>
             )}

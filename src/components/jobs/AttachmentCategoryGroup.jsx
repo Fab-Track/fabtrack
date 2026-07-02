@@ -10,11 +10,8 @@ export default function AttachmentCategoryGroup({ categoryName, files, jobId }) 
   // Every upload is its own entry — sort newest first, no version merging.
   const sortedFiles = [...files].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
 
-  // The most recent upload per same-named file group is badged "Latest".
-  const latestIdByName = {};
-  sortedFiles.forEach(f => {
-    if (!(f.file_name in latestIdByName)) latestIdByName[f.file_name] = f.id;
-  });
+  // Only the single newest upload in this category is badged "Latest".
+  const latestFileId = sortedFiles[0]?.id;
 
   return (
     <div>
@@ -38,7 +35,7 @@ export default function AttachmentCategoryGroup({ categoryName, files, jobId }) 
             <AttachmentFileCard
               key={f.id}
               file={f}
-              isLatest={latestIdByName[f.file_name] === f.id}
+              isLatest={f.id === latestFileId}
               jobId={jobId}
             />
           ))}
