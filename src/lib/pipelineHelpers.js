@@ -282,6 +282,18 @@ export function reorderColumnPriority(columnJobs, sourceIndex, destIndex, stage)
   return reordered.map((j, idx) => ({ jobId: j.id, stage_priority: { ...(j.stage_priority || {}), [stage]: idx + 1 } }));
 }
 
+// ── Payment status (3-state, derived from invoices only — no manual flag) ─────
+// "not_invoiced"  — no invoice exists for the job
+// "partial"       — an invoice exists but the full amount hasn't been collected yet
+// "paid_in_full"  — total collected covers the total invoiced amount
+export function getPaymentStatus(jobInvoices = []) {
+  const totalInvoiced = jobInvoices.reduce((s, i) => s + (i.total || 0), 0);
+  if (jobInvoices.length === 0 || totalInvoiced <= 0) return "not_invoiced";
+  const totalCollected = jobInvoices.reduce((s, i) => s + (i.amount_paid || 0), 0);
+  if (totalCollected >= totalInvoiced) return "paid_in_full";
+  return "partial";
+}
+
 // ── Billing overdue stage calculator ──────────────────────────────────────────
 export function calcBillingStage(invoiceSentDate, amountPaid, total) {
   // If there's no invoice yet, the job still needs one created

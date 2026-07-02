@@ -2,9 +2,11 @@ import React, { useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { SALES_STAGES, SALES_COLORS, daysInStage, buildStageTransition, sortColumnJobs, closePriorityGap, reorderColumnPriority } from "@/lib/pipelineHelpers";
+import { SALES_STAGES, SALES_COLORS, daysInStage, buildStageTransition, sortColumnJobs, closePriorityGap, reorderColumnPriority, getPaymentStatus } from "@/lib/pipelineHelpers";
 import PriorityBadge from "./PriorityBadge";
 import PriorityMenuItems from "./PriorityMenuItems";
+import PaymentStatusBadge from "./PaymentStatusBadge";
+import JobCardCustomerInfo from "./JobCardCustomerInfo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -16,6 +18,7 @@ import DeleteJobModal from "@/components/jobs/DeleteJobModal";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 import { differenceInDays, parseISO } from "date-fns";
+import { toast } from "sonner";
 
 const EST_PILL = {
   Draft:    "bg-muted text-muted-foreground",
@@ -25,9 +28,10 @@ const EST_PILL = {
 };
 
 // ── Sales Card ─────────────────────────────────────────────────────────────────
-function SalesCard({ job, isDragging, onPromote, estimates = [], onCloseLead, onDeleteJob, canDelete, stage, columnJobs, onPriorityChange }) {
+function SalesCard({ job, isDragging, onPromote, estimates = [], invoices = [], customer, onCloseLead, onDeleteJob, canDelete, stage, columnJobs, onPriorityChange }) {
   const navigate = useNavigate();
   const days = daysInStage(job);
+  const paymentStatus = getPaymentStatus(invoices);
   const isStale = days > 7 && job.stage !== "Deposit Received / Sale Won";
 
   // Most recent estimate for this job
@@ -52,6 +56,7 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], onCloseLead, on
         <span className="text-[10px] font-mono text-muted-foreground">{job.job_number}</span>
         <div className="flex items-center gap-1">
           <PriorityBadge rank={job.stage_priority?.[stage]} />
+          <PaymentStatusBadge status={paymentStatus} />
           {job.job_type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.job_type}</Badge>}
           <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger asChild>
@@ -81,7 +86,7 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], onCloseLead, on
       <Link to={`/jobs/${job.id}?board=Sales`}>
         <h4 className="text-sm font-semibold leading-tight mb-0.5 line-clamp-2 hover:text-accent transition-colors">{job.job_name}</h4>
       </Link>
-      <p className="text-xs text-muted-foreground mb-2">{job.customer_name}</p>
+      <JobCardCustomerInfo customerName={job.customer_name} customer={customer} />
 
       <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
         {latestEst && (
@@ -133,6 +138,7 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], onCloseLead, on
 // ── Sales Board ────────────────────────────────────────────────────────────────
 export default function SalesBoard({ jobs = [] }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [promoting, setPromoting] = useState(null);
   const [closingLead, setClosingLead] = useState(null);
   const [deletingJob, setDeletingJob] = useState(null);
@@ -175,10 +181,24 @@ export default function SalesBoard({ jobs = [] }) {
     enabled: jobIds.length > 0,
   });
 
+  // Fetch customers to show company name / customer type on cards
+  const { data: allCustomers = [] } = useQuery({
+    queryKey: ["customers"],
+    queryFn: () => base44.entities.Customer.list("-created_date", 500),
+  });
+  const customersById = Object.fromEntries(allCustomers.map(c => [c.id, c]));
+
   // Group estimates by job_id for quick lookup
   const estimatesByJob = allEstimates.reduce((acc, e) => {
     if (!acc[e.job_id]) acc[e.job_id] = [];
     acc[e.job_id].push(e);
+    return acc;
+  }, {});
+
+  // Group invoices by job_id for quick lookup
+  const invoicesByJob = allInvoices.reduce((acc, inv) => {
+    if (!acc[inv.job_id]) acc[inv.job_id] = [];
+    acc[inv.job_id].push(inv);
     return acc;
   }, {});
 
@@ -248,6 +268,16 @@ export default function SalesBoard({ jobs = [] }) {
     moveMutation.mutate({ job, toBoard: "Sales", toStage: newStage, note: "" });
   }
 
+  function handlePromoteClick(job) {
+    if ((invoicesByJob[job.id] || []).length === 0) {
+      toast.error("An invoice must be created before this job can move to Shop Flow.", {
+        action: { label: "Go to Job", onClick: () => navigate(`/jobs/${job.id}?board=Sales`) },
+      });
+      return;
+    }
+    setPromoting(job);
+  }
+
   function handlePromoteConfirm(note) {
     if (!promoting) return;
     moveMutation.mutate({
@@ -297,8 +327,10 @@ export default function SalesBoard({ jobs = [] }) {
                             <SalesCard
                               job={job}
                               isDragging={snap.isDragging}
-                              onPromote={setPromoting}
+                              onPromote={handlePromoteClick}
                               estimates={estimatesByJob[job.id] || []}
+                              invoices={invoicesByJob[job.id] || []}
+                              customer={customersById[job.customer_id]}
                               onCloseLead={setClosingLead}
                               onDeleteJob={setDeletingJob}
                               canDelete={canDeleteJob(job)}

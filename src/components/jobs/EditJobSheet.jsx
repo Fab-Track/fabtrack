@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Wrench, Hash, CalendarDays, MapPin, ClipboardList, UserCheck, Building2 } from "lucide-react";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
+import { SHOP_STAGES } from "@/lib/pipelineHelpers";
 
 const JOB_TYPES = ["Railing", "Gate", "Fence", "Staircase", "Custom Structure", "Other"];
 const BOARDS = ["Sales", "Shop", "Billing"];
@@ -59,6 +60,14 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
 
   async function handleSave() {
     if (!job || !form.job_name?.trim()) return;
+    const enteringShop = form.pipeline_board === "Shop" && !SHOP_STAGES.includes(job.stage);
+    if (enteringShop) {
+      const jobInvoices = await base44.entities.Invoice.filter({ job_id: job.id });
+      if (!jobInvoices.length) {
+        toast.error("An invoice must be created before this job can move to Shop Flow.");
+        return;
+      }
+    }
     setSaving(true);
     try {
       const updates = {

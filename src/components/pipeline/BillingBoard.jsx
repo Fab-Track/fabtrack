@@ -2,9 +2,11 @@ import React, { useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { BILLING_STAGES, BILLING_COLORS, BILLING_CARD_BG, daysInStage, buildStageTransition, sortColumnJobs, closePriorityGap, reorderColumnPriority } from "@/lib/pipelineHelpers";
+import { BILLING_STAGES, BILLING_COLORS, BILLING_CARD_BG, daysInStage, buildStageTransition, sortColumnJobs, closePriorityGap, reorderColumnPriority, getPaymentStatus } from "@/lib/pipelineHelpers";
 import PriorityBadge from "./PriorityBadge";
 import PriorityMenuItems from "./PriorityMenuItems";
+import PaymentStatusBadge from "./PaymentStatusBadge";
+import JobCardCustomerInfo from "./JobCardCustomerInfo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -60,8 +62,9 @@ function BillingSummary({ jobs, invoiceMap }) {
 }
 
 // ── Billing Card ───────────────────────────────────────────────────────────────
-function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder, onDeleteJob, canDelete, stage, columnJobs, onPriorityChange }) {
+function BillingCard({ job, isDragging, invoice, jobInvoices = [], customer, onMarkPaid, onSendReminder, onDeleteJob, canDelete, stage, columnJobs, onPriorityChange }) {
   const navigate = useNavigate();
+  const paymentStatus = getPaymentStatus(jobInvoices);
   const days = job.invoice_sent_date && isValid(parseISO(job.invoice_sent_date))
     ? differenceInDays(new Date(), parseISO(job.invoice_sent_date))
     : null;
@@ -79,6 +82,7 @@ function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder, onD
         <span className="text-[10px] font-mono text-muted-foreground">{job.job_number}</span>
         <div className="flex items-center gap-1">
           <PriorityBadge rank={job.stage_priority?.[stage]} />
+          <PaymentStatusBadge status={paymentStatus} />
           {isOverdue && (
             <span className={`text-xs font-bold ${days >= 30 ? "text-red-700" : days >= 20 ? "text-orange-600" : "text-yellow-700"}`}>
               {days}d overdue
@@ -107,7 +111,7 @@ function BillingCard({ job, isDragging, invoice, onMarkPaid, onSendReminder, onD
       <Link to={`/jobs/${job.id}?board=Billing`}>
         <h4 className="text-sm font-semibold leading-tight mb-0.5 line-clamp-1 hover:text-accent transition-colors">{job.job_name}</h4>
       </Link>
-      <p className="text-xs text-muted-foreground mb-2">{job.customer_name}</p>
+      <JobCardCustomerInfo customerName={job.customer_name} customer={customer} />
 
       {invoice && (
         <div className="flex items-center gap-1 text-sm font-bold mb-2">
@@ -153,10 +157,21 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
 
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices-global"],
-    queryFn: () => base44.entities.Invoice.list("-created_date", 200),
+    queryFn: () => base44.entities.Invoice.list("-created_date", 500),
   });
 
+  const { data: allCustomers = [] } = useQuery({
+    queryKey: ["customers"],
+    queryFn: () => base44.entities.Customer.list("-created_date", 500),
+  });
+  const customersById = Object.fromEntries(allCustomers.map(c => [c.id, c]));
+
   const invoiceMap = Object.fromEntries(invoices.map(inv => [inv.id, inv]));
+  const invoicesByJob = invoices.reduce((acc, inv) => {
+    if (!acc[inv.job_id]) acc[inv.job_id] = [];
+    acc[inv.job_id].push(inv);
+    return acc;
+  }, {});
 
   const columns = {};
   BILLING_STAGES.forEach(s => { columns[s] = []; });
@@ -242,6 +257,8 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
                           job={job}
                           isDragging={snap.isDragging}
                           invoice={invoiceMap[job.second_half_invoice_id]}
+                          jobInvoices={invoicesByJob[job.id] || []}
+                          customer={customersById[job.customer_id]}
                           onMarkPaid={handleMarkPaid}
                           onSendReminder={handleSendReminder}
                           onDeleteJob={setDeletingJob}

@@ -62,7 +62,13 @@ export default function JobCard({ job, isDragging }) {
   });
 
   const moveMutation = useMutation({
-    mutationFn: ({ toBoard, toStage }) => {
+    mutationFn: async ({ toBoard, toStage }) => {
+      if (toBoard === "Shop" && !SHOP_STAGES.includes(job.stage)) {
+        const jobInvoices = await base44.entities.Invoice.filter({ job_id: job.id });
+        if (!jobInvoices.length) {
+          throw new Error("An invoice must be created before this job can move to Shop Flow.");
+        }
+      }
       const payload = buildStageTransition(job, toBoard, toStage);
       return base44.entities.Job.update(job.id, payload);
     },
