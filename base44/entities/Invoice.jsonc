@@ -124,6 +124,21 @@
           "install_location": {
             "type": "string"
           },
+          "components": {
+            "type": "array",
+            "description": "Display-only component/material spec carried from the estimate line. Not used for pricing.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "component_type": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "_hard_cost_per_unit": {
             "type": "number",
             "description": "Carried from estimate (internal only)"

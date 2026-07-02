@@ -89,6 +89,23 @@
           "show_photo": {
             "type": "boolean"
           },
+          "components": {
+            "type": "array",
+            "description": "Display-only component/material spec for this line (e.g. railing style breakdown). Not used for pricing.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "component_type": {
+                  "type": "string",
+                  "description": "Component slot/role, e.g. Top Rail, Bottom Rail, Post, Picket, Cap"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Material name from the master Materials list"
+                }
+              }
+            }
+          },
           "_hard_cost_per_unit": {
             "type": "number",
             "description": "Snapshot of computed hard cost per unit (internal only)"

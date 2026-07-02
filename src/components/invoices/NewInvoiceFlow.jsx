@@ -153,6 +153,7 @@ export default function NewInvoiceFlow({ open, onClose, approvedEstimate, approv
         unit: line.unit || "ls",
         unit_cost: sel.amount / (line.quantity || 1),
         total: sel.amount,
+        ...(line.components?.length ? { components: line.components } : {}),
       });
     });
 

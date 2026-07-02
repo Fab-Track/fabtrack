@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Check, PenLine } from "lucide-react";
 import CostModelPricing from "./CostModelPricing";
+import LineItemComponentsEditor from "./LineItemComponentsEditor";
+import { RAILING_STYLES } from "@/lib/railingData";
 
 const INSTALL_LOCATIONS = [
   "Interior — Main Staircase",
@@ -79,6 +81,13 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
   const [calcQty, setCalcQty] = useState(null);
   const [calcBreakdown, setCalcBreakdown] = useState(null);
   const [installLocation, setInstallLocation] = useState("");
+  const [railingStyle, setRailingStyle] = useState("");
+  const [components, setComponents] = useState([]);
+  const [orgId, setOrgId] = useState(null);
+
+  useEffect(() => {
+    base44.auth.me().then(u => setOrgId(u?.organization_id || null)).catch(() => {});
+  }, []);
 
   const { data: catalog = [] } = useQuery({
     queryKey: ["serviceCatalog", "active"],
@@ -92,6 +101,31 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
   });
   const fabRate = settings[0]?.labor_fab_rate ?? 0;
   const installRate = settings[0]?.labor_install_rate ?? 0;
+
+  // Materials master list — for the component/material dropdowns on railing items
+  const { data: materials = [] } = useQuery({
+    queryKey: ["materialPriceList", orgId],
+    queryFn: () => orgId ? base44.entities.MaterialPriceList.filter({ organization_id: orgId }) : [],
+    enabled: !!orgId,
+  });
+
+  // Style → components mapping — auto-fills components when a railing style is chosen
+  const { data: styleMapResults = [] } = useQuery({
+    queryKey: ["styleComponentMap", orgId, railingStyle],
+    queryFn: () => base44.entities.StyleComponentMap.filter({ organization_id: orgId, style_name: railingStyle }),
+    enabled: !!orgId && !!selectedItem?.is_railing && !!railingStyle && railingStyle !== "Custom",
+  });
+
+  useEffect(() => {
+    if (!selectedItem?.is_railing) return;
+    if (!railingStyle || railingStyle === "Custom") {
+      setComponents([]);
+      return;
+    }
+    const map = styleMapResults[0];
+    setComponents((map?.components || []).map(c => ({ component_type: c.component_label, name: c.material_name })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [railingStyle, styleMapResults]);
 
   // Unique categories sorted by sort_order
   const categories = [...new Set(
@@ -120,6 +154,8 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
     setCalcQty(null);
     setCalcBreakdown(null);
     setInstallLocation("");
+    setRailingStyle("");
+    setComponents([]);
   }
 
   function handleClose() {
@@ -143,6 +179,8 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
     setCalcPrice(null);
     setCalcQty(null);
     setCalcBreakdown(null);
+    setRailingStyle("");
+    setComponents([]);
     setStep(STEP_PRICING);
   }
 
@@ -185,7 +223,8 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
       // Material projection flags — driven by catalog item properties, not category string
       ...(selectedItem?.is_railing ? {
         _is_railing: true,
-        _railing_style: selectedItem?.name || null,
+        _railing_style: railingStyle || selectedItem?.name || null,
+        components: components.filter(c => c.name),
       } : {}),
       ...(selectedItem?.category === "Staircase" ? {
         _is_staircase: true,
@@ -302,6 +341,29 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
                 autoFocus={isCustom}
               />
             </div>
+
+            {/* Railing style + components — only for catalog items flagged as railing */}
+            {selectedItem?.is_railing && (
+              <div className="space-y-3 border rounded-lg p-3 bg-muted/20">
+                <div>
+                  <Label className="text-xs font-medium">Railing Style</Label>
+                  <Select value={railingStyle} onValueChange={setRailingStyle}>
+                    <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Select style…" /></SelectTrigger>
+                    <SelectContent>
+                      {RAILING_STYLES.map(s => <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {railingStyle && (
+                  <LineItemComponentsEditor
+                    components={components}
+                    onChange={setComponents}
+                    materials={materials}
+                    orgId={orgId}
+                  />
+                )}
+              </div>
+            )}
 
             {/* Cost model calculator */}
             {hasCostModel && (
