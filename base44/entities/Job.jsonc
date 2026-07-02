@@ -174,10 +174,14 @@
     },
     "notes": {
       "type": "array",
-      "description": "Running log of timestamped notes, visible to and addable by any org user",
+      "description": "Running log of timestamped notes, visible to and addable by any org user. Notes can optionally be marked as a To-Do.",
       "items": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique id for this note entry"
+          },
           "text": {
             "type": "string"
           },
@@ -190,6 +194,37 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "is_todo": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether this note is a To-Do item"
+          },
+          "is_completed": {
+            "type": "boolean",
+            "default": false
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_by_id": {
+            "type": "string"
+          },
+          "completed_by_name": {
+            "type": "string"
+          },
+          "assignee_id": {
+            "type": "string",
+            "description": "Optional user assigned to this To-Do"
+          },
+          "assignee_name": {
+            "type": "string"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Optional due date for this To-Do"
           }
         }
       }

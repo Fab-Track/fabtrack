@@ -9,7 +9,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import DashboardTodosWidget from "@/components/dashboard/shared/DashboardTodosWidget";
+import DashboardTodoList from "@/components/dashboard/shared/DashboardTodoList";
 import MasterClockCard from "@/components/timetracking/MasterClockCard";
 import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 import { useOrgFilter } from "@/lib/orgContext";
@@ -140,7 +140,7 @@ export default function DesignDashboard() {
       </div>
 
       {/* ── To-Dos ── */}
-      <DashboardTodosWidget />
+      <DashboardTodoList />
 
       {/* ── Stat Cards ── */}
       <DesignStatsCards

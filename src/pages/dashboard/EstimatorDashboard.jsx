@@ -12,7 +12,7 @@ import MasterClockCard from "@/components/timetracking/MasterClockCard";
 import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import DashboardTodosWidget from "@/components/dashboard/shared/DashboardTodosWidget";
+import DashboardTodoList from "@/components/dashboard/shared/DashboardTodoList";
 import { useOrgFilter } from "@/lib/orgContext";
 
 const STATUS_COLORS = {
@@ -163,7 +163,7 @@ export default function EstimatorDashboard() {
       <EstimatorFollowUpsWidget jobs={jobs} />
 
       {/* To-Dos */}
-      <DashboardTodosWidget />
+      <DashboardTodoList />
 
       {/* Action-required table */}
       <DashWidget title="My Estimates — Action Required">

@@ -15,7 +15,7 @@ import CustomerMixCard from "@/components/dashboard/owner/CustomerMixCard";
 import CustomerLifetimeValueCard from "@/components/dashboard/owner/CustomerLifetimeValueCard";
 import PipelineVelocityCard from "@/components/dashboard/owner/PipelineVelocityCard";
 import ClosedLeadsDashboardCard from "@/components/dashboard/owner/ClosedLeadsDashboardCard";
-import DashboardTodosWidget from "@/components/dashboard/shared/DashboardTodosWidget";
+import DashboardTodoList from "@/components/dashboard/shared/DashboardTodoList";
 import { useOrgFilter } from "@/lib/orgContext";
 
 export default function OwnerDashboard() {
@@ -67,7 +67,7 @@ export default function OwnerDashboard() {
       </div>
 
       {/* Row 2 — To-Dos */}
-      <DashboardTodosWidget />
+      <DashboardTodoList />
 
       {/* Row 3 — Urgent Actions */}
       <DashWidget title="Urgent Actions">

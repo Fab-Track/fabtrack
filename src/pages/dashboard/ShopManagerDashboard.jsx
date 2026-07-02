@@ -11,7 +11,7 @@ import TodaysInstalls from "@/components/dashboard/owner/TodaysInstalls";
 import MasterClockCard from "@/components/timetracking/MasterClockCard";
 import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 import { Link } from "react-router-dom";
-import DashboardTodosWidget from "@/components/dashboard/shared/DashboardTodosWidget";
+import DashboardTodoList from "@/components/dashboard/shared/DashboardTodoList";
 import { useOrgFilter } from "@/lib/orgContext";
 
 const PROD_STAGES = ["In Fabrication", "Fab Queue", "Powder Coat", "At Powder Coat", "Ready for Install", "Install Scheduled"];
@@ -133,7 +133,7 @@ export default function ShopManagerDashboard() {
       </div>
 
       {/* To-Dos */}
-      <DashboardTodosWidget />
+      <DashboardTodoList />
 
       {/* Production Board Snapshot */}
       <DashWidget title="Production Board Snapshot" action="View Full Job Board" actionTo="/jobs">

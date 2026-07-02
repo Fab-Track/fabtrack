@@ -11,7 +11,7 @@ import DashWidget from "@/components/dashboard/shared/DashWidget";
 import MasterClockCard from "@/components/timetracking/MasterClockCard";
 import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 import { useNavigate } from "react-router-dom";
-import DashboardTodosWidget from "@/components/dashboard/shared/DashboardTodosWidget";
+import DashboardTodoList from "@/components/dashboard/shared/DashboardTodoList";
 import { toast } from "sonner";
 import { useOrgFilter } from "@/lib/orgContext";
 
@@ -137,7 +137,7 @@ export default function AccountantDashboard() {
       </div>
 
       {/* To-Dos */}
-      <DashboardTodosWidget />
+      <DashboardTodoList />
 
       {/* Overdue invoices */}
       <DashWidget title="Overdue Invoices — Priority Action">
