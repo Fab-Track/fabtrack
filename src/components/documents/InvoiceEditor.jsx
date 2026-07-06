@@ -169,7 +169,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
         }, 0);
         payload.invoice_number = `${yearPrefix}${String(maxNum + 1).padStart(4, "0")}`;
         if (prefill?.invoice_label) payload.invoice_label = prefill.invoice_label;
-        const created = await base44.entities.Invoice.create({ ...payload, view_mode: viewMode });
+        const created = await base44.entities.Invoice.create({ ...payload, view_mode: viewMode, share_token: crypto.randomUUID().replace(/-/g, "") });
         setSavedInvoice(created);
         return created;
       }

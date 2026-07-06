@@ -131,7 +131,7 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
         } : {}),
       };
       return isNew
-        ? base44.entities.Estimate.create(payload)
+        ? base44.entities.Estimate.create({ ...payload, share_token: crypto.randomUUID().replace(/-/g, "") })
         : base44.entities.Estimate.update(estimate.id, payload);
     },
     onSuccess: async () => {
