@@ -75,20 +75,20 @@ export default function UsersRolesSection() {
       return;
     }
     setInviting(true);
-    const roles = invite.roles?.length ? invite.roles : ["fabricator"];
-    const isHighPriv = roles.some(r => r === "owner" || r === "admin");
-    const platformRole = isHighPriv ? "admin" : "user";
-    await base44.users.inviteUser(invite.email, platformRole);
-    // Set the roles array on the invited user (will be applied when they register)
-    // For now, also set the legacy role field to the first role
-    const baseRole = roles[0];
-    // Note: we can't update the user entity here since invite only creates a pending user.
-    // The roles will be assigned when the user registers or when admin edits them.
-    toast.success(`Invite sent to ${invite.email}`);
-    setInviting(false);
-    setShowInvite(false);
-    setInvite({ first_name: "", last_name: "", email: "", roles: ["fabricator"], phone: "" });
-    qc.invalidateQueries({ queryKey: ["users"] });
+    try {
+      const roles = invite.roles?.length ? invite.roles : ["fabricator"];
+      const isHighPriv = roles.some(r => r === "owner" || r === "admin");
+      const platformRole = isHighPriv ? "admin" : "user";
+      await base44.users.inviteUser(invite.email, platformRole);
+      toast.success(`Invite sent to ${invite.email}`);
+      setShowInvite(false);
+      setInvite({ first_name: "", last_name: "", email: "", roles: ["fabricator"], phone: "" });
+      qc.invalidateQueries({ queryKey: ["users"] });
+    } catch (err) {
+      toast.error(err?.response?.data?.error || err?.message || "Failed to send invite");
+    } finally {
+      setInviting(false);
+    }
   }
 
   async function handleSaveEdit(form) {
