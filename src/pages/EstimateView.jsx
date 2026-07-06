@@ -6,20 +6,20 @@ import EstimateCustomerView from "@/components/estimates/EstimateCustomerView";
 import { toast } from "sonner";
 
 export default function EstimateView() {
-  const { estimateId } = useParams();
+  const { token } = useParams();
   const qc = useQueryClient();
 
   const { data, isLoading: loadingEst } = useQuery({
-    queryKey: ["estimate-public", estimateId],
+    queryKey: ["estimate-public", token],
     queryFn: async () => {
       try {
-        const res = await base44.functions.invoke("getPublicDocument", { type: "estimate", id: estimateId });
+        const res = await base44.functions.invoke("getPublicDocument", { type: "estimate", token });
         return res.data;
       } catch {
         return null;
       }
     },
-    enabled: !!estimateId,
+    enabled: !!token,
     retry: false,
   });
 
@@ -29,9 +29,9 @@ export default function EstimateView() {
   const contractText = data?.contract_text || null;
 
   const approve = useMutation({
-    mutationFn: (customerName) => base44.functions.invoke("approvePublicEstimate", { estimateId, customerName }),
+    mutationFn: (customerName) => base44.functions.invoke("approvePublicEstimate", { token, customerName }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["estimate-public", estimateId] });
+      qc.invalidateQueries({ queryKey: ["estimate-public", token] });
       toast.success("Estimate approved — thank you!");
     },
     onError: (err) => {

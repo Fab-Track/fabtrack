@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { invoice_id, cancel_url, success_url } = body;
+    const { invoice_id, cancel_url, success_url, token } = body;
 
     if (!invoice_id) {
       return Response.json({ error: 'invoice_id is required' }, { status: 400 });
@@ -64,8 +64,8 @@ Deno.serve(async (req) => {
         invoice_number: invoice.invoice_number || '',
         job_id: invoice.job_id || '',
       },
-      success_url: success_url || `${req.headers.get('origin') || ''}/invoice-view/${invoice.id}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancel_url || `${req.headers.get('origin') || ''}/invoice-view/${invoice.id}?payment=cancelled`,
+      success_url: success_url || `${req.headers.get('origin') || ''}/invoice-view/${token || invoice.share_token || invoice.id}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancel_url || `${req.headers.get('origin') || ''}/invoice-view/${token || invoice.share_token || invoice.id}?payment=cancelled`,
     });
 
     return Response.json({

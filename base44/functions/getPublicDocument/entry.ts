@@ -4,16 +4,17 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json();
-    const { type, id } = body;
+    const { type, token } = body;
 
-    if (!id || (type !== 'estimate' && type !== 'invoice')) {
-      return Response.json({ error: 'A valid type ("estimate" or "invoice") and id are required' }, { status: 400 });
+    if (!token || (type !== 'estimate' && type !== 'invoice')) {
+      return Response.json({ error: 'A valid type ("estimate" or "invoice") and token are required' }, { status: 400 });
     }
 
     const entityName = type === 'estimate' ? 'Estimate' : 'Invoice';
     let doc = null;
     try {
-      doc = await base44.asServiceRole.entities[entityName].get(id);
+      const matches = await base44.asServiceRole.entities[entityName].filter({ share_token: token });
+      doc = matches[0] || null;
     } catch {
       doc = null;
     }
@@ -68,6 +69,7 @@ Deno.serve(async (req) => {
     if (type === 'estimate') {
       documentPayload = {
         id: doc.id,
+        share_token: doc.share_token || null,
         estimate_number: doc.estimate_number || null,
         estimate_date: doc.estimate_date || null,
         expiration_date: doc.expiration_date || null,
@@ -89,6 +91,7 @@ Deno.serve(async (req) => {
     } else {
       documentPayload = {
         id: doc.id,
+        share_token: doc.share_token || null,
         invoice_number: doc.invoice_number || null,
         invoice_label: doc.invoice_label || null,
         status: doc.status || 'Unpaid',

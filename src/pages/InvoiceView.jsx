@@ -6,7 +6,7 @@ import InvoiceCustomerView from "@/components/invoices/InvoiceCustomerView";
 import { Loader2, CheckCircle2, XCircle, CreditCard } from "lucide-react";
 
 export default function InvoiceView() {
-  const { invoiceId } = useParams();
+  const { token } = useParams();
   const [searchParams] = useSearchParams();
   const paymentStatus = searchParams.get("payment");
 
@@ -14,16 +14,16 @@ export default function InvoiceView() {
   const [payError, setPayError] = useState(null);
 
   const { data, isLoading: loadingInv } = useQuery({
-    queryKey: ["invoice-public", invoiceId],
+    queryKey: ["invoice-public", token],
     queryFn: async () => {
       try {
-        const res = await base44.functions.invoke("getPublicDocument", { type: "invoice", id: invoiceId });
+        const res = await base44.functions.invoke("getPublicDocument", { type: "invoice", token });
         return res.data;
       } catch {
         return null;
       }
     },
-    enabled: !!invoiceId,
+    enabled: !!token,
     retry: false,
   });
 
@@ -37,9 +37,10 @@ export default function InvoiceView() {
     try {
       const origin = window.location.origin;
       const res = await base44.functions.invoke("createStripeCheckout", {
-        invoice_id: invoiceId,
-        success_url: `${origin}/invoice-view/${invoiceId}?payment=success`,
-        cancel_url: `${origin}/invoice-view/${invoiceId}?payment=cancelled`,
+        invoice_id: invoice.id,
+        token,
+        success_url: `${origin}/invoice-view/${token}?payment=success`,
+        cancel_url: `${origin}/invoice-view/${token}?payment=cancelled`,
       });
 
       if (res.data?.checkout_url) {

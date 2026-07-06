@@ -72,21 +72,23 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json();
-    const { estimateId, customerName } = body;
+    const { token, customerName } = body;
 
-    if (!estimateId || !customerName) {
-      return Response.json({ error: 'estimateId and customerName are required' }, { status: 400 });
+    if (!token || !customerName) {
+      return Response.json({ error: 'token and customerName are required' }, { status: 400 });
     }
 
     let estimate = null;
     try {
-      estimate = await base44.asServiceRole.entities.Estimate.get(estimateId);
+      const matches = await base44.asServiceRole.entities.Estimate.filter({ share_token: token });
+      estimate = matches[0] || null;
     } catch {
       estimate = null;
     }
     if (!estimate) {
       return Response.json({ error: 'Estimate not found' }, { status: 404 });
     }
+    const estimateId = estimate.id;
 
     if (estimate.status === 'Approved') {
       return Response.json({ error: 'This estimate has already been approved' }, { status: 400 });

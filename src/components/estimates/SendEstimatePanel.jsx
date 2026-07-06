@@ -18,15 +18,15 @@ function getPhone(customer) {
   return customer?.job_contact_phone || customer?.phone || "";
 }
 
-function getShareableLink(estimateId) {
-  return `${window.location.origin}/estimate-view/${estimateId}`;
+function getShareableLink(estimate) {
+  return `${window.location.origin}/estimate-view/${estimate?.share_token || estimate?.id}`;
 }
 
 const METHODS = ["email", "text", "both"];
 
 export default function SendEstimatePanel({ estimate, job, customer, onClose, onSent }) {
   const firstName = customer?.name?.split(" ")[0] || customer?.name || "there";
-  const link = getShareableLink(estimate?.id);
+  const link = getShareableLink(estimate);
 
   // Email fields
   const [to, setTo] = useState(getBillingEmail(customer));

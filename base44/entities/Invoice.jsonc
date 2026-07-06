@@ -10,6 +10,10 @@
       "type": "string",
       "description": "Auto-generated invoice number e.g. INV-2026-0001"
     },
+    "share_token": {
+      "type": "string",
+      "description": "Opaque random token used in public share links instead of the raw record id"
+    },
     "job_id": {
       "type": "string",
       "description": "Linked job ID"

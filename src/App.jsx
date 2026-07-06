@@ -232,8 +232,8 @@ const AuthenticatedApp = () => {
         <Route path="/setup" element={<OnboardingWizard />} />
         <Route path="/super-admin" element={<SuperAdmin />} />
         <Route path="/" element={<RootRouter />} />
-        <Route path="/estimate-view/:estimateId" element={<EstimateView />} />
-        <Route path="/invoice-view/:invoiceId" element={<InvoiceView />} />
+        <Route path="/estimate-view/:token" element={<EstimateView />} />
+        <Route path="/invoice-view/:token" element={<InvoiceView />} />
         
         {/* Main app with sidebar layout */}
         <Route element={<AppLayout />}>

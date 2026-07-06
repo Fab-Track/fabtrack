@@ -25,7 +25,7 @@ function buildDefaultMessage({ invoice, invoiceLabel, job, customer, total, bala
   const totalFmt = `$${(total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
   const dueFmt = dueDate ? format(parseISO(dueDate), "MMMM d, yyyy") : "the due date shown on your invoice";
 
-  const payLink = invoice?.id ? `\n\nView & Pay Online: ${window.location.origin}/invoice-view/${invoice.id}` : '';
+  const payLink = invoice?.id ? `\n\nView & Pay Online: ${window.location.origin}/invoice-view/${invoice.share_token || invoice.id}` : '';
 
   return `Hi ${name},
 

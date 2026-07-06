@@ -18,6 +18,10 @@
       "type": "string",
       "description": "Auto-generated estimate number e.g. EST-2026-0001"
     },
+    "share_token": {
+      "type": "string",
+      "description": "Opaque random token used in public share links instead of the raw record id"
+    },
     "estimate_date": {
       "type": "string",
       "format": "date"
