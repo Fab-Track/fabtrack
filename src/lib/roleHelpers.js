@@ -23,7 +23,7 @@ export const ALL_ROLES = [
 ];
 
 /** Roles that count as owner-level (full access) */
-export const OWNER_LEVEL_ROLES = ["owner", "admin", "manager"];
+export const OWNER_LEVEL_ROLES = ["owner", "admin", "manager", "super_admin"];
 
 /** Roles that have payroll access (approve, export, corrections) */
 export const PAYROLL_ROLES = ["owner", "admin", "payroll"];

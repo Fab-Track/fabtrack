@@ -17,6 +17,7 @@ import OrgDetail from '@/components/super-admin/OrgDetail';
 import SuperAdminAuditLog from '@/components/super-admin/SuperAdminAuditLog';
 import IssueList from '@/components/super-admin/IssueList';
 import PlatformAnalytics from '@/components/super-admin/PlatformAnalytics';
+import { hasRole } from '@/lib/roleHelpers';
 
 export default function SuperAdmin() {
   const { user } = useAuth();
@@ -27,7 +28,7 @@ export default function SuperAdmin() {
   const [ownerEmail, setOwnerEmail] = useState('');
   const [selectedOrg, setSelectedOrg] = useState(null);
 
-  const isSuperAdmin = (user?.roles || []).includes('super_admin');
+  const isSuperAdmin = hasRole(user, 'super_admin');
 
   const { data: orgsData, isLoading } = useQuery({
     queryKey: ['super-admin', 'organizations'],
