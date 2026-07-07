@@ -3,22 +3,14 @@ import { createClient } from 'npm:@base44/sdk@0.8.31';
 
 Deno.serve(async (req) => {
   try {
-    // Read Stripe keys from AppSettings first (multi-tenant), fall back to env vars
-    let stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
-    let webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
+    // Platform key and webhook signing secret come from env vars only
+    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
 
     const base44 = createClient({
       appId: Deno.env.get('BASE44_APP_ID'),
       env: 'production',
     });
-
-    try {
-      const settings = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'main' });
-      if (settings.length > 0) {
-        if (settings[0].stripe_secret_key) stripeSecretKey = settings[0].stripe_secret_key;
-        if (settings[0].stripe_webhook_secret) webhookSecret = settings[0].stripe_webhook_secret;
-      }
-    } catch { /* fall back to env vars */ }
 
     if (!stripeSecretKey) {
       return Response.json({ error: 'Stripe secret key not configured' }, { status: 500 });
@@ -86,7 +78,7 @@ Deno.serve(async (req) => {
         return Response.json({ received: true, type: 'subscription_created', org_id: orgId });
       }
 
-      // Legacy invoice payment (shop collecting from customer)
+      // Direct-charge invoice payment (shop collecting from customer via their connected account)
       const invoiceId = session.metadata?.invoice_id;
       if (!invoiceId) {
         return Response.json({ received: true, event: event.type });
@@ -95,6 +87,16 @@ Deno.serve(async (req) => {
       const invoice = await base44.asServiceRole.entities.Invoice.get(invoiceId);
       if (!invoice) {
         return Response.json({ error: 'Invoice not found' }, { status: 404 });
+      }
+
+      // For direct charges, the event carries the connected account in `event.account`.
+      // Verify it matches the invoice's organization before applying the payment.
+      const connectedAccountId = event.account;
+      if (connectedAccountId && invoice.organization_id) {
+        const org = await base44.asServiceRole.entities.Organization.get(invoice.organization_id);
+        if (org && org.stripe_account_id && org.stripe_account_id !== connectedAccountId) {
+          return Response.json({ error: 'Connected account does not match invoice organization' }, { status: 400 });
+        }
       }
 
       const paymentAmount = session.amount_total / 100;
@@ -247,6 +249,38 @@ Deno.serve(async (req) => {
       }
 
       return Response.json({ received: true, type: 'invoice_payment_failed' });
+    }
+
+    // account.updated (connected account onboarding/status changes)
+    if (event.type === 'account.updated') {
+      const account = event.data.object;
+      const accountId = account.id;
+
+      try {
+        const orgs = await base44.asServiceRole.entities.Organization.filter({ stripe_account_id: accountId });
+        const org = orgs?.[0];
+        if (org) {
+          const chargesEnabled = !!account.charges_enabled;
+          const detailsSubmitted = !!account.details_submitted;
+          let status = 'restricted';
+          if (chargesEnabled) status = 'active';
+          else if (detailsSubmitted) status = 'pending';
+          else status = 'pending';
+
+          const updateData = {
+            stripe_connect_status: status,
+            stripe_charges_enabled: chargesEnabled,
+          };
+          if (status === 'active' && !org.stripe_connected_at) {
+            updateData.stripe_connected_at = new Date().toISOString();
+          }
+          await base44.asServiceRole.entities.Organization.update(org.id, updateData);
+        }
+      } catch (err) {
+        console.error('Failed to sync account.updated:', err.message);
+      }
+
+      return Response.json({ received: true, type: 'account_updated', account_id: accountId });
     }
 
     // ── UNHANDLED EVENTS ──
