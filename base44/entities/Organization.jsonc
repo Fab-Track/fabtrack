@@ -129,6 +129,31 @@
       "type": "string",
       "format": "date-time",
       "description": "When the demo org data was last reset"
+    },
+    "stripe_account_id": {
+      "type": "string",
+      "description": "Stripe Connect account ID (acct_...) for this org's payment processing"
+    },
+    "stripe_connect_status": {
+      "type": "string",
+      "enum": [
+        "not_connected",
+        "pending",
+        "active",
+        "restricted"
+      ],
+      "default": "not_connected",
+      "description": "Status of this org's Stripe Connect account"
+    },
+    "stripe_charges_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this org's Stripe Connect account can currently accept charges"
+    },
+    "stripe_connected_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this org's Stripe Connect account was connected"
     }
   },
   "required": [
