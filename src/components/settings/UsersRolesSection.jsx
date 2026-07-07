@@ -79,11 +79,26 @@ export default function UsersRolesSection() {
       const roles = invite.roles?.length ? invite.roles : ["fabricator"];
       const isHighPriv = roles.some(r => r === "owner" || r === "admin");
       const platformRole = isHighPriv ? "admin" : "user";
-      await base44.users.inviteUser(invite.email, platformRole);
+      const invited = await base44.users.inviteUser(invite.email, platformRole);
+
+      // inviteUser doesn't scope the new User to this organization — do that now
+      // so it shows up in this org's Users & Roles table and permission checks.
+      const invitedId = invited?.id || invited?.data?.id;
+      if (invitedId) {
+        await base44.entities.User.update(invitedId, {
+          organization_id: orgId,
+          organization_name: currentUser?.organization_name || null,
+          roles,
+          role: roles[0] || "fabricator",
+          account_status: "invited",
+        });
+      }
+
       toast.success(`Invite sent to ${invite.email}`);
       setShowInvite(false);
       setInvite({ first_name: "", last_name: "", email: "", roles: ["fabricator"], phone: "" });
       qc.invalidateQueries({ queryKey: ["users"] });
+      qc.invalidateQueries({ queryKey: ["org-user-count"] });
     } catch (err) {
       toast.error(err?.response?.data?.error || err?.message || "Failed to send invite");
     } finally {
