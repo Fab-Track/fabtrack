@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     const platformRole = isHighPriv ? 'admin' : 'user';
 
     // Sends the platform invite email (or resends it for an existing invited user)
-    await base44.auth.inviteUser(email, platformRole);
+    await base44.users.inviteUser(email, platformRole);
 
     if (action === 'resend') {
       return Response.json({ success: true, resent: true });
