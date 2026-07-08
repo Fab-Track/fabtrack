@@ -2,8 +2,12 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 Deno.serve(async (req) => {
   try {
+    console.log('[inviteOrgUser] step: creating client from request');
     const base44 = createClientFromRequest(req);
+
+    console.log('[inviteOrgUser] step: calling base44.auth.me()');
     const user = await base44.auth.me();
+    console.log('[inviteOrgUser] caller user:', JSON.stringify({ id: user?.id, email: user?.email, role: user?.role, roles: user?.roles, organization_id: user?.organization_id }));
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     // Base44's inviteUser requires the caller's built-in `role` field to literally be
@@ -16,22 +20,38 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Only owners/admins can invite users' }, { status: 403 });
     }
     if (user.role !== 'admin') {
+      console.log('[inviteOrgUser] step: caller built-in role is not admin, attempting sync. current role:', user.role);
       try {
         await base44.asServiceRole.entities.User.update(user.id, { role: 'admin' });
-      } catch {
-        // The app's own owner account can't have its role changed — ignore and proceed.
+        console.log('[inviteOrgUser] step: role sync succeeded');
+      } catch (syncErr) {
+        console.log('[inviteOrgUser] step: role sync FAILED:', syncErr?.message, syncErr?.stack);
       }
     }
 
-    const { email, roles, action } = await req.json();
+    const body = await req.json();
+    console.log('[inviteOrgUser] incoming payload:', JSON.stringify(body));
+    const { email, roles, action } = body;
     if (!email) return Response.json({ error: 'Email is required' }, { status: 400 });
 
     const roleList = Array.isArray(roles) && roles.length ? roles : ['fabricator'];
     const isHighPriv = roleList.some(r => r === 'owner' || r === 'admin');
     const platformRole = isHighPriv ? 'admin' : 'user';
 
-    // Sends the platform invite email (or resends it for an existing invited user)
-    await base44.users.inviteUser(email, platformRole);
+    console.log('[inviteOrgUser] step: calling base44.users.inviteUser with', JSON.stringify({ email, platformRole }));
+    try {
+      const inviteResult = await base44.users.inviteUser(email, platformRole);
+      console.log('[inviteOrgUser] step: inviteUser succeeded:', JSON.stringify(inviteResult));
+    } catch (inviteErr) {
+      console.log('[inviteOrgUser] step: inviteUser THREW. message:', inviteErr?.message);
+      console.log('[inviteOrgUser] step: inviteUser error stack:', inviteErr?.stack);
+      console.log('[inviteOrgUser] step: inviteUser error full object:', JSON.stringify(inviteErr, Object.getOwnPropertyNames(inviteErr)));
+      if (inviteErr?.response) {
+        console.log('[inviteOrgUser] step: inviteUser error.response.status:', inviteErr.response.status);
+        console.log('[inviteOrgUser] step: inviteUser error.response.data:', JSON.stringify(inviteErr.response.data));
+      }
+      throw inviteErr;
+    }
 
     if (action === 'resend') {
       return Response.json({ success: true, resent: true });
@@ -57,6 +77,8 @@ Deno.serve(async (req) => {
 
     return Response.json({ success: true, linked });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    console.log('[inviteOrgUser] TOP-LEVEL CATCH. message:', error?.message);
+    console.log('[inviteOrgUser] TOP-LEVEL CATCH. stack:', error?.stack);
+    return Response.json({ error: error.message, stack: error?.stack }, { status: 500 });
   }
 });
