@@ -69,23 +69,26 @@ export default function UsersRolesSection() {
   const permissions = loadPermissions();
 
   async function handleInvite() {
-    if (!invite.email || !invite.first_name) { toast.error("Name and email are required"); return; }
-    if (atCap) {
-      toast.error(`User cap reached (${userCount}/${userCap}). Upgrade your plan to add more users.`);
-      return;
-    }
-    setInviting(true);
+    console.log("[UsersRolesSection] handleInvite fired", invite);
     try {
+      if (!invite.email || !invite.first_name) { toast.error("Name and email are required"); return; }
+      if (atCap) {
+        toast.error(`User cap reached (${userCount}/${userCap}). Upgrade your plan to add more users.`);
+        return;
+      }
+      setInviting(true);
+
       const roles = invite.roles?.length ? invite.roles : ["fabricator"];
       const isHighPriv = roles.some(r => r === "owner" || r === "admin");
       const platformRole = isHighPriv ? "admin" : "user";
-      const invited = await base44.users.inviteUser(invite.email, platformRole);
+      await base44.users.inviteUser(invite.email, platformRole);
+      console.log("[UsersRolesSection] inviteUser call resolved");
 
-      // inviteUser doesn't scope the new User to this organization — do that now
-      // so it shows up in this org's Users & Roles table and permission checks.
-      const invitedId = invited?.id || invited?.data?.id;
-      if (invitedId) {
-        await base44.entities.User.update(invitedId, {
+      // inviteUser doesn't scope the new User to this organization — look it up by
+      // email and set org/roles now so it shows up in this org's Users table.
+      const matches = await base44.entities.User.filter({ email: invite.email });
+      if (matches?.[0]?.id) {
+        await base44.entities.User.update(matches[0].id, {
           organization_id: orgId,
           organization_name: currentUser?.organization_name || null,
           roles,
@@ -100,6 +103,7 @@ export default function UsersRolesSection() {
       qc.invalidateQueries({ queryKey: ["users"] });
       qc.invalidateQueries({ queryKey: ["org-user-count"] });
     } catch (err) {
+      console.error("[UsersRolesSection] handleInvite error", err);
       toast.error(err?.response?.data?.error || err?.message || "Failed to send invite");
     } finally {
       setInviting(false);
