@@ -79,23 +79,8 @@ export default function UsersRolesSection() {
       setInviting(true);
 
       const roles = invite.roles?.length ? invite.roles : ["fabricator"];
-      const isHighPriv = roles.some(r => r === "owner" || r === "admin");
-      const platformRole = isHighPriv ? "admin" : "user";
-      await base44.users.inviteUser(invite.email, platformRole);
-      console.log("[UsersRolesSection] inviteUser call resolved");
-
-      // inviteUser doesn't scope the new User to this organization — look it up by
-      // email and set org/roles now so it shows up in this org's Users table.
-      const matches = await base44.entities.User.filter({ email: invite.email });
-      if (matches?.[0]?.id) {
-        await base44.entities.User.update(matches[0].id, {
-          organization_id: orgId,
-          organization_name: currentUser?.organization_name || null,
-          roles,
-          role: roles[0] || "fabricator",
-          account_status: "invited",
-        });
-      }
+      const { data } = await base44.functions.invoke("inviteOrgUser", { email: invite.email, roles });
+      console.log("[UsersRolesSection] inviteOrgUser resolved", data);
 
       toast.success(`Invite sent to ${invite.email}`);
       setShowInvite(false);
@@ -260,9 +245,7 @@ export default function UsersRolesSection() {
                           {status === "invited" && (
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Resend invite" onClick={async () => {
                               const ul = (u.roles && u.roles.length > 0) ? u.roles : (u.role ? [u.role] : ["fabricator"]);
-                              const isHighPriv = ul.some(r => r === "owner" || r === "admin");
-                              const platformRole = isHighPriv ? "admin" : "user";
-                              await base44.users.inviteUser(u.email, platformRole);
+                              await base44.functions.invoke("inviteOrgUser", { email: u.email, roles: ul, action: "resend" });
                               toast.success("Invite resent");
                             }}>
                               <RefreshCw className="w-3.5 h-3.5" />
