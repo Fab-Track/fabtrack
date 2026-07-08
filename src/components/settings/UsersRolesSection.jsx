@@ -98,7 +98,6 @@ export default function UsersRolesSection() {
   async function handleSaveEdit(form) {
     await base44.entities.User.update(editUser.id, {
       roles: form.roles,
-      role: form.roles[0] || "fabricator", // legacy field for backward compat
       organization_id: form.organization_id || null,
       organization_name: form.organization_name || null,
     });

@@ -6,6 +6,23 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
+    // Base44's inviteUser requires the caller's built-in `role` field to literally be
+    // "admin" — but this app stores its own owner/admin/etc. designation in the separate
+    // `roles` array, so the built-in field can drift to a custom value. Re-sync it here
+    // for owner-level app users so inviting doesn't fail with "Could not validate credentials".
+    const callerAppRoles = (user.roles && user.roles.length ? user.roles : (user.role ? [user.role] : [])).map(r => (r || '').toLowerCase());
+    const callerIsOwnerLevel = callerAppRoles.some(r => ['owner', 'admin', 'manager'].includes(r));
+    if (!callerIsOwnerLevel) {
+      return Response.json({ error: 'Only owners/admins can invite users' }, { status: 403 });
+    }
+    if (user.role !== 'admin') {
+      try {
+        await base44.asServiceRole.entities.User.update(user.id, { role: 'admin' });
+      } catch {
+        // The app's own owner account can't have its role changed — ignore and proceed.
+      }
+    }
+
     const { email, roles, action } = await req.json();
     if (!email) return Response.json({ error: 'Email is required' }, { status: 400 });
 
@@ -30,7 +47,6 @@ Deno.serve(async (req) => {
           organization_id: user.organization_id || null,
           organization_name: user.organization_name || null,
           roles: roleList,
-          role: roleList[0] || 'fabricator',
           account_status: 'invited',
         });
         linked = true;
