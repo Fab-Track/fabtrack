@@ -5,10 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { UserPlus, Pencil, MailOpen, Eye, Table2, Clock, ChevronRight, Ban, CheckCircle2, RefreshCw, KeyRound, X, Users, Shield } from "lucide-react";
+import { UserPlus, Pencil, Trash2, Eye, Table2, Clock, ChevronRight, Ban, CheckCircle2, RefreshCw, KeyRound, Users, Shield, Mail } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useUserCapCheck } from "@/hooks/useUserCapCheck";
 import { format } from "date-fns";
@@ -19,13 +18,13 @@ import PermissionAuditLog from "./permissions/PermissionAuditLog";
 import RoleSummaryCard from "./permissions/RoleSummaryCard";
 import RolesTab from "./RolesTab";
 import OrgCombobox from "@/components/shared/OrgCombobox";
-import { ROLES as PERM_ROLES, ROLE_LABELS, DEFAULT_PERMISSIONS } from "@/lib/permissionsData";
+import { ROLES as PERM_ROLES, DEFAULT_PERMISSIONS } from "@/lib/permissionsData";
 
 const ROLES = ["owner", "admin", "shop_manager", "estimator", "fabricator", "accountant", "design_specialist"];
 
 function statusBadge(status) {
   if (status === "active") return <Badge className="bg-green-100 text-green-700 text-xs border-0">Active</Badge>;
-  if (status === "invited") return <Badge className="bg-yellow-100 text-yellow-700 text-xs border-0">Invited</Badge>;
+  if (status === "pending_invite") return <Badge className="bg-blue-100 text-blue-700 text-xs border-0">Invited (pending)</Badge>;
   if (status === "pending_setup") return <Badge className="bg-blue-100 text-blue-700 text-xs border-0">Pending Setup</Badge>;
   if (status === "locked") return <Badge className="bg-red-100 text-red-700 text-xs border-0">Locked</Badge>;
   return <Badge variant="outline" className="text-xs text-muted-foreground">Deactivated</Badge>;
@@ -46,6 +45,8 @@ const TABS = [
   { id: "audit",   label: "Audit Log",           icon: Clock },
 ];
 
+const EMPTY_INVITE = { first_name: "", last_name: "", email: "", roles: ["fabricator"], phone: "" };
+
 export default function UsersRolesSection() {
   const qc = useQueryClient();
   const { user: currentUser } = useAuth();
@@ -53,8 +54,9 @@ export default function UsersRolesSection() {
   const isAdminOrOwner = ["admin", "owner"].includes((currentUser?.role || "").toLowerCase());
   const [tab, setTab] = useState("users");
   const [showInvite, setShowInvite] = useState(false);
+  const [editingInvite, setEditingInvite] = useState(null); // null = creating a new invite
   const [editUser, setEditUser] = useState(null);
-  const [invite, setInvite] = useState({ first_name: "", last_name: "", email: "", roles: ["fabricator"], phone: "" });
+  const [invite, setInvite] = useState(EMPTY_INVITE);
   const [inviting, setInviting] = useState(false);
   const [summaryRole, setSummaryRole] = useState(null);
   const [showDeactivated, setShowDeactivated] = useState(false);
@@ -66,32 +68,92 @@ export default function UsersRolesSection() {
     queryFn: () => orgId ? base44.entities.User.filter({ organization_id: orgId }) : [],
   });
 
+  const { data: pendingInvites = [] } = useQuery({
+    queryKey: ["pendingInvites", orgId],
+    queryFn: () => orgId ? base44.entities.PendingInvite.filter({ organization_id: orgId }) : [],
+  });
+
   const permissions = loadPermissions();
 
+  function openCreateInvite() {
+    setEditingInvite(null);
+    setInvite(EMPTY_INVITE);
+    setShowInvite(true);
+  }
+
+  function openEditInvite(inv) {
+    setEditingInvite(inv);
+    setInvite({
+      first_name: inv.first_name || "",
+      last_name: inv.last_name || "",
+      email: inv.email || "",
+      roles: inv.roles?.length ? inv.roles : ["fabricator"],
+      phone: inv.phone || "",
+    });
+    setShowInvite(true);
+  }
+
+  function closeInviteDialog() {
+    setShowInvite(false);
+    setEditingInvite(null);
+    setInvite(EMPTY_INVITE);
+  }
+
   async function handleInvite() {
-    console.log("[UsersRolesSection] handleInvite fired", invite);
     try {
       if (!invite.email || !invite.first_name) { toast.error("Name and email are required"); return; }
-      if (atCap) {
+      if (!editingInvite && atCap) {
         toast.error(`User cap reached (${userCount}/${userCap}). Upgrade your plan to add more users.`);
         return;
       }
       setInviting(true);
-
       const roles = invite.roles?.length ? invite.roles : ["fabricator"];
-      const { data } = await base44.functions.invoke("inviteOrgUser", { email: invite.email, roles });
-      console.log("[UsersRolesSection] inviteOrgUser resolved", data);
 
-      toast.success(`Invite sent to ${invite.email}`);
-      setShowInvite(false);
-      setInvite({ first_name: "", last_name: "", email: "", roles: ["fabricator"], phone: "" });
+      if (editingInvite) {
+        await base44.functions.invoke("inviteOrgUser", {
+          action: "update",
+          invite_id: editingInvite.id,
+          email: invite.email,
+          roles,
+          first_name: invite.first_name,
+          last_name: invite.last_name,
+          phone: invite.phone,
+        });
+        toast.success("Invite updated");
+      } else {
+        const { data } = await base44.functions.invoke("inviteOrgUser", {
+          action: "create",
+          email: invite.email,
+          roles,
+          first_name: invite.first_name,
+          last_name: invite.last_name,
+          phone: invite.phone,
+        });
+        if (data.email_sent) {
+          toast.success(`Invite email sent to ${invite.email}. Their account activates automatically once they register with that address.`);
+        } else {
+          toast.warning(`Invite created for ${invite.email}, but the email failed to send (${data.email_error || "unknown error"}). Let them know to register at the app using this exact email address — their account will activate automatically.`);
+        }
+      }
+
+      closeInviteDialog();
+      qc.invalidateQueries({ queryKey: ["pendingInvites"] });
       qc.invalidateQueries({ queryKey: ["users"] });
       qc.invalidateQueries({ queryKey: ["org-user-count"] });
     } catch (err) {
-      console.error("[UsersRolesSection] handleInvite error", err);
-      toast.error(err?.response?.data?.error || err?.message || "Failed to send invite");
+      toast.error(err?.response?.data?.error || err?.message || "Failed to save invite");
     } finally {
       setInviting(false);
+    }
+  }
+
+  async function handleDeleteInvite(inv) {
+    try {
+      await base44.functions.invoke("inviteOrgUser", { action: "delete", invite_id: inv.id });
+      toast.success("Invite deleted");
+      qc.invalidateQueries({ queryKey: ["pendingInvites"] });
+    } catch (err) {
+      toast.error(err?.response?.data?.error || err?.message || "Failed to delete invite");
     }
   }
 
@@ -154,7 +216,7 @@ export default function UsersRolesSection() {
                 {userCount}/{userCap} users
               </span>
             )}
-            <Button size="sm" onClick={() => setShowInvite(true)} className="gap-1.5" disabled={atCap}>
+            <Button size="sm" onClick={openCreateInvite} className="gap-1.5" disabled={atCap}>
               <UserPlus className="w-3.5 h-3.5" /> Invite User
             </Button>
           </div>
@@ -199,11 +261,36 @@ export default function UsersRolesSection() {
                 </tr>
               </thead>
               <tbody className="divide-y">
+                {pendingInvites.map(inv => (
+                  <tr key={`invite-${inv.id}`} className="bg-blue-50/40">
+                    <td className="px-4 py-3 font-medium">{[inv.first_name, inv.last_name].filter(Boolean).join(" ") || "—"}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{inv.email}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {(inv.roles || []).map(r => (
+                          <Badge key={r} variant="outline" className="text-[10px] capitalize py-0 px-1.5">{r.replace(/_/g, " ")}</Badge>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground italic">Not registered yet</td>
+                    <td className="px-4 py-3">{statusBadge("pending_invite")}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEditInvite(inv)} title="Edit invite">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteInvite(inv)} title="Delete invite">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
                 {(() => {
                   const visibleUsers = showDeactivated
                     ? users
                     : users.filter(u => (u.account_status || "active") !== "deactivated");
-                  if (visibleUsers.length === 0) {
+                  if (visibleUsers.length === 0 && pendingInvites.length === 0) {
                     return <tr><td colSpan={6} className="text-center py-8 text-muted-foreground text-sm">No users yet.</td></tr>;
                   }
                   return visibleUsers.map(u => {
@@ -241,15 +328,6 @@ export default function UsersRolesSection() {
                           <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditUser(u)} title="Edit role">
                             <Pencil className="w-3.5 h-3.5" />
                           </Button>
-                          {status === "invited" && (
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Resend invite" onClick={async () => {
-                              const ul = (u.roles && u.roles.length > 0) ? u.roles : (u.role ? [u.role] : ["fabricator"]);
-                              await base44.functions.invoke("inviteOrgUser", { email: u.email, roles: ul, action: "resend" });
-                              toast.success("Invite resent");
-                            }}>
-                              <RefreshCw className="w-3.5 h-3.5" />
-                            </Button>
-                          )}
                           {isLocked && (
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-amber-600" title="Unlock account" onClick={() => handleUnlock(u)}>
                               <CheckCircle2 className="w-3.5 h-3.5" />
@@ -299,11 +377,15 @@ export default function UsersRolesSection() {
       {/* Audit log tab */}
       {tab === "audit" && <PermissionAuditLog />}
 
-      {/* Invite modal */}
-      <Dialog open={showInvite} onOpenChange={setShowInvite}>
+      {/* Invite / edit invite modal */}
+      <Dialog open={showInvite} onOpenChange={(open) => !open && closeInviteDialog()}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Invite User</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingInvite ? "Edit Invite" : "Invite User"}</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-1">
+            <p className="text-xs text-muted-foreground flex items-start gap-1.5 bg-muted/40 rounded-md p-2">
+              <Mail className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              They'll be emailed instructions to register at FabTrack using this exact email address. Their account activates and joins your organization automatically as soon as they sign up.
+            </p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">First Name *</Label>
@@ -348,7 +430,10 @@ export default function UsersRolesSection() {
               <Input className="h-8" value={invite.phone} onChange={e => setInvite(p => ({ ...p, phone: e.target.value }))} placeholder="+1..." />
             </div>
             <Button onClick={handleInvite} disabled={inviting} className="w-full gap-1.5">
-              {inviting ? "Sending…" : <><MailOpen className="w-3.5 h-3.5" /> Send Invite</>}
+              {inviting
+                ? (editingInvite ? "Saving…" : "Sending…")
+                : <>{editingInvite ? <><Pencil className="w-3.5 h-3.5" /> Save Changes</> : <><Mail className="w-3.5 h-3.5" /> Send Invite</>}</>
+              }
             </Button>
           </div>
         </DialogContent>

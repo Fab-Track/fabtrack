@@ -104,6 +104,15 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
       setAuthChecked(true);
+
+      // Auto-link a pending org invite for brand-new users (no-op if none exists)
+      if (currentUser && !currentUser.organization_id) {
+        base44.functions.invoke('linkPendingInvite', {}).then((res) => {
+          if (res?.data?.linked) {
+            base44.auth.me().then(setUser).catch(() => {});
+          }
+        }).catch(() => {});
+      }
     } catch (error) {
       console.error('User auth check failed:', error);
       setIsLoadingAuth(false);

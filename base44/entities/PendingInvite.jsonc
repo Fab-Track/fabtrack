@@ -1,0 +1,52 @@
+{
+  "name": "PendingInvite",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
+    "organization_name": {
+      "type": "string",
+      "description": "Organization name (denormalized for email content)"
+    },
+    "first_name": {
+      "type": "string"
+    },
+    "last_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string",
+      "description": "Invitee email \u2014 matched case-insensitively against new registrations"
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Roles to apply to the user once they register with this email"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending"
+      ],
+      "default": "pending"
+    },
+    "invited_by_id": {
+      "type": "string",
+      "description": "User ID of the owner/admin who created this invite"
+    },
+    "invited_by_name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "organization_id",
+    "email"
+  ]
+}
