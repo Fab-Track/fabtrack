@@ -142,7 +142,7 @@ export default function UsersRolesSection() {
   }
 
   async function handlePasswordReset(u) {
-    await base44.auth.sendPasswordResetEmail(u.email);
+    await base44.auth.resetPasswordRequest(u.email);
     toast.success(`Password reset email sent to ${u.email}`);
   }
 
