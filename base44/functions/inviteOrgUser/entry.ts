@@ -104,6 +104,7 @@ Deno.serve(async (req) => {
       const orgName = user.organization_name || 'your company';
       const html = `<p>Hi ${first_name || ''},</p><p>You've been added to <strong>${orgName}</strong> on FabTrack.</p><p>To activate your account, please register using this exact email address: <strong>${email.trim()}</strong></p><p>Once you sign up with this email, you'll automatically be added to the team with the correct access.</p>`;
       const text = `You've been added to ${orgName} on FabTrack. Register using this exact email address: ${email.trim()}`;
+      console.log(`[inviteOrgUser] invoking sendGmail: to=${email.trim()} routing_type=system`);
       const sendRes = await base44.functions.invoke('sendGmail', {
         to: email.trim(),
         subject: `You've been invited to join ${orgName} on FabTrack`,
@@ -111,10 +112,12 @@ Deno.serve(async (req) => {
         text_body: text,
         routing_type: 'system',
       });
+      console.log(`[inviteOrgUser] sendGmail response: status=${sendRes?.status} data=${JSON.stringify(sendRes?.data)}`);
       emailSent = !!sendRes?.data?.ok;
       if (!emailSent) emailError = sendRes?.data?.error || 'Unknown email error';
     } catch (e) {
       emailError = e?.message || 'Failed to send invite email';
+      console.log(`[inviteOrgUser] sendGmail threw: ${e?.message}`);
     }
 
     return Response.json({

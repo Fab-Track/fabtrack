@@ -86,13 +86,17 @@ Deno.serve(async (req) => {
 
     // Routing rules
     if (routing_type === 'invoice' || routing_type === 'estimate' || routing_type === 'system') {
+      console.log(`[sendGmail] request: to=${to} routing_type=${routing_type} sender=system(${SYSTEM_SENDER_EMAIL})`);
       tokenData = await getValidToken(base44, 'system', null);
       if (tokenData.error) {
+        console.log(`[sendGmail] system sender unavailable: error=${tokenData.error} — no AppSettings record with setting_key="gmail_system_sender" is connected/found`);
         return Response.json({
           error: `The company billing email (${SYSTEM_SENDER_EMAIL}) isn't connected. Connect it in Settings → Integrations before sending estimates or invoices.`,
           code: 'system_sender_unavailable',
+          detail: tokenData.error,
         }, { status: 503 });
       }
+      console.log(`[sendGmail] system token resolved OK, sending from=${tokenData.from}`);
     } else if (routing_type === 'user_message') {
       if (sender_employee_id) {
         tokenData = await getValidToken(base44, 'user', sender_employee_id);
