@@ -23,6 +23,16 @@ export default function OnboardingGate({ children }) {
 
     const roles = getUserRoles(user);
     const isOwnerOrAdmin = roles.includes('owner') || roles.includes('admin');
+
+    // Self-serve, cold-start signup: no org and no assigned role at all.
+    // By this point linkPendingInvite has already been awaited in AuthContext,
+    // so a missing organization_id here means there really is no invite —
+    // send them to the Shop Setup wizard regardless of role.
+    if (!user.organization_id && !isOwnerOrAdmin && roles.length === 0) {
+      setStatus('needed');
+      return;
+    }
+
     if (!isOwnerOrAdmin) {
       // Non-owner/admin: redirect away from /setup, otherwise let through
       setStatus(isOnSetupPage ? 'done' : 'skip');

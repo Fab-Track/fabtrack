@@ -33,12 +33,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: `An organization with slug "${slug}" already exists. Choose a different name.` }, { status: 409 });
     }
 
-    // 1. Create the organization
+    // 1. Create the organization — pre-created via super admin, so the owner
+    // never sees the self-serve shop-setup wizard (they just get a welcome).
     const org = await base44.asServiceRole.entities.Organization.create({
       name,
       slug,
       is_active: true,
       plan: 'trial',
+      onboarding_completed: true,
     });
 
     // 2. Create empty starter AppSettings for this org
@@ -88,6 +90,8 @@ Deno.serve(async (req) => {
     const emailNorm = ownerEmail.trim().toLowerCase();
     const existingUsers = await base44.asServiceRole.entities.User.filter({ email: ownerEmail });
     let inviteStatus = 'invited';
+    let emailSent = null;
+    let emailError = null;
 
     if (existingUsers.length > 0) {
       // User already exists — update their organization affiliation directly
@@ -127,19 +131,27 @@ Deno.serve(async (req) => {
         invited_by_name: user.full_name || user.email,
       });
 
-      // Email the owner — failure doesn't block org creation
+      // Email the owner — failure doesn't block org creation, but is captured and
+      // reported back to the calling admin so a silent-failure isn't invisible.
       try {
         const html = `<p>Hi ${ownerName},</p><p>An organization called <strong>${name}</strong> has been created for you on FabTrack.</p><p>To activate your account as the owner, please register at <a href="https://fab-track.io">fab-track.io</a> using this exact email address: <strong>${ownerEmail.trim()}</strong></p><p>Once you sign up with this email, you'll automatically be set up as the owner of "${name}".</p>`;
         const text = `An organization called ${name} has been created for you on FabTrack. Register at fab-track.io using this exact email address: ${ownerEmail.trim()}`;
-        await base44.functions.invoke('sendGmail', {
+        const sendRes = await base44.functions.invoke('sendGmail', {
           to: ownerEmail.trim(),
           subject: `You've been set up as owner of ${name} on FabTrack`,
           html_body: html,
           text_body: text,
           routing_type: 'system',
         });
+        if (!sendRes?.data?.ok) {
+          emailSent = false;
+          emailError = sendRes?.data?.error || 'Unknown email error';
+        } else {
+          emailSent = true;
+        }
       } catch (e) {
-        // Non-fatal — invite record still exists for when they register
+        emailSent = false;
+        emailError = e?.message || 'Failed to send invite email';
       }
     }
 
@@ -169,6 +181,8 @@ Deno.serve(async (req) => {
         email: ownerEmail,
         name: ownerName,
         status: inviteStatus,
+        email_sent: emailSent,
+        email_error: emailError,
       },
     });
   } catch (error) {

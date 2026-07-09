@@ -99,20 +99,24 @@ export const AuthProvider = ({ children }) => {
     try {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
-      const currentUser = await base44.auth.me();
+      let currentUser = await base44.auth.me();
+
+      // Check for a matching PendingInvite BEFORE any onboarding routing runs —
+      // awaited (not fire-and-forget) so organization_id is resolved before
+      // OnboardingGate decides whether to send the user to the setup wizard.
+      if (currentUser && !currentUser.organization_id) {
+        try {
+          const res = await base44.functions.invoke('linkPendingInvite', {});
+          if (res?.data?.linked) {
+            currentUser = await base44.auth.me();
+          }
+        } catch {}
+      }
+
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
       setAuthChecked(true);
-
-      // Auto-link a pending org invite for brand-new users (no-op if none exists)
-      if (currentUser && !currentUser.organization_id) {
-        base44.functions.invoke('linkPendingInvite', {}).then((res) => {
-          if (res?.data?.linked) {
-            base44.auth.me().then(setUser).catch(() => {});
-          }
-        }).catch(() => {});
-      }
     } catch (error) {
       console.error('User auth check failed:', error);
       setIsLoadingAuth(false);

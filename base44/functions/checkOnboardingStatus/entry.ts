@@ -8,12 +8,21 @@ Deno.serve(async (req) => {
 
     const userRoles = (user.roles || []).map((r) => r.toLowerCase());
     const isOwnerOrAdmin = userRoles.includes('owner') || userRoles.includes('admin');
-    if (!isOwnerOrAdmin) {
+
+    const orgId = user.organization_id;
+
+    // Self-serve, cold-start signup: no org, no assigned role — they need the
+    // Shop Setup wizard to create their own organization from scratch.
+    if (!orgId) {
+      if (!isOwnerOrAdmin && userRoles.length === 0) {
+        return Response.json({ needs_onboarding: true, org: null });
+      }
       return Response.json({ needs_onboarding: false });
     }
 
-    const orgId = user.organization_id;
-    if (!orgId) return Response.json({ needs_onboarding: false });
+    if (!isOwnerOrAdmin) {
+      return Response.json({ needs_onboarding: false });
+    }
 
     // Fetch org record
     const org = await base44.asServiceRole.entities.Organization.get(orgId);

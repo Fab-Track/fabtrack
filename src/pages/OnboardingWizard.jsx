@@ -37,7 +37,10 @@ export default function OnboardingWizard() {
   const [invites, setInvites] = useState(INITIAL_INVITES);
   const [createdJob, setCreatedJob] = useState(null);
 
-  // Fetch org data on mount to pre-fill shop name
+  // Fetch org data on mount to pre-fill shop name. For a self-serve, cold-start
+  // signup there's no org yet (res.data.org is null) — orgData is set to a
+  // sentinel object so step 0 renders normally, and the org gets created when
+  // they continue past Shop Setup (see handleNextFromShop).
   useEffect(() => {
     base44.functions.invoke('checkOnboardingStatus')
       .then((res) => {
@@ -50,6 +53,8 @@ export default function OnboardingWizard() {
             shop_size: res.data.org.shop_size || '',
             default_hourly_rate: res.data.org.default_hourly_rate ?? null,
           }));
+        } else if (res.data?.needs_onboarding) {
+          setOrgData({ id: null, name: '' }); // self-serve — org not created yet
         } else {
           // Already completed or not eligible — go to dashboard
           navigate('/dashboard', { replace: true });
@@ -59,6 +64,21 @@ export default function OnboardingWizard() {
         toast.error('Failed to load onboarding data');
       });
   }, [navigate]);
+
+  const createOrgMutation = useMutation({
+    mutationFn: (payload) => base44.functions.invoke('createSelfServeOrg', payload),
+    onSuccess: (res) => {
+      if (res.data?.success) {
+        setOrgData(res.data.organization);
+        setStep(1);
+      } else {
+        toast.error(res.data?.error || 'Could not create your organization. Please try again.');
+      }
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.error || 'Could not create your organization. Please try again.');
+    },
+  });
 
   const completeMutation = useMutation({
     mutationFn: (payload) => base44.functions.invoke('completeOrgOnboarding', payload),
@@ -98,6 +118,11 @@ export default function OnboardingWizard() {
   const handleNextFromShop = () => {
     if (!step0Valid) {
       toast.error('Please fill in shop name, trade, and size.');
+      return;
+    }
+    if (!orgData?.id) {
+      // Self-serve, cold-start signup — no organization exists yet, create it now.
+      createOrgMutation.mutate(shopSettings);
       return;
     }
     setStep(1);
@@ -157,8 +182,12 @@ export default function OnboardingWizard() {
           <>
             <ShopSetupStep data={shopSettings} update={updateShop} />
             <div className="flex justify-end mt-6">
-              <Button onClick={handleNextFromShop} className="h-10 px-6">
-                Continue
+              <Button onClick={handleNextFromShop} className="h-10 px-6" disabled={createOrgMutation.isPending}>
+                {createOrgMutation.isPending ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Setting up…</>
+                ) : (
+                  'Continue'
+                )}
               </Button>
             </div>
           </>

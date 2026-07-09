@@ -57,6 +57,11 @@
       "default": "trial",
       "description": "Subscription plan tier"
     },
+    "trial_started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the org's trial period began \u2014 set on self-serve signup so trial expiry handling can be added later"
+    },
     "stripe_customer_id": {
       "type": "string",
       "description": "Stripe customer ID for billing"

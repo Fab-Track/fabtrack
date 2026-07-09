@@ -43,7 +43,11 @@ export default function SuperAdmin() {
     mutationFn: (data) => base44.functions.invoke('createOrganization', data),
     onSuccess: (res) => {
       if (res.data?.success) {
-        toast.success(`Organization "${res.data.organization.name}" created. Owner invited at ${res.data.owner.email}.`);
+        if (res.data.owner.email_sent === false) {
+          toast.error(`Org created, but the invite email failed to send: ${res.data.owner.email_error || 'unknown error'}`);
+        } else {
+          toast.success(`Organization "${res.data.organization.name}" created. Owner invited at ${res.data.owner.email}.`);
+        }
         setName('');
         setOwnerName('');
         setOwnerEmail('');

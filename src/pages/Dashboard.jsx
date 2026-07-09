@@ -75,7 +75,7 @@ export default function Dashboard() {
   const autoOpenedRef = useRef(false);
 
   const profileIncomplete =
-    !isOwnerRole && !employeeLoading && (!employee || !employee.profile_complete);
+    !!user?.organization_id && !isOwnerRole && !employeeLoading && (!employee || !employee.profile_complete);
 
   useEffect(() => {
     if (profileIncomplete && !autoOpenedRef.current) {
