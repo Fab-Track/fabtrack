@@ -84,35 +84,62 @@ Deno.serve(async (req) => {
       createdRoles[role.key] = record.id;
     }
 
-    // 3. Invite or update the owner user
-    let ownerUser = null;
+    // 3. Invite or link the owner user
+    const emailNorm = ownerEmail.trim().toLowerCase();
     const existingUsers = await base44.asServiceRole.entities.User.filter({ email: ownerEmail });
-    
+    let inviteStatus = 'invited';
+
     if (existingUsers.length > 0) {
-      // User already exists — update their organization affiliation
-      ownerUser = existingUsers[0];
+      // User already exists — update their organization affiliation directly
+      const ownerUser = existingUsers[0];
+      if (ownerUser.organization_id && ownerUser.organization_id !== org.id) {
+        // Guard: don't silently move a user out of another org they already belong to
+        await base44.asServiceRole.entities.Organization.delete(org.id);
+        return Response.json({ error: `This email already belongs to another organization ("${ownerUser.organization_name || ownerUser.organization_id}"). Remove them from that org first if you want to reassign them.` }, { status: 409 });
+      }
       await base44.asServiceRole.entities.User.update(ownerUser.id, {
         organization_id: org.id,
         organization_name: name,
         full_name: ownerName,
         roles: ['owner'],
         role_ids: [createdRoles['owner']],
+        account_status: 'active',
       });
+      inviteStatus = 'linked_existing_account';
     } else {
-      // New user — invite them as admin (platform only supports 'user'/'admin')
-      await base44.users.inviteUser(ownerEmail, 'admin');
-      
-      // Find the just-created invited user
-      const newUsers = await base44.asServiceRole.entities.User.filter({ email: ownerEmail });
-      if (newUsers.length > 0) {
-        ownerUser = newUsers[0];
-        await base44.asServiceRole.entities.User.update(ownerUser.id, {
-          organization_id: org.id,
-          organization_name: name,
-          full_name: ownerName,
-          roles: ['owner'],
-          role_ids: [createdRoles['owner']],
+      // Guard: an invite for this email must not already exist for a different org
+      const existingInvites = await base44.asServiceRole.entities.PendingInvite.filter({});
+      const dupe = existingInvites.find(i => (i.email || '').trim().toLowerCase() === emailNorm);
+      if (dupe) {
+        await base44.asServiceRole.entities.Organization.delete(org.id);
+        return Response.json({ error: `An invite for this email is already pending for organization "${dupe.organization_name || dupe.organization_id}".` }, { status: 409 });
+      }
+
+      // New user — create a PendingInvite, same mechanism as employee invites
+      await base44.asServiceRole.entities.PendingInvite.create({
+        organization_id: org.id,
+        organization_name: name,
+        first_name: ownerName,
+        email: ownerEmail.trim(),
+        roles: ['owner'],
+        status: 'pending',
+        invited_by_id: user.id,
+        invited_by_name: user.full_name || user.email,
+      });
+
+      // Email the owner — failure doesn't block org creation
+      try {
+        const html = `<p>Hi ${ownerName},</p><p>An organization called <strong>${name}</strong> has been created for you on FabTrack.</p><p>To activate your account as the owner, please register at <a href="https://fab-track.io">fab-track.io</a> using this exact email address: <strong>${ownerEmail.trim()}</strong></p><p>Once you sign up with this email, you'll automatically be set up as the owner of "${name}".</p>`;
+        const text = `An organization called ${name} has been created for you on FabTrack. Register at fab-track.io using this exact email address: ${ownerEmail.trim()}`;
+        await base44.functions.invoke('sendGmail', {
+          to: ownerEmail.trim(),
+          subject: `You've been set up as owner of ${name} on FabTrack`,
+          html_body: html,
+          text_body: text,
+          routing_type: 'system',
         });
+      } catch (e) {
+        // Non-fatal — invite record still exists for when they register
       }
     }
 
@@ -141,7 +168,7 @@ Deno.serve(async (req) => {
       owner: {
         email: ownerEmail,
         name: ownerName,
-        status: 'invited',
+        status: inviteStatus,
       },
     });
   } catch (error) {
