@@ -97,26 +97,25 @@ Deno.serve(async (req) => {
     let notifySent = false;
     let notifyError = null;
     try {
-      const html = `<p>A new self-serve trial organization was just created on FabTrack.</p>
-        <ul>
-          <li><strong>Org name:</strong> ${org.name}</li>
-          <li><strong>Owner:</strong> ${user.full_name || user.email} (${user.email})</li>
-          <li><strong>Trade:</strong> ${primary_trade}</li>
-          <li><strong>Shop size:</strong> ${shop_size}</li>
-          <li><strong>Created:</strong> ${now}</li>
-        </ul>`;
-      const text = `New self-serve trial org: ${org.name} — owner ${user.full_name || user.email} (${user.email}), trade: ${primary_trade}, size: ${shop_size}, created: ${now}`;
-      const sendRes = await base44.functions.invoke('sendGmail', {
+      const body = `A new self-serve trial organization was just created on FabTrack.
+
+Org name: ${org.name}
+Owner: ${user.full_name || user.email} (${user.email})
+Trade: ${primary_trade}
+Shop size: ${shop_size}
+Created: ${now}`;
+      console.log(`[createSelfServeOrg] invoking Core.SendEmail: to=info@fab-track.io`);
+      await base44.asServiceRole.integrations.Core.SendEmail({
         to: 'info@fab-track.io',
         subject: `New trial org created: ${org.name}`,
-        html_body: html,
-        text_body: text,
-        routing_type: 'system',
+        body,
+        from_name: 'FabTrack',
       });
-      notifySent = !!sendRes?.data?.ok;
-      if (!notifySent) notifyError = sendRes?.data?.error || 'Unknown email error';
+      notifySent = true;
+      console.log(`[createSelfServeOrg] Core.SendEmail succeeded`);
     } catch (e) {
       notifyError = e?.message || 'Failed to send notification email';
+      console.log(`[createSelfServeOrg] Core.SendEmail threw: ${e?.message}`);
     }
 
     return Response.json({

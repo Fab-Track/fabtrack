@@ -102,22 +102,28 @@ Deno.serve(async (req) => {
     let emailError = null;
     try {
       const orgName = user.organization_name || 'your company';
-      const html = `<p>Hi ${first_name || ''},</p><p>You've been added to <strong>${orgName}</strong> on FabTrack.</p><p>To activate your account, please register using this exact email address: <strong>${email.trim()}</strong></p><p>Once you sign up with this email, you'll automatically be added to the team with the correct access.</p>`;
-      const text = `You've been added to ${orgName} on FabTrack. Register using this exact email address: ${email.trim()}`;
-      console.log(`[inviteOrgUser] invoking sendGmail: to=${email.trim()} routing_type=system`);
-      const sendRes = await base44.functions.invoke('sendGmail', {
+      const body = `Hi ${first_name || ''},
+
+You've been added to "${orgName}" on FabTrack by ${user.full_name || user.email}.
+
+To activate your account, register at fab-track.io using this exact email address: ${email.trim()}
+
+Once you sign up with this email, you'll automatically be added to the team with the correct access.
+
+— The FabTrack Team`;
+      console.log(`[inviteOrgUser] invoking Core.SendEmail: to=${email.trim()}`);
+      await base44.asServiceRole.integrations.Core.SendEmail({
         to: email.trim(),
         subject: `You've been invited to join ${orgName} on FabTrack`,
-        html_body: html,
-        text_body: text,
-        routing_type: 'system',
+        body,
+        from_name: 'FabTrack',
       });
-      console.log(`[inviteOrgUser] sendGmail response: status=${sendRes?.status} data=${JSON.stringify(sendRes?.data)}`);
-      emailSent = !!sendRes?.data?.ok;
-      if (!emailSent) emailError = sendRes?.data?.error || 'Unknown email error';
+      emailSent = true;
+      console.log(`[inviteOrgUser] Core.SendEmail succeeded`);
     } catch (e) {
+      emailSent = false;
       emailError = e?.message || 'Failed to send invite email';
-      console.log(`[inviteOrgUser] sendGmail threw: ${e?.message}`);
+      console.log(`[inviteOrgUser] Core.SendEmail threw: ${e?.message}`);
     }
 
     return Response.json({

@@ -134,27 +134,28 @@ Deno.serve(async (req) => {
       // Email the owner — failure doesn't block org creation, but is captured and
       // reported back to the calling admin so a silent-failure isn't invisible.
       try {
-        const html = `<p>Hi ${ownerName},</p><p>An organization called <strong>${name}</strong> has been created for you on FabTrack.</p><p>To activate your account as the owner, please register at <a href="https://fab-track.io">fab-track.io</a> using this exact email address: <strong>${ownerEmail.trim()}</strong></p><p>Once you sign up with this email, you'll automatically be set up as the owner of "${name}".</p>`;
-        const text = `An organization called ${name} has been created for you on FabTrack. Register at fab-track.io using this exact email address: ${ownerEmail.trim()}`;
-        console.log(`[createOrganization] invoking sendGmail: to=${ownerEmail.trim()} routing_type=system`);
-        const sendRes = await base44.functions.invoke('sendGmail', {
+        const body = `Hi ${ownerName},
+
+You've been set up as the owner of "${name}" on FabTrack by ${user.full_name || user.email}.
+
+To activate your account, register at fab-track.io using this exact email address: ${ownerEmail.trim()}
+
+Once you sign up with this email, you'll automatically land in "${name}" as the owner — no additional setup needed.
+
+— The FabTrack Team`;
+        console.log(`[createOrganization] invoking Core.SendEmail: to=${ownerEmail.trim()}`);
+        await base44.asServiceRole.integrations.Core.SendEmail({
           to: ownerEmail.trim(),
           subject: `You've been set up as owner of ${name} on FabTrack`,
-          html_body: html,
-          text_body: text,
-          routing_type: 'system',
+          body,
+          from_name: 'FabTrack',
         });
-        console.log(`[createOrganization] sendGmail response: status=${sendRes?.status} data=${JSON.stringify(sendRes?.data)}`);
-        if (!sendRes?.data?.ok) {
-          emailSent = false;
-          emailError = sendRes?.data?.error || 'Unknown email error';
-        } else {
-          emailSent = true;
-        }
+        emailSent = true;
+        console.log(`[createOrganization] Core.SendEmail succeeded`);
       } catch (e) {
         emailSent = false;
         emailError = e?.message || 'Failed to send invite email';
-        console.log(`[createOrganization] sendGmail threw: ${e?.message} — full=${JSON.stringify(e?.response?.data || e)}`);
+        console.log(`[createOrganization] Core.SendEmail threw: ${e?.message}`);
       }
     }
 
