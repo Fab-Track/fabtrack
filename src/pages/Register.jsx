@@ -36,7 +36,9 @@ export default function Register() {
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [step, setStep] = useState("form"); // form | verify | done
+  const [otpCode, setOtpCode] = useState("");
+  const [resending, setResending] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -52,8 +54,7 @@ export default function Register() {
       // Use the base44 SDK via dynamic import to avoid auth-context interference
       const { base44 } = await import("@/api/base44Client");
       await base44.auth.register({ email: email.trim(), password, full_name: fullName.trim() });
-      setSuccess(true);
-      setTimeout(() => { window.location.href = "/login"; }, 2000);
+      setStep("verify");
     } catch (err) {
       const msg = (err?.message || "").toLowerCase();
       if (msg.includes("already") || msg.includes("exists")) {
@@ -65,13 +66,89 @@ export default function Register() {
     setLoading(false);
   }
 
-  if (success) {
+  async function handleVerify(e) {
+    e.preventDefault();
+    setError("");
+    if (!otpCode.trim()) { setError("Enter the verification code sent to your email."); return; }
+
+    setLoading(true);
+    try {
+      const { base44 } = await import("@/api/base44Client");
+      await base44.auth.verifyOtp({ email: email.trim(), otpCode: otpCode.trim() });
+      // Log the user straight in now that their email is verified
+      await base44.auth.loginViaEmailPassword(email.trim(), password);
+      setStep("done");
+      setTimeout(() => { window.location.href = "/dashboard"; }, 1200);
+    } catch (err) {
+      setError(err?.message || "Invalid or expired code. Please try again.");
+    }
+    setLoading(false);
+  }
+
+  async function handleResend() {
+    setError("");
+    setResending(true);
+    try {
+      const { base44 } = await import("@/api/base44Client");
+      await base44.auth.resendOtp(email.trim());
+    } catch (err) {
+      setError(err?.message || "Could not resend code.");
+    }
+    setResending(false);
+  }
+
+  if (step === "done") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-sm text-center space-y-4">
           <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
-          <h2 className="text-xl font-bold">Account created!</h2>
-          <p className="text-sm text-muted-foreground">Redirecting you to sign in…</p>
+          <h2 className="text-xl font-bold">Email verified!</h2>
+          <p className="text-sm text-muted-foreground">Signing you in…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "verify") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-sm space-y-6">
+          <div className="text-center space-y-1">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary text-primary-foreground mb-3">
+              <Lock className="w-6 h-6" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight">Verify your email</h1>
+            <p className="text-sm text-muted-foreground">Enter the code we sent to {email}</p>
+          </div>
+
+          <form onSubmit={handleVerify} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="otp">Verification Code</Label>
+              <Input
+                id="otp"
+                type="text"
+                inputMode="numeric"
+                value={otpCode}
+                onChange={e => setOtpCode(e.target.value)}
+                placeholder="123456"
+                required
+              />
+            </div>
+
+            {error && (
+              <div className="flex items-start gap-2 rounded-md bg-destructive/10 text-destructive px-3 py-2 text-sm">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Verifying…" : "Verify & Sign In"}
+            </Button>
+            <Button type="button" variant="ghost" className="w-full" disabled={resending} onClick={handleResend}>
+              {resending ? "Resending…" : "Resend code"}
+            </Button>
+          </form>
         </div>
       </div>
     );
