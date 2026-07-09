@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
       // Email the owner — failure doesn't block org creation, but is captured and
       // reported back to the calling admin so a silent-failure isn't invisible.
       try {
-        const body = `Hi ${ownerName},
+        const text = `Hi ${ownerName},
 
 You've been set up as the owner of "${name}" on FabTrack by ${user.full_name || user.email}.
 
@@ -143,19 +143,16 @@ To activate your account, register at fab-track.io using this exact email addres
 Once you sign up with this email, you'll automatically land in "${name}" as the owner — no additional setup needed.
 
 — The FabTrack Team`;
-        console.log(`[createOrganization] invoking Core.SendEmail: to=${ownerEmail.trim()}`);
-        await base44.asServiceRole.integrations.Core.SendEmail({
+        const sendRes = await base44.functions.invoke('sendInviteEmail', {
           to: ownerEmail.trim(),
           subject: `You've been set up as owner of ${name} on FabTrack`,
-          body,
-          from_name: 'FabTrack',
+          text,
         });
-        emailSent = true;
-        console.log(`[createOrganization] Core.SendEmail succeeded`);
+        emailSent = !!sendRes?.data?.ok;
+        if (!emailSent) emailError = sendRes?.data?.error || 'Unknown email error';
       } catch (e) {
         emailSent = false;
         emailError = e?.message || 'Failed to send invite email';
-        console.log(`[createOrganization] Core.SendEmail threw: ${e?.message}`);
       }
     }
 

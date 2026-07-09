@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
     let emailError = null;
     try {
       const orgName = user.organization_name || 'your company';
-      const body = `Hi ${first_name || ''},
+      const text = `Hi ${first_name || ''},
 
 You've been added to "${orgName}" on FabTrack by ${user.full_name || user.email}.
 
@@ -111,19 +111,16 @@ To activate your account, register at fab-track.io using this exact email addres
 Once you sign up with this email, you'll automatically be added to the team with the correct access.
 
 — The FabTrack Team`;
-      console.log(`[inviteOrgUser] invoking Core.SendEmail: to=${email.trim()}`);
-      await base44.asServiceRole.integrations.Core.SendEmail({
+      const sendRes = await base44.functions.invoke('sendInviteEmail', {
         to: email.trim(),
         subject: `You've been invited to join ${orgName} on FabTrack`,
-        body,
-        from_name: 'FabTrack',
+        text,
       });
-      emailSent = true;
-      console.log(`[inviteOrgUser] Core.SendEmail succeeded`);
+      emailSent = !!sendRes?.data?.ok;
+      if (!emailSent) emailError = sendRes?.data?.error || 'Unknown email error';
     } catch (e) {
       emailSent = false;
       emailError = e?.message || 'Failed to send invite email';
-      console.log(`[inviteOrgUser] Core.SendEmail threw: ${e?.message}`);
     }
 
     return Response.json({
