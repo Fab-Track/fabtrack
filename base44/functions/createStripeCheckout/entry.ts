@@ -22,6 +22,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Invoice not found' }, { status: 404 });
     }
 
+    // Tenant isolation: callers can only create checkouts for their own org's invoices
+    if (invoice.organization_id !== user.organization_id) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     if (!invoice.share_token) {
       return Response.json({ error: 'Invoice is missing a share token and cannot be paid online.' }, { status: 400 });
     }

@@ -7,7 +7,7 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json().catch(() => ({}));
-    const { type, employee_id } = body;
+    const { type, employee_id, organization_id } = body;
 
     const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID');
     const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET');
@@ -27,7 +27,9 @@ Deno.serve(async (req) => {
     }
 
     if (type === 'system') {
-      const records = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'gmail_system_sender' });
+      // Tenant isolation: never resolve the system sender without an org scope.
+      if (!organization_id) return Response.json({ error: 'organization_id required.' }, { status: 400 });
+      const records = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'gmail_system_sender', organization_id });
       if (!records.length) return Response.json({ error: 'System sender not configured.' }, { status: 404 });
       const rec = records[0];
       if (!rec.system_sender_refresh_token) {

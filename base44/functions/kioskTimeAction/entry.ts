@@ -19,12 +19,14 @@ Deno.serve(async (req) => {
 
     // ── getStatus ──────────────────────────────────────────────────────────
     if (action === "getStatus") {
-      // organization_id is mandatory — never allow a platform-wide query, which would
-      // expose every org's active timecards to an unauthenticated caller.
-      if (!body.organization_id) {
-        return Response.json({ error: "organization_id required" }, { status: 400 });
+      // Requires an authenticated app user — active timecards are never exposed
+      // to anonymous callers. The org scope is taken from the caller's own
+      // account, never from the request body.
+      const user = await base44.auth.me().catch(() => null);
+      if (!user || !user.organization_id) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
       }
-      const active = await base44.asServiceRole.entities.TimeEntry.filter({ is_active: true, organization_id: body.organization_id });
+      const active = await base44.asServiceRole.entities.TimeEntry.filter({ is_active: true, organization_id: user.organization_id });
       const activeEntries = active.map(e => ({
         employee_id: e.employee_id,
         entry_id: e.id,

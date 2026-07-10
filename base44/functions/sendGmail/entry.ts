@@ -37,9 +37,11 @@ function buildRawEmail({ from, to, subject, htmlBody, textBody }) {
   return btoa(unescape(encodeURIComponent(raw))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-async function getValidToken(base44, type, employeeId) {
+async function getValidToken(base44, type, employeeId, orgId) {
+  // Tenant isolation: every lookup must be scoped to the caller's organization.
+  if (!orgId) return { error: type === 'system' ? 'system_not_connected' : 'user_not_connected' };
   if (type === 'system') {
-    const records = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'gmail_system_sender' });
+    const records = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'gmail_system_sender', organization_id: orgId });
     if (!records.length) return { error: 'system_not_connected' };
     const rec = records[0];
     if (rec.system_sender_status !== 'connected') return { error: 'system_not_connected' };
@@ -48,7 +50,7 @@ async function getValidToken(base44, type, employeeId) {
     const expiry = rec.system_sender_token_expiry ? new Date(rec.system_sender_token_expiry) : null;
     if (!expiry || expiry <= new Date(Date.now() + 60000)) {
       // Refresh
-      const refreshRes = await base44.functions.invoke('gmailRefreshToken', { type: 'system' });
+      const refreshRes = await base44.functions.invoke('gmailRefreshToken', { type: 'system', organization_id: orgId });
       if (refreshRes.data?.error) return { error: 'system_expired' };
       return { token: refreshRes.data.access_token, from: rec.system_sender_email };
     }
@@ -57,6 +59,7 @@ async function getValidToken(base44, type, employeeId) {
     // Per-user
     const emps = await base44.asServiceRole.entities.Employee.filter({ id: employeeId });
     if (!emps.length || !emps[0].gmail_connected) return { error: 'user_not_connected' };
+    if (emps[0].organization_id !== orgId) return { error: 'user_not_connected' };
     const emp = emps[0];
     if (emp.gmail_token_status !== 'connected') return { error: 'user_expired', employee: emp };
 
@@ -87,7 +90,7 @@ Deno.serve(async (req) => {
     // Routing rules
     if (routing_type === 'invoice' || routing_type === 'estimate' || routing_type === 'system') {
       console.log(`[sendGmail] request: to=${to} routing_type=${routing_type} sender=system(${SYSTEM_SENDER_EMAIL})`);
-      tokenData = await getValidToken(base44, 'system', null);
+      tokenData = await getValidToken(base44, 'system', null, user.organization_id);
       if (tokenData.error) {
         console.log(`[sendGmail] system sender unavailable: error=${tokenData.error} — no AppSettings record with setting_key="gmail_system_sender" is connected/found`);
         return Response.json({
@@ -110,13 +113,13 @@ Deno.serve(async (req) => {
         if (!targetEmployee || (!isSelf && !isAdminInSameOrg)) {
           return Response.json({ error: 'Not authorized to send email as this employee.' }, { status: 403 });
         }
-        tokenData = await getValidToken(base44, 'user', sender_employee_id);
+        tokenData = await getValidToken(base44, 'user', sender_employee_id, user.organization_id);
       } else {
         tokenData = { error: 'user_not_connected' };
       }
       if (tokenData.error) {
         // Fallback to system sender for user messages
-        tokenData = await getValidToken(base44, 'system', null);
+        tokenData = await getValidToken(base44, 'system', null, user.organization_id);
         usingFallback = true;
         if (tokenData.error) {
           return Response.json({
