@@ -164,5 +164,37 @@
   "required": [
     "name",
     "slug"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "__deny__"
+      }
+    },
+    "read": {
+      "data.id": "{{user.data.organization_id}}"
+    },
+    "update": {
+      "$and": [
+        {
+          "data.id": "{{user.data.organization_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "owner"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": false
+  }
 }

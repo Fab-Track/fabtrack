@@ -59,5 +59,19 @@
     "admin_email",
     "action_type",
     "action_detail"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "__deny__"
+      }
+    },
+    "read": false,
+    "update": {
+      "user_condition": {
+        "role": "__deny__"
+      }
+    },
+    "delete": false
+  }
 }

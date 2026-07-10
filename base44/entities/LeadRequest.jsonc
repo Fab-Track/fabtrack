@@ -33,5 +33,19 @@
     "last_name",
     "business_name",
     "email"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "__deny__"
+      }
+    },
+    "read": false,
+    "update": {
+      "user_condition": {
+        "role": "__deny__"
+      }
+    },
+    "delete": false
+  }
 }
