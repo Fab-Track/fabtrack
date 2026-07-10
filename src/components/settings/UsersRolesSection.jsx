@@ -17,7 +17,6 @@ import RolePreviewSection from "./permissions/RolePreviewSection";
 import PermissionAuditLog from "./permissions/PermissionAuditLog";
 import RoleSummaryCard from "./permissions/RoleSummaryCard";
 import RolesTab from "./RolesTab";
-import OrgCombobox from "@/components/shared/OrgCombobox";
 import { ROLES as PERM_ROLES, DEFAULT_PERMISSIONS } from "@/lib/permissionsData";
 
 const ROLES = ["owner", "admin", "shop_manager", "estimator", "fabricator", "accountant", "design_specialist"];
@@ -52,6 +51,7 @@ export default function UsersRolesSection() {
   const { user: currentUser } = useAuth();
   const { atCap, userCap, userCount } = useUserCapCheck();
   const isAdminOrOwner = ["admin", "owner"].includes((currentUser?.role || "").toLowerCase());
+  const isSuperAdmin = (currentUser?.roles || []).includes("super_admin") || currentUser?.role === "super_admin";
   const [tab, setTab] = useState("users");
   const [showInvite, setShowInvite] = useState(false);
   const [editingInvite, setEditingInvite] = useState(null); // null = creating a new invite
@@ -157,34 +157,33 @@ export default function UsersRolesSection() {
     }
   }
 
-  async function handleSaveEdit(form) {
-    await base44.entities.User.update(editUser.id, {
-      roles: form.roles,
-      organization_id: form.organization_id || null,
-      organization_name: form.organization_name || null,
-    });
-    toast.success("User updated");
-    qc.invalidateQueries({ queryKey: ["users"] });
-    setEditUser(null);
-  }
-
   async function handleToggleActivation(u) {
     const isDeactivated = u.account_status === "deactivated";
-    await base44.entities.User.update(u.id, {
-      account_status: isDeactivated ? "active" : "deactivated",
-    });
-    toast.success(isDeactivated ? "Account reactivated" : "Account deactivated");
-    qc.invalidateQueries({ queryKey: ["users"] });
+    try {
+      await base44.functions.invoke("manageOrgUsers", {
+        organizationId: orgId,
+        action: isDeactivated ? "reactivate" : "deactivate",
+        targetEmail: u.email,
+      });
+      toast.success(isDeactivated ? "Account reactivated" : "Account deactivated");
+      qc.invalidateQueries({ queryKey: ["users"] });
+    } catch (err) {
+      toast.error(err?.response?.data?.error || err?.message || "Failed to update account status");
+    }
   }
 
   async function handleUnlock(u) {
-    await base44.entities.User.update(u.id, {
-      account_status: "active",
-      failed_login_count: 0,
-      locked_until: null,
-    });
-    toast.success("Account unlocked");
-    qc.invalidateQueries({ queryKey: ["users"] });
+    try {
+      await base44.functions.invoke("manageOrgUsers", {
+        organizationId: orgId,
+        action: "reactivate",
+        targetEmail: u.email,
+      });
+      toast.success("Account status restored. Note: lockout counters reset automatically on next successful login.");
+      qc.invalidateQueries({ queryKey: ["users"] });
+    } catch (err) {
+      toast.error(err?.response?.data?.error || err?.message || "Failed to unlock account");
+    }
   }
 
   async function handlePasswordReset(u) {
@@ -325,10 +324,10 @@ export default function UsersRolesSection() {
                       <td className="px-4 py-3">{statusBadge(status)}</td>
                       <td className="px-4 py-3">
                         <div className="flex gap-1">
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditUser(u)} title="Edit role">
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditUser(u)} title="View user details">
                             <Pencil className="w-3.5 h-3.5" />
                           </Button>
-                          {isLocked && (
+                          {isLocked && isSuperAdmin && (
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-amber-600" title="Unlock account" onClick={() => handleUnlock(u)}>
                               <CheckCircle2 className="w-3.5 h-3.5" />
                             </Button>
@@ -344,15 +343,17 @@ export default function UsersRolesSection() {
                               <KeyRound className="w-3.5 h-3.5" />
                             </Button>
                           )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className={`h-7 w-7 p-0 ${isDeactivated ? "text-green-600" : "text-muted-foreground hover:text-destructive"}`}
-                            title={isDeactivated ? "Reactivate" : "Deactivate"}
-                            onClick={() => handleToggleActivation(u)}
-                          >
-                            {isDeactivated ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Ban className="w-3.5 h-3.5" />}
-                          </Button>
+                          {isSuperAdmin && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className={`h-7 w-7 p-0 ${isDeactivated ? "text-green-600" : "text-muted-foreground hover:text-destructive"}`}
+                              title={isDeactivated ? "Reactivate" : "Deactivate"}
+                              onClick={() => handleToggleActivation(u)}
+                            >
+                              {isDeactivated ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Ban className="w-3.5 h-3.5" />}
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -439,9 +440,9 @@ export default function UsersRolesSection() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit user sheet */}
+      {/* View user sheet (read-only — role/org changes are made in the Super Admin area) */}
       {editUser && (
-        <EditUserSheet user={editUser} onClose={() => setEditUser(null)} onSave={handleSaveEdit} />
+        <EditUserSheet user={editUser} onClose={() => setEditUser(null)} />
       )}
 
       {/* Role summary card */}
@@ -461,79 +462,35 @@ export default function UsersRolesSection() {
   );
 }
 
-function EditUserSheet({ user, onClose, onSave }) {
-  const initialRoles = (user.roles && user.roles.length > 0) ? user.roles : (user.role ? [user.role] : ["fabricator"]);
-  const [form, setForm] = React.useState({
-    roles: initialRoles,
-    organization_id: user.organization_id || null,
-    organization_name: user.organization_name || "",
-  });
-
-  const { data: organizations = [] } = useQuery({
-    queryKey: ["all-organizations"],
-    queryFn: () => base44.entities.Organization.list(),
-  });
-
-  function handleOrgChange(org) {
-    setForm(p => ({
-      ...p,
-      organization_id: org?.id || null,
-      organization_name: org?.name || "",
-    }));
-  }
+function EditUserSheet({ user, onClose }) {
+  const roleList = (user.roles && user.roles.length > 0) ? user.roles : (user.role ? [user.role] : []);
 
   return (
     <Sheet open onOpenChange={onClose}>
       <SheetContent>
-        <SheetHeader><SheetTitle>Edit User — {user.full_name}</SheetTitle></SheetHeader>
+        <SheetHeader><SheetTitle>User Details — {user.full_name}</SheetTitle></SheetHeader>
         <div className="space-y-4 mt-4">
           <div>
             <Label className="text-xs">Email</Label>
             <Input className="h-8" value={user.email} disabled />
           </div>
-          <div className="space-y-2">
+          <div>
             <Label className="text-xs">Organization</Label>
-            <OrgCombobox
-              organizations={organizations}
-              value={form.organization_id}
-              onChange={handleOrgChange}
-            />
+            <Input className="h-8 bg-muted/50" value={user.organization_name || "—"} disabled />
           </div>
           <div>
-            <Label className="text-xs">Organization Name</Label>
-            <Input
-              className="h-8 bg-muted/50"
-              value={form.organization_name || ""}
-              disabled
-              placeholder="Auto-filled from organization selection"
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Roles (select multiple)</Label>
+            <Label className="text-xs">Roles</Label>
             <div className="flex flex-wrap gap-1.5 mt-1 mb-2">
-              {ROLES.map(r => {
-                const selected = form.roles.includes(r);
-                return (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setForm(p => ({
-                      ...p,
-                      roles: selected ? p.roles.filter(x => x !== r) : [...p.roles, r],
-                    }))}
-                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium capitalize border transition-colors ${
-                      selected
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-muted text-muted-foreground border-border hover:border-primary/50"
-                    }`}
-                  >
-                    {r.replace(/_/g, " ")}
-                  </button>
-                );
-              })}
+              {roleList.length === 0 ? (
+                <span className="text-xs text-muted-foreground">—</span>
+              ) : roleList.map(r => (
+                <Badge key={r} variant="outline" className="text-[11px] capitalize py-0.5 px-2">{r.replace(/_/g, " ")}</Badge>
+              ))}
             </div>
           </div>
-          <Button className="w-full" onClick={() => onSave(form)} disabled={form.roles.length === 0}>Save Changes</Button>
+          <p className="text-xs text-muted-foreground bg-muted/40 rounded-md p-2">
+            Role and organization changes are managed in the Super Admin area.
+          </p>
         </div>
       </SheetContent>
     </Sheet>
