@@ -90,16 +90,24 @@
   ],
   "rls": {
     "create": {
-      "data.organization_id": "{{user.data.organization_id}}"
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "read": {
-      "data.organization_id": "{{user.data.organization_id}}"
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "update": {
-      "data.organization_id": "{{user.data.organization_id}}"
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "delete": {
-      "data.organization_id": "{{user.data.organization_id}}"
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }
