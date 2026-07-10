@@ -53,6 +53,9 @@
       "description": "IDs of Role entity records this user holds. This is the source of truth for role assignment \u2014 the 'roles' array is kept in sync with these records' key fields.",
       "items": {
         "type": "string"
+      },
+      "rls": {
+        "write": false
       }
     },
     "account_status": {
@@ -65,7 +68,10 @@
         "deactivated"
       ],
       "default": "active",
-      "description": "Current account status"
+      "description": "Current account status",
+      "rls": {
+        "write": false
+      }
     },
     "last_login_at": {
       "type": "string",
@@ -85,7 +91,10 @@
     "two_fa_enabled": {
       "type": "boolean",
       "default": false,
-      "description": "Whether 2FA is enabled for this user"
+      "description": "Whether 2FA is enabled for this user",
+      "rls": {
+        "write": false
+      }
     },
     "two_fa_method": {
       "type": "string",
@@ -94,6 +103,18 @@
         "sms"
       ],
       "description": "Preferred 2FA delivery method"
+    },
+    "two_fa_secret": {
+      "type": "string",
+      "rls": {
+        "write": false
+      }
+    },
+    "mfa_enabled": {
+      "type": "boolean",
+      "rls": {
+        "write": false
+      }
     },
     "phone": {
       "type": "string",
