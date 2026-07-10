@@ -168,97 +168,95 @@
     "organization_id"
   ],
   "rls": {
-    "create": true,
+    "create": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
     "read": {
-      "$or": [
+      "$and": [
         {
-          "data.employee_email": "{{user.email}}"
+          "data.organization_id": "{{user.data.organization_id}}"
         },
         {
-          "user_condition": {
-            "role": "owner"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "shop_manager"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "foreman"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "payroll"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "super_admin"
-          }
+          "$or": [
+            {
+              "data.employee_email": "{{user.email}}"
+            },
+            {
+              "user_condition": {
+                "role": "owner"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "shop_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "payroll"
+              }
+            }
+          ]
         }
       ]
     },
     "update": {
-      "$or": [
+      "$and": [
         {
-          "data.employee_email": "{{user.email}}"
+          "data.organization_id": "{{user.data.organization_id}}"
         },
         {
-          "user_condition": {
-            "role": "owner"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "shop_manager"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "foreman"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "payroll"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "super_admin"
-          }
+          "$or": [
+            {
+              "data.employee_email": "{{user.email}}"
+            },
+            {
+              "user_condition": {
+                "role": "owner"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "shop_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "payroll"
+              }
+            }
+          ]
         }
       ]
     },
     "delete": {
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "owner"
-          }
+          "data.organization_id": "{{user.data.organization_id}}"
         },
         {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "super_admin"
-          }
+          "$or": [
+            {
+              "user_condition": {
+                "role": "owner"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            }
+          ]
         }
       ]
     }
