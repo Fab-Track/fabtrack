@@ -66,6 +66,7 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
           <PriorityBadge rank={job.stage_priority?.[stage]} />
           <PaymentStatusBadge status={paymentStatus} />
           {job.job_type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.job_type}</Badge>}
+          {!readOnly && (
           <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger asChild>
               <button
@@ -119,6 +120,7 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
               <PriorityMenuItems job={job} stage={stage} columnJobs={columnJobs} onApply={onPriorityChange} closeMenu={() => setMenuOpen(false)} />
             </DropdownMenuContent>
           </DropdownMenu>
+          )}
         </div>
       </div>
       <Link to={`/jobs/${job.id}?board=Shop`}>

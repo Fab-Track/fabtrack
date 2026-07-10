@@ -248,7 +248,7 @@ export default function JobBoard() {
         )}
         {activeBoard === "Shop" && (
           viewMode.Shop === "row"
-            ? <PipelineRowView jobs={filtered.Shop}    stages={SHOP_STAGES}    board="Shop"    />
+            ? <PipelineRowView jobs={filtered.Shop}    stages={SHOP_STAGES}    board="Shop"    readOnly={isFabricator} />
             : <ShopBoard    jobs={filtered.Shop}    readOnly={isFabricator} />
         )}
         {activeBoard === "Billing" && (

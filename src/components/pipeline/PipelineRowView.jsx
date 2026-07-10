@@ -62,7 +62,7 @@ function SectionHeader({ stage, count, expanded, onToggle }) {
   );
 }
 
-function PipelineJobRow({ job, index, board }) {
+function PipelineJobRow({ job, index, board, readOnly = false }) {
   const days = daysInStage(job);
   const isStale = (board === "Shop" && days > 5) || (board === "Sales" && days > 7);
 
@@ -77,7 +77,7 @@ function PipelineJobRow({ job, index, board }) {
     : null;
 
   return (
-    <Draggable draggableId={job.id} index={index}>
+    <Draggable draggableId={job.id} index={index} isDragDisabled={readOnly}>
       {(provided, snapshot) => (
         <div
           ref={provided.innerRef}
@@ -88,7 +88,7 @@ function PipelineJobRow({ job, index, board }) {
           {/* Drag handle */}
           <div
             {...provided.dragHandleProps}
-            className="px-2 py-3 opacity-0 group-hover:opacity-60 transition-opacity cursor-grab active:cursor-grabbing text-muted-foreground"
+            className={`px-2 py-3 transition-opacity text-muted-foreground ${readOnly ? "opacity-0 pointer-events-none" : "opacity-0 group-hover:opacity-60 cursor-grab active:cursor-grabbing"}`}
           >
             <GripVertical className="w-4 h-4" />
           </div>
@@ -178,7 +178,7 @@ function PipelineJobRow({ job, index, board }) {
  *   stages – ordered stage list (SALES_STAGES / SHOP_STAGES / BILLING_STAGES)
  *   board – "Sales" | "Shop" | "Billing"
  */
-export default function PipelineRowView({ jobs, stages, board }) {
+export default function PipelineRowView({ jobs, stages, board, readOnly = false }) {
   const qc = useQueryClient();
   const [collapsed, setCollapsed] = useState({});
   const [isDragging, setIsDragging] = useState(false);
@@ -210,7 +210,7 @@ export default function PipelineRowView({ jobs, stages, board }) {
 
   function handleDragEnd(result) {
     setIsDragging(false);
-    if (!result.destination) return;
+    if (readOnly || !result.destination) return;
     const { draggableId, source, destination } = result;
     const srcStage = source.droppableId;
     const dstStage = destination.droppableId;
@@ -272,7 +272,7 @@ export default function PipelineRowView({ jobs, stages, board }) {
                       className={`min-h-[36px] transition-colors ${snapshot.isDraggingOver ? "bg-accent/10" : ""}`}
                     >
                       {stageJobs.map((job, i) => (
-                        <PipelineJobRow key={job.id} job={job} index={i} board={board} />
+                        <PipelineJobRow key={job.id} job={job} index={i} board={board} readOnly={readOnly} />
                       ))}
                       {provided.placeholder}
                       {stageJobs.length === 0 && (
