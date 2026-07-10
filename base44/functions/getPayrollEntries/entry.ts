@@ -17,11 +17,12 @@ Deno.serve(async (req) => {
     const isManager = normalizedRoles.some(r => managerRoles.includes(r));
     if (!isManager) return Response.json({ error: 'Access denied — manager role required' }, { status: 403 });
 
-    const body = await req.json().catch(() => ({}));
-    const orgId = body.organization_id || user.organization_id || null;
+    // Always scope to the caller's own organization — never trust a client-supplied
+    // organization_id, which would let a manager in one org read another org's payroll.
+    const orgId = user.organization_id || null;
+    if (!orgId) return Response.json({ error: 'No organization associated with this account' }, { status: 403 });
 
-    const filter = orgId ? { organization_id: orgId } : {};
-    const entries = await base44.asServiceRole.entities.TimeEntry.filter(filter, '-clock_in', 2000);
+    const entries = await base44.asServiceRole.entities.TimeEntry.filter({ organization_id: orgId }, '-clock_in', 2000);
 
     return Response.json({ entries });
   } catch (error) {

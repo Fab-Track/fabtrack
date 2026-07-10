@@ -99,6 +99,17 @@ Deno.serve(async (req) => {
       console.log(`[sendGmail] system token resolved OK, sending from=${tokenData.from}`);
     } else if (routing_type === 'user_message') {
       if (sender_employee_id) {
+        // Only allow sending as: the caller's own linked employee record, or — for
+        // owners/admins — another employee within the caller's own organization.
+        const senderEmp = await base44.asServiceRole.entities.Employee.filter({ id: sender_employee_id });
+        const targetEmployee = senderEmp[0];
+        const callerRoles = (user.roles || (user.role ? [user.role] : [])).map(r => r.toLowerCase());
+        const isSelf = targetEmployee && targetEmployee.user_id === user.id;
+        const isAdminInSameOrg = targetEmployee && targetEmployee.organization_id === user.organization_id && (callerRoles.includes('owner') || callerRoles.includes('admin'));
+
+        if (!targetEmployee || (!isSelf && !isAdminInSameOrg)) {
+          return Response.json({ error: 'Not authorized to send email as this employee.' }, { status: 403 });
+        }
         tokenData = await getValidToken(base44, 'user', sender_employee_id);
       } else {
         tokenData = { error: 'user_not_connected' };

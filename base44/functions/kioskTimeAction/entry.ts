@@ -19,10 +19,12 @@ Deno.serve(async (req) => {
 
     // ── getStatus ──────────────────────────────────────────────────────────
     if (action === "getStatus") {
-      const filter = body.organization_id
-        ? { is_active: true, organization_id: body.organization_id }
-        : { is_active: true };
-      const active = await base44.asServiceRole.entities.TimeEntry.filter(filter);
+      // organization_id is mandatory — never allow a platform-wide query, which would
+      // expose every org's active timecards to an unauthenticated caller.
+      if (!body.organization_id) {
+        return Response.json({ error: "organization_id required" }, { status: 400 });
+      }
+      const active = await base44.asServiceRole.entities.TimeEntry.filter({ is_active: true, organization_id: body.organization_id });
       const activeEntries = active.map(e => ({
         employee_id: e.employee_id,
         entry_id: e.id,

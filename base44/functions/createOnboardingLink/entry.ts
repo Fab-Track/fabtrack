@@ -11,6 +11,13 @@ Deno.serve(async (req) => {
     const { employee_id, employee_name } = await req.json();
     if (!employee_id) return Response.json({ error: "employee_id required" }, { status: 400 });
 
+    // Verify the target employee belongs to the caller's own organization —
+    // otherwise an admin in org A could hijack/delete another org's onboarding survey.
+    const employee = await base44.asServiceRole.entities.Employee.get(employee_id);
+    if (!employee || employee.organization_id !== user.organization_id) {
+      return Response.json({ error: "Employee not found" }, { status: 404 });
+    }
+
     // Generate a unique token
     const array = new Uint8Array(24);
     crypto.getRandomValues(array);
