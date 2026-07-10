@@ -4,7 +4,10 @@
   "properties": {
     "organization_id": {
       "type": "string",
-      "description": "Organization ID this user belongs to (null for super admins)"
+      "description": "Organization ID this user belongs to (null for super admins)",
+      "rls": {
+        "write": false
+      }
     },
     "organization_name": {
       "type": "string",
