@@ -77,10 +77,26 @@ Deno.serve(async (req) => {
       return Response.json({ entry });
     }
 
+    // ── PIN verification for all entry mutations ────────────────────────────
+    // Anyone can reach this public endpoint, so clockOut/startBreak/endBreak
+    // must prove identity via the employee's kiosk PIN (same as clockIn).
+    async function getVerifiedEntry(entryId, pin) {
+      if (!entryId) return { error: Response.json({ error: "entry_id required" }, { status: 400 }) };
+      const entry = await base44.asServiceRole.entities.TimeEntry.get(entryId).catch(() => null);
+      if (!entry) return { error: Response.json({ error: "Entry not found" }, { status: 404 }) };
+      const employee = await base44.asServiceRole.entities.Employee.get(entry.employee_id).catch(() => null);
+      if (!employee) return { error: Response.json({ error: "Employee not found" }, { status: 404 }) };
+      if (employee.pin && pin !== employee.pin) {
+        return { error: Response.json({ error: "Invalid PIN" }, { status: 403 }) };
+      }
+      return { entry };
+    }
+
     // ── clockOut ────────────────────────────────────────────────────────────
     if (action === "clockOut") {
-      const entry = await base44.asServiceRole.entities.TimeEntry.get(body.entry_id);
-      if (!entry) return Response.json({ error: "Entry not found" }, { status: 404 });
+      const verified = await getVerifiedEntry(body.entry_id, body.pin);
+      if (verified.error) return verified.error;
+      const entry = verified.entry;
       if (!entry.is_active) return Response.json({ error: "Entry already clocked out" }, { status: 400 });
 
       const now = new Date();
@@ -116,8 +132,10 @@ Deno.serve(async (req) => {
 
     // ── startBreak ──────────────────────────────────────────────────────────
     if (action === "startBreak") {
-      const entry = await base44.asServiceRole.entities.TimeEntry.get(body.entry_id);
-      if (!entry || !entry.is_active) return Response.json({ error: "No active entry" }, { status: 400 });
+      const verified = await getVerifiedEntry(body.entry_id, body.pin);
+      if (verified.error) return verified.error;
+      const entry = verified.entry;
+      if (!entry.is_active) return Response.json({ error: "No active entry" }, { status: 400 });
       if (entry.is_on_break) return Response.json({ error: "Already on break" }, { status: 400 });
 
       const updated = await base44.asServiceRole.entities.TimeEntry.update(entry.id, {
@@ -129,8 +147,10 @@ Deno.serve(async (req) => {
 
     // ── endBreak ────────────────────────────────────────────────────────────
     if (action === "endBreak") {
-      const entry = await base44.asServiceRole.entities.TimeEntry.get(body.entry_id);
-      if (!entry || !entry.is_active) return Response.json({ error: "No active entry" }, { status: 400 });
+      const verified = await getVerifiedEntry(body.entry_id, body.pin);
+      if (verified.error) return verified.error;
+      const entry = verified.entry;
+      if (!entry.is_active) return Response.json({ error: "No active entry" }, { status: 400 });
       if (!entry.is_on_break) return Response.json({ error: "Not on break" }, { status: 400 });
 
       const now = new Date();

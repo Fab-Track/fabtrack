@@ -1,5 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
+// HMAC-SHA256 signature (hex) — must match the signature created by calendarOAuthStart.
+async function hmacHex(secret, data) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // Handles the OAuth callback from Google Calendar authorization.
 // Exchanges the code for tokens and stores them on the Employee entity.
 Deno.serve(async (req) => {
@@ -26,18 +33,30 @@ Deno.serve(async (req) => {
       );
     }
 
-    let state;
-    try {
-      state = JSON.parse(atob(stateB64));
-    } catch {
+    const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID');
+    const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET');
+
+    // Verify the HMAC-signed state before trusting anything inside it.
+    // State format: base64(json) + "." + hmacHex — created by calendarOAuthStart.
+    let state = null;
+    if (clientSecret) {
+      const dotIdx = stateB64.indexOf('.');
+      if (dotIdx > 0) {
+        const data = stateB64.slice(0, dotIdx);
+        const sig = stateB64.slice(dotIdx + 1);
+        const expected = await hmacHex(clientSecret, data);
+        if (sig === expected) {
+          try { state = JSON.parse(atob(data)); } catch { /* invalid */ }
+        }
+      }
+    }
+    if (!state) {
       return new Response(
-        '<html><body><script>window.close();</script><p>Invalid state. You can close this window.</p></body></html>',
+        '<html><body><script>window.close();</script><p>Invalid or tampered state. Please restart the connection from Settings. You can close this window.</p></body></html>',
         { headers: { 'Content-Type': 'text/html' } }
       );
     }
 
-    const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID');
-    const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET');
     if (!clientId || !clientSecret) {
       return new Response(
         '<html><body><script>window.close();</script><p>OAuth not configured. You can close this window.</p></body></html>',

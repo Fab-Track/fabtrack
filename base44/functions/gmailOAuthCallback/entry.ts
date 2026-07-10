@@ -22,6 +22,13 @@ function redirectTo(url) {
   return new Response(null, { status: 302, headers: { Location: url } });
 }
 
+// HMAC-SHA256 signature (hex) — must match the signature created by gmailOAuthStart.
+async function hmacHex(secret, data) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 Deno.serve(async (req) => {
   const url = new URL(req.url);
   const code = url.searchParams.get('code');
@@ -31,25 +38,42 @@ Deno.serve(async (req) => {
   const appId = Deno.env.get('BASE44_APP_ID');
   const redirectUri = `https://api.base44.com/api/apps/${appId}/functions/gmailOAuthCallback`;
 
-  // Decode state early so we know which page to return to on error
+  const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID');
+  const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET');
+
+  // Verify the HMAC-signed state before trusting anything inside it.
+  // State format: base64(json) + "." + hmacHex — created by gmailOAuthStart.
   let state = { type: 'system' };
-  if (stateB64) {
-    try { state = JSON.parse(atob(stateB64)); } catch { /* fallback to system */ }
+  let stateValid = false;
+  if (stateB64 && clientSecret) {
+    const dotIdx = stateB64.indexOf('.');
+    if (dotIdx > 0) {
+      const data = stateB64.slice(0, dotIdx);
+      const sig = stateB64.slice(dotIdx + 1);
+      const expected = await hmacHex(clientSecret, data);
+      if (sig === expected) {
+        try {
+          state = JSON.parse(atob(data));
+          stateValid = true;
+        } catch { /* invalid */ }
+      }
+    }
   }
 
   if (errorParam) {
     return redirectTo(buildReturnUrl(state.type, 'error', `Authorization cancelled: ${errorParam}`));
   }
 
+  if (!clientId || !clientSecret) {
+    return redirectTo(buildReturnUrl(state.type, 'error', 'OAuth credentials not configured on the server.'));
+  }
+
   if (!code || !stateB64) {
     return redirectTo(buildReturnUrl(state.type, 'error', 'Missing authorization code.'));
   }
 
-  const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID');
-  const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET');
-
-  if (!clientId || !clientSecret) {
-    return redirectTo(buildReturnUrl(state.type, 'error', 'OAuth credentials not configured on the server.'));
+  if (!stateValid) {
+    return redirectTo(buildReturnUrl('system', 'error', 'Invalid or tampered authorization state. Please restart the connection from Settings.'));
   }
 
   try {

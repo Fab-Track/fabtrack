@@ -1,5 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
+// HMAC-SHA256 signature (hex) so the OAuth state can't be tampered with client-side.
+async function hmacHex(secret, data) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // Starts the Google Calendar OAuth flow. Returns a redirect URL for the frontend to open.
 Deno.serve(async (req) => {
   try {
@@ -8,13 +15,15 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID');
-    if (!clientId) return Response.json({ error: 'GOOGLE_OAUTH_CLIENT_ID not configured.' }, { status: 500 });
+    const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET');
+    if (!clientId || !clientSecret) return Response.json({ error: 'OAuth credentials not configured.' }, { status: 500 });
 
     const appId = Deno.env.get('BASE44_APP_ID');
     const redirectUri = `https://api.base44.com/api/apps/${appId}/functions/calendarOAuthCallback`;
 
     const state = JSON.stringify({ user_id: user.id });
-    const stateB64 = btoa(state);
+    const stateData = btoa(state);
+    const stateB64 = `${stateData}.${await hmacHex(clientSecret, stateData)}`;
 
     const scopes = [
       'https://www.googleapis.com/auth/calendar.events',

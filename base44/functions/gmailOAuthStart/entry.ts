@@ -1,5 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
+// HMAC-SHA256 signature (hex) so the OAuth state can't be tampered with client-side.
+async function hmacHex(secret, data) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // Starts the Gmail OAuth flow. Returns a redirect URL for the frontend to open.
 // Query params: type = "system" | "user", employee_id (for user type)
 Deno.serve(async (req) => {
@@ -16,14 +23,31 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Only owners can connect the system sender.' }, { status: 403 });
     }
 
+    // For per-user connections, verify the caller is allowed to connect this employee's Gmail
+    if (type !== 'system') {
+      if (!employee_id) return Response.json({ error: 'employee_id required.' }, { status: 400 });
+      const emp = await base44.asServiceRole.entities.Employee.get(employee_id).catch(() => null);
+      if (!emp || emp.organization_id !== user.organization_id) {
+        return Response.json({ error: 'Employee not found in your organization.' }, { status: 403 });
+      }
+      const isAdmin = ['admin', 'owner', 'super_admin'].includes(user.role);
+      const isSelf = emp.user_id === user.id ||
+        (emp.email && user.email && emp.email.toLowerCase() === user.email.toLowerCase());
+      if (!isAdmin && !isSelf) {
+        return Response.json({ error: 'You can only connect your own Gmail account.' }, { status: 403 });
+      }
+    }
+
     const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID');
-    if (!clientId) return Response.json({ error: 'GOOGLE_OAUTH_CLIENT_ID not configured.' }, { status: 500 });
+    const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET');
+    if (!clientId || !clientSecret) return Response.json({ error: 'OAuth credentials not configured.' }, { status: 500 });
 
     const appId = Deno.env.get('BASE44_APP_ID');
     const redirectUri = `https://api.base44.com/api/apps/${appId}/functions/gmailOAuthCallback`;
 
     const state = JSON.stringify({ type, employee_id: employee_id || null, user_id: user.id });
-    const stateB64 = btoa(state);
+    const stateData = btoa(state);
+    const stateB64 = `${stateData}.${await hmacHex(clientSecret, stateData)}`;
 
     const scopes = [
       'https://www.googleapis.com/auth/gmail.send',
