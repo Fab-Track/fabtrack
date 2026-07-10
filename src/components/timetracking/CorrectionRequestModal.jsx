@@ -16,6 +16,7 @@ export default function CorrectionRequestModal({ open, onClose, employee, dayEnt
     mutationFn: () => {
       const entryId = dayEntries.length === 1 ? dayEntries[0].id : null;
       return base44.entities.CorrectionRequest.create({
+        organization_id: employee.organization_id,
         employee_id: employee.id,
         employee_name: employee.name,
         time_entry_id: entryId,
@@ -32,6 +33,7 @@ export default function CorrectionRequestModal({ open, onClose, employee, dayEnt
       setDescription("");
       onClose();
     },
+    onError: (err) => toast.error(err?.message || "Failed to submit correction request. Please try again."),
   });
 
   if (!dayEntries || dayEntries.length === 0) return null;
