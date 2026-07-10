@@ -242,6 +242,16 @@ export default function Sidebar() {
   const navGroups = getUnionNavGroups(userRoles);
   const mobileItems = getMobileItems(navGroups);
 
+  // Org record — for name + logo in the header
+  const { data: org } = useQuery({
+    queryKey: ["sidebar-org", user?.organization_id],
+    queryFn: () => base44.entities.Organization.get(user.organization_id),
+    enabled: !!user?.organization_id,
+    staleTime: 5 * 60 * 1000,
+  });
+  const orgName = org?.name || user?.organization_name || (isSuperAdmin ? "FabTrack" : "My Organization");
+  const orgLogo = org?.logo_url;
+
   // Unread message count for badge
   const { data: channels = [] } = useQuery({
     queryKey: ["channels"],
@@ -301,16 +311,17 @@ export default function Sidebar() {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border shrink-0">
-        <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
-          <Wrench className="w-4 h-4 text-sidebar-primary-foreground" />
-        </div>
+        {orgLogo ? (
+          <img src={orgLogo} alt={orgName} className="w-8 h-8 rounded-lg object-contain bg-white/90 p-0.5 shrink-0" />
+        ) : (
+          <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center shrink-0">
+            <Wrench className="w-4 h-4 text-sidebar-primary-foreground" />
+          </div>
+        )}
         {!collapsed && (
-          <div className="flex flex-col">
-            <span className="font-bold text-sm text-white tracking-wide">FABTRACK</span>
+          <div className="flex flex-col min-w-0">
+            <span className="font-bold text-sm text-white tracking-wide truncate">{orgName}</span>
             <span className="text-[11px] text-sidebar-foreground/60 font-medium leading-tight truncate">
-              {isSuperAdmin ? "Platform Owner" : (user?.organization_name || "My Organization")}
-            </span>
-            <span className="text-[10px] text-sidebar-foreground/50 font-medium leading-tight">
               {isSuperAdmin ? "Super Admin" : getPrimaryRoleLabel(userRoles)}
             </span>
           </div>
@@ -400,11 +411,15 @@ export default function Sidebar() {
         <button onClick={() => setMobileOpen(true)} className="text-white min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2">
           <Menu className="w-5 h-5" />
         </button>
-        <div className="flex items-center gap-2 ml-3">
-          <div className="w-6 h-6 rounded bg-sidebar-primary flex items-center justify-center">
-            <Wrench className="w-3 h-3 text-sidebar-primary-foreground" />
-          </div>
-          <span className="font-bold text-sm text-white">FABTRACK</span>
+        <div className="flex items-center gap-2 ml-3 min-w-0">
+          {orgLogo ? (
+            <img src={orgLogo} alt={orgName} className="w-6 h-6 rounded object-contain bg-white/90 p-0.5 shrink-0" />
+          ) : (
+            <div className="w-6 h-6 rounded bg-sidebar-primary flex items-center justify-center shrink-0">
+              <Wrench className="w-3 h-3 text-sidebar-primary-foreground" />
+            </div>
+          )}
+          <span className="font-bold text-sm text-white truncate">{orgName}</span>
         </div>
       </div>
 
