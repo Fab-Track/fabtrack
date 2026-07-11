@@ -44,7 +44,10 @@ Deno.serve(async (req) => {
     if (action === "clockIn") {
       const employee = await base44.asServiceRole.entities.Employee.get(body.employee_id);
       if (!employee) return Response.json({ error: "Employee not found" }, { status: 404 });
-      if (employee.pin && body.pin !== employee.pin) {
+      if (!employee.pin) {
+        return Response.json({ error: "No kiosk PIN set for this employee. Ask your manager to set one before clocking in." }, { status: 403 });
+      }
+      if (body.pin !== employee.pin) {
         return Response.json({ error: "Invalid PIN" }, { status: 403 });
       }
 
@@ -88,7 +91,10 @@ Deno.serve(async (req) => {
       if (!entry) return { error: Response.json({ error: "Entry not found" }, { status: 404 }) };
       const employee = await base44.asServiceRole.entities.Employee.get(entry.employee_id).catch(() => null);
       if (!employee) return { error: Response.json({ error: "Employee not found" }, { status: 404 }) };
-      if (employee.pin && pin !== employee.pin) {
+      if (!employee.pin) {
+        return { error: Response.json({ error: "No kiosk PIN set for this employee. Ask your manager to set one." }, { status: 403 }) };
+      }
+      if (pin !== employee.pin) {
         return { error: Response.json({ error: "Invalid PIN" }, { status: 403 }) };
       }
       return { entry };

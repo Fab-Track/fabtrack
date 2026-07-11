@@ -6,8 +6,19 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+
+    // Auth required — this endpoint returns live Gmail access tokens.
+    const user = await base44.auth.me().catch(() => null);
+    if (!user || !user.organization_id) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const callerRoles = [user.role, ...(user.roles || [])].filter(Boolean);
+    const isAdmin = callerRoles.some(r => ['admin', 'owner', 'super_admin'].includes(r));
+
     const body = await req.json().catch(() => ({}));
-    const { type, employee_id, organization_id } = body;
+    const { type, employee_id } = body;
+    // Org scope always comes from the caller's own account, never the request body.
+    const organization_id = user.organization_id;
 
     const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID');
     const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET');
@@ -50,9 +61,14 @@ Deno.serve(async (req) => {
       return Response.json({ access_token: tokens.access_token, expires_at: expiresAt });
     } else {
       if (!employee_id) return Response.json({ error: 'employee_id required.' }, { status: 400 });
-      const emps = await base44.asServiceRole.entities.Employee.filter({ id: employee_id });
+      const emps = await base44.asServiceRole.entities.Employee.filter({ id: employee_id, organization_id });
       if (!emps.length) return Response.json({ error: 'Employee not found.' }, { status: 404 });
       const emp = emps[0];
+      // Caller must be this employee or an org admin/owner.
+      const isSelf = emp.user_id === user.id || (emp.email && emp.email.toLowerCase() === (user.email || '').toLowerCase());
+      if (!isSelf && !isAdmin) {
+        return Response.json({ error: 'Forbidden' }, { status: 403 });
+      }
       if (!emp.gmail_refresh_token) {
         await base44.asServiceRole.entities.Employee.update(employee_id, { gmail_token_status: 'expired' });
         return Response.json({ error: 'No refresh token — reconnect required.' }, { status: 401 });
