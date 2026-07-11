@@ -89,6 +89,13 @@ Deno.serve(async (req) => {
 
     // Routing rules
     if (routing_type === 'invoice' || routing_type === 'estimate' || routing_type === 'system') {
+      // Privileged routing types send fully custom content from the org's official
+      // billing identity — restrict to roles that legitimately send estimates/invoices.
+      const callerRoles = (user.roles || (user.role ? [user.role] : [])).map(r => r.toLowerCase());
+      const allowedSystemSenderRoles = ['owner', 'admin', 'estimator', 'accountant', 'shop_manager'];
+      if (!callerRoles.some(r => allowedSystemSenderRoles.includes(r))) {
+        return Response.json({ error: 'Not authorized to send email from the company billing address.' }, { status: 403 });
+      }
       console.log(`[sendGmail] request: to=${to} routing_type=${routing_type} sender=system(${SYSTEM_SENDER_EMAIL})`);
       tokenData = await getValidToken(base44, 'system', null, user.organization_id);
       if (tokenData.error) {
