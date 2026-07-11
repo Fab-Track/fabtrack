@@ -10,9 +10,9 @@ Deno.serve(async (req) => {
 
     // Parse payload from entity automation
     const payload = await req.json();
-    const { event, data: job, changed_fields } = payload;
+    const { data, changed_fields } = payload;
 
-    if (!job || !job.id) {
+    if (!data || !data.id) {
       return Response.json({ ok: false, reason: "No job data" }, { status: 400 });
     }
 
@@ -21,6 +21,13 @@ Deno.serve(async (req) => {
       return Response.json({ ok: false, reason: "Stage not changed" });
     }
 
+    // Never trust the request body — re-fetch the job and verify its ACTUAL
+    // stage in the database. A forged payload can't archive channels for a
+    // job that isn't genuinely Paid / Closed.
+    const job = await base44.asServiceRole.entities.Job.get(data.id).catch(() => null);
+    if (!job) {
+      return Response.json({ ok: false, reason: "Job not found" }, { status: 404 });
+    }
     if (job.stage !== "Paid / Closed") {
       return Response.json({ ok: false, reason: `Stage is ${job.stage}, not Paid / Closed` });
     }
