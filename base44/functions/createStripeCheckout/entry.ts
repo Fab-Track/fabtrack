@@ -64,6 +64,12 @@ Deno.serve(async (req) => {
 
     const origin = req.headers.get('origin') || '';
 
+    // Prevent open redirect: only accept relative paths (e.g. "/invoice-view/...")
+    // for custom redirect URLs — never attacker-supplied absolute URLs.
+    const safePath = (p) => (typeof p === 'string' && p.startsWith('/') && !p.startsWith('//')) ? `${origin}${p}` : null;
+    const safeSuccessUrl = safePath(success_url);
+    const safeCancelUrl = safePath(cancel_url);
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
@@ -87,8 +93,8 @@ Deno.serve(async (req) => {
         job_id: invoice.job_id || '',
         organization_id: org.id,
       },
-      success_url: success_url || `${origin}/invoice-view/${invoice.share_token}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancel_url || `${origin}/invoice-view/${invoice.share_token}?payment=cancelled`,
+      success_url: safeSuccessUrl || `${origin}/invoice-view/${invoice.share_token}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: safeCancelUrl || `${origin}/invoice-view/${invoice.share_token}?payment=cancelled`,
     }, {
       stripeAccount: org.stripe_account_id,
     });

@@ -23,8 +23,13 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'entry_id and clock_out are required' }, { status: 400 });
     }
 
-    const entry = await base44.asServiceRole.entities.TimeEntry.get(entry_id);
+    const entry = await base44.asServiceRole.entities.TimeEntry.get(entry_id).catch(() => null);
     if (!entry) return Response.json({ error: 'Entry not found' }, { status: 404 });
+
+    // Tenant isolation: managers can only resolve entries in their own org
+    if (!user.organization_id || entry.organization_id !== user.organization_id) {
+      return Response.json({ error: 'Entry not found' }, { status: 404 });
+    }
 
     const clockOutDate = new Date(clock_out);
     const clockIn = new Date(entry.clock_in);

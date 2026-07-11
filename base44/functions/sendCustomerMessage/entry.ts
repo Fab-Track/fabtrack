@@ -55,8 +55,12 @@ Deno.serve(async (req) => {
       sendResult = { success: true, sid: null };
     }
 
-    // Update the CommMessage record if provided
+    // Update the CommMessage record if provided — only within the caller's own org
     if (message_id) {
+      const existing = await base44.asServiceRole.entities.CommMessage.get(message_id).catch(() => null);
+      if (!existing || existing.organization_id !== user.organization_id) {
+        return Response.json({ error: 'Message record not found' }, { status: 404 });
+      }
       const updateData = sendResult.success
         ? { status: 'sent', sent_at: new Date().toISOString(), twilio_sid: sendResult.sid || null }
         : { status: 'failed', error_message: sendResult.error };
