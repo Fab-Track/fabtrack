@@ -8,6 +8,18 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
+
+    if (body.cleanup === true) {
+      const toDelete = await base44.asServiceRole.entities.Employee.filter({
+        organization_id: "6a3d4408e96af0b1976eb0f9",
+        email: "cole.morley+xorgtest@gmail.com",
+      });
+      for (const emp of toDelete) {
+        await base44.asServiceRole.entities.Employee.delete(emp.id);
+      }
+      return Response.json({ deleted: true, count: toDelete.length });
+    }
+
     const email = body.email ?? "cole.morley+xorgtest@gmail.com";
 
     const employee = await base44.asServiceRole.entities.Employee.create({
