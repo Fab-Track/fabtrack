@@ -20,9 +20,11 @@ import {
 const INVITE_ROLES = [
   { value: "owner", label: "Owner" },
   { value: "admin", label: "Admin" },
-  { value: "estimator", label: "Estimator" },
-  { value: "installer", label: "Installer" },
   { value: "shop_manager", label: "Shop Manager" },
+  { value: "estimator", label: "Estimator" },
+  { value: "design_specialist", label: "Design Specialist" },
+  { value: "fabricator", label: "Fabricator" },
+  { value: "accountant", label: "Accountant" },
 ];
 
 const ROLE_LABELS = Object.fromEntries(INVITE_ROLES.map(r => [r.value, r.label]));
@@ -63,9 +65,10 @@ export default function EmployeeInviteSection() {
     }
 
     setInviting(true);
+    let createdEmployee = null;
     try {
       // 1. Create the Employee record (pending — user_id null)
-      await base44.entities.Employee.create({
+      createdEmployee = await base44.entities.Employee.create({
         name: invite.name.trim(),
         email: invite.email.trim(),
         role: invite.role,
@@ -75,16 +78,35 @@ export default function EmployeeInviteSection() {
         user_id: null,
       });
 
-      // 2. Invite the Base44 User
-      const isHighPriv = invite.role === "owner" || invite.role === "admin";
-      const platformRole = isHighPriv ? "admin" : "user";
-      await base44.users.inviteUser(invite.email.trim(), platformRole);
+      // 2. Create the pending invite + send email via backend pipeline
+      const fullName = invite.name.trim();
+      const spaceIdx = fullName.indexOf(" ");
+      const first_name = spaceIdx === -1 ? fullName : fullName.slice(0, spaceIdx);
+      const last_name = spaceIdx === -1 ? "" : fullName.slice(spaceIdx + 1);
 
-      toast.success(`Invite sent to ${invite.email.trim()}. They'll be linked automatically when they register.`);
+      const res = await base44.functions.invoke("inviteOrgUser", {
+        email: invite.email.trim(),
+        roles: [invite.role],
+        first_name,
+        last_name,
+      });
+
+      if (res.data?.email_sent === false) {
+        toast.warning(
+          `Employee and invite created, but the invite email failed to send${res.data?.email_error ? `: ${res.data.email_error}` : "."}`
+        );
+      } else {
+        toast.success(`Invite sent to ${invite.email.trim()}. They'll be linked automatically when they register.`);
+      }
       setShowInvite(false);
       setInvite({ name: "", email: "", role: "estimator", hire_date: "" });
       qc.invalidateQueries({ queryKey: ["employees"] });
     } catch (err) {
+      // Duplicate user / duplicate pending invite — roll back the Employee record
+      if (err?.response?.status === 409 && createdEmployee?.id) {
+        await base44.entities.Employee.delete(createdEmployee.id).catch(() => {});
+        qc.invalidateQueries({ queryKey: ["employees"] });
+      }
       const msg = err?.response?.data?.error || err?.message || "Failed to invite employee";
       toast.error(msg);
     } finally {
@@ -127,12 +149,27 @@ export default function EmployeeInviteSection() {
 
   async function handleResendInvite(emp) {
     try {
-      const isHighPriv = emp.role === "owner" || emp.role === "admin";
-      const platformRole = isHighPriv ? "admin" : "user";
-      await base44.users.inviteUser(emp.email, platformRole);
-      toast.success(`Invite re-sent to ${emp.email}`);
+      const normalized = emp.email.trim().toLowerCase();
+      const invites = await base44.entities.PendingInvite.filter(orgFilter, "-created_date", 200);
+      const match = invites.find(i => i.email?.trim().toLowerCase() === normalized);
+
+      if (match) {
+        await base44.functions.invoke("inviteOrgUser", { action: "resend", invite_id: match.id });
+        toast.success(`Invite re-sent to ${emp.email}`);
+      } else {
+        // No pending invite exists — create one (without a new Employee record)
+        const fullName = (emp.name || "").trim();
+        const spaceIdx = fullName.indexOf(" ");
+        await base44.functions.invoke("inviteOrgUser", {
+          email: emp.email.trim(),
+          roles: [emp.role].filter(Boolean),
+          first_name: spaceIdx === -1 ? fullName : fullName.slice(0, spaceIdx),
+          last_name: spaceIdx === -1 ? "" : fullName.slice(spaceIdx + 1),
+        });
+        toast.success(`No pending invite was found, so a new invite was created and sent to ${emp.email}`);
+      }
     } catch (err) {
-      toast.error("Failed to resend invite");
+      toast.error(err?.response?.data?.error || "Failed to resend invite");
     }
   }
 
@@ -327,9 +364,11 @@ function RoleBadge({ role }) {
   const styles = {
     owner: "bg-purple-100 text-purple-700",
     admin: "bg-blue-100 text-blue-700",
-    estimator: "bg-emerald-100 text-emerald-700",
-    installer: "bg-amber-100 text-amber-700",
     shop_manager: "bg-indigo-100 text-indigo-700",
+    estimator: "bg-emerald-100 text-emerald-700",
+    design_specialist: "bg-cyan-100 text-cyan-700",
+    fabricator: "bg-amber-100 text-amber-700",
+    accountant: "bg-rose-100 text-rose-700",
   };
   const label = ROLE_LABELS[role] || role?.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) || "—";
   return (
