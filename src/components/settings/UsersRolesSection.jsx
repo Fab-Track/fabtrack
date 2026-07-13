@@ -147,6 +147,24 @@ export default function UsersRolesSection() {
     }
   }
 
+  const [resendingId, setResendingId] = useState(null);
+
+  async function handleResendInvite(inv) {
+    setResendingId(inv.id);
+    try {
+      const { data } = await base44.functions.invoke("inviteOrgUser", { action: "resend", invite_id: inv.id });
+      if (data.email_sent) {
+        toast.success(`Invite email resent to ${inv.email}`);
+      } else {
+        toast.error(`Failed to resend invite: ${data.email_error || "unknown error"}`);
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.error || err?.message || "Failed to resend invite");
+    } finally {
+      setResendingId(null);
+    }
+  }
+
   async function handleDeleteInvite(inv) {
     try {
       await base44.functions.invoke("inviteOrgUser", { action: "delete", invite_id: inv.id });
@@ -277,6 +295,9 @@ export default function UsersRolesSection() {
                       <div className="flex gap-1">
                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEditInvite(inv)} title="Edit invite">
                           <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-blue-600" onClick={() => handleResendInvite(inv)} disabled={resendingId === inv.id} title="Resend invite email">
+                          {resendingId === inv.id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
                         </Button>
                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteInvite(inv)} title="Delete invite">
                           <Trash2 className="w-3.5 h-3.5" />

@@ -41,6 +41,42 @@ Deno.serve(async (req) => {
       return Response.json({ success: true });
     }
 
+    if (action === 'resend') {
+      const { invite_id } = body;
+      if (!invite_id) return Response.json({ error: 'invite_id is required' }, { status: 400 });
+      const invite = await base44.asServiceRole.entities.PendingInvite.get(invite_id);
+      if (!invite || invite.organization_id !== user.organization_id) {
+        return Response.json({ error: 'Invite not found' }, { status: 404 });
+      }
+
+      const orgName = user.organization_name || invite.organization_name || 'your company';
+      const text = `Hi ${invite.first_name || ''},
+
+You've been added to "${orgName}" on FabTrack by ${invite.invited_by_name || user.full_name || user.email}.
+
+To activate your account, register at fab-track.io using this exact email address: ${invite.email}
+
+Once you sign up with this email, you'll automatically be added to the team with the correct access.
+
+— The FabTrack Team`;
+
+      let emailSent = false;
+      let emailError = null;
+      try {
+        const sendRes = await base44.functions.invoke('sendInviteEmail', {
+          to: invite.email,
+          subject: `Reminder: you've been invited to join ${orgName} on FabTrack`,
+          text,
+        });
+        emailSent = !!sendRes?.data?.ok;
+        if (!emailSent) emailError = sendRes?.data?.error || 'Unknown email error';
+      } catch (e) {
+        emailError = e?.message || 'Failed to send invite email';
+      }
+
+      return Response.json({ success: true, email_sent: emailSent, email_error: emailSent ? null : emailError });
+    }
+
     if (action === 'update') {
       const { invite_id, email, roles, first_name, last_name, phone } = body;
       if (!invite_id) return Response.json({ error: 'invite_id is required' }, { status: 400 });
