@@ -100,13 +100,11 @@ export default function EmployeeInviteSection() {
     }
     try {
       await base44.entities.Employee.update(emp.id, { role: newRole });
-      // If linked to a user, sync the role
+      // If linked to a user, sync the role via the backend (role fields are write-protected client-side)
       if (emp.user_id) {
-        const isHighPriv = newRole === "owner" || newRole === "admin";
-        const platformRole = isHighPriv ? "admin" : "user";
-        await base44.entities.User.update(emp.user_id, {
-          roles: [newRole],
-          role: newRole,
+        await base44.functions.invoke("setOrgUserRole", {
+          target_user_id: emp.user_id,
+          new_role: newRole,
         });
       }
       toast.success(`${emp.name}'s role updated to ${ROLE_LABELS[newRole]}`);
