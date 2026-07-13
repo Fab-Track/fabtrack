@@ -15,18 +15,46 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
     if (!user.email) return Response.json({ error: 'No email on user account' }, { status: 400 });
 
-    // Find Employee by email that isn't yet linked to a user
-    const employees = await base44.asServiceRole.entities.Employee.filter({ email: user.email });
-    if (employees.length === 0) {
+    // Never match by email without an org scope
+    if (!user.organization_id) {
+      return Response.json({ linked: false, reason: 'User has no organization' });
+    }
+
+    // Org-scoped lookup, then normalized email match in code
+    const normalize = (e) => (e || '').trim().toLowerCase();
+    const userEmail = normalize(user.email);
+    const orgEmployees = await base44.asServiceRole.entities.Employee.filter({ organization_id: user.organization_id });
+    const matches = orgEmployees.filter(e => normalize(e.email) === userEmail);
+
+    // Already linked to this user — return without updating
+    const alreadyLinked = matches.find(e => e.user_id === user.id);
+    if (alreadyLinked) {
+      return Response.json({
+        linked: true,
+        employee: {
+          id: alreadyLinked.id,
+          name: alreadyLinked.name,
+          role: alreadyLinked.role,
+          user_id: alreadyLinked.user_id,
+        },
+      });
+    }
+
+    // Exclude candidates linked to a different user
+    const unlinked = matches.filter(e => !e.user_id);
+
+    if (unlinked.length === 0) {
+      if (matches.length > 0) {
+        return Response.json({ linked: false, reason: 'Employee already linked to another user' });
+      }
       return Response.json({ linked: false, reason: 'No matching employee record found' });
     }
 
-    const emp = employees[0];
-
-    // Already linked to a different user — don't overwrite
-    if (emp.user_id && emp.user_id !== user.id) {
-      return Response.json({ linked: false, reason: 'Employee already linked to another user' });
+    if (unlinked.length > 1) {
+      return Response.json({ linked: false, reason: 'Multiple employee records match this email — resolve duplicates in Settings → Employees' });
     }
+
+    const emp = unlinked[0];
 
     // Link the employee to this user
     const updated = await base44.asServiceRole.entities.Employee.update(emp.id, {
