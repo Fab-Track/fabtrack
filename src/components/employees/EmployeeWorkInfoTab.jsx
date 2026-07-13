@@ -21,7 +21,6 @@ export default function EmployeeWorkInfoTab({ employee, canEdit, canSeeRate }) {
     role: employee.role || "",
     work_center_primary: employee.work_center_primary || "",
     work_center_secondary: employee.work_center_secondary || "",
-    pin: employee.pin || "",
     hourly_rate: employee.hourly_rate ?? "",
     years_experience: employee.years_experience ?? "",
     certifications: employee.certifications || "",
@@ -57,10 +56,6 @@ export default function EmployeeWorkInfoTab({ employee, canEdit, canSeeRate }) {
             <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
             <SelectContent>{ROLES.map(r => <SelectItem key={r} value={r}>{r.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase())}</SelectItem>)}</SelectContent>
           </Select>
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs font-semibold">PIN (4 digits)</Label>
-          <Input value={form.pin} onChange={e => set("pin", e.target.value)} maxLength={4} placeholder="1234" disabled={!canEdit} />
         </div>
         <div className="space-y-1">
           <Label className="text-xs font-semibold">Primary Work Center</Label>

@@ -74,10 +74,6 @@
       "type": "number",
       "description": "Hourly rate - internal only"
     },
-    "pin": {
-      "type": "string",
-      "description": "4-digit PIN for kiosk clock-in"
-    },
     "is_active": {
       "type": "boolean",
       "default": true

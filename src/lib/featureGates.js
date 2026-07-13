@@ -43,7 +43,7 @@ export const FEATURE_GATES = {
   },
   shop_floor: {
     label: 'Shop Floor',
-    description: 'Work centers, shop kiosk, and production management.',
+    description: 'Work centers and production management.',
     lockedMessage: 'Shop Floor features require Professional or higher.',
     upgradeTo: 'professional',
     route: '/work-centers',

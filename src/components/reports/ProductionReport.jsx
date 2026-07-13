@@ -224,7 +224,7 @@ export default function ProductionReport() {
               </tbody>
             </table>
           </div>
-        ) : <EmptyState message="No time entries yet. Have fabricators clock in from the Shop Kiosk." />}
+        ) : <EmptyState message="No time entries yet. Have fabricators clock in from their Time Card." />}
       </section>
     </div>
   );
