@@ -45,14 +45,17 @@ Deno.serve(async (req) => {
         }
       }
     } else if (channel === 'Email') {
-      // Always use built-in email integration (no SendGrid required)
-      await base44.asServiceRole.integrations.Core.SendEmail({
+      // Route through Resend — org-branded from + reply-to derived server-side
+      const resp = await base44.functions.invoke('sendResendEmail', {
         to: to_email,
         subject: subject || '(no subject)',
         body: message_body,
-        from_name: from_name || 'High Country Metal Works',
       });
-      sendResult = { success: true, sid: null };
+      if (resp.data?.ok) {
+        sendResult = { success: true, sid: resp.data.id || null };
+      } else {
+        sendResult = { success: false, error: resp.data?.error || 'Email send failed' };
+      }
     }
 
     // Update the CommMessage record if provided — only within the caller's own org

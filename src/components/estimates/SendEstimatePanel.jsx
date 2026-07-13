@@ -61,9 +61,9 @@ export default function SendEstimatePanel({ estimate, job, customer, onClose, on
     setSending(true);
     try {
       if (showEmail) {
-        const body = `${message}\n\n---\nEstimate Total: $${(estimate?.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
-        const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.open(mailtoUrl, "_blank");
+        const body = `${message}\n\nView your estimate: ${link}\n\n---\nEstimate Total: $${(estimate?.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+        const resp = await base44.functions.invoke("sendResendEmail", { to, subject, body });
+        if (!resp.data?.ok) throw new Error(resp.data?.error || "Email failed to send");
       }
 
       if (showText) {
@@ -81,8 +81,8 @@ export default function SendEstimatePanel({ estimate, job, customer, onClose, on
 
       onSent?.(to);
 
-      if (showEmail && showText) toast.success("Email draft opened and text message sent");
-      else if (showEmail) toast.success(`Email draft opened for ${to}`);
+      if (showEmail && showText) toast.success("Email and text message sent");
+      else if (showEmail) toast.success(`Email sent to ${to}`);
       else toast.success(`Text message sent to ${phone}`);
     } catch (err) {
       toast.error(`Failed to send: ${err.message}`);

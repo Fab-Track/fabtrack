@@ -7,6 +7,8 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Download, Send, Mail, MessageSquare, CheckSquare } from "lucide-react";
 import InvoiceCustomerView from "@/components/invoices/InvoiceCustomerView";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { format, parseISO } from "date-fns";
 
@@ -332,22 +334,27 @@ export default function InvoiceReviewSend({
     generateInvoicePDF(pdfProps);
   }
 
-  function handleSend() {
+  async function handleSend() {
     setSending(true);
-    // Open mailto / sms links as best-effort delivery
-    if (sendMode === "Email" || sendMode === "Both") {
-      const body = encodeURIComponent(messageBody);
-      const subj = encodeURIComponent(subject);
-      window.open(`mailto:${toEmail}?subject=${subj}&body=${body}`);
-    }
-    if (sendMode === "Text" || sendMode === "Both") {
-      const smsBody = encodeURIComponent(`${subject}\n\n${messageBody}`);
-      window.open(`sms:${toPhone}?body=${smsBody}`);
-    }
-    setTimeout(() => {
-      setSending(false);
+    try {
+      if (sendMode === "Email" || sendMode === "Both") {
+        const resp = await base44.functions.invoke("sendResendEmail", {
+          to: toEmail,
+          subject,
+          body: messageBody,
+        });
+        if (!resp.data?.ok) throw new Error(resp.data?.error || "Email failed to send");
+      }
+      if (sendMode === "Text" || sendMode === "Both") {
+        const smsBody = encodeURIComponent(`${subject}\n\n${messageBody}`);
+        window.open(`sms:${toPhone}?body=${smsBody}`);
+      }
       setSent(true);
-    }, 600);
+    } catch (err) {
+      toast.error(err.message || "Failed to send invoice");
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
