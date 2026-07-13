@@ -36,28 +36,23 @@ export default function MyAccountSection() {
   const [uploading, setUploading] = useState(false);
   const [showNewPwd, setShowNewPwd] = useState(false);
 
-  // Fetch the employee record — try email, personal_email, name, then created_by_id
+  // Fetch the employee record — strict match only: user_id link, or exact
+  // verified-email match. Never match by name or created_by_id, which can
+  // surface a different person's record.
   const { data: employees = [], refetch: refetchEmployee } = useQuery({
-    queryKey: ["my-employee-record", user?.id, user?.email, user?.full_name],
+    queryKey: ["my-employee-record", user?.id, user?.email],
     queryFn: async () => {
+      if (user?.id) {
+        const byUserId = await base44.entities.Employee.filter({ user_id: user.id });
+        if (byUserId.length > 0) return byUserId;
+      }
       if (user?.email) {
         const byEmail = await base44.entities.Employee.filter({ email: user.email });
         if (byEmail.length > 0) return byEmail;
-        const byPersonalEmail = await base44.entities.Employee.filter({ personal_email: user.email });
-        if (byPersonalEmail.length > 0) return byPersonalEmail;
-      }
-      if (user?.full_name) {
-        const byName = await base44.entities.Employee.filter({ name: user.full_name });
-        if (byName.length > 0) return byName;
-      }
-      // Final fallback: created_by_id matches user id
-      if (user?.id) {
-        const byCreator = await base44.entities.Employee.filter({ created_by_id: user.id });
-        if (byCreator.length > 0) return byCreator;
       }
       return [];
     },
-    enabled: !!(user?.id || user?.email || user?.full_name),
+    enabled: !!(user?.id || user?.email),
     staleTime: 15000,
   });
   const myEmployee = employees[0] || null;
@@ -189,7 +184,7 @@ export default function MyAccountSection() {
         </>
       ) : (
         <div className="border rounded-xl p-4 bg-muted/30 text-xs text-muted-foreground">
-          No employee profile linked to your account. Ask your admin to add your email (<strong>{user?.email}</strong>) to your employee record.
+          No employee profile linked to your account. Contact your admin.
         </div>
       )}
 
