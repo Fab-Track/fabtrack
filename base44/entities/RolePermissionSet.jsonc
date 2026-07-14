@@ -1,0 +1,73 @@
+{
+  "name": "RolePermissionSet",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
+    "matrix": {
+      "type": "object",
+      "description": "Permission matrix: { [role]: { [permissionId]: 0|1|2|3 } }"
+    },
+    "updated_by": {
+      "type": "string",
+      "description": "Email of the last editor"
+    }
+  },
+  "required": [
+    "organization_id"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.organization_id": "{{user.data.organization_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "owner"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
+    "update": {
+      "$and": [
+        {
+          "data.organization_id": "{{user.data.organization_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "owner"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "__deny__"
+      }
+    }
+  }
+}

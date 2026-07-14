@@ -1,4 +1,8 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,15 +17,13 @@ import {
 } from "@/lib/permissionsData";
 import { RotateCcw, Save } from "lucide-react";
 
-const STORAGE_KEY = "fabtrack_role_permissions";
-
-function loadPermissions() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : { ...DEFAULT_PERMISSIONS };
-  } catch {
-    return { ...DEFAULT_PERMISSIONS };
+// Deep-merge a saved matrix over defaults so newly added permission ids still get defaults
+function mergeWithDefaults(savedMatrix) {
+  const merged = {};
+  for (const role of Object.keys(DEFAULT_PERMISSIONS)) {
+    merged[role] = { ...DEFAULT_PERMISSIONS[role], ...(savedMatrix?.[role] || {}) };
   }
+  return merged;
 }
 
 function nextLevel(current) {
@@ -30,9 +32,30 @@ function nextLevel(current) {
 }
 
 export default function PermissionsMatrix() {
-  const [permissions, setPermissions] = useState(loadPermissions);
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const orgId = user?.organization_id;
+
+  const { data: savedRecord, isLoading } = useQuery({
+    queryKey: ["rolePermissionSet", orgId],
+    queryFn: async () => {
+      const records = await base44.entities.RolePermissionSet.filter({ organization_id: orgId }, "-updated_date", 50);
+      return records[0] || null;
+    },
+    enabled: !!orgId,
+  });
+
+  const [permissions, setPermissions] = useState(null);
   const [dirty, setDirty] = useState({}); // { "role.rowId": true }
   const [resetRole, setResetRole] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    if (isLoading || initializedRef.current) return;
+    initializedRef.current = true;
+    setPermissions(savedRecord?.matrix ? mergeWithDefaults(savedRecord.matrix) : { ...DEFAULT_PERMISSIONS });
+  }, [isLoading, savedRecord]);
 
   function cycleCell(role, rowId) {
     const current = permissions[role]?.[rowId] ?? 0;
@@ -41,11 +64,29 @@ export default function PermissionsMatrix() {
     setDirty(d => ({ ...d, [`${role}.${rowId}`]: true }));
   }
 
-  function save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(permissions));
-    setDirty({});
-    toast.success("Permissions saved");
-    // TODO: persist to backend entity if desired
+  async function save() {
+    setSaving(true);
+    try {
+      if (savedRecord?.id) {
+        await base44.entities.RolePermissionSet.update(savedRecord.id, {
+          matrix: permissions,
+          updated_by: user?.email,
+        });
+      } else {
+        await base44.entities.RolePermissionSet.create({
+          organization_id: orgId,
+          matrix: permissions,
+          updated_by: user?.email,
+        });
+      }
+      qc.invalidateQueries({ queryKey: ["rolePermissionSet", orgId] });
+      setDirty({});
+      toast.success("Permissions saved");
+    } catch (err) {
+      toast.error(`Failed to save permissions: ${err?.message || "Unknown error"}`);
+    } finally {
+      setSaving(false);
+    }
   }
 
   function resetToDefault(role) {
@@ -62,6 +103,16 @@ export default function PermissionsMatrix() {
 
   const hasDirty = Object.keys(dirty).length > 0;
 
+  if (isLoading || !permissions) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-4 w-72" />
+        <Skeleton className="h-[400px] w-full rounded-xl" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -70,8 +121,8 @@ export default function PermissionsMatrix() {
           <p className="text-xs text-muted-foreground">Click a cell to cycle through access levels. Owner is always full control.</p>
         </div>
         {hasDirty && (
-          <Button size="sm" onClick={save} className="gap-1.5 bg-amber-500 hover:bg-amber-600 text-white">
-            <Save className="w-3.5 h-3.5" /> Save Changes
+          <Button size="sm" onClick={save} disabled={saving} className="gap-1.5 bg-amber-500 hover:bg-amber-600 text-white">
+            <Save className="w-3.5 h-3.5" /> {saving ? "Saving…" : "Save Changes"}
           </Button>
         )}
       </div>
