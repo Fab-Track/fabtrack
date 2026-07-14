@@ -41,7 +41,7 @@ export const BILLING_STAGES = [
 // ── Role access ────────────────────────────────────────────────────────────────
 export const BOARD_ACCESS = {
   Sales:   ["owner", "estimator", "admin", "installer"],
-  Shop:    ["owner", "shop_manager", "fabricator", "installer", "design_specialist", "foreman", "admin"],
+  Shop: ["owner", "shop_manager", "fabricator", "installer", "design_specialist", "foreman", "admin", "estimator"],
   Billing: ["owner", "estimator", "admin", "accountant", "installer"],
 };
 
