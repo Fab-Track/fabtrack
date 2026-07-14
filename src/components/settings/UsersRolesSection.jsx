@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { UserPlus, Pencil, Trash2, Eye, Table2, Clock, ChevronRight, Ban, CheckCircle2, RefreshCw, KeyRound, Users, Shield, Mail } from "lucide-react";
+import { UserPlus, Pencil, Trash2, Eye, Table2, Clock, ChevronRight, Ban, CheckCircle2, RefreshCw, KeyRound, Users, Shield, Mail, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import { isOwnerLevel } from "@/lib/roleHelpers";
 import { useUserCapCheck } from "@/hooks/useUserCapCheck";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -51,6 +52,8 @@ export default function UsersRolesSection() {
   const { user: currentUser } = useAuth();
   const { atCap, userCap, userCount } = useUserCapCheck();
   const isAdminOrOwner = ["admin", "owner"].includes((currentUser?.role || "").toLowerCase());
+  const canViewMatrix = isOwnerLevel(currentUser);
+  const visibleTabs = TABS.filter(t => t.id !== "matrix" || canViewMatrix);
   const isSuperAdmin = (currentUser?.roles || []).includes("super_admin") || currentUser?.role === "super_admin";
   const [tab, setTab] = useState("users");
   const [showInvite, setShowInvite] = useState(false);
@@ -242,7 +245,7 @@ export default function UsersRolesSection() {
 
       {/* Tab bar */}
       <div className="flex border-b gap-0.5">
-        {TABS.map(t => {
+        {visibleTabs.map(t => {
           const Icon = t.icon;
           return (
             <button
@@ -391,7 +394,17 @@ export default function UsersRolesSection() {
       {tab === "roles" && <RolesTab />}
 
       {/* Matrix tab */}
-      {tab === "matrix" && <PermissionsMatrix />}
+      {tab === "matrix" && (
+        canViewMatrix ? (
+          <PermissionsMatrix />
+        ) : (
+          <div className="text-center py-16 border-2 border-dashed rounded-xl">
+            <ShieldAlert className="w-10 h-10 mx-auto text-muted-foreground/40 mb-3" />
+            <h3 className="font-medium text-sm">Insufficient Permissions</h3>
+            <p className="text-xs text-muted-foreground mt-1">You don't have access to view the Permissions Matrix.</p>
+          </div>
+        )
+      )}
 
       {/* Preview tab */}
       {tab === "preview" && <RolePreviewSection />}
