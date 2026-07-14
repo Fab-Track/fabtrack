@@ -133,6 +133,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
   const save = useMutation({
     mutationFn: async () => {
       const payload = {
+        organization_id: job.organization_id,
         job_id: job.id,
         job_number: job.job_number,
         job_name: job.job_name,
@@ -202,6 +203,9 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
       } else {
         onClose?.();
       }
+    },
+    onError: (err) => {
+      toast.error(`Failed to save invoice: ${err?.message || "Unknown error"}`);
     },
   });
 

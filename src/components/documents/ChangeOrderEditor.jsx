@@ -50,6 +50,7 @@ export default function ChangeOrderEditor({ changeOrder, job, originalEstimateTo
   const save = useMutation({
     mutationFn: () => {
       const payload = {
+        organization_id: job.organization_id,
         job_id: job.id,
         job_number: job.job_number,
         description,
