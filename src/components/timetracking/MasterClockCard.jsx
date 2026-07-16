@@ -90,9 +90,23 @@ async function doClockOut(entry) {
 }
 
 async function doBreakStart(entry, breakType) {
+  const now = new Date();
+
+  // Auto-pause any currently running job clock entries for this employee
+  const activeEntries = await base44.entities.TimeEntry.filter({
+    employee_id: entry.employee_id,
+    is_active: true,
+  });
+  const runningJobEntries = activeEntries.filter(e => e.job_id && !e.is_on_break);
+  await Promise.all(runningJobEntries.map(e => base44.entities.TimeEntry.update(e.id, {
+    is_on_break: true,
+    break_start: now.toISOString(),
+    master_paused: true,
+  })));
+
   return base44.entities.TimeEntry.update(entry.id, {
     is_on_break: true,
-    break_start: new Date().toISOString(),
+    break_start: now.toISOString(),
     break_type: breakType,
   });
 }
@@ -101,6 +115,23 @@ async function doBreakEnd(entry) {
   const now = new Date();
   const addedMins = Math.max(0, (now - parseISO(entry.break_start)) / (1000 * 60));
   const totalMins = (entry.break_minutes || 0) + addedMins;
+
+  // Auto-resume any job clock entries that were paused because of this master break
+  const activeEntries = await base44.entities.TimeEntry.filter({
+    employee_id: entry.employee_id,
+    is_active: true,
+  });
+  const masterPausedJobEntries = activeEntries.filter(e => e.job_id && e.is_on_break && e.master_paused);
+  await Promise.all(masterPausedJobEntries.map(e => {
+    const addedBreakMins = e.break_start ? Math.max(0, (now - parseISO(e.break_start)) / (1000 * 60)) : 0;
+    return base44.entities.TimeEntry.update(e.id, {
+      is_on_break: false,
+      break_start: null,
+      master_paused: false,
+      break_minutes: Math.round(((e.break_minutes || 0) + addedBreakMins) * 10) / 10,
+    });
+  }));
+
   return base44.entities.TimeEntry.update(entry.id, {
     is_on_break: false,
     break_start: null,

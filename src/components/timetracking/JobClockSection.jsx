@@ -47,6 +47,7 @@ async function resumeEntry(entry, now) {
   return base44.entities.TimeEntry.update(entry.id, {
     is_on_break: false,
     break_start: null,
+    master_paused: false,
     break_minutes: Math.round((entry.break_minutes || 0) + additionalBreak),
   });
 }

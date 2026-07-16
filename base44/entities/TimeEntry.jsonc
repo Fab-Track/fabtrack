@@ -92,6 +92,11 @@
       "format": "date-time",
       "description": "When current break started"
     },
+    "master_paused": {
+      "type": "boolean",
+      "default": false,
+      "description": "For job clock entries: true when this entry was auto-paused because the employee started a break/lunch on their master (daily payroll) clock, rather than manually pausing the job clock. Used to auto-resume this entry when the master break ends."
+    },
     "is_manual": {
       "type": "boolean",
       "default": false,
