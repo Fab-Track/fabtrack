@@ -125,19 +125,18 @@ export default function FabricatorDashboard({ overrideEmployee = null }) {
             qcInspections={qcInspections}
           />
         )}
+        {/* ── JOB CLOCK ── directly under the daily payroll clock ── */}
+        <JobClockSection
+          employee={myEmployee || { id: null, name: user?.full_name, email: user?.email, work_center_primary: "General", organization_id: user?.organization_id }}
+          masterEntry={masterEntry}
+          activeEntries={jobActiveEntries}
+          allTimeEntries={allTimeEntries}
+          jobs={jobs}
+        />
       </div>
 
       {/* ── To-Dos ── */}
       <DashboardTodoList />
-
-      {/* ── JOB CLOCK ── */}
-      <JobClockSection
-        employee={myEmployee || { id: null, name: user?.full_name, email: user?.email, work_center_primary: "General", organization_id: user?.organization_id }}
-        masterEntry={masterEntry}
-        activeEntries={jobActiveEntries}
-        allTimeEntries={allTimeEntries}
-        jobs={jobs}
-      />
 
       {/* Jobs this week */}
       <MyJobsThisWeek
