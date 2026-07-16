@@ -74,14 +74,12 @@ function JobRow({ job, index, onStatusChange }) {
         <div
           ref={provided.innerRef}
           {...provided.draggableProps}
-          className={`group flex items-center gap-0 border-b last:border-b-0 border-border/50 bg-card transition-all
+          {...provided.dragHandleProps}
+          className={`group flex items-center gap-0 border-b last:border-b-0 border-border/50 bg-card transition-all cursor-grab active:cursor-grabbing
             ${snapshot.isDragging ? "shadow-lg ring-1 ring-accent/40 rounded-lg opacity-95 z-50" : "hover:bg-muted/30"}`}
         >
-          {/* Drag handle */}
-          <div
-            {...provided.dragHandleProps}
-            className="px-2 py-3 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-muted-foreground/50"
-          >
+          {/* Drag handle (visual only — whole row is draggable) */}
+          <div className="px-2 py-3 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/50">
             <GripVertical className="w-4 h-4" />
           </div>
 

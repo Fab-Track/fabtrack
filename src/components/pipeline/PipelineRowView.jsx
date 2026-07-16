@@ -82,14 +82,13 @@ function PipelineJobRow({ job, index, board, readOnly = false }) {
         <div
           ref={provided.innerRef}
           {...provided.draggableProps}
+          {...(!readOnly ? provided.dragHandleProps : {})}
           className={`group flex items-center gap-0 border-b last:border-b-0 border-border/40 bg-card transition-all
+            ${!readOnly ? "cursor-grab active:cursor-grabbing" : ""}
             ${snapshot.isDragging ? "shadow-lg ring-1 ring-accent/40 rounded-lg opacity-95 z-50" : "hover:bg-muted/20"}`}
         >
-          {/* Drag handle */}
-          <div
-            {...provided.dragHandleProps}
-            className={`px-2 py-3 transition-opacity text-muted-foreground ${readOnly ? "opacity-0 pointer-events-none" : "opacity-0 group-hover:opacity-60 cursor-grab active:cursor-grabbing"}`}
-          >
+          {/* Drag handle (visual only — whole row is draggable) */}
+          <div className={`px-2 py-3 transition-opacity text-muted-foreground ${readOnly ? "opacity-0 pointer-events-none" : "opacity-0 group-hover:opacity-60"}`}>
             <GripVertical className="w-4 h-4" />
           </div>
 
