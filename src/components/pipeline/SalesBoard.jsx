@@ -269,12 +269,6 @@ export default function SalesBoard({ jobs = [] }) {
   }
 
   function handlePromoteClick(job) {
-    if ((invoicesByJob[job.id] || []).length === 0) {
-      toast.error("An invoice must be created before this job can move to Shop Flow.", {
-        action: { label: "Go to Job", onClick: () => navigate(`/jobs/${job.id}?board=Sales`) },
-      });
-      return;
-    }
     setPromoting(job);
   }
 
@@ -371,7 +365,11 @@ export default function SalesBoard({ jobs = [] }) {
         open={!!promoting}
         onClose={() => { setPromoting(null); setPromoteRepId(null); }}
         title="Move to Shop Flow?"
-        message={`"${promoting?.job_name}" has a deposit. Move it to the Shop Board under "New Jobs Landed — Needs Approval"?`}
+        message={
+          (invoicesByJob[promoting?.id] || []).length === 0
+            ? `Are you sure you want to move "${promoting?.job_name}" to Shop Flow? An invoice still does not exist for this job.`
+            : `"${promoting?.job_name}" has a deposit. Move it to the Shop Board under "New Jobs Landed — Needs Approval"?`
+        }
         fromStage="Deposit Received / Sale Won"
         toStage="New Jobs Landed — Needs Approval"
         toBoard="Shop"
