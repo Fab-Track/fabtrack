@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { format, parseISO, isValid, differenceInDays } from "date-fns";
 import {
   ChevronDown, ChevronRight, GripVertical,
@@ -63,6 +63,7 @@ function SectionHeader({ stage, count, expanded, onToggle }) {
 }
 
 function PipelineJobRow({ job, index, board, readOnly = false }) {
+  const navigate = useNavigate();
   const days = daysInStage(job);
   const isStale = (board === "Shop" && days > 5) || (board === "Sales" && days > 7);
 
@@ -79,90 +80,85 @@ function PipelineJobRow({ job, index, board, readOnly = false }) {
   return (
     <Draggable draggableId={job.id} index={index} isDragDisabled={readOnly}>
       {(provided, snapshot) => (
-        <div
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...(!readOnly ? provided.dragHandleProps : {})}
-          className={`group flex items-center gap-0 border-b last:border-b-0 border-border/40 bg-card transition-all
-            ${!readOnly ? "cursor-grab active:cursor-grabbing" : ""}
-            ${snapshot.isDragging ? "shadow-lg ring-1 ring-accent/40 rounded-lg opacity-95 z-50" : "hover:bg-muted/20"}`}
-        >
-          {/* Drag handle (visual only — whole row is draggable) */}
-          <div className={`px-2 py-3 transition-opacity text-muted-foreground ${readOnly ? "opacity-0 pointer-events-none" : "opacity-0 group-hover:opacity-60"}`}>
-            <GripVertical className="w-4 h-4" />
-          </div>
-
-          {/* Job # */}
-          <div className="w-32 shrink-0 text-xs font-mono text-muted-foreground truncate">{job.job_number || "—"}</div>
-
-          {/* Job Name */}
-          <div className="flex-1 min-w-0 pr-4">
-            <Link
-              to={`/jobs/${job.id}?board=${board}`}
-              className="text-sm font-medium hover:text-accent transition-colors line-clamp-1"
-              onClick={e => e.stopPropagation()}
-            >
-              {job.job_name}
-            </Link>
-          </div>
-
-          {/* Customer */}
-          <div className="w-36 shrink-0 text-xs text-muted-foreground truncate pr-3">{job.customer_name || "—"}</div>
-
-          {/* Type */}
-          <div className="w-28 shrink-0 pr-3">
-            {job.job_type
-              ? <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">{job.job_type}</Badge>
-              : <span className="text-muted-foreground/40 text-xs">—</span>}
-          </div>
-
-          {/* Install Date */}
-          <div className="w-24 shrink-0 pr-3">
-            {installDate
-              ? <div className="flex items-center gap-1 text-xs text-muted-foreground"><CalendarDays className="w-3 h-3 shrink-0" />{installDate}</div>
-              : <span className="text-muted-foreground/30 text-xs">—</span>}
-          </div>
-
-          {/* Powder coat (Sales/Shop) or Overdue (Billing) */}
-          <div className="w-32 shrink-0 pr-3">
-            {board === "Billing" ? (
-              overdueDays !== null && overdueDays > 0 ? (
-                <span className={`text-xs font-semibold ${overdueDays >= 30 ? "text-red-700" : overdueDays >= 20 ? "text-orange-600" : "text-yellow-700"}`}>
-                  {overdueDays}d overdue
-                </span>
-              ) : <span className="text-muted-foreground/30 text-xs">—</span>
-            ) : (
-              job.powder_coat_color
-                ? <div className="flex items-center gap-1 text-xs text-muted-foreground"><Paintbrush className="w-3 h-3 shrink-0" /><span className="truncate">{job.powder_coat_color}</span></div>
-                : <span className="text-muted-foreground/30 text-xs">—</span>
-            )}
-          </div>
-
-          {/* Crew / Estimator */}
-          <div className="w-20 shrink-0 pr-3">
-            {job.assigned_crew_names?.length > 0
-              ? <div className="flex items-center gap-1 text-xs text-muted-foreground"><Users className="w-3 h-3" />{job.assigned_crew_names.length}</div>
-              : job.assigned_estimator_name
-                ? <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[9px] font-bold text-primary shrink-0">
-                      {job.assigned_estimator_name[0]}
-                    </div>
-                  </div>
-                : <span className="text-muted-foreground/30 text-xs">—</span>}
-          </div>
-
-          {/* Days in stage */}
-          <div className="w-16 shrink-0 pr-3">
-            <div className={`flex items-center gap-1 text-xs ${isStale ? "text-amber-600 font-semibold" : "text-muted-foreground"}`}>
-              <Clock className="w-3 h-3 shrink-0" />{days}d
+        <div ref={provided.innerRef} {...provided.draggableProps} {...(!readOnly ? provided.dragHandleProps : {})}>
+          <div
+            onClick={() => navigate(`/jobs/${job.id}?board=${board}`)}
+            className={`group flex items-center gap-0 border-b last:border-b-0 border-border/40 bg-card transition-all cursor-pointer
+              ${snapshot.isDragging ? "shadow-lg ring-1 ring-accent/40 rounded-lg opacity-95 z-50" : "hover:bg-muted/20"}`}
+          >
+            {/* Drag handle (visual only — whole row is draggable) */}
+            <div className={`px-2 py-3 transition-opacity text-muted-foreground ${readOnly ? "opacity-0 pointer-events-none" : "opacity-0 group-hover:opacity-60"}`}>
+              <GripVertical className="w-4 h-4" />
             </div>
-          </div>
 
-          {/* Estimate / Balance */}
-          <div className="w-24 shrink-0 pr-3">
-            {job.estimate_total > 0 || job.actual_cost > 0
-              ? <div className="flex items-center gap-0.5 text-xs font-medium"><DollarSign className="w-3 h-3 text-muted-foreground" />{(job.estimate_total || job.actual_cost || 0).toLocaleString()}</div>
-              : <span className="text-muted-foreground/30 text-xs">—</span>}
+            {/* Job # */}
+            <div className="w-32 shrink-0 text-xs font-mono text-muted-foreground truncate">{job.job_number || "—"}</div>
+
+            {/* Job Name */}
+            <div className="flex-1 min-w-0 pr-4">
+              <span className="text-sm font-medium group-hover:text-accent transition-colors line-clamp-1">
+                {job.job_name}
+              </span>
+            </div>
+
+            {/* Customer */}
+            <div className="w-36 shrink-0 text-xs text-muted-foreground truncate pr-3">{job.customer_name || "—"}</div>
+
+            {/* Type */}
+            <div className="w-28 shrink-0 pr-3">
+              {job.job_type
+                ? <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">{job.job_type}</Badge>
+                : <span className="text-muted-foreground/40 text-xs">—</span>}
+            </div>
+
+            {/* Install Date */}
+            <div className="w-24 shrink-0 pr-3">
+              {installDate
+                ? <div className="flex items-center gap-1 text-xs text-muted-foreground"><CalendarDays className="w-3 h-3 shrink-0" />{installDate}</div>
+                : <span className="text-muted-foreground/30 text-xs">—</span>}
+            </div>
+
+            {/* Powder coat (Sales/Shop) or Overdue (Billing) */}
+            <div className="w-32 shrink-0 pr-3">
+              {board === "Billing" ? (
+                overdueDays !== null && overdueDays > 0 ? (
+                  <span className={`text-xs font-semibold ${overdueDays >= 30 ? "text-red-700" : overdueDays >= 20 ? "text-orange-600" : "text-yellow-700"}`}>
+                    {overdueDays}d overdue
+                  </span>
+                ) : <span className="text-muted-foreground/30 text-xs">—</span>
+              ) : (
+                job.powder_coat_color
+                  ? <div className="flex items-center gap-1 text-xs text-muted-foreground"><Paintbrush className="w-3 h-3 shrink-0" /><span className="truncate">{job.powder_coat_color}</span></div>
+                  : <span className="text-muted-foreground/30 text-xs">—</span>
+              )}
+            </div>
+
+            {/* Crew / Estimator */}
+            <div className="w-20 shrink-0 pr-3">
+              {job.assigned_crew_names?.length > 0
+                ? <div className="flex items-center gap-1 text-xs text-muted-foreground"><Users className="w-3 h-3" />{job.assigned_crew_names.length}</div>
+                : job.assigned_estimator_name
+                  ? <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[9px] font-bold text-primary shrink-0">
+                        {job.assigned_estimator_name[0]}
+                      </div>
+                    </div>
+                  : <span className="text-muted-foreground/30 text-xs">—</span>}
+            </div>
+
+            {/* Days in stage */}
+            <div className="w-16 shrink-0 pr-3">
+              <div className={`flex items-center gap-1 text-xs ${isStale ? "text-amber-600 font-semibold" : "text-muted-foreground"}`}>
+                <Clock className="w-3 h-3 shrink-0" />{days}d
+              </div>
+            </div>
+
+            {/* Estimate / Balance */}
+            <div className="w-24 shrink-0 pr-3">
+              {job.estimate_total > 0 || job.actual_cost > 0
+                ? <div className="flex items-center gap-0.5 text-xs font-medium"><DollarSign className="w-3 h-3 text-muted-foreground" />{(job.estimate_total || job.actual_cost || 0).toLocaleString()}</div>
+                : <span className="text-muted-foreground/30 text-xs">—</span>}
+            </div>
           </div>
         </div>
       )}
@@ -180,24 +176,16 @@ function PipelineJobRow({ job, index, board, readOnly = false }) {
 export default function PipelineRowView({ jobs, stages, board, readOnly = false }) {
   const qc = useQueryClient();
   const [collapsed, setCollapsed] = useState({});
-  const [isDragging, setIsDragging] = useState(false);
 
-  // Build sections
-  const [sections, setSections] = useState(() => {
+  // Sections are derived directly from the jobs prop every render (no local
+  // optimistic mirror) — this matches the kanban boards and avoids the
+  // drag "snap back": the drop position only ever reflects real data.
+  const sections = useMemo(() => {
     const s = {};
     stages.forEach(st => { s[st] = []; });
     jobs.forEach(j => { const st = j.stage || stages[0]; if (s[st]) s[st].push(j); });
     return s;
-  });
-
-  // Keep sections in sync when jobs prop changes (but not during drag)
-  useMemo(() => {
-    if (isDragging) return;
-    const s = {};
-    stages.forEach(st => { s[st] = []; });
-    jobs.forEach(j => { const st = j.stage || stages[0]; if (s[st]) s[st].push(j); });
-    setSections(s);
-  }, [jobs, isDragging]);
+  }, [jobs, stages]);
 
   const moveMutation = useMutation({
     mutationFn: ({ job, toStage }) =>
@@ -205,31 +193,15 @@ export default function PipelineRowView({ jobs, stages, board, readOnly = false 
     onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
   });
 
-  function handleDragStart() { setIsDragging(true); }
-
   function handleDragEnd(result) {
-    setIsDragging(false);
     if (readOnly || !result.destination) return;
     const { draggableId, source, destination } = result;
     const srcStage = source.droppableId;
     const dstStage = destination.droppableId;
+    if (srcStage === dstStage) return;
 
-    // Optimistic update
-    setSections(prev => {
-      const next = {};
-      stages.forEach(st => { next[st] = [...(prev[st] || [])]; });
-      const job = next[srcStage]?.find(j => j.id === draggableId);
-      if (!job) return prev;
-      next[srcStage].splice(source.index, 1);
-      const updated = dstStage !== srcStage ? { ...job, stage: dstStage } : job;
-      next[dstStage].splice(destination.index, 0, updated);
-      return next;
-    });
-
-    if (srcStage !== dstStage) {
-      const job = jobs.find(j => j.id === draggableId);
-      if (job) moveMutation.mutate({ job, toStage: dstStage });
-    }
+    const job = jobs.find(j => j.id === draggableId);
+    if (job) moveMutation.mutate({ job, toStage: dstStage });
   }
 
   const colLabel = board === "Billing" ? "Overdue" : "Powder Coat";
@@ -250,7 +222,7 @@ export default function PipelineRowView({ jobs, stages, board, readOnly = false 
         <div className="w-24 shrink-0 pr-3">Amount</div>
       </div>
 
-      <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <DragDropContext onDragEnd={handleDragEnd}>
         {stages.map(stage => {
           const stageJobs = sections[stage] || [];
           const isCollapsed = collapsed[stage];
