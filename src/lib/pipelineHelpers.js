@@ -193,93 +193,131 @@ export function buildStageTransition(job, toBoard, toStage, note = "") {
 }
 
 // ── Per-column priority ranking ────────────────────────────────────────────────
-// Jobs carry a `stage_priority` object keyed by stage name → rank (1 = highest).
-// Ranked jobs sort to the top of their column (ascending rank); unranked jobs
-// keep the existing default order beneath them. Priority is only ever changed
-// via explicit controls (never by drag), so accidental drags can't corrupt it.
+// Jobs carry a `stage_priority` object keyed by stage name → rank (1 = highest, max 5).
+// Set by drag-to-reorder or the priority menu.
+
+// Maximum number of pinned (ranked) jobs allowed per stage.
+export const MAX_PRIORITY_SLOTS = 5;
+
+// Install-date sort key: soonest first; jobs with no valid date sink to the bottom.
+function installSortKey(job) {
+  const d = job.promised_install_date || job.expected_install_date;
+  if (!d) return Infinity;
+  const p = parseISO(d);
+  return isValid(p) ? p.getTime() : Infinity;
+}
+
+// Oldest-job-first tiebreak key (Base44 created_date).
+function createdKey(job) {
+  if (!job.created_date) return Infinity;
+  const p = parseISO(job.created_date);
+  return isValid(p) ? p.getTime() : Infinity;
+}
+
+// Assigns contiguous ranks 1..MAX_PRIORITY_SLOTS to the jobs listed in orderedIds
+// (in that order). Any job beyond slot 5, and any previously-pinned job not in
+// orderedIds, has its rank for this stage cleared. Returns the minimal set of
+// { jobId, stage_priority } updates. This is the single source of truth for
+// writing pins — drag, the menu, and gap-closing all go through it.
+function assignPinRanks(allJobs, orderedIds, stage) {
+  const updates = [];
+  const jobById = new Map(allJobs.map(j => [j.id, j]));
+  const kept = new Set();
+
+  orderedIds.slice(0, MAX_PRIORITY_SLOTS).forEach((id, i) => {
+    const j = jobById.get(id);
+    if (!j) return;
+    kept.add(id);
+    const rank = i + 1;
+    if (j.stage_priority?.[stage] !== rank) {
+      updates.push({ jobId: id, stage_priority: { ...(j.stage_priority || {}), [stage]: rank } });
+    }
+  });
+
+  allJobs.forEach(j => {
+    if (!kept.has(j.id) && typeof j.stage_priority?.[stage] === "number") {
+      const rest = { ...(j.stage_priority || {}) };
+      delete rest[stage];
+      updates.push({ jobId: j.id, stage_priority: rest });
+    }
+  });
+
+  return updates;
+}
+
 export function sortColumnJobs(jobs, stage) {
   const ranked = jobs
     .filter(j => typeof j.stage_priority?.[stage] === "number")
     .sort((a, b) => a.stage_priority[stage] - b.stage_priority[stage]);
-  const unranked = jobs.filter(j => typeof j.stage_priority?.[stage] !== "number");
-  return [...ranked, ...unranked];
+
+  const tail = jobs
+    .filter(j => typeof j.stage_priority?.[stage] !== "number")
+    .sort((a, b) => {
+      const ka = installSortKey(a), kb = installSortKey(b);
+      if (ka !== kb) return ka - kb;
+      return createdKey(a) - createdKey(b);
+    });
+
+  return [...ranked, ...tail];
 }
 
-// Computes the Job.update payload(s) needed to apply a priority change.
-// `sortedColumnJobs` must be the current (sortColumnJobs-sorted) list for that stage.
-// direction: "top" | "up" | "down" | "clear"
-// Returns an array of { jobId, stage_priority } updates to apply (0-2 records).
-export function computePriorityChange(sortedColumnJobs, job, stage, direction) {
-  const rankedJobs = sortedColumnJobs.filter(j => typeof j.stage_priority?.[stage] === "number");
-  const currentRank = job.stage_priority?.[stage];
+// Menu-driven priority change. direction: "top" | "up" | "down" | "clear".
+// Returns the { jobId, stage_priority } updates needed. Enforces the 5-slot cap.
+export function computePriorityChange(columnJobs, job, stage, direction) {
+  const pins = columnJobs
+    .filter(j => typeof j.stage_priority?.[stage] === "number")
+    .sort((a, b) => a.stage_priority[stage] - b.stage_priority[stage]);
+  const ordered = pins.map(j => j.id);
+  const idx = ordered.indexOf(job.id);
 
   if (direction === "clear") {
-    if (typeof currentRank !== "number") return [];
-    const rest = { ...(job.stage_priority || {}) };
-    delete rest[stage];
-    return [{ jobId: job.id, stage_priority: rest }];
+    if (idx === -1) return [];
+    ordered.splice(idx, 1);
+  } else if (direction === "top") {
+    if (idx !== -1) ordered.splice(idx, 1);
+    ordered.unshift(job.id);
+  } else if (direction === "up") {
+    if (idx === -1) ordered.push(job.id); // "Add to Priority List" → bottom slot
+    else if (idx > 0) [ordered[idx - 1], ordered[idx]] = [ordered[idx], ordered[idx - 1]];
+  } else if (direction === "down") {
+    if (idx === -1) return [];
+    if (idx < ordered.length - 1) [ordered[idx + 1], ordered[idx]] = [ordered[idx], ordered[idx + 1]];
+    else ordered.splice(idx, 1); // moving below the last pin unpins it
+  } else {
+    return [];
   }
 
-  if (direction === "top") {
-    const updates = [{ jobId: job.id, stage_priority: { ...(job.stage_priority || {}), [stage]: 1 } }];
-    rankedJobs.filter(j => j.id !== job.id).forEach(j => {
-      updates.push({ jobId: j.id, stage_priority: { ...j.stage_priority, [stage]: j.stage_priority[stage] + 1 } });
-    });
-    return updates;
-  }
-
-  if (direction === "up") {
-    if (typeof currentRank !== "number") {
-      const newRank = rankedJobs.length + 1;
-      return [{ jobId: job.id, stage_priority: { ...(job.stage_priority || {}), [stage]: newRank } }];
-    }
-    if (currentRank <= 1) return [];
-    const swapWith = rankedJobs.find(j => j.stage_priority[stage] === currentRank - 1);
-    const updates = [{ jobId: job.id, stage_priority: { ...job.stage_priority, [stage]: currentRank - 1 } }];
-    if (swapWith) updates.push({ jobId: swapWith.id, stage_priority: { ...swapWith.stage_priority, [stage]: currentRank } });
-    return updates;
-  }
-
-  if (direction === "down") {
-    if (typeof currentRank !== "number") return [];
-    const maxRank = rankedJobs.length;
-    if (currentRank >= maxRank) {
-      const rest = { ...(job.stage_priority || {}) };
-      delete rest[stage];
-      return [{ jobId: job.id, stage_priority: rest }];
-    }
-    const swapWith = rankedJobs.find(j => j.stage_priority[stage] === currentRank + 1);
-    const updates = [{ jobId: job.id, stage_priority: { ...job.stage_priority, [stage]: currentRank + 1 } }];
-    if (swapWith) updates.push({ jobId: swapWith.id, stage_priority: { ...swapWith.stage_priority, [stage]: currentRank } });
-    return updates;
-  }
-
-  return [];
+  return assignPinRanks(columnJobs, ordered, stage);
 }
 
 // Closes the rank gap left behind in a stage's column after a job leaves it
 // (moved to another stage). Remaining ranked jobs are renumbered 1..N with no gaps.
 export function closePriorityGap(columnJobs, stage, movedJobId) {
-  const remaining = columnJobs
+  const ordered = columnJobs
     .filter(j => j.id !== movedJobId && typeof j.stage_priority?.[stage] === "number")
-    .sort((a, b) => a.stage_priority[stage] - b.stage_priority[stage]);
-  const updates = [];
-  remaining.forEach((j, idx) => {
-    const newRank = idx + 1;
-    if (j.stage_priority[stage] !== newRank) {
-      updates.push({ jobId: j.id, stage_priority: { ...j.stage_priority, [stage]: newRank } });
-    }
-  });
-  return updates;
+    .sort((a, b) => a.stage_priority[stage] - b.stage_priority[stage])
+    .map(j => j.id);
+  return assignPinRanks(columnJobs, ordered, stage);
 }
 
-// Computes the full re-ranking for a column after a same-stage drag reorder —
-// every job in the column gets an explicit rank matching its new position.
-export function reorderColumnPriority(columnJobs, sourceIndex, destIndex, stage) {
-  const reordered = Array.from(columnJobs);
-  const [moved] = reordered.splice(sourceIndex, 1);
-  reordered.splice(destIndex, 0, moved);
-  return reordered.map((j, idx) => ({ jobId: j.id, stage_priority: { ...(j.stage_priority || {}), [stage]: idx + 1 } }));
+// Same-stage drag reorder. sortedColumnJobs is the sortColumnJobs-sorted list;
+// sourceIndex/destIndex are positions within it.
+export function reorderColumnPriority(sortedColumnJobs, sourceIndex, destIndex, stage) {
+  const dragged = sortedColumnJobs[sourceIndex];
+  if (!dragged) return [];
+
+  const pins = sortedColumnJobs
+    .filter(j => typeof j.stage_priority?.[stage] === "number" && j.id !== dragged.id)
+    .sort((a, b) => a.stage_priority[stage] - b.stage_priority[stage]);
+
+  // A drop pins the job only if it lands inside the band or the slot immediately
+  // after the last pin (lets you grow the list), and within the 5-slot cap.
+  const canPin = destIndex < MAX_PRIORITY_SLOTS && destIndex <= pins.length;
+
+  const ordered = pins.map(j => j.id);
+  if (canPin) ordered.splice(destIndex, 0, dragged.id);
+
+  return assignPinRanks(sortedColumnJobs, ordered, stage);
 }
 
 // ── Payment status (3-state, derived from invoices only — no manual flag) ─────

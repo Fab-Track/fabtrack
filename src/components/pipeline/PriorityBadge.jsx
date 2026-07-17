@@ -7,15 +7,15 @@ import { Trophy } from "lucide-react";
  */
 export default function PriorityBadge({ rank }) {
   if (typeof rank !== "number") return null;
-  const isTop3 = rank <= 3;
+  const isTopPriority = rank <= 5;
   return (
     <span
       title={`Priority #${rank}`}
       className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0 rounded-full shrink-0 ${
-        isTop3 ? "bg-red-600 text-white" : "bg-muted text-muted-foreground border border-border"
+        isTopPriority ? "bg-red-600 text-white" : "bg-muted text-muted-foreground border border-border"
       }`}
     >
-      {isTop3 && <Trophy className="w-2.5 h-2.5" />}
+      {isTopPriority && <Trophy className="w-2.5 h-2.5" />}
       #{rank}
     </span>
   );
