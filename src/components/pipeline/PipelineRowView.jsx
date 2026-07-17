@@ -13,6 +13,10 @@ import PriorityBadge from "./PriorityBadge";
 import PriorityMenuItems from "./PriorityMenuItems";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
+import { hasAnyRole } from "@/lib/roleHelpers";
+
+const AMOUNT_VISIBLE_ROLES = ["owner", "admin", "accountant"];
 
 // Muted left-border colors per stage (derived from top-border colors on kanban)
 const STAGE_BORDER = {
@@ -65,7 +69,7 @@ function SectionHeader({ stage, count, expanded, onToggle }) {
   );
 }
 
-function PipelineJobRow({ job, index, board, readOnly = false, stage, columnJobs, onPriorityChange }) {
+function PipelineJobRow({ job, index, board, readOnly = false, stage, columnJobs, onPriorityChange, showAmount }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const days = daysInStage(job);
@@ -160,12 +164,14 @@ function PipelineJobRow({ job, index, board, readOnly = false, stage, columnJobs
               </div>
             </div>
 
-            {/* Estimate / Balance */}
-            <div className="w-24 shrink-0 pr-3">
-              {job.estimate_total > 0 || job.actual_cost > 0
-                ? <div className="flex items-center gap-0.5 text-xs font-medium"><DollarSign className="w-3 h-3 text-muted-foreground" />{(job.estimate_total || job.actual_cost || 0).toLocaleString()}</div>
-                : <span className="text-muted-foreground/30 text-xs">—</span>}
-            </div>
+            {/* Estimate / Balance — restricted to owner/admin/accountant */}
+            {showAmount && (
+              <div className="w-24 shrink-0 pr-3">
+                {job.estimate_total > 0 || job.actual_cost > 0
+                  ? <div className="flex items-center gap-0.5 text-xs font-medium"><DollarSign className="w-3 h-3 text-muted-foreground" />{(job.estimate_total || job.actual_cost || 0).toLocaleString()}</div>
+                  : <span className="text-muted-foreground/30 text-xs">—</span>}
+              </div>
+            )}
 
             {/* Priority menu */}
             <div className="w-8 shrink-0 flex justify-end pr-2">
@@ -199,6 +205,8 @@ function PipelineJobRow({ job, index, board, readOnly = false, stage, columnJobs
  */
 export default function PipelineRowView({ jobs, stages, board, readOnly = false }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const showAmount = hasAnyRole(user, AMOUNT_VISIBLE_ROLES);
   const [collapsed, setCollapsed] = useState({});
 
   // Sections are derived directly from the jobs prop every render (no local
@@ -256,7 +264,7 @@ export default function PipelineRowView({ jobs, stages, board, readOnly = false 
         <div className="w-32 shrink-0 pr-3">{colLabel}</div>
         <div className="w-20 shrink-0 pr-3">Crew</div>
         <div className="w-16 shrink-0 pr-3">Age</div>
-        <div className="w-24 shrink-0 pr-3">Amount</div>
+        {showAmount && <div className="w-24 shrink-0 pr-3">Amount</div>}
         <div className="w-8 shrink-0" />
       </div>
 
@@ -290,6 +298,7 @@ export default function PipelineRowView({ jobs, stages, board, readOnly = false 
                           stage={stage}
                           columnJobs={stageJobs}
                           onPriorityChange={(updates) => priorityMutation.mutate(updates)}
+                          showAmount={showAmount}
                         />
                       ))}
                       {provided.placeholder}
