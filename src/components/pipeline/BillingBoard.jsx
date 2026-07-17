@@ -43,16 +43,16 @@ function BillingSummary({ jobs, invoiceMap }) {
           <p className="text-xl font-bold text-destructive">${totalOutstanding.toLocaleString("en-US", { minimumFractionDigits: 0 })}</p>
         </div>
         {buckets.map(b => {
-          const count = jobs.filter(j => b.stages.includes(j.stage)).length;
-          const amt = jobs.filter(j => b.stages.includes(j.stage)).reduce((s, j) => {
+          const bucketJobs = jobs.filter(j => b.stages.includes(j.stage));
+          const amt = bucketJobs.reduce((s, j) => {
             const inv = invoiceMap[j.second_half_invoice_id];
             return s + (inv?.balance_due || 0);
           }, 0);
           return (
             <div key={b.label} className="bg-card border rounded-lg px-4 py-3">
               <p className="text-xs text-muted-foreground">{b.label}</p>
-              <p className="text-base font-bold">{count} jobs</p>
-              {amt > 0 && <p className="text-xs text-muted-foreground">${amt.toLocaleString()}</p>}
+              <p className="text-base font-bold">${amt.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">{bucketJobs.length} job{bucketJobs.length === 1 ? "" : "s"}</p>
             </div>
           );
         })}
