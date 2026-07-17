@@ -17,6 +17,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import DeleteJobModal from "@/components/jobs/DeleteJobModal";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CompletedInvoicesTab from "./CompletedInvoicesTab";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -158,10 +160,13 @@ function BillingCard({ job, isDragging, invoice, jobInvoices = [], customer, onM
 }
 
 // ── Billing Board ──────────────────────────────────────────────────────────────
+const COMPLETED_INVOICE_AGE_DAYS = 30;
+
 export default function BillingBoard({ jobs = [], readOnly = false }) {
   const qc = useQueryClient();
   const [deletingJob, setDeletingJob] = useState(null);
   const [confirmingPaidJob, setConfirmingPaidJob] = useState(null);
+  const [activeTab, setActiveTab] = useState("active");
   const { user } = useAuth();
   const effectiveRole = useEffectiveRole(user?.role || "admin");
   const canDelete = ["owner", "admin", "estimator"].includes(effectiveRole.toLowerCase());
@@ -184,9 +189,20 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
     return acc;
   }, {});
 
+  // Paid jobs older than 30 days move out of the active pipeline into the
+  // Completed Invoices tab, keeping the Paid / Closed column current.
+  const isOldCompleted = (j) => {
+    if (j.stage !== "Paid / Closed") return false;
+    const paidAt = j.stage_entered_at && isValid(parseISO(j.stage_entered_at)) ? parseISO(j.stage_entered_at) : null;
+    return paidAt ? differenceInDays(new Date(), paidAt) > COMPLETED_INVOICE_AGE_DAYS : false;
+  };
+  const completedJobs = jobs.filter(isOldCompleted)
+    .sort((a, b) => new Date(b.stage_entered_at || 0) - new Date(a.stage_entered_at || 0));
+  const activeJobs = jobs.filter(j => !isOldCompleted(j));
+
   const columns = {};
   BILLING_STAGES.forEach(s => { columns[s] = []; });
-  jobs.forEach(j => {
+  activeJobs.forEach(j => {
     const stage = j.stage || "Needs 2nd Half Invoice Created";
     if (columns[stage]) columns[stage].push(j);
     else columns["Needs 2nd Half Invoice Created"].push(j);
@@ -298,10 +314,22 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
 
   return (
     <>
-      <BillingSummary jobs={jobs} invoiceMap={invoiceMap} />
-      <DragDropContext onDragEnd={readOnly ? () => {} : handleDragEnd}>
-        {columnContent}
-      </DragDropContext>
+      <BillingSummary jobs={activeJobs} invoiceMap={invoiceMap} />
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0">
+        <TabsList className="mb-3 self-start shrink-0">
+          <TabsTrigger value="active">Active Pipeline</TabsTrigger>
+          <TabsTrigger value="completed">Completed Invoices{completedJobs.length > 0 ? ` (${completedJobs.length})` : ""}</TabsTrigger>
+        </TabsList>
+
+        {activeTab === "active" ? (
+          <DragDropContext onDragEnd={readOnly ? () => {} : handleDragEnd}>
+            {columnContent}
+          </DragDropContext>
+        ) : (
+          <CompletedInvoicesTab jobs={completedJobs} invoiceMap={invoiceMap} customersById={customersById} />
+        )}
+      </Tabs>
 
       <DeleteJobModal
         open={!!deletingJob}
