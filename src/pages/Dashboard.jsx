@@ -20,7 +20,8 @@ import DesignDashboard from "./dashboard/DesignDashboard";
 function getDashboardForRole(role) {
   const r = (role || "").toLowerCase();
   if (["owner", "admin"].includes(r)) return "owner";
-  if (["shop_manager", "foreman"].includes(r)) return "shop";
+  if (r === "shop_manager") return "fabricator";
+  if (r === "foreman") return "shop";
   if (r === "estimator") return "estimator";
   if (r === "accountant") return "accountant";
   if (r === "design_specialist") return "design";

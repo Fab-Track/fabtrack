@@ -78,8 +78,9 @@ export function getDashboardForRoles(user) {
   if (roles.length === 0) return "owner";
   if (roles.some(r => OWNER_LEVEL_ROLES.includes(r))) return "owner";
   const r = roles[0];
-  if (["shop_manager", "foreman", "manager"].includes(r)) return "owner";
-  if (["shop_manager", "foreman"].includes(r)) return "shop";
+  if (["foreman", "manager"].includes(r)) return "owner";
+  if (r === "shop_manager") return "fabricator";
+  if (r === "foreman") return "shop";
   if (r === "estimator") return "estimator";
   if (r === "accountant" || r === "payroll") return "accountant";
   if (r === "design_specialist") return "design";
