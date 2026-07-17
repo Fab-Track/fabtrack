@@ -45,8 +45,20 @@ export default function JobBoard() {
   const [filterType, setFilterType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeBoard, setActiveBoard] = useState(null);
-  // Per-board view: "kanban" | "row"
-  const [viewMode, setViewMode] = useState({ Sales: "kanban", Shop: "kanban", Billing: "kanban" });
+  // Per-board view: "kanban" | "row" — persisted so the chosen view survives navigation
+  const [viewMode, setViewMode] = useState(() => {
+    const defaults = { Sales: "kanban", Shop: "kanban", Billing: "kanban" };
+    try {
+      const saved = JSON.parse(localStorage.getItem("jobBoardViewMode"));
+      return saved ? { ...defaults, ...saved } : defaults;
+    } catch {
+      return defaults;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("jobBoardViewMode", JSON.stringify(viewMode));
+  }, [viewMode]);
 
   const queryClient = useQueryClient();
   const orgFilter = useOrgFilter();
