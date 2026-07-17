@@ -9,6 +9,7 @@ import DashKpiCard from "@/components/dashboard/shared/DashKpiCard";
 import DashWidget from "@/components/dashboard/shared/DashWidget";
 import EstimatorFollowUpsWidget from "@/components/dashboard/estimator/EstimatorFollowUpsWidget";
 import MasterClockCard from "@/components/timetracking/MasterClockCard";
+import JobClockSection from "@/components/timetracking/JobClockSection";
 import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -58,6 +59,7 @@ export default function EstimatorDashboard() {
   const myId = myEmployee2?.id || user?.id;
   const myActiveEntries2 = myId ? activeEntries.filter(e => e.employee_id === myId) : [];
   const masterEntry = myActiveEntries2.find(e => !e.job_id) || null;
+  const jobActiveEntries = myActiveEntries2.filter(e => !!e.job_id);
 
   useEffect(() => {
     const unsubscribe = base44.entities.TimeEntry.subscribe(() => {
@@ -132,6 +134,13 @@ export default function EstimatorDashboard() {
       <div className="space-y-3">
         <MasterClockCard employee={myEmployee2 || { id: user?.id, name: user?.full_name, work_center_primary: "General" }} masterEntry={masterEntry} />
         {myEmployee2 && <HoursStatsRow employee={myEmployee2} timeEntries={allTimeEntries} activeEntry={masterEntry} />}
+        <JobClockSection
+          employee={myEmployee2 || { id: null, name: user?.full_name, email: user?.email, work_center_primary: "General", organization_id: user?.organization_id }}
+          masterEntry={masterEntry}
+          activeEntries={jobActiveEntries}
+          allTimeEntries={allTimeEntries}
+          jobs={jobs}
+        />
       </div>
 
       {/* Period selector + KPIs */}
