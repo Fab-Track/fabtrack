@@ -17,6 +17,16 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import DeleteJobModal from "@/components/jobs/DeleteJobModal";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // ── Summary bar ────────────────────────────────────────────────────────────────
 function BillingSummary({ jobs, invoiceMap }) {
@@ -151,6 +161,7 @@ function BillingCard({ job, isDragging, invoice, jobInvoices = [], customer, onM
 export default function BillingBoard({ jobs = [], readOnly = false }) {
   const qc = useQueryClient();
   const [deletingJob, setDeletingJob] = useState(null);
+  const [confirmingPaidJob, setConfirmingPaidJob] = useState(null);
   const { user } = useAuth();
   const effectiveRole = useEffectiveRole(user?.role || "admin");
   const canDelete = ["owner", "admin", "estimator"].includes(effectiveRole.toLowerCase());
@@ -217,7 +228,12 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
   }
 
   function handleMarkPaid(job) {
-    moveMutation.mutate({ job, toStage: "Paid / Closed" });
+    setConfirmingPaidJob(job);
+  }
+
+  function confirmMarkPaid() {
+    if (confirmingPaidJob) moveMutation.mutate({ job: confirmingPaidJob, toStage: "Paid / Closed" });
+    setConfirmingPaidJob(null);
   }
 
   function handleSendReminder(job, invoice) {
@@ -293,6 +309,23 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
         job={deletingJob}
         onDeleted={() => setDeletingJob(null)}
       />
+
+      <AlertDialog open={!!confirmingPaidJob} onOpenChange={(open) => !open && setConfirmingPaidJob(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark this job as paid?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmingPaidJob && `"${confirmingPaidJob.job_name}" will move to Paid / Closed. This confirms the balance has been collected.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-emerald-600 hover:bg-emerald-700" onClick={confirmMarkPaid}>
+              Mark Paid
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
