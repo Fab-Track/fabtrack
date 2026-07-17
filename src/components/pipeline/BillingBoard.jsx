@@ -240,6 +240,7 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
       priorityMutation.mutate(reorderColumnPriority(columns[newStage], source.index, destination.index, newStage));
       return;
     }
+    if (readOnly) return; // cross-stage moves stay blocked in read-only mode
     moveMutation.mutate({ job, toStage: newStage });
   }
 
@@ -267,7 +268,7 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
   const columnContent = (
     <div className="flex gap-3 overflow-x-auto flex-1 pb-4">
       {BILLING_STAGES.map(stage => (
-        <Droppable key={stage} droppableId={stage} isDropDisabled={readOnly}>
+        <Droppable key={stage} droppableId={stage}>
           {(provided, snapshot) => (
             <div
               ref={provided.innerRef}
@@ -282,9 +283,9 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
               </div>
               <div className="flex-1 px-2 pb-2 space-y-2 overflow-y-auto min-h-[200px]">
                 {columns[stage].map((job, index) => (
-                  <Draggable key={job.id} draggableId={job.id} index={index} isDragDisabled={readOnly}>
+                  <Draggable key={job.id} draggableId={job.id} index={index}>
                     {(prov, snap) => (
-                      <div ref={prov.innerRef} {...prov.draggableProps} {...(readOnly ? {} : prov.dragHandleProps)}>
+                      <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}>
                         <BillingCard
                           job={job}
                           isDragging={snap.isDragging}
@@ -323,7 +324,7 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
         </TabsList>
 
         {activeTab === "active" ? (
-          <DragDropContext onDragEnd={readOnly ? () => {} : handleDragEnd}>
+          <DragDropContext onDragEnd={handleDragEnd}>
             {columnContent}
           </DragDropContext>
         ) : (

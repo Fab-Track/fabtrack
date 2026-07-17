@@ -66,7 +66,6 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
           <PriorityBadge rank={job.stage_priority?.[stage]} />
           <PaymentStatusBadge status={paymentStatus} />
           {job.job_type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.job_type}</Badge>}
-          {!readOnly && (
           <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger asChild>
               <button
@@ -77,50 +76,53 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="text-sm gap-2">
-                  <ArrowRightLeft className="w-3.5 h-3.5" /> Move to...
-                </DropdownMenuSubTrigger>
-                <DropdownMenuPortal>
-                  <DropdownMenuSubContent className="w-48">
-                    {Object.entries(FLOWS).map(([board, stages]) => (
-                      <DropdownMenuSub key={board}>
-                        <DropdownMenuSubTrigger className="text-sm">{board} Flow</DropdownMenuSubTrigger>
-                        <DropdownMenuPortal>
-                          <DropdownMenuSubContent className="w-56 max-h-64 overflow-y-auto">
-                            {stages.map(stage => (
-                              <DropdownMenuItem
-                                key={stage}
-                                className="text-sm"
-                                onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); moveMutation.mutate({ toBoard: board, toStage: stage }); }}
-                              >
-                                {stage}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuPortal>
-                      </DropdownMenuSub>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuPortal>
-              </DropdownMenuSub>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-sm gap-2"
-                onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); archiveMutation.mutate(); }}
-              >
-                <Archive className="w-3.5 h-3.5" /> Archive
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-sm gap-2 text-destructive focus:text-destructive"
-                onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); setDeleteOpen(true); }}
-              >
-                <Trash2 className="w-3.5 h-3.5" /> Delete
-              </DropdownMenuItem>
+              {!readOnly && (
+                <>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="text-sm gap-2">
+                      <ArrowRightLeft className="w-3.5 h-3.5" /> Move to...
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent className="w-48">
+                        {Object.entries(FLOWS).map(([board, stages]) => (
+                          <DropdownMenuSub key={board}>
+                            <DropdownMenuSubTrigger className="text-sm">{board} Flow</DropdownMenuSubTrigger>
+                            <DropdownMenuPortal>
+                              <DropdownMenuSubContent className="w-56 max-h-64 overflow-y-auto">
+                                {stages.map(stage => (
+                                  <DropdownMenuItem
+                                    key={stage}
+                                    className="text-sm"
+                                    onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); moveMutation.mutate({ toBoard: board, toStage: stage }); }}
+                                  >
+                                    {stage}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuSubContent>
+                            </DropdownMenuPortal>
+                          </DropdownMenuSub>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-sm gap-2"
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); archiveMutation.mutate(); }}
+                  >
+                    <Archive className="w-3.5 h-3.5" /> Archive
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-sm gap-2 text-destructive focus:text-destructive"
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); setDeleteOpen(true); }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </DropdownMenuItem>
+                </>
+              )}
               <PriorityMenuItems job={job} stage={stage} columnJobs={columnJobs} onApply={onPriorityChange} closeMenu={() => setMenuOpen(false)} />
             </DropdownMenuContent>
           </DropdownMenu>
-          )}
         </div>
       </div>
       <Link to={`/jobs/${job.id}?board=Shop`}>
@@ -229,7 +231,7 @@ export default function ShopBoard({ jobs = [], readOnly = false }) {
   });
 
   function handleDragEnd(result) {
-    if (readOnly || !result.destination) return;
+    if (!result.destination) return;
     const { draggableId, source, destination } = result;
     const newStage = destination.droppableId;
     const job = jobs.find(j => j.id === draggableId);
@@ -239,6 +241,7 @@ export default function ShopBoard({ jobs = [], readOnly = false }) {
       priorityMutation.mutate(reorderColumnPriority(columns[newStage], source.index, destination.index, newStage));
       return;
     }
+    if (readOnly) return; // cross-stage moves stay blocked in read-only mode
     moveMutation.mutate({ job, toBoard: "Shop", toStage: newStage, note: "" });
   }
 
@@ -267,9 +270,9 @@ export default function ShopBoard({ jobs = [], readOnly = false }) {
                   </div>
                   <div className="flex-1 px-2 pb-2 space-y-2 overflow-y-auto min-h-[200px]">
                     {columns[stage].map((job, index) => (
-                      <Draggable key={job.id} draggableId={job.id} index={index} isDragDisabled={readOnly}>
+                      <Draggable key={job.id} draggableId={job.id} index={index}>
                         {(prov, snap) => (
-                          <div ref={prov.innerRef} {...prov.draggableProps} {...(!readOnly ? prov.dragHandleProps : {})}>
+                          <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}>
                             <ShopCard
                               job={job}
                               isDragging={snap.isDragging}
