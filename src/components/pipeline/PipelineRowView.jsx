@@ -1,13 +1,16 @@
 import React, { useState, useMemo } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, isValid, differenceInDays } from "date-fns";
 import {
-  ChevronDown, ChevronRight, GripVertical,
+  ChevronDown, ChevronRight, GripVertical, MoreHorizontal,
   CalendarDays, Users, Paintbrush, Clock, DollarSign,
 } from "lucide-react";
-import { daysInStage, buildStageTransition } from "@/lib/pipelineHelpers";
+import { daysInStage, buildStageTransition, sortColumnJobs, reorderColumnPriority } from "@/lib/pipelineHelpers";
+import PriorityBadge from "./PriorityBadge";
+import PriorityMenuItems from "./PriorityMenuItems";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 
@@ -62,8 +65,9 @@ function SectionHeader({ stage, count, expanded, onToggle }) {
   );
 }
 
-function PipelineJobRow({ job, index, board, readOnly = false }) {
+function PipelineJobRow({ job, index, board, readOnly = false, stage, columnJobs, onPriorityChange }) {
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
   const days = daysInStage(job);
   const isStale = (board === "Shop" && days > 5) || (board === "Sales" && days > 7);
 
@@ -78,21 +82,24 @@ function PipelineJobRow({ job, index, board, readOnly = false }) {
     : null;
 
   return (
-    <Draggable draggableId={job.id} index={index} isDragDisabled={readOnly}>
+    <Draggable draggableId={job.id} index={index}>
       {(provided, snapshot) => (
-        <div ref={provided.innerRef} {...provided.draggableProps} {...(!readOnly ? provided.dragHandleProps : {})}>
+        <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
           <div
             onClick={() => navigate(`/jobs/${job.id}?board=${board}`)}
             className={`group flex items-center gap-0 border-b last:border-b-0 border-border/40 bg-card transition-all cursor-pointer
               ${snapshot.isDragging ? "shadow-lg ring-1 ring-accent/40 rounded-lg opacity-95 z-50" : "hover:bg-muted/20"}`}
           >
-            {/* Drag handle (visual only — whole row is draggable) */}
-            <div className={`px-2 py-3 transition-opacity text-muted-foreground ${readOnly ? "opacity-0 pointer-events-none" : "opacity-0 group-hover:opacity-60"}`}>
+            {/* Drag handle (visual only — whole row is draggable; same-stage priority reorder is always allowed) */}
+            <div className="px-2 py-3 transition-opacity text-muted-foreground opacity-0 group-hover:opacity-60">
               <GripVertical className="w-4 h-4" />
             </div>
 
             {/* Job # */}
-            <div className="w-32 shrink-0 text-xs font-mono text-muted-foreground truncate">{job.job_number || "—"}</div>
+            <div className="w-32 shrink-0 flex items-center gap-1 text-xs font-mono text-muted-foreground truncate">
+              {job.job_number || "—"}
+              <PriorityBadge rank={job.stage_priority?.[stage]} />
+            </div>
 
             {/* Job Name */}
             <div className="flex-1 min-w-0 pr-4">
@@ -159,6 +166,23 @@ function PipelineJobRow({ job, index, board, readOnly = false }) {
                 ? <div className="flex items-center gap-0.5 text-xs font-medium"><DollarSign className="w-3 h-3 text-muted-foreground" />{(job.estimate_total || job.actual_cost || 0).toLocaleString()}</div>
                 : <span className="text-muted-foreground/30 text-xs">—</span>}
             </div>
+
+            {/* Priority menu */}
+            <div className="w-8 shrink-0 flex justify-end pr-2">
+              <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="p-0.5 rounded hover:bg-muted text-muted-foreground"
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); }}
+                  >
+                    <MoreHorizontal className="w-3.5 h-3.5" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <PriorityMenuItems job={job} stage={stage} columnJobs={columnJobs} onApply={onPriorityChange} closeMenu={() => setMenuOpen(false)} />
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
       )}
@@ -184,6 +208,7 @@ export default function PipelineRowView({ jobs, stages, board, readOnly = false 
     const s = {};
     stages.forEach(st => { s[st] = []; });
     jobs.forEach(j => { const st = j.stage || stages[0]; if (s[st]) s[st].push(j); });
+    stages.forEach(st => { s[st] = sortColumnJobs(s[st], st); });
     return s;
   }, [jobs, stages]);
 
@@ -193,13 +218,25 @@ export default function PipelineRowView({ jobs, stages, board, readOnly = false 
     onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
   });
 
+  const priorityMutation = useMutation({
+    mutationFn: (updates) => base44.entities.Job.bulkUpdate(updates.map(u => ({ id: u.jobId, stage_priority: u.stage_priority }))),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
+  });
+
   function handleDragEnd(result) {
-    if (readOnly || !result.destination) return;
+    if (!result.destination) return;
     const { draggableId, source, destination } = result;
     const srcStage = source.droppableId;
     const dstStage = destination.droppableId;
-    if (srcStage === dstStage) return;
 
+    if (srcStage === dstStage) {
+      if (source.index === destination.index) return;
+      const updates = reorderColumnPriority(sections[srcStage] || [], source.index, destination.index, srcStage);
+      if (updates.length) priorityMutation.mutate(updates);
+      return;
+    }
+
+    if (readOnly) return;
     const job = jobs.find(j => j.id === draggableId);
     if (job) moveMutation.mutate({ job, toStage: dstStage });
   }
@@ -220,6 +257,7 @@ export default function PipelineRowView({ jobs, stages, board, readOnly = false 
         <div className="w-20 shrink-0 pr-3">Crew</div>
         <div className="w-16 shrink-0 pr-3">Age</div>
         <div className="w-24 shrink-0 pr-3">Amount</div>
+        <div className="w-8 shrink-0" />
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
@@ -243,7 +281,16 @@ export default function PipelineRowView({ jobs, stages, board, readOnly = false 
                       className={`min-h-[36px] transition-colors ${snapshot.isDraggingOver ? "bg-accent/10" : ""}`}
                     >
                       {stageJobs.map((job, i) => (
-                        <PipelineJobRow key={job.id} job={job} index={i} board={board} readOnly={readOnly} />
+                        <PipelineJobRow
+                          key={job.id}
+                          job={job}
+                          index={i}
+                          board={board}
+                          readOnly={readOnly}
+                          stage={stage}
+                          columnJobs={stageJobs}
+                          onPriorityChange={(updates) => priorityMutation.mutate(updates)}
+                        />
                       ))}
                       {provided.placeholder}
                       {stageJobs.length === 0 && (
