@@ -9,6 +9,7 @@ import DashKpiCard from "@/components/dashboard/shared/DashKpiCard";
 import DashWidget from "@/components/dashboard/shared/DashWidget";
 import TodaysInstalls from "@/components/dashboard/owner/TodaysInstalls";
 import MasterClockCard from "@/components/timetracking/MasterClockCard";
+import JobClockSection from "@/components/timetracking/JobClockSection";
 import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 import { Link } from "react-router-dom";
 import DashboardTodoList from "@/components/dashboard/shared/DashboardTodoList";
@@ -57,6 +58,7 @@ export default function ShopManagerDashboard() {
   const myId = myEmployee?.id || null;
   const myActiveEntries = myId ? activeEntries.filter(e => e.employee_id === myId) : [];
   const masterEntry = myActiveEntries.find(e => !e.job_id) || null;
+  const jobActiveEntries = myActiveEntries.filter(e => !!e.job_id);
 
   useEffect(() => {
     const unsubscribe = base44.entities.TimeEntry.subscribe(() => {
@@ -122,6 +124,13 @@ export default function ShopManagerDashboard() {
       <div className="space-y-3">
         <MasterClockCard employee={myEmployee || { id: null, name: user?.full_name, work_center_primary: "General", organization_id: user?.organization_id }} masterEntry={masterEntry} />
         {myEmployee && <HoursStatsRow employee={myEmployee} timeEntries={allTimeEntries} activeEntry={masterEntry} />}
+        <JobClockSection
+          employee={myEmployee || { id: null, name: user?.full_name, email: user?.email, work_center_primary: "General", organization_id: user?.organization_id }}
+          masterEntry={masterEntry}
+          activeEntries={jobActiveEntries}
+          allTimeEntries={allTimeEntries}
+          jobs={jobs}
+        />
       </div>
 
       {/* KPIs */}

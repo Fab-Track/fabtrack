@@ -11,6 +11,7 @@ import { CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import DashboardTodoList from "@/components/dashboard/shared/DashboardTodoList";
 import MasterClockCard from "@/components/timetracking/MasterClockCard";
+import JobClockSection from "@/components/timetracking/JobClockSection";
 import HoursStatsRow from "@/components/timetracking/HoursStatsRow";
 import { useOrgFilter } from "@/lib/orgContext";
 
@@ -69,6 +70,7 @@ export default function DesignDashboard() {
   const myId = me?.id || user?.id;
   const myActiveEntries = myId ? activeEntries.filter(e => e.employee_id === myId) : [];
   const masterEntry = myActiveEntries.find(e => !e.job_id) || null;
+  const jobActiveEntries = myActiveEntries.filter(e => !!e.job_id);
 
   useEffect(() => {
     const unsubscribe = base44.entities.TimeEntry.subscribe(() => {
@@ -137,6 +139,13 @@ export default function DesignDashboard() {
       <div className="space-y-3">
         <MasterClockCard employee={me || { id: user?.id, name: user?.full_name, work_center_primary: "General" }} masterEntry={masterEntry} />
         {me && <HoursStatsRow employee={me} timeEntries={allTimeEntries} activeEntry={masterEntry} />}
+        <JobClockSection
+          employee={me || { id: null, name: user?.full_name, email: user?.email, work_center_primary: "General", organization_id: user?.organization_id }}
+          masterEntry={masterEntry}
+          activeEntries={jobActiveEntries}
+          allTimeEntries={allTimeEntries}
+          jobs={allJobs}
+        />
       </div>
 
       {/* ── To-Dos ── */}
