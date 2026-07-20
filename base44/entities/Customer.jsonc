@@ -36,7 +36,7 @@
     },
     "address": {
       "type": "string",
-      "description": "Address"
+      "description": "Primary address"
     },
     "notes": {
       "type": "string",
@@ -66,6 +66,10 @@
       "type": "string",
       "description": "Billing contact phone"
     },
+    "billing_contact_address": {
+      "type": "string",
+      "description": "Billing contact address"
+    },
     "billing_same_as_job": {
       "type": "boolean",
       "default": true,
@@ -74,7 +78,7 @@
     "billing_same_as_primary": {
       "type": "boolean",
       "default": false,
-      "description": "If true, billing contact matches the customer's primary name/email/phone"
+      "description": "If true, billing contact matches the customer's primary info"
     },
     "payment_terms": {
       "type": "string",
@@ -84,7 +88,7 @@
         "Net 45",
         "Custom"
       ],
-      "description": "Payment terms for this customer's invoices"
+      "description": "Billing terms for this customer's invoices"
     },
     "payment_terms_custom_days": {
       "type": "number",

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileText } from "lucide-react";
 import JobScopeSection from "@/components/jobs/JobScopeSection";
 import KeyDatesCard from "@/components/jobs/KeyDatesCard";
+import CustomerInfoCard from "@/components/jobs/CustomerInfoCard";
 import JobNotesSection from "@/components/jobs/JobNotesSection";
 import PaymentStatusBadge from "@/components/pipeline/PaymentStatusBadge";
 import { getPaymentStatus } from "@/lib/pipelineHelpers";
@@ -87,6 +88,8 @@ export default function JobOverviewTab({ job, highlightNoteId }) {
       </Card>
 
       <KeyDatesCard job={job} />
+
+      <CustomerInfoCard job={job} />
 
       {job.internal_notes && !isFabricator && (
         <Card className="md:col-span-2">

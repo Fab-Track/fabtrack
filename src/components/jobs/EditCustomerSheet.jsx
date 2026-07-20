@@ -42,6 +42,7 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
         billing_contact_name: customer.billing_contact_name || "",
         billing_contact_email: customer.billing_contact_email || "",
         billing_contact_phone: customer.billing_contact_phone || "",
+        billing_contact_address: customer.billing_contact_address || "",
         payment_terms: customer.payment_terms || "",
         payment_terms_custom_days: customer.payment_terms_custom_days ?? "",
         billing_deadline_date: customer.billing_deadline_date || "",
@@ -57,6 +58,7 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
       next.billing_contact_name = p.name || "";
       next.billing_contact_email = p.email || "";
       next.billing_contact_phone = p.phone || "";
+      next.billing_contact_address = p.address || "";
     }
     return next;
   });
@@ -76,6 +78,7 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
         billing_contact_name: form.billing_contact_name || null,
         billing_contact_email: form.billing_contact_email || null,
         billing_contact_phone: form.billing_contact_phone || null,
+        billing_contact_address: form.billing_contact_address || null,
         payment_terms: form.payment_terms || null,
         payment_terms_custom_days: form.payment_terms === "Custom" && form.payment_terms_custom_days !== "" ? Number(form.payment_terms_custom_days) : null,
         billing_deadline_date: form.billing_deadline_date || null,
@@ -138,16 +141,16 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
               <Mail className="w-3.5 h-3.5" /> Contact
             </legend>
             <div>
+              <Label className="text-xs">Address</Label>
+              <Input value={form.address || ""} onChange={e => f("address", e.target.value)} placeholder="123 Main St, City, State" />
+            </div>
+            <div>
               <Label className="text-xs">Email</Label>
               <Input type="email" value={form.email || ""} onChange={e => f("email", e.target.value)} placeholder="email@example.com" />
             </div>
             <div>
               <Label className="text-xs">Phone</Label>
               <PhoneInput value={form.phone || ""} onChange={e => f("phone", e.target.value)} placeholder="000-000-0000" />
-            </div>
-            <div>
-              <Label className="text-xs">Billing Address</Label>
-              <Input value={form.address || ""} onChange={e => f("address", e.target.value)} placeholder="123 Main St, City, State" />
             </div>
           </fieldset>
 
@@ -166,16 +169,25 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
                 Same as Primary Info
               </Label>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <div>
-                <Label className="text-xs">Name</Label>
-                <Input
-                  value={form.billing_contact_name || ""}
-                  onChange={e => f("billing_contact_name", e.target.value)}
-                  placeholder="Billing contact name"
-                  disabled={!!form.billing_same_as_primary}
-                />
-              </div>
+            <div>
+              <Label className="text-xs">Name</Label>
+              <Input
+                value={form.billing_contact_name || ""}
+                onChange={e => f("billing_contact_name", e.target.value)}
+                placeholder="Billing contact name"
+                disabled={!!form.billing_same_as_primary}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Address</Label>
+              <Input
+                value={form.billing_contact_address || ""}
+                onChange={e => f("billing_contact_address", e.target.value)}
+                placeholder="123 Main St, City, State"
+                disabled={!!form.billing_same_as_primary}
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
                 <Label className="text-xs">Email</Label>
                 <Input
