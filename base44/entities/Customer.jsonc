@@ -70,6 +70,30 @@
       "type": "boolean",
       "default": true,
       "description": "If true, billing contact is the same as job contact"
+    },
+    "billing_same_as_primary": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, billing contact matches the customer's primary name/email/phone"
+    },
+    "payment_terms": {
+      "type": "string",
+      "enum": [
+        "Net 15",
+        "Net 30",
+        "Net 45",
+        "Custom"
+      ],
+      "description": "Payment terms for this customer's invoices"
+    },
+    "payment_terms_custom_days": {
+      "type": "number",
+      "description": "Custom number of days when payment_terms is 'Custom'"
+    },
+    "billing_deadline_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Deadline date for submitting billing for this customer"
     }
   },
   "required": [

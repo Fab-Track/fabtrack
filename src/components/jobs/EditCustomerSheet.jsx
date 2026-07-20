@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Building2, Mail, StickyNote, Users } from "lucide-react";
+import { Building2, Mail, StickyNote, Users, Receipt } from "lucide-react";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 
 const CUSTOMER_TYPES = [
@@ -42,6 +42,9 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
         billing_contact_name: customer.billing_contact_name || "",
         billing_contact_email: customer.billing_contact_email || "",
         billing_contact_phone: customer.billing_contact_phone || "",
+        payment_terms: customer.payment_terms || "",
+        payment_terms_custom_days: customer.payment_terms_custom_days ?? "",
+        billing_deadline_date: customer.billing_deadline_date || "",
         notes: customer.notes || "",
       });
     }
@@ -73,6 +76,9 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
         billing_contact_name: form.billing_contact_name || null,
         billing_contact_email: form.billing_contact_email || null,
         billing_contact_phone: form.billing_contact_phone || null,
+        payment_terms: form.payment_terms || null,
+        payment_terms_custom_days: form.payment_terms === "Custom" && form.payment_terms_custom_days !== "" ? Number(form.payment_terms_custom_days) : null,
+        billing_deadline_date: form.billing_deadline_date || null,
         notes: form.notes || null,
       });
       // Update denormalized customer name on the job if name changed
@@ -189,6 +195,47 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
                   disabled={!!form.billing_same_as_primary}
                 />
               </div>
+            </div>
+          </fieldset>
+
+          {/* Billing Details */}
+          <fieldset className="space-y-3 border rounded-lg p-3">
+            <legend className="text-xs font-semibold text-muted-foreground px-1 flex items-center gap-1.5">
+              <Receipt className="w-3.5 h-3.5" /> Billing Details
+            </legend>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Payment Terms</Label>
+                <Select value={form.payment_terms || ""} onValueChange={val => f("payment_terms", val)}>
+                  <SelectTrigger><SelectValue placeholder="Select terms…" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Net 15">Net 15</SelectItem>
+                    <SelectItem value="Net 30">Net 30</SelectItem>
+                    <SelectItem value="Net 45">Net 45</SelectItem>
+                    <SelectItem value="Custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {form.payment_terms === "Custom" && (
+                <div>
+                  <Label className="text-xs">Custom Days</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={form.payment_terms_custom_days ?? ""}
+                    onChange={e => f("payment_terms_custom_days", e.target.value)}
+                    placeholder="e.g. 60"
+                  />
+                </div>
+              )}
+            </div>
+            <div>
+              <Label className="text-xs">Billing Submission Deadline</Label>
+              <Input
+                type="date"
+                value={form.billing_deadline_date || ""}
+                onChange={e => f("billing_deadline_date", e.target.value)}
+              />
             </div>
           </fieldset>
 
