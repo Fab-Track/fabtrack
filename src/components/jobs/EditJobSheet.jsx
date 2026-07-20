@@ -132,15 +132,6 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
               <Label className="text-xs">Job Number</Label>
               <Input value={form.job_number || ""} onChange={e => f("job_number", e.target.value)} placeholder="HCMW-2025-001" />
             </div>
-            <div>
-              <Label className="text-xs">Job Type</Label>
-              <Select value={form.job_type || ""} onValueChange={val => f("job_type", val)}>
-                <SelectTrigger><SelectValue placeholder="Select type…" /></SelectTrigger>
-                <SelectContent>
-                  {JOB_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
           </fieldset>
 
           {/* Location & dates */}

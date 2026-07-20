@@ -42,7 +42,6 @@ export default function JobOverviewTab({ job, highlightNoteId }) {
         </CardHeader>
         <CardContent className="space-y-3">
           <DetailRow label="Products" value={productsList} />
-          <DetailRow label="Job Type" value={job.job_type} />
           {job.powder_coat_color && (
             <DetailRow label="Powder Coat" value={`${job.powder_coat_color}${job.powder_coat_code ? ` (${job.powder_coat_code})` : ""}`} />
           )}
