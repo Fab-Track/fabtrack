@@ -42,6 +42,8 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
         job_type: job.job_type || "",
         expected_install_date: job.expected_install_date || "",
         site_address: job.site_address || "",
+        onsite_contact_name: job.onsite_contact_name || "",
+        onsite_contact_phone: job.onsite_contact_phone || "",
         pipeline_board: job.pipeline_board || "Sales",
         stage: job.stage || "",
         assigned_rep_id: job.assigned_rep_id || "",
@@ -76,6 +78,8 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
         job_type: form.job_type || null,
         expected_install_date: form.expected_install_date || null,
         site_address: form.site_address || null,
+        onsite_contact_name: form.onsite_contact_name || null,
+        onsite_contact_phone: form.onsite_contact_phone || null,
         pipeline_board: form.pipeline_board || "Sales",
         stage: form.stage || null,
         assigned_rep_id: form.assigned_rep_id || null,
@@ -151,6 +155,14 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
             <div>
               <Label className="text-xs">Expected Install Date</Label>
               <Input type="date" value={form.expected_install_date || ""} onChange={e => f("expected_install_date", e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">On-Site Contact Name</Label>
+              <Input value={form.onsite_contact_name || ""} onChange={e => f("onsite_contact_name", e.target.value)} placeholder="Contact name" />
+            </div>
+            <div>
+              <Label className="text-xs">On-Site Contact Phone</Label>
+              <Input value={form.onsite_contact_phone || ""} onChange={e => f("onsite_contact_phone", e.target.value)} placeholder="(555) 555-5555" />
             </div>
           </fieldset>
 

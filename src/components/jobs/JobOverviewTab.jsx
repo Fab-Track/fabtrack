@@ -43,6 +43,8 @@ export default function JobOverviewTab({ job, highlightNoteId }) {
         <CardContent className="space-y-3">
           <DetailRow label="Products" value={productsList} />
           <DetailRow label="Site Address" value={job.site_address} />
+          <DetailRow label="On-Site Contact" value={job.onsite_contact_name} />
+          <DetailRow label="On-Site Contact Phone" value={job.onsite_contact_phone} />
           <DetailRow label="Payment" value={<PaymentStatusBadge status={paymentStatus} className="text-xs px-2 py-0.5" />} />
           {job.lead_outcome && (
             <DetailRow label="Lead Outcome" value={

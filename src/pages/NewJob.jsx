@@ -45,6 +45,8 @@ export default function NewJob() {
     customer_name: prefilledCustomerName,
     status: "Estimate",
     site_address: prefilledCustomer?.address || "",
+    onsite_contact_name: "",
+    onsite_contact_phone: "",
     expected_install_date: "",
     customer_approval_status: "pending",
     last_activity_date: new Date().toISOString(),
@@ -166,6 +168,25 @@ export default function NewJob() {
                 onChange={e => updateField("site_address", e.target.value)}
                 placeholder="123 Main St, City, State"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs">On-Site Contact Name</Label>
+                <Input
+                  value={form.onsite_contact_name}
+                  onChange={e => updateField("onsite_contact_name", e.target.value)}
+                  placeholder="Contact name"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">On-Site Contact Phone</Label>
+                <Input
+                  value={form.onsite_contact_phone}
+                  onChange={e => updateField("onsite_contact_phone", e.target.value)}
+                  placeholder="(555) 555-5555"
+                />
+              </div>
             </div>
 
             <div>

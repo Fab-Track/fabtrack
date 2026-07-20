@@ -110,6 +110,14 @@
     "site_address": {
       "type": "string"
     },
+    "onsite_contact_name": {
+      "type": "string",
+      "description": "Name of the on-site contact for this job"
+    },
+    "onsite_contact_phone": {
+      "type": "string",
+      "description": "Phone number of the on-site contact for this job"
+    },
     "expected_install_date": {
       "type": "string",
       "format": "date"
