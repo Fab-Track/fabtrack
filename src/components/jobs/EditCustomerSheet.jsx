@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Building2, Mail, StickyNote, Users } from "lucide-react";
 import { PhoneInput } from "@/components/ui/PhoneInput";
@@ -37,6 +38,7 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
         phone: customer.phone || "",
         address: customer.address || "",
         type: customer.type || "",
+        billing_same_as_primary: customer.billing_same_as_primary ?? false,
         billing_contact_name: customer.billing_contact_name || "",
         billing_contact_email: customer.billing_contact_email || "",
         billing_contact_phone: customer.billing_contact_phone || "",
@@ -45,7 +47,16 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
     }
   }, [customer, open]);
 
-  const f = (field, val) => setForm(p => ({ ...p, [field]: val }));
+  const f = (field, val) => setForm(p => {
+    const next = { ...p, [field]: val };
+    // When checking "same as primary info", copy name/email/phone into billing contact
+    if (field === "billing_same_as_primary" && val === true) {
+      next.billing_contact_name = p.name || "";
+      next.billing_contact_email = p.email || "";
+      next.billing_contact_phone = p.phone || "";
+    }
+    return next;
+  });
 
   async function handleSave() {
     if (!customer || !form.name?.trim()) return;
@@ -58,6 +69,7 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
         phone: form.phone || null,
         address: form.address || null,
         type: form.type || null,
+        billing_same_as_primary: form.billing_same_as_primary,
         billing_contact_name: form.billing_contact_name || null,
         billing_contact_email: form.billing_contact_email || null,
         billing_contact_phone: form.billing_contact_phone || null,
@@ -138,18 +150,44 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
             <legend className="text-xs font-semibold text-muted-foreground px-1 flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5" /> Billing Contact
             </legend>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="billing_same_as_primary"
+                checked={!!form.billing_same_as_primary}
+                onCheckedChange={val => f("billing_same_as_primary", !!val)}
+              />
+              <Label htmlFor="billing_same_as_primary" className="text-xs cursor-pointer">
+                Same as Primary Info
+              </Label>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div>
                 <Label className="text-xs">Name</Label>
-                <Input value={form.billing_contact_name || ""} onChange={e => f("billing_contact_name", e.target.value)} placeholder="Billing contact name" />
+                <Input
+                  value={form.billing_contact_name || ""}
+                  onChange={e => f("billing_contact_name", e.target.value)}
+                  placeholder="Billing contact name"
+                  disabled={!!form.billing_same_as_primary}
+                />
               </div>
               <div>
                 <Label className="text-xs">Email</Label>
-                <Input type="email" value={form.billing_contact_email || ""} onChange={e => f("billing_contact_email", e.target.value)} placeholder="billing@email.com" />
+                <Input
+                  type="email"
+                  value={form.billing_contact_email || ""}
+                  onChange={e => f("billing_contact_email", e.target.value)}
+                  placeholder="billing@email.com"
+                  disabled={!!form.billing_same_as_primary}
+                />
               </div>
               <div>
                 <Label className="text-xs">Phone</Label>
-                <PhoneInput value={form.billing_contact_phone || ""} onChange={e => f("billing_contact_phone", e.target.value)} placeholder="000-000-0000" />
+                <PhoneInput
+                  value={form.billing_contact_phone || ""}
+                  onChange={e => f("billing_contact_phone", e.target.value)}
+                  placeholder="000-000-0000"
+                  disabled={!!form.billing_same_as_primary}
+                />
               </div>
             </div>
           </fieldset>
