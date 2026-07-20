@@ -99,7 +99,7 @@ export default function CustomerContactsSection({ customer, onUpdated }) {
 
   return (
     <>
-      <div className="bg-card border rounded-xl p-5 mb-5">
+      <div className="mt-4 pt-4 border-t border-border">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">Contacts</p>
         <div className="flex flex-col sm:flex-row gap-5">
           {/* Job Contact */}

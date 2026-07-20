@@ -155,34 +155,53 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
 
       {/* Header */}
       <div className="bg-card border rounded-xl p-5 mb-5">
-        {/* Name row */}
-        <div className="flex items-center gap-2 flex-wrap mb-1">
-          <h2 className="text-xl font-bold">{customer.name}</h2>
-          {editingType ? (
-            <Select
-              value={customer.type || ""}
-              onValueChange={(v) => updateTypeMutation.mutate(v)}
-              onOpenChange={(open) => { if (!open) setEditingType(false); }}
-              defaultOpen
-            >
-              <SelectTrigger className="h-7 w-44 text-xs">
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                {CUSTOMER_TYPES.map(t => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <button onClick={() => setEditingType(true)} className="hover:opacity-70 transition-opacity">
-              {customer.type ? <TypeBadge type={customer.type} /> : (
-                <Badge variant="outline" className="text-[10px] text-muted-foreground border-dashed">+ Add Type</Badge>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            {/* Name row */}
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <h2 className="text-xl font-bold">{customer.name}</h2>
+              {editingType ? (
+                <Select
+                  value={customer.type || ""}
+                  onValueChange={(v) => updateTypeMutation.mutate(v)}
+                  onOpenChange={(open) => { if (!open) setEditingType(false); }}
+                  defaultOpen
+                >
+                  <SelectTrigger className="h-7 w-44 text-xs">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CUSTOMER_TYPES.map(t => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <button onClick={() => setEditingType(true)} className="hover:opacity-70 transition-opacity">
+                  {customer.type ? <TypeBadge type={customer.type} /> : (
+                    <Badge variant="outline" className="text-[10px] text-muted-foreground border-dashed">+ Add Type</Badge>
+                  )}
+                </button>
               )}
-            </button>
-          )}
+            </div>
+            {customer.company && <p className="text-sm text-muted-foreground">{customer.company}</p>}
+          </div>
+
+          {/* Action cluster — mirrors job header */}
+          <div className="flex items-center gap-2 shrink-0">
+            <Button size="sm" onClick={() => setComposerOpen(true)} className="gap-1.5">
+              <Send className="w-3.5 h-3.5" /> Send Message
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => { setEditForm({ name: customer.name || "", phone: customer.phone || "", email: customer.email || "", address: customer.address || "" }); setEditSheetOpen(true); }}
+            >
+              <Pencil className="w-3.5 h-3.5" /> Edit
+            </Button>
+          </div>
         </div>
-        {customer.company && <p className="text-sm text-muted-foreground mb-3">{customer.company}</p>}
 
         {/* Info cells row — mirrors job header style */}
         {(customer.phone || customer.email || customer.address) && (
@@ -211,16 +230,11 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
                 <p className="text-sm font-medium">{customer.address}</p>
               </div>
             )}
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1 ml-auto"
-              onClick={() => { setEditForm({ name: customer.name || "", phone: customer.phone || "", email: customer.email || "", address: customer.address || "" }); setEditSheetOpen(true); }}
-            >
-              <Pencil className="w-3 h-3" /> Edit
-            </Button>
           </div>
         )}
+
+        {/* Contacts */}
+        <CustomerContactsSection customer={customer} onUpdated={onUpdated} />
       </div>
 
       {/* Edit slide-out panel */}
@@ -258,9 +272,6 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
         </SheetContent>
       </Sheet>
 
-      {/* Contacts */}
-      <CustomerContactsSection customer={customer} onUpdated={onUpdated} />
-
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <StatCard icon={DollarSign} label="Total Revenue" value={`$${totalRevenue.toLocaleString()}`} />
@@ -273,15 +284,6 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
       {unpaidInvoices.length > 0 && (
         <div className="mb-5">
           <OutstandingAgingCard unpaidInvoices={unpaidInvoices} lifetimeRevenue={totalRevenue} />
-        </div>
-      )}
-
-      {/* Send Message button — only shown outside the communications tab */}
-      {activeTab !== "communications" && (
-        <div className="flex justify-end mb-2">
-          <Button size="sm" onClick={() => setComposerOpen(true)} className="gap-1.5">
-            <Send className="w-3.5 h-3.5" /> Send Message
-          </Button>
         </div>
       )}
 
