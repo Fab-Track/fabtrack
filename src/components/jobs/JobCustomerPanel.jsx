@@ -100,7 +100,8 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
           ) : (
             <span className="font-semibold">{job.customer_name}</span>
           )}
-          {customer?.company && (
+          {customer?.company &&
+            customer.company.trim().toLowerCase() !== (job.customer_name || "").trim().toLowerCase() && (
             <>
               <span className="text-muted-foreground">·</span>
               <span className="text-muted-foreground">{customer.company}</span>
