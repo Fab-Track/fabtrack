@@ -205,7 +205,7 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
             </legend>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
-                <Label className="text-xs">Payment Terms</Label>
+                <Label className="text-xs">Billing Terms</Label>
                 <Select value={form.payment_terms || ""} onValueChange={val => f("payment_terms", val)}>
                   <SelectTrigger><SelectValue placeholder="Select terms…" /></SelectTrigger>
                   <SelectContent>
