@@ -184,7 +184,10 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
                 </button>
               )}
             </div>
-            {customer.company && <p className="text-sm text-muted-foreground">{customer.company}</p>}
+            {customer.company &&
+              customer.company.trim().toLowerCase() !== (customer.name || "").trim().toLowerCase() && (
+              <p className="text-sm text-muted-foreground">{customer.company}</p>
+            )}
           </div>
 
           {/* Action cluster — mirrors job header */}
