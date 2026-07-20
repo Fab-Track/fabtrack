@@ -9,8 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { STATUS_COLORS, getJobHealth, getHealthDot } from "@/lib/jobHelpers";
 import { getBoardForJob } from "@/lib/pipelineHelpers";
-import { format, parseISO } from "date-fns";
-import { ArrowLeft, CalendarDays, MapPin, Paintbrush, Send, MoreHorizontal, Trash2 } from "lucide-react";
+import { ArrowLeft, Send, MoreHorizontal, Trash2 } from "lucide-react";
 import JobCustomerPanel from "@/components/jobs/JobCustomerPanel";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import DeleteJobModal from "@/components/jobs/DeleteJobModal";
@@ -142,52 +141,29 @@ export default function JobDetail() {
             <h1 className="text-xl font-bold">{job.job_name}</h1>
             <JobCustomerPanel job={job} onJobUpdated={refetchJob} />
           </div>
-          <div className="flex flex-col items-end gap-3">
-            {/* Action buttons row */}
-            <div className="flex items-center gap-2">
-              {!isFabricator && !isAccountant && (
-                <Button size="sm" onClick={() => setComposerOpen(true)} className="gap-1.5 shrink-0">
-                  <Send className="w-3.5 h-3.5" /> Send Message
-                </Button>
-              )}
-              {canDeleteJob && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-9 w-9 shrink-0">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={() => setDeleteOpen(true)}
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" /> Delete Job
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-            {job.expected_install_date && (
-              <div className="flex items-center gap-1.5">
-                <CalendarDays className="w-4 h-4" />
-                {format(parseISO(job.expected_install_date), "MMM d, yyyy")}
-              </div>
+          <div className="flex items-center gap-2">
+            {!isFabricator && !isAccountant && (
+              <Button size="sm" onClick={() => setComposerOpen(true)} className="gap-1.5 shrink-0">
+                <Send className="w-3.5 h-3.5" /> Send Message
+              </Button>
             )}
-            {job.site_address && !isFabricator && (
-              <div className="flex items-center gap-1.5">
-                <MapPin className="w-4 h-4" />
-                {job.site_address}
-              </div>
+            {canDeleteJob && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-9 w-9 shrink-0">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => setDeleteOpen(true)}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" /> Delete Job
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
-            {job.powder_coat_color && (
-              <div className="flex items-center gap-1.5">
-                <Paintbrush className="w-4 h-4" />
-                {job.powder_coat_color} {job.powder_coat_code && `(${job.powder_coat_code})`}
-              </div>
-            )}
-            </div>
           </div>
         </div>
       </div>

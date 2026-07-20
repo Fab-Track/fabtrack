@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Mail, Phone, MapPin, UserSearch, Tag, User, Wrench } from "lucide-react";
+import { Mail, Phone, MapPin, UserSearch, User, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
@@ -88,35 +88,31 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
     );
   }
 
-  // Display info (use fetched customer for details, fall back to job fields)
-  const displayEmail = customer?.email || null;
-  const displayPhone = customer?.phone || null;
-  const displayAddress = customer?.address || null;
-
   return (
     <>
-      <div className="mt-2 flex items-start gap-4 flex-wrap">
-        {/* Customer name link */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-muted-foreground">Customer:</span>
+      <div className="mt-2 flex items-center justify-between gap-4 flex-wrap">
+        {/* Customer subtitle line */}
+        <div className="flex items-center gap-1.5 text-sm">
           {job.customer_id ? (
-            <Link to={`/customers?id=${job.customer_id}`} className="text-sm font-semibold text-accent hover:underline">
+            <Link to={`/customers?id=${job.customer_id}`} className="font-semibold text-accent hover:underline">
               {job.customer_name}
             </Link>
           ) : (
-            <span className="text-sm font-semibold">{job.customer_name}</span>
+            <span className="font-semibold">{job.customer_name}</span>
+          )}
+          {customer?.company && (
+            <>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground">{customer.company}</span>
+            </>
+          )}
+          {customer?.type && (
+            <>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground">{customer.type}</span>
+            </>
           )}
         </div>
-
-        {/* Info cells — only show if customer record has data */}
-        {(displayEmail || displayPhone || displayAddress || customer?.type) && (
-          <div className="flex items-start gap-5 flex-wrap pl-2 border-l border-border">
-            {customer?.type && <InfoCell label="Type" icon={Tag} value={customer.type} />}
-            {displayEmail && <InfoCell label="Email" icon={Mail} value={displayEmail} />}
-            {displayPhone && <InfoCell label="Phone" icon={Phone} value={formatPhoneDisplay(displayPhone)} />}
-            {displayAddress && <InfoCell label="Billing Address" icon={MapPin} value={displayAddress} />}
-          </div>
-        )}
 
         {/* Two edit buttons */}
         {job.customer_id && (
@@ -139,6 +135,17 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
             </Button>
           </div>
         )}
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-border mt-3 pt-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+          <InfoCell label="Site Address" icon={MapPin} value={job.site_address} />
+          <InfoCell label="On-Site Contact" icon={User} value={job.onsite_contact_name} />
+          <InfoCell label="On-Site Contact Phone" icon={Phone} value={job.onsite_contact_phone ? formatPhoneDisplay(job.onsite_contact_phone) : null} />
+          <InfoCell label="Customer Email" icon={Mail} value={customer?.email} />
+          <InfoCell label="Customer Phone" icon={Phone} value={customer?.phone ? formatPhoneDisplay(customer.phone) : null} />
+        </div>
       </div>
 
       {/* Edit Customer slide-out */}
