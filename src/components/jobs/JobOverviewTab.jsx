@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { FileText } from "lucide-react";
 import JobScopeSection from "@/components/jobs/JobScopeSection";
 import KeyDatesCard from "@/components/jobs/KeyDatesCard";
-import CustomerInfoCard from "@/components/jobs/CustomerInfoCard";
 import JobNotesSection from "@/components/jobs/JobNotesSection";
 import PaymentStatusBadge from "@/components/pipeline/PaymentStatusBadge";
 import { getPaymentStatus } from "@/lib/pipelineHelpers";
@@ -43,9 +42,10 @@ export default function JobOverviewTab({ job, highlightNoteId }) {
         </CardHeader>
         <CardContent className="space-y-3">
           <DetailRow label="Products" value={productsList} />
-          <DetailRow label="Site Address" value={job.site_address} />
-          <DetailRow label="On-Site Contact" value={job.onsite_contact_name} />
-          <DetailRow label="On-Site Contact Phone" value={job.onsite_contact_phone} />
+          <DetailRow label="Job Type" value={job.job_type} />
+          {job.powder_coat_color && (
+            <DetailRow label="Powder Coat" value={`${job.powder_coat_color}${job.powder_coat_code ? ` (${job.powder_coat_code})` : ""}`} />
+          )}
           <DetailRow label="Payment" value={<PaymentStatusBadge status={paymentStatus} className="text-xs px-2 py-0.5" />} />
           {job.lead_outcome && (
             <DetailRow label="Lead Outcome" value={
@@ -88,8 +88,6 @@ export default function JobOverviewTab({ job, highlightNoteId }) {
       </Card>
 
       <KeyDatesCard job={job} />
-
-      <CustomerInfoCard job={job} />
 
       {job.internal_notes && !isFabricator && (
         <Card className="md:col-span-2">
