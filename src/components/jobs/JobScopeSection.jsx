@@ -61,7 +61,7 @@ export default function JobScopeSection({ job }) {
               {allLines.map((line, i) => (
                 <tr key={i} className="border-b last:border-0 hover:bg-muted/20">
                   <td className="px-4 py-2.5 font-medium">
-                    {line.description || "—"}
+                    {line.service_name || line.description || "—"}
                     {line._co_label && (
                       <Badge className="ml-2 text-xs bg-amber-100 text-amber-700 border-transparent">{line._co_label}</Badge>
                     )}
