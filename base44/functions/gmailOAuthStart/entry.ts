@@ -18,8 +18,14 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const { type = 'user', employee_id } = body;
 
-    // Only owners can connect the system sender
-    if (type === 'system' && user.role !== 'admin') {
+    if (!user.organization_id) {
+      return Response.json({ error: 'Your account is not linked to an organization.' }, { status: 403 });
+    }
+    const callerRoles = [user.role, ...(user.roles || [])].filter(Boolean).map(r => String(r).toLowerCase());
+    const isAdmin = callerRoles.some(r => ['admin', 'owner', 'super_admin'].includes(r));
+
+    // Only owners/admins can connect the org's system sender
+    if (type === 'system' && !isAdmin) {
       return Response.json({ error: 'Only owners can connect the system sender.' }, { status: 403 });
     }
 
@@ -30,7 +36,6 @@ Deno.serve(async (req) => {
       if (!emp || emp.organization_id !== user.organization_id) {
         return Response.json({ error: 'Employee not found in your organization.' }, { status: 403 });
       }
-      const isAdmin = ['admin', 'owner', 'super_admin'].includes(user.role);
       const isSelf = emp.user_id === user.id ||
         (emp.email && user.email && emp.email.toLowerCase() === user.email.toLowerCase());
       if (!isAdmin && !isSelf) {
@@ -45,7 +50,7 @@ Deno.serve(async (req) => {
     const appId = Deno.env.get('BASE44_APP_ID');
     const redirectUri = `https://api.base44.com/api/apps/${appId}/functions/gmailOAuthCallback`;
 
-    const state = JSON.stringify({ type, employee_id: employee_id || null, user_id: user.id });
+    const state = JSON.stringify({ type, employee_id: employee_id || null, user_id: user.id, org_id: user.organization_id });
     const stateData = btoa(state);
     const stateB64 = `${stateData}.${await hmacHex(clientSecret, stateData)}`;
 

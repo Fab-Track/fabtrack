@@ -9,9 +9,12 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { employee_id } = await req.json().catch(() => ({}));
+    if (!user.organization_id) {
+      return Response.json({ system_sender: { status: 'disconnected', email: null, connected_at: null }, user_connection: null });
+    }
 
-    // System sender status (owner-only for full details, everyone gets existence)
-    const sysRecords = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'gmail_system_sender' });
+    // System sender status — scoped to the caller's organization only
+    const sysRecords = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'gmail_system_sender', organization_id: user.organization_id });
     const sys = sysRecords[0] || null;
     const systemSender = sys ? {
       email: sys.system_sender_email,
@@ -22,7 +25,7 @@ Deno.serve(async (req) => {
     // Per-user status
     let userConnection = null;
     if (employee_id) {
-      const emps = await base44.asServiceRole.entities.Employee.filter({ id: employee_id });
+      const emps = await base44.asServiceRole.entities.Employee.filter({ id: employee_id, organization_id: user.organization_id });
       if (emps.length) {
         const e = emps[0];
         userConnection = {

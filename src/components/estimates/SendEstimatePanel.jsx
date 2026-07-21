@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { X, Send, Link, Check, Mail, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
 
 function getBillingEmail(customer) {
   if (!customer) return "";
@@ -25,21 +26,23 @@ function getShareableLink(estimate) {
 const METHODS = ["email", "text", "both"];
 
 export default function SendEstimatePanel({ estimate, job, customer, onClose, onSent }) {
+  const { user } = useAuth();
+  const orgName = user?.organization_name || "";
   const firstName = customer?.name?.split(" ")[0] || customer?.name || "there";
   const link = getShareableLink(estimate);
 
   // Email fields
   const [to, setTo] = useState(getBillingEmail(customer));
-  const [subject, setSubject] = useState(`Your Estimate from High Country Metal Works — ${job?.job_name || ""}`);
+  const [subject, setSubject] = useState(`Your Estimate${orgName ? ` from ${orgName}` : ""} — ${job?.job_name || ""}`);
   const [message, setMessage] = useState(
-    `Hi ${firstName},\n\nPlease find your estimate attached. Let us know if you have any questions!\n\nThank you,\nHigh Country Metal Works`
+    `Hi ${firstName},\n\nPlease find your estimate attached. Let us know if you have any questions!\n\nThank you,\n${orgName || "The Team"}`
   );
 
   // SMS fields
   const estimateNum = estimate?.job_number ? `EST-${estimate.job_number}` : `EST-${estimate?.id?.slice(-6).toUpperCase()}`;
   const [phone, setPhone] = useState(getPhone(customer));
   const [smsBody, setSmsBody] = useState(
-    `Hi ${firstName}, your estimate ${estimateNum} from High Country Metal Works is ready to view here: ${link}`
+    `Hi ${firstName}, your estimate ${estimateNum}${orgName ? ` from ${orgName}` : ""} is ready to view here: ${link}`
   );
 
   // Send method
@@ -62,7 +65,10 @@ export default function SendEstimatePanel({ estimate, job, customer, onClose, on
     try {
       if (showEmail) {
         const body = `${message}\n\nView your estimate: ${link}\n\n---\nEstimate Total: $${(estimate?.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
-        const resp = await base44.functions.invoke("sendResendEmail", { to, subject, body });
+        const html = body.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+        const resp = await base44.functions.invoke("sendGmail", {
+          to, subject, html_body: html, text_body: body, routing_type: "estimate",
+        });
         if (!resp.data?.ok) throw new Error(resp.data?.error || "Email failed to send");
       }
 
@@ -85,7 +91,7 @@ export default function SendEstimatePanel({ estimate, job, customer, onClose, on
       else if (showEmail) toast.success(`Email sent to ${to}`);
       else toast.success(`Text message sent to ${phone}`);
     } catch (err) {
-      toast.error(`Failed to send: ${err.message}`);
+      toast.error(`Failed to send: ${err.response?.data?.error || err.message}`);
     } finally {
       setSending(false);
     }

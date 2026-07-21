@@ -16,7 +16,8 @@ function StatusBadge({ status }) {
 
 export default function GmailSystemSenderCard() {
   const { user } = useAuth();
-  const isOwner = user?.role === "admin";
+  const userRoles = [user?.role, ...(user?.roles || [])].filter(Boolean).map(r => String(r).toLowerCase());
+  const isOwner = userRoles.some(r => ["admin", "owner"].includes(r));
   const [status, setStatus] = useState(null);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -73,8 +74,8 @@ export default function GmailSystemSenderCard() {
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold">System Sender</span>
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0">billing@</Badge>
+            <span className="text-sm font-semibold">Company Email Sender</span>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">Org-wide</Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             All estimates and invoices are sent from the connected system sender

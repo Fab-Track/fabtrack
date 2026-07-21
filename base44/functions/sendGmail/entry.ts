@@ -7,13 +7,10 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 //   sender_employee_id?: string   // required for routing_type="user_message"
 // }
 
-const SYSTEM_SENDER_EMAIL = 'billing@highcountrymetalworks.com';
-const ALLOWED_DOMAIN = 'highcountrymetalworks.com';
-
-function buildRawEmail({ from, to, subject, htmlBody, textBody }) {
+function buildRawEmail({ from, fromName, to, subject, htmlBody, textBody }) {
   const boundary = `boundary_${Date.now()}`;
   const headers = [
-    `From: High Country Metal Works <${from}>`,
+    `From: ${fromName ? `${fromName} <${from}>` : from}`,
     `Reply-To: ${from}`,
     `To: ${to}`,
     `Subject: ${subject}`,
@@ -84,6 +81,13 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'to, subject, and html_body are required.' }, { status: 400 });
     }
 
+    if (!user.organization_id) {
+      return Response.json({ error: 'Your account is not linked to an organization.' }, { status: 403 });
+    }
+    // Org display name for the From header
+    const org = await base44.asServiceRole.entities.Organization.get(user.organization_id).catch(() => null);
+    const orgName = org?.name || '';
+
     let tokenData;
     let usingFallback = false;
 
@@ -96,12 +100,12 @@ Deno.serve(async (req) => {
       if (!callerRoles.some(r => allowedSystemSenderRoles.includes(r))) {
         return Response.json({ error: 'Not authorized to send email from the company billing address.' }, { status: 403 });
       }
-      console.log(`[sendGmail] request: to=${to} routing_type=${routing_type} sender=system(${SYSTEM_SENDER_EMAIL})`);
+      console.log(`[sendGmail] request: to=${to} routing_type=${routing_type} sender=system(org=${user.organization_id})`);
       tokenData = await getValidToken(base44, 'system', null, user.organization_id);
       if (tokenData.error) {
         console.log(`[sendGmail] system sender unavailable: error=${tokenData.error} — no AppSettings record with setting_key="gmail_system_sender" is connected/found`);
         return Response.json({
-          error: `The company billing email (${SYSTEM_SENDER_EMAIL}) isn't connected. Connect it in Settings → Integrations before sending estimates or invoices.`,
+          error: `Your company email isn't connected yet. Connect it in Settings → Integrations before sending estimates or invoices.`,
           code: 'system_sender_unavailable',
           detail: tokenData.error,
         }, { status: 503 });
@@ -141,6 +145,7 @@ Deno.serve(async (req) => {
 
     const rawEmail = buildRawEmail({
       from: tokenData.from,
+      fromName: orgName,
       to,
       subject,
       htmlBody: html_body,
@@ -168,7 +173,7 @@ Deno.serve(async (req) => {
       from: tokenData.from,
       used_fallback: usingFallback,
       fallback_message: usingFallback
-        ? `Sending from ${SYSTEM_SENDER_EMAIL} — connect your email in Settings to send from your own address.`
+        ? `Sending from ${tokenData.from} — connect your email in Settings to send from your own address.`
         : null,
     });
   } catch (error) {

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Download, Send, Mail, MessageSquare, CheckSquare } from "lucide-react";
 import InvoiceCustomerView from "@/components/invoices/InvoiceCustomerView";
 import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { format, parseISO } from "date-fns";
@@ -18,9 +19,9 @@ Payment is due within 30 days of invoice date unless otherwise agreed in writing
 
 Accepted payment methods: Check, ACH, Credit Card, or Stripe.
 
-Late payments may be subject to a 1.5% monthly finance charge. For questions regarding this invoice, please contact High Country Metal Works directly.`;
+Late payments may be subject to a 1.5% monthly finance charge. For questions regarding this invoice, please contact us directly.`;
 
-function buildDefaultMessage({ invoice, invoiceLabel, job, customer, total, balanceDue, dueDate }) {
+function buildDefaultMessage({ invoice, invoiceLabel, job, customer, total, balanceDue, dueDate, orgName }) {
   const name = customer?.name || job?.customer_name || "Valued Customer";
   const invNum = invoice?.invoice_number || "your invoice";
   const label = invoiceLabel || invoice?.invoice_type || "Invoice";
@@ -31,7 +32,7 @@ function buildDefaultMessage({ invoice, invoiceLabel, job, customer, total, bala
 
   return `Hi ${name},
 
-Please find your ${label} from High Country Metal Works attached.
+Please find your ${label}${orgName ? ` from ${orgName}` : ""} attached.
 
 Invoice: ${invNum}
 Total: ${totalFmt}
@@ -40,7 +41,7 @@ Due: ${dueFmt}${payLink}
 Please don't hesitate to reach out with any questions.
 
 Thank you for your business!
-– High Country Metal Works`;
+– ${orgName || "The Team"}`;
 }
 
 function buildDefaultSubject({ invoice, invoiceLabel, job }) {
@@ -309,6 +310,8 @@ export default function InvoiceReviewSend({
   total, amountPaid, balanceDue, notes, viewMode, issuedDate, dueDate,
   invoiceLabel, status, contractText, onBack,
 }) {
+  const { user } = useAuth();
+  const orgName = user?.organization_name || "";
   const billingEmail = customer?.billing_contact_email || customer?.email || "";
   const billingPhone = customer?.billing_contact_phone || customer?.phone || "";
 
@@ -317,7 +320,7 @@ export default function InvoiceReviewSend({
   const [sendMode, setSendMode] = useState("Email");
   const [subject, setSubject] = useState(() => buildDefaultSubject({ invoice, invoiceLabel, job }));
   const [messageBody, setMessageBody] = useState(() =>
-    buildDefaultMessage({ invoice, invoiceLabel, job, customer, total, balanceDue, dueDate })
+    buildDefaultMessage({ invoice, invoiceLabel, job, customer, total, balanceDue, dueDate, orgName })
   );
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -338,10 +341,13 @@ export default function InvoiceReviewSend({
     setSending(true);
     try {
       if (sendMode === "Email" || sendMode === "Both") {
-        const resp = await base44.functions.invoke("sendResendEmail", {
+        const html = messageBody.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+        const resp = await base44.functions.invoke("sendGmail", {
           to: toEmail,
           subject,
-          body: messageBody,
+          html_body: html,
+          text_body: messageBody,
+          routing_type: "invoice",
         });
         if (!resp.data?.ok) throw new Error(resp.data?.error || "Email failed to send");
       }
@@ -351,7 +357,7 @@ export default function InvoiceReviewSend({
       }
       setSent(true);
     } catch (err) {
-      toast.error(err.message || "Failed to send invoice");
+      toast.error(err.response?.data?.error || err.message || "Failed to send invoice");
     } finally {
       setSending(false);
     }

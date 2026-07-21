@@ -1,7 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-const ALLOWED_DOMAIN = 'highcountrymetalworks.com';
-
 // The FabTrack app base URL — all redirects go here, never to the marketing site.
 const APP_BASE_URL = 'https://app.base44.com/apps/6a0386c06686afe23a4a4b70';
 
@@ -103,19 +101,22 @@ Deno.serve(async (req) => {
     const userinfo = await userinfoRes.json();
     const authorizedEmail = userinfo.email || '';
 
-    // Validate domain
-    if (!authorizedEmail.endsWith(`@${ALLOWED_DOMAIN}`)) {
-      return redirectTo(buildReturnUrl(state.type, 'error',
-        `Only @${ALLOWED_DOMAIN} accounts can be connected. You used ${authorizedEmail} — please sign in with your company account.`));
+    if (!authorizedEmail) {
+      return redirectTo(buildReturnUrl(state.type, 'error', 'Could not determine the authorized email address. Please try again.'));
     }
 
     const expiresAt = new Date(Date.now() + (tokens.expires_in || 3600) * 1000).toISOString();
     const base44 = createClientFromRequest(req);
 
     if (state.type === 'system') {
-      const existing = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'gmail_system_sender' });
+      // Tenant isolation: the system sender connection lives on the org's own AppSettings record.
+      if (!state.org_id) {
+        return redirectTo(buildReturnUrl('system', 'error', 'Missing organization scope — please restart the connection from Settings.'));
+      }
+      const existing = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'gmail_system_sender', organization_id: state.org_id });
       const tokenData = {
         setting_key: 'gmail_system_sender',
+        organization_id: state.org_id,
         system_sender_email: authorizedEmail,
         system_sender_access_token: tokens.access_token,
         system_sender_refresh_token: tokens.refresh_token || null,
