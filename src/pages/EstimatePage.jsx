@@ -36,6 +36,7 @@ const INSTALL_LOCATIONS = [
 
 const blankLine = () => ({
   _id: Math.random().toString(36).slice(2),
+  service_name: "",
   description: "",
   install_location: "N/A",
   category: "Labor",
@@ -248,6 +249,7 @@ export default function EstimatePage() {
       const next = [...prev];
       next[idx] = calcLine({
         ...next[idx],
+        service_name: item.name,
         description: item.default_description || item.name,
         category: item.default_category || "Labor",
         unit: item.default_unit || "ls",
@@ -455,10 +457,10 @@ export default function EstimatePage() {
                   <div style={{ minWidth: 620 }}>
                     {/* Column headers */}
                     <div className="grid gap-1.5 text-xs text-muted-foreground font-medium mb-2 px-1"
-                      style={{ gridTemplateColumns: "2.5fr 1.5fr 1fr 0.6fr 1fr 1fr auto" }}>
+                      style={{ gridTemplateColumns: "1.5fr 2fr 1.3fr 0.6fr 1fr 1fr auto" }}>
+                      <span>Service Item</span>
                       <span>Description</span>
                       <span>Install Location</span>
-                      <span>Category</span>
                       <span>Qty</span>
                       <span>Unit Cost</span>
                       <span>Amount</span>
@@ -469,19 +471,21 @@ export default function EstimatePage() {
                       {lines.map((line, idx) => (
                         <div key={line._id}>
                           <div className="grid gap-1.5 items-center"
-                            style={{ gridTemplateColumns: "2.5fr 1.5fr 1fr 0.6fr 1fr 1fr auto" }}>
+                            style={{ gridTemplateColumns: "1.5fr 2fr 1.3fr 0.6fr 1fr 1fr auto" }}>
                             <ProductServiceDropdown
-                              value={line.description}
-                              onChange={v => updateLine(idx, "description", v)}
+                              value={line.service_name}
+                              onChange={v => updateLine(idx, "service_name", v)}
                               onSelect={item => handleProductSelect(idx, item)}
+                            />
+                            <Input
+                              className="h-8 text-xs"
+                              placeholder="Description"
+                              value={line.description}
+                              onChange={e => updateLine(idx, "description", e.target.value)}
                             />
                             <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)}>
                               <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                               <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
-                            </Select>
-                            <Select value={line.category || "Labor"} onValueChange={v => updateLine(idx, "category", v)}>
-                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                              <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}</SelectContent>
                             </Select>
                             <Input className="h-8 text-xs" type="number" value={line.quantity} onChange={e => updateLine(idx, "quantity", e.target.value)} />
                             <Input className="h-8 text-xs" type="number" placeholder="0.00" value={line.unit_cost} onChange={e => updateLine(idx, "unit_cost", e.target.value)} />
@@ -522,13 +526,24 @@ export default function EstimatePage() {
                 <div className="md:hidden space-y-3">
                   {lines.map((line, idx) => (
                     <div key={line._id} className="bg-card rounded-xl border p-3 space-y-2.5">
+                      {/* Service Item */}
+                      <div>
+                        <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Service Item</Label>
+                        <ProductServiceDropdown
+                          value={line.service_name}
+                          onChange={v => updateLine(idx, "service_name", v)}
+                          onSelect={item => handleProductSelect(idx, item)}
+                        />
+                      </div>
+
                       {/* Description */}
                       <div>
                         <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Description</Label>
-                        <ProductServiceDropdown
+                        <Input
+                          className="h-9 text-sm mt-0.5"
+                          placeholder="Description"
                           value={line.description}
-                          onChange={v => updateLine(idx, "description", v)}
-                          onSelect={item => handleProductSelect(idx, item)}
+                          onChange={e => updateLine(idx, "description", e.target.value)}
                         />
                       </div>
 
@@ -541,15 +556,8 @@ export default function EstimatePage() {
                         </Select>
                       </div>
 
-                      {/* Category + Qty + Unit Cost row */}
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Category</Label>
-                          <Select value={line.category || "Labor"} onValueChange={v => updateLine(idx, "category", v)}>
-                            <SelectTrigger className="h-9 text-sm w-full mt-0.5"><SelectValue /></SelectTrigger>
-                            <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                          </Select>
-                        </div>
+                      {/* Qty + Unit Cost row */}
+                      <div className="grid grid-cols-2 gap-2">
                         <div>
                           <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Qty</Label>
                           <Input className="h-9 text-sm mt-0.5" type="number" value={line.quantity} onChange={e => updateLine(idx, "quantity", e.target.value)} />

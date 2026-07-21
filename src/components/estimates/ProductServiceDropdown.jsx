@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Search, Plus } from "lucide-react";
 
-export default function ProductServiceDropdown({ value, onChange, onSelect, placeholder = "Description" }) {
+export default function ProductServiceDropdown({ value, onChange, onSelect, placeholder = "Service item" }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState(value || "");
   const triggerRef = useRef(null);
@@ -66,9 +66,8 @@ export default function ProductServiceDropdown({ value, onChange, onSelect, plac
   }, [open]);
 
   function handleSelect(item) {
-    const desc = item.default_description || item.name;
-    setSearch(desc);
-    onChange(desc);
+    setSearch(item.name);
+    onChange(item.name);
     onSelect({ ...item, show_photo: true });
     setOpen(false);
   }

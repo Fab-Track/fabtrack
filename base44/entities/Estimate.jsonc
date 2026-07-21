@@ -62,6 +62,10 @@
           "category": {
             "type": "string"
           },
+          "service_name": {
+            "type": "string",
+            "description": "Selected Service Catalog item name for this line"
+          },
           "description": {
             "type": "string"
           },
