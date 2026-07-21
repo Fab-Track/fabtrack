@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, CreditCard, TrendingUp, CheckSquare, Sparkles, FileText, FileDiff } from "lucide-react";
+import { ArrowLeft, CreditCard, TrendingUp, CheckSquare, Sparkles, FileText, FileDiff, CheckCircle2, Flag } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const fmt = (n) => `$${(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
@@ -195,6 +195,9 @@ export default function NewInvoiceFlow({ open, onClose, approvedEstimate, approv
   }
 
   const estLines = approvedEstimate?.line_items || [];
+  const unapprovedSelected =
+    estLines.some((line, idx) => estSelected[idx]?.checked && line.mgr_approval?.status !== "approved") ||
+    approvedChangeOrders.some(co => (co.line_items || []).some((line, idx) => coSelected[`${co.id}_${idx}`]?.checked && line.mgr_approval?.status !== "approved"));
   const estTotal = Object.values(estSelected).filter(v => v.checked).reduce((s, v) => s + (v.amount || 0), 0);
   const coTotal = Object.values(coSelected).filter(v => v.checked).reduce((s, v) => s + (v.amount || 0), 0);
   const checkedTotal = estTotal + coTotal;
@@ -292,7 +295,11 @@ export default function NewInvoiceFlow({ open, onClose, approvedEstimate, approv
                       <div key={idx} className={`grid grid-cols-[auto_1fr_5rem_5rem_5rem_8rem] gap-3 px-6 py-3 items-center transition-colors ${sel.checked ? "bg-primary/5" : ""}`}>
                         <Checkbox checked={sel.checked} onCheckedChange={() => toggleEst(idx)} />
                         <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{line.description || "—"}</p>
+                          <p className="text-sm font-medium flex items-center gap-1">
+                            {line.mgr_approval?.status === "approved" && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" title="Manager approved" />}
+                            {line.mgr_approval?.status === "denied" && <Flag className="w-3.5 h-3.5 text-red-500 shrink-0" title="Flagged by manager" />}
+                            <span className="truncate">{line.description || "—"}</span>
+                          </p>
                           {line.install_location && line.install_location !== "N/A" && (
                             <p className="text-xs text-muted-foreground truncate">{line.install_location}</p>
                           )}
@@ -341,7 +348,11 @@ export default function NewInvoiceFlow({ open, onClose, approvedEstimate, approv
                         <div key={key} className={`grid grid-cols-[auto_1fr_5rem_5rem_5rem_8rem] gap-3 px-6 py-3 items-center transition-colors ${sel.checked ? "bg-amber-50/50" : ""}`}>
                           <Checkbox checked={sel.checked} onCheckedChange={() => toggleCo(key)} />
                           <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{line.description || co.description || "Change Order"}</p>
+                            <p className="text-sm font-medium flex items-center gap-1">
+                              {line.mgr_approval?.status === "approved" && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" title="Manager approved" />}
+                              {line.mgr_approval?.status === "denied" && <Flag className="w-3.5 h-3.5 text-red-500 shrink-0" title="Flagged by manager" />}
+                              <span className="truncate">{line.description || co.description || "Change Order"}</span>
+                            </p>
                             <p className="text-xs text-amber-700">CO #{co.id?.slice(-6).toUpperCase()}</p>
                           </div>
                           <span className="text-sm text-right">{fmt(lineTotal)}</span>
@@ -363,6 +374,14 @@ export default function NewInvoiceFlow({ open, onClose, approvedEstimate, approv
                 </>
               )}
             </div>
+
+            {/* Unapproved line item warning */}
+            {unapprovedSelected && (
+              <div className="px-6 py-2.5 border-t bg-amber-50 flex items-center gap-2 shrink-0 text-xs text-amber-800">
+                <Flag className="w-3.5 h-3.5 shrink-0" />
+                <span>Heads up — some selected line items haven't been signed off by a manager yet. You can still invoice them.</span>
+              </div>
+            )}
 
             {/* Footer */}
             <div className="px-6 py-4 border-t bg-muted/20 flex items-center justify-between shrink-0">

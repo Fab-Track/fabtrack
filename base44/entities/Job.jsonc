@@ -177,6 +177,22 @@
       ],
       "default": "pending"
     },
+    "scope_approval": {
+      "type": "object",
+      "description": "Manager sign-off of the job scope \u2014 timestamp signature recorded when a manager approves the scope",
+      "properties": {
+        "approved_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "approved_by_id": {
+          "type": "string"
+        },
+        "approved_by_name": {
+          "type": "string"
+        }
+      }
+    },
     "internal_notes": {
       "type": "string"
     },

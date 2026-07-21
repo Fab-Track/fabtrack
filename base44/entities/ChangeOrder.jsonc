@@ -55,6 +55,29 @@
           },
           "total": {
             "type": "number"
+          },
+          "mgr_approval": {
+            "type": "object",
+            "description": "Internal manager review of this line item (approved or flagged/denied) with timestamp signature",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "approved",
+                  "denied"
+                ]
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "by_id": {
+                "type": "string"
+              },
+              "by_name": {
+                "type": "string"
+              }
+            }
           }
         }
       }

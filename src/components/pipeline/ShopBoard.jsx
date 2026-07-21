@@ -13,6 +13,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Clock, CalendarDays, Paintbrush, Users, MoreHorizontal, Archive, Trash2, ArrowRightLeft } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import StageTransitionDialog from "./StageTransitionDialog";
+import ScopeReviewDialog from "./ScopeReviewDialog";
 import DeleteJobModal from "@/components/jobs/DeleteJobModal";
 import { toast } from "sonner";
 import { format, parseISO, isValid } from "date-fns";
@@ -20,7 +21,7 @@ import { format, parseISO, isValid } from "date-fns";
 const FLOWS = { Sales: SALES_STAGES, Shop: SHOP_STAGES, Billing: BILLING_STAGES };
 
 // ── Shop Card ──────────────────────────────────────────────────────────────────
-function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, columnJobs, onPriorityChange, invoices = [], customer }) {
+function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, columnJobs, onPriorityChange, invoices = [], customer, onFabReview }) {
   const navigate = useNavigate();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const qc = useQueryClient();
@@ -89,13 +90,20 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
                             <DropdownMenuSubTrigger className="text-sm">{board} Flow</DropdownMenuSubTrigger>
                             <DropdownMenuPortal>
                               <DropdownMenuSubContent className="w-56 max-h-64 overflow-y-auto">
-                                {stages.map(stage => (
+                                {stages.map(stageOption => (
                                   <DropdownMenuItem
-                                    key={stage}
+                                    key={stageOption}
                                     className="text-sm"
-                                    onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); moveMutation.mutate({ toBoard: board, toStage: stage }); }}
+                                    onClick={e => {
+                                      e.preventDefault(); e.stopPropagation(); setMenuOpen(false);
+                                      if (board === "Shop" && stageOption === "On Deck for Fabrication" && job.stage === "Drawing Needs Approval" && onFabReview) {
+                                        onFabReview(job);
+                                        return;
+                                      }
+                                      moveMutation.mutate({ toBoard: board, toStage: stageOption });
+                                    }}
                                   >
-                                    {stage}
+                                    {stageOption}
                                   </DropdownMenuItem>
                                 ))}
                               </DropdownMenuSubContent>
@@ -187,6 +195,7 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
 export default function ShopBoard({ jobs = [], readOnly = false }) {
   const qc = useQueryClient();
   const [completing, setCompleting] = useState(null);
+  const [fabReview, setFabReview] = useState(null);
 
   const jobIds = jobs.map(j => j.id);
   const { data: allInvoices = [] } = useQuery({
@@ -222,7 +231,7 @@ export default function ShopBoard({ jobs = [], readOnly = false }) {
         await base44.entities.Job.bulkUpdate(gapUpdates.map(u => ({ id: u.jobId, stage_priority: u.stage_priority })));
       }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["jobs"] }); setCompleting(null); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["jobs"] }); setCompleting(null); setFabReview(null); },
   });
 
   const priorityMutation = useMutation({
@@ -242,6 +251,10 @@ export default function ShopBoard({ jobs = [], readOnly = false }) {
       return;
     }
     if (readOnly) return; // cross-stage moves stay blocked in read-only mode
+    if (newStage === "On Deck for Fabrication" && job.stage === "Drawing Needs Approval") {
+      setFabReview(job);
+      return;
+    }
     moveMutation.mutate({ job, toBoard: "Shop", toStage: newStage, note: "" });
   }
 
@@ -281,6 +294,7 @@ export default function ShopBoard({ jobs = [], readOnly = false }) {
                               stage={stage}
                               columnJobs={columns[stage]}
                               onPriorityChange={(updates) => priorityMutation.mutate(updates)}
+                              onFabReview={readOnly ? undefined : setFabReview}
                               invoices={invoicesByJob[job.id] || []}
                               customer={customersById[job.customer_id]}
                             />
@@ -308,6 +322,14 @@ export default function ShopBoard({ jobs = [], readOnly = false }) {
         confirmLabel="Yes, Move to Billing"
         onConfirm={handleBillingConfirm}
         isPending={moveMutation.isPending}
+      />
+
+      <ScopeReviewDialog
+        open={!!fabReview}
+        onClose={() => setFabReview(null)}
+        job={fabReview}
+        isPending={moveMutation.isPending}
+        onConfirm={() => moveMutation.mutate({ job: fabReview, toBoard: "Shop", toStage: "On Deck for Fabrication", note: "Scope reviewed before fabrication" })}
       />
     </>
   );
