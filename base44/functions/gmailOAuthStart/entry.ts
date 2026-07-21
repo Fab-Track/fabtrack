@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     if (!clientId || !clientSecret) return Response.json({ error: 'OAuth credentials not configured.' }, { status: 500 });
 
     const appId = Deno.env.get('BASE44_APP_ID');
-    const redirectUri = `https://api.base44.com/api/apps/${appId}/functions/gmailOAuthCallback`;
+    const redirectUri = `https://base44.app/api/apps/${appId}/functions/gmailOAuthCallback`;
 
     const state = JSON.stringify({ type, employee_id: employee_id || null, user_id: user.id, org_id: user.organization_id });
     const stateData = btoa(state);

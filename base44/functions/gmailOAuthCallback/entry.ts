@@ -1,23 +1,26 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-// The FabTrack app base URL — all redirects go here, never to the marketing site.
-const APP_BASE_URL = 'https://app.base44.com/apps/6a0386c06686afe23a4a4b70';
-
-// After OAuth, redirect back to the correct Settings page with result params.
-// System sender → /settings?section=integrations&gmail_result=...
-// Per-user      → /settings?section=account&gmail_result=...
+// The OAuth flow opens in a new tab; the Settings page polls for the result,
+// so the callback just renders a simple close-this-tab page.
 function buildReturnUrl(type, result, message) {
-  const section = type === 'system' ? 'integrations' : 'account';
-  const params = new URLSearchParams({
-    section,
-    gmail_result: result,       // "success" | "error"
-    gmail_message: message,
-  });
-  return `${APP_BASE_URL}?${params}`;
+  return { result, message };
 }
 
-function redirectTo(url) {
-  return new Response(null, { status: 302, headers: { Location: url } });
+function redirectTo({ result, message }) {
+  const ok = result === 'success';
+  const safeMsg = String(message || '').replace(/</g, '&lt;');
+  return new Response(
+    `<html><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f8fafc">
+      <div style="text-align:center;max-width:420px">
+        <div style="font-size:40px">${ok ? '✅' : '⚠️'}</div>
+        <h2 style="margin:8px 0">${ok ? 'Email Connected' : 'Connection Failed'}</h2>
+        <p style="color:#475569">${safeMsg}</p>
+        <p style="color:#94a3b8;font-size:13px">You can close this tab and return to FabTrack.</p>
+      </div>
+      <script>setTimeout(function(){ window.close(); }, 4000);</script>
+    </body></html>`,
+    { status: ok ? 200 : 400, headers: { 'Content-Type': 'text/html' } }
+  );
 }
 
 // HMAC-SHA256 signature (hex) — must match the signature created by gmailOAuthStart.
@@ -34,7 +37,7 @@ Deno.serve(async (req) => {
   const errorParam = url.searchParams.get('error');
 
   const appId = Deno.env.get('BASE44_APP_ID');
-  const redirectUri = `https://api.base44.com/api/apps/${appId}/functions/gmailOAuthCallback`;
+  const redirectUri = `https://base44.app/api/apps/${appId}/functions/gmailOAuthCallback`;
 
   const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID');
   const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET');
