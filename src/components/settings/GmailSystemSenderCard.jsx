@@ -51,10 +51,26 @@ export default function GmailSystemSenderCard() {
   async function handleConnect() {
     setConnecting(true);
     const res = await base44.functions.invoke("gmailOAuthStart", { type: "system" });
-    setConnecting(false);
-    if (res.data?.error) { toast.error(res.data.error); return; }
-    // Full redirect — Google will return us to the app via the callback
-    window.location.href = res.data.auth_url;
+    if (res.data?.error) { setConnecting(false); toast.error(res.data.error); return; }
+    // Open Google sign-in in a new tab (Google blocks loading inside embedded frames),
+    // then poll until the connection completes.
+    window.open(res.data.auth_url, "_blank");
+    toast.info("Complete the Google sign-in in the new tab. This page will update automatically.");
+    const started = Date.now();
+    const poll = setInterval(async () => {
+      const st = await base44.functions.invoke("gmailGetStatus", {}).catch(() => null);
+      const sender = st?.data?.system_sender;
+      if (sender?.status === "connected") {
+        clearInterval(poll);
+        setStatus(sender);
+        setConnecting(false);
+        toast.success(`Connected as ${sender.email}`);
+      } else if (Date.now() - started > 3 * 60 * 1000) {
+        clearInterval(poll);
+        setConnecting(false);
+        fetchStatus();
+      }
+    }, 3000);
   }
 
   async function handleDisconnect() {
@@ -119,7 +135,7 @@ export default function GmailSystemSenderCard() {
             disabled={connecting}
           >
             {connecting ? (
-              <><span className="w-3 h-3 border-2 border-t-transparent border-current rounded-full animate-spin" />Redirecting…</>
+              <><span className="w-3 h-3 border-2 border-t-transparent border-current rounded-full animate-spin" />Waiting for Google sign-in…</>
             ) : isConnected ? (
               <><RefreshCw className="w-3 h-3" />Reconnect</>
             ) : (
