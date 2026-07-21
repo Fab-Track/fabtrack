@@ -207,8 +207,17 @@ const AuthenticatedApp = () => {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
-      navigateToLogin();
-      return null;
+      // Allow public pages (landing, lead form, shared estimate/invoice views)
+      // to render without authentication so visitors can find the site.
+      const isPublicPath =
+        publicPath === "/" ||
+        publicPath === "/lead" ||
+        publicPath.startsWith("/estimate-view/") ||
+        publicPath.startsWith("/invoice-view/");
+      if (!isPublicPath) {
+        navigateToLogin();
+        return null;
+      }
     }
   }
 
