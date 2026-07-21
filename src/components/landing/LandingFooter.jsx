@@ -13,12 +13,26 @@ export default function LandingFooter() {
           </div>
           <span className="font-bold tracking-wide text-white">FABTRACK</span>
         </div>
-        <button
-          onClick={() => navigate("/login")}
-          className="text-sm text-sidebar-foreground hover:text-white transition-colors"
-        >
-          Sign In
-        </button>
+        <div className="flex items-center gap-5">
+          <button
+            onClick={() => navigate("/login")}
+            className="text-sm text-sidebar-foreground hover:text-white transition-colors"
+          >
+            Sign In
+          </button>
+          <button
+            onClick={() => navigate("/privacy-policy")}
+            className="text-sm text-sidebar-foreground hover:text-white transition-colors"
+          >
+            Privacy Policy
+          </button>
+          <button
+            onClick={() => navigate("/terms-of-service")}
+            className="text-sm text-sidebar-foreground hover:text-white transition-colors"
+          >
+            Terms of Service
+          </button>
+        </div>
         <p className="text-xs text-sidebar-foreground">
           © {new Date().getFullYear()} FabTrack. All rights reserved.
         </p>

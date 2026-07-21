@@ -72,6 +72,8 @@ const CalendarPage     = lazy(() => import('@/pages/Calendar'));
 const OnboardingWelcome = lazy(() => import('@/pages/OnboardingWelcome'));
 const OnboardingWizard = lazy(() => import('@/pages/OnboardingWizard'));
 const SuperAdmin       = lazy(() => import('@/pages/SuperAdmin'));
+const PrivacyPolicy    = lazy(() => import('@/pages/PrivacyPolicy'));
+const TermsOfService   = lazy(() => import('@/pages/TermsOfService'));
 const LandingPage      = lazy(() => import('@/pages/LandingPage'));
 const Login            = lazy(() => import('@/pages/Login'));
 const Register         = lazy(() => import('@/pages/Register'));
@@ -191,6 +193,12 @@ const AuthenticatedApp = () => {
   if (publicPath === "/reset-password") {
     return <Suspense fallback={<PageLoader />}><ResetPassword /></Suspense>;
   }
+  if (publicPath === "/privacy-policy") {
+    return <Suspense fallback={<PageLoader />}><PrivacyPolicy /></Suspense>;
+  }
+  if (publicPath === "/terms-of-service") {
+    return <Suspense fallback={<PageLoader />}><TermsOfService /></Suspense>;
+  }
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
@@ -212,6 +220,8 @@ const AuthenticatedApp = () => {
       const isPublicPath =
         publicPath === "/" ||
         publicPath === "/lead" ||
+        publicPath === "/privacy-policy" ||
+        publicPath === "/terms-of-service" ||
         publicPath.startsWith("/estimate-view/") ||
         publicPath.startsWith("/invoice-view/");
       if (!isPublicPath) {
@@ -242,6 +252,8 @@ const AuthenticatedApp = () => {
         <Route path="/setup" element={<OnboardingWizard />} />
         <Route path="/super-admin" element={<SuperAdmin />} />
         <Route path="/" element={<RootRouter />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
         <Route path="/estimate-view/:token" element={<EstimateView />} />
         <Route path="/invoice-view/:token" element={<InvoiceView />} />
         
