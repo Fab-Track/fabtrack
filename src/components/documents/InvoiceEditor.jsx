@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import InvoiceCustomerView from "@/components/invoices/InvoiceCustomerView";
 import InvoiceReviewSend from "@/components/invoices/InvoiceReviewSend";
 import { useJobDetailConfig } from "@/hooks/useJobDetailConfig";
+import ProductServiceDropdown from "@/components/estimates/ProductServiceDropdown";
 
 const LABEL_STYLES = {
   "Deposit Invoice (50%)":  "bg-blue-100 text-blue-800 border-blue-200",
@@ -28,7 +29,15 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const GROUPS = ["Materials", "Labor", "Hardware", "Other"];
+const INSTALL_LOCATIONS = [
+  "Interior — Main Staircase", "Interior — Secondary Staircase", "Interior — Loft / Mezzanine",
+  "Interior — Balcony / Overlook", "Interior — Basement Staircase", "Interior — Other",
+  "Exterior — Front Porch", "Exterior — Front Balcony", "Exterior — Back Deck",
+  "Exterior — Back Porch", "Exterior — Side Yard", "Exterior — Pool Area",
+  "Exterior — Driveway / Entry", "Exterior — Rooftop / Terrace", "Exterior — Staircase to Grade",
+  "Exterior — Other", "Commercial — Staircase", "Commercial — Corridor / Hallway",
+  "Commercial — Parking Structure", "Commercial — External Entry", "Commercial — Other", "N/A",
+];
 
 function calcLine(line) {
   return { ...line, total: (line.quantity || 0) * (line.unit_cost || 0) };
@@ -92,6 +101,18 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
     setLines(prev => {
       const next = [...prev];
       next[idx] = calcLine({ ...next[idx], [field]: (field === "quantity" || field === "unit_cost") ? parseFloat(value) || 0 : value });
+      return next;
+    });
+  }
+
+  function handleServiceSelect(idx, item) {
+    setLines(prev => {
+      const next = [...prev];
+      next[idx] = calcLine({
+        ...next[idx],
+        service_name: item.name,
+        description: item.default_description || item.name,
+      });
       return next;
     });
   }
@@ -413,17 +434,22 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
               </div>
               <div className="overflow-x-auto -mx-1 px-1">
               <div style={{ minWidth: 660 }}>
-              <div className="grid grid-cols-[1fr_1.5fr_1fr_0.8fr_0.7fr_0.9fr_0.9fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
-                 <span>Group</span><span>Description</span><span>Color</span><span>Qty</span><span>Unit</span><span>Unit Cost</span><span>Total</span><span></span>
+              <div className="grid grid-cols-[1.3fr_1.7fr_1.1fr_1fr_0.5fr_0.9fr_0.9fr_auto] gap-1.5 text-xs text-muted-foreground font-medium mb-1.5 px-1">
+                 <span>Service Item</span><span>Description</span><span>Install Location</span><span>Color</span><span>Qty</span><span>Unit Cost</span><span>Total</span><span></span>
                </div>
                <div className="space-y-1.5">
                  {lines.map((line, idx) => (
-                   <div key={line._id} className="grid grid-cols-[1fr_1.5fr_1fr_0.8fr_0.7fr_0.9fr_0.9fr_auto] gap-1.5 items-center">
-                     <Select value={line.group} onValueChange={v => updateLine(idx, "group", v)}>
-                       <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                       <SelectContent>{GROUPS.map(g => <SelectItem key={g} value={g} className="text-xs">{g}</SelectItem>)}</SelectContent>
-                     </Select>
+                   <div key={line._id} className="grid grid-cols-[1.3fr_1.7fr_1.1fr_1fr_0.5fr_0.9fr_0.9fr_auto] gap-1.5 items-center">
+                     <ProductServiceDropdown
+                       value={line.service_name}
+                       onChange={v => updateLine(idx, "service_name", v)}
+                       onSelect={item => handleServiceSelect(idx, item)}
+                     />
                      <Input className="h-8 text-xs" placeholder="Description" value={line.description} onChange={e => updateLine(idx, "description", e.target.value)} />
+                     <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)}>
+                       <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                       <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
+                     </Select>
                      <Select value={line.color || "__none__"} onValueChange={v => updateLine(idx, "color", v === "__none__" ? "" : v)}>
                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="None" /></SelectTrigger>
                        <SelectContent>
@@ -432,7 +458,6 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
                        </SelectContent>
                      </Select>
                      <Input className="h-8 text-xs" type="number" value={line.quantity} onChange={e => updateLine(idx, "quantity", e.target.value)} />
-                    <Input className="h-8 text-xs" placeholder="ea" value={line.unit} onChange={e => updateLine(idx, "unit", e.target.value)} />
                     <Input className="h-8 text-xs" type="number" placeholder="0.00" value={line.unit_cost} onChange={e => updateLine(idx, "unit_cost", e.target.value)} />
                     <span className="text-sm font-semibold text-right">${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => setLines(p => p.filter((_, i) => i !== idx))}>
