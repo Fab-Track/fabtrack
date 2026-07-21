@@ -10,47 +10,34 @@ import LineApprovalButtons from "@/components/jobs/LineApprovalButtons";
 import ScopeApprovalBox from "@/components/jobs/ScopeApprovalBox";
 
 /**
- * Shop-facing read-only scope view pulled from the approved estimate + change orders.
- * Shows Item, Qty, Color, Install Location — no pricing — plus manager review controls.
+ * Shop-facing read-only scope view — pulled from PAID invoices only
+ * (not the estimate). Shows Item, Qty, Color, Install Location, plus
+ * manager review controls.
  */
 export default function JobScopeSection({ job }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const canApprove = canApproveScope(user);
 
-  const { data: estimates = [] } = useQuery({
-    queryKey: ["estimates", job.id],
-    queryFn: () => base44.entities.Estimate.filter({ job_id: job.id }),
+  const { data: invoices = [] } = useQuery({
+    queryKey: ["invoices", job.id],
+    queryFn: () => base44.entities.Invoice.filter({ job_id: job.id }),
     enabled: !!job.id,
   });
 
-  const { data: changeOrders = [] } = useQuery({
-    queryKey: ["changeOrders", job.id],
-    queryFn: () => base44.entities.ChangeOrder.filter({ job_id: job.id }),
-    enabled: !!job.id,
-  });
-
-  const approvedEstimate = estimates.find(e => e.status === "Approved");
-  const approvedCOs = changeOrders.filter(co => co.status === "Approved");
-  const estLines = (approvedEstimate?.line_items || []).map((l, idx) => ({
-    ...l, _src: { type: "Estimate", record: approvedEstimate, idx },
-  }));
-  const coLines = approvedCOs.flatMap(co =>
-    (co.line_items || []).map((l, idx) => ({
+  const paidInvoices = invoices.filter(inv => inv.status === "Paid");
+  const allLines = paidInvoices.flatMap(inv =>
+    (inv.line_items || []).map((l, idx) => ({
       ...l,
-      _co_label: `CO #${co.id?.slice(-6).toUpperCase()}`,
-      _src: { type: "ChangeOrder", record: co, idx },
+      _co_label: inv.invoice_label && inv.invoice_label !== "Final Invoice" ? inv.invoice_label : null,
+      _src: { type: "Invoice", record: inv, idx },
     }))
   );
-  const allLines = [...estLines, ...coLines];
 
   const approveMutation = useMutation({
     mutationFn: ({ src, status }) =>
       setLineApproval({ entityType: src.type, record: src.record, lineIdx: src.idx, status, user }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["estimates", job.id] });
-      qc.invalidateQueries({ queryKey: ["changeOrders", job.id] });
-    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["invoices", job.id] }),
   });
 
   return (
@@ -58,21 +45,21 @@ export default function JobScopeSection({ job }) {
       <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/20 flex-wrap">
         <Layers className="w-4 h-4 text-muted-foreground" />
         <h3 className="font-semibold text-sm">Scope</h3>
-        {approvedEstimate && (
+        {paidInvoices.length > 0 && (
           <Badge className="bg-emerald-100 text-emerald-800 text-xs ml-1">
-            <CheckCircle2 className="w-3 h-3 mr-1" /> Approved
+            <CheckCircle2 className="w-3 h-3 mr-1" /> Paid
           </Badge>
         )}
-        {approvedEstimate && (
+        {paidInvoices.length > 0 && (
           <div className="ml-auto">
             <ScopeApprovalBox job={job} />
           </div>
         )}
       </div>
 
-      {!approvedEstimate ? (
+      {paidInvoices.length === 0 ? (
         <div className="px-4 py-8 text-center text-muted-foreground text-sm">
-          Scope not yet defined — awaiting estimate approval
+          Scope not yet visible — awaiting a paid invoice
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -113,7 +100,7 @@ export default function JobScopeSection({ job }) {
               {allLines.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground text-sm">
-                    No line items on the approved estimate.
+                    No line items on the paid invoice(s).
                   </td>
                 </tr>
               )}

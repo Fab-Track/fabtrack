@@ -132,6 +132,29 @@
           "install_location": {
             "type": "string"
           },
+          "mgr_approval": {
+            "type": "object",
+            "description": "Internal manager review of this line item (approved or flagged/denied) with timestamp signature",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "approved",
+                  "denied"
+                ]
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "by_id": {
+                "type": "string"
+              },
+              "by_name": {
+                "type": "string"
+              }
+            }
+          },
           "components": {
             "type": "array",
             "description": "Display-only component/material spec carried from the estimate line. Not used for pricing.",
