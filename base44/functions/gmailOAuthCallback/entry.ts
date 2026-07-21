@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
   const errorParam = url.searchParams.get('error');
 
   const appId = Deno.env.get('BASE44_APP_ID');
-  const redirectUri = `https://base44.app/api/apps/${appId}/functions/gmailOAuthCallback`;
+  const redirectUri = `https://fab-track.base44.app/functions/gmailOAuthCallback`;
 
   const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID');
   const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET');

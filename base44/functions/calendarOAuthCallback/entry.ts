@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     }
 
     const appId = Deno.env.get('BASE44_APP_ID');
-    const redirectUri = `https://base44.app/api/apps/${appId}/functions/calendarOAuthCallback`;
+    const redirectUri = `https://fab-track.base44.app/functions/calendarOAuthCallback`;
 
     // Exchange code for tokens
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
