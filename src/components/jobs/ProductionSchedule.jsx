@@ -45,7 +45,7 @@ export default function ProductionSchedule({ job, readOnly = false }) {
   const hasManualEdits = phases.some(p => p.manuallyEdited);
 
   const measureDate = phases.find(p => p.name === "Measure")?.startDate || "";
-  const installDate = phases.find(p => p.name === "Install")?.startDate || job.promised_install_date || "";
+  const installDate = phases.find(p => p.name === "Install")?.startDate || job.promised_install_date || job.expected_install_date || "";
 
   function saveSchedule(newPhases) {
     const installPhase = newPhases.find(p => p.name === "Install");
