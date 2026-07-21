@@ -17,6 +17,7 @@ import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
 import { useAuth } from "@/lib/AuthContext";
 import { useWriteOrgId } from "@/lib/orgContext";
 import ProductServiceDropdown from "@/components/estimates/ProductServiceDropdown";
+import { useJobDetailConfig } from "@/hooks/useJobDetailConfig";
 import { formatPhoneDisplay } from "@/lib/phoneFormat";
 import RailingInlineCalc from "@/components/estimates/RailingInlineCalc";
 import StaircaseInlineCalc from "@/components/estimates/StaircaseInlineCalc";
@@ -68,6 +69,7 @@ export default function EstimatePage() {
   const { user } = useAuth();
   const writeOrgId = useWriteOrgId();
   const isNew = estimateId === "new";
+  const { config: jobDetailConfig } = useJobDetailConfig();
 
   const [activeTab, setActiveTab] = useState("edit");
   const [sendPanelOpen, setSendPanelOpen] = useState(false);
@@ -457,10 +459,11 @@ export default function EstimatePage() {
                   <div style={{ minWidth: 620 }}>
                     {/* Column headers */}
                     <div className="grid gap-1.5 text-xs text-muted-foreground font-medium mb-2 px-1"
-                      style={{ gridTemplateColumns: "1.5fr 2fr 1.3fr 0.6fr 1fr 1fr auto" }}>
+                      style={{ gridTemplateColumns: "1.3fr 1.7fr 1.1fr 1fr 0.5fr 0.9fr 0.9fr auto" }}>
                       <span>Service Item</span>
                       <span>Description</span>
                       <span>Install Location</span>
+                      <span>Color</span>
                       <span>Qty</span>
                       <span>Unit Cost</span>
                       <span>Amount</span>
@@ -471,7 +474,7 @@ export default function EstimatePage() {
                       {lines.map((line, idx) => (
                         <div key={line._id}>
                           <div className="grid gap-1.5 items-center"
-                            style={{ gridTemplateColumns: "1.5fr 2fr 1.3fr 0.6fr 1fr 1fr auto" }}>
+                            style={{ gridTemplateColumns: "1.3fr 1.7fr 1.1fr 1fr 0.5fr 0.9fr 0.9fr auto" }}>
                             <ProductServiceDropdown
                               value={line.service_name}
                               onChange={v => updateLine(idx, "service_name", v)}
@@ -486,6 +489,13 @@ export default function EstimatePage() {
                             <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)}>
                               <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                               <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
+                            </Select>
+                            <Select value={line.color || "none"} onValueChange={v => updateLine(idx, "color", v === "none" ? "" : v)}>
+                              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Color" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none" className="text-xs">None</SelectItem>
+                                {jobDetailConfig.powdercoat_colors.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}
+                              </SelectContent>
                             </Select>
                             <Input className="h-8 text-xs" type="number" value={line.quantity} onChange={e => updateLine(idx, "quantity", e.target.value)} />
                             <Input className="h-8 text-xs" type="number" placeholder="0.00" value={line.unit_cost} onChange={e => updateLine(idx, "unit_cost", e.target.value)} />
@@ -553,6 +563,18 @@ export default function EstimatePage() {
                         <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)}>
                           <SelectTrigger className="h-9 text-sm w-full mt-0.5"><SelectValue /></SelectTrigger>
                           <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Color */}
+                      <div>
+                        <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Color</Label>
+                        <Select value={line.color || "none"} onValueChange={v => updateLine(idx, "color", v === "none" ? "" : v)}>
+                          <SelectTrigger className="h-9 text-sm w-full mt-0.5"><SelectValue placeholder="Color" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            {jobDetailConfig.powdercoat_colors.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                          </SelectContent>
                         </Select>
                       </div>
 
