@@ -95,11 +95,17 @@ export default function SendEstimatePanel({ estimate, job, customer, onClose, on
 
   return (
     <div className="absolute inset-y-0 right-0 w-80 bg-background border-l shadow-xl flex flex-col z-10">
-      <div className="flex items-center justify-between px-4 py-3 border-b">
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b">
         <h3 className="font-semibold text-sm">Review &amp; Send</h3>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-          <X className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={handleSend} disabled={!canSend || sending}>
+            <Send className="w-3.5 h-3.5" />
+            {sending ? "Sending…" : method === "text" ? "Send Text" : method === "both" ? "Send Both" : "Send Estimate"}
+          </Button>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -168,12 +174,6 @@ export default function SendEstimatePanel({ estimate, job, customer, onClose, on
         </div>
       </div>
 
-      <div className="p-4 border-t">
-        <Button className="w-full gap-2" onClick={handleSend} disabled={!canSend || sending}>
-          <Send className="w-3.5 h-3.5" />
-          {sending ? "Sending…" : "Send Estimate"}
-        </Button>
-      </div>
     </div>
   );
 }
