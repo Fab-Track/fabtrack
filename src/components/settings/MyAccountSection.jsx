@@ -12,7 +12,6 @@ import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import GmailUserConnectionCard from "./GmailUserConnectionCard";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -186,11 +185,6 @@ export default function MyAccountSection() {
         <div className="border rounded-xl p-4 bg-muted/30 text-xs text-muted-foreground">
           No employee profile linked to your account. Contact your admin.
         </div>
-      )}
-
-      {/* Gmail connection */}
-      {myEmployee && (
-        <GmailUserConnectionCard employee={myEmployee} onRefresh={() => refetchEmployee()} />
       )}
 
       {/* Password change */}
