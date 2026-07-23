@@ -9,6 +9,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import AutoGrowTextarea from "@/components/ui/auto-grow-textarea";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Trash2, CheckCircle2, FileText, LayoutList, AlignJustify, AlertCircle, ImageOff, Image, Lock } from "lucide-react";
 import AddLineItemWizard from "./AddLineItemWizard";
@@ -381,14 +382,14 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
               <div className="space-y-2">
                 {lines.map((line, idx) => (
                   <div key={line._id} className="space-y-1">
-                    <div className="grid grid-cols-[2fr_1.5fr_1fr_0.7fr_1fr_1fr_auto] gap-1.5 items-center">
-                       <Input
-                         className="h-8 text-xs"
-                         placeholder="Description"
-                         value={line.description}
-                         onChange={e => updateLine(idx, "description", e.target.value)}
-                         disabled={isLocked && !!estimate?.id}
-                       />
+                    <div className="grid grid-cols-[2fr_1.5fr_1fr_0.7fr_1fr_1fr_auto] gap-1.5 items-start">
+                       <AutoGrowTextarea
+                          className="text-xs"
+                          placeholder="Description"
+                          value={line.description}
+                          onChange={e => updateLine(idx, "description", e.target.value)}
+                          disabled={isLocked && !!estimate?.id}
+                        />
                        <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)} disabled={isLocked && !!estimate?.id}>
                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                          <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
@@ -451,8 +452,8 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                   <div key={line._id} className="bg-card rounded-xl border p-3 space-y-2.5">
                     <div>
                       <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Description</Label>
-                      <Input
-                        className="h-9 text-sm mt-0.5"
+                      <AutoGrowTextarea
+                        className="text-sm mt-0.5"
                         placeholder="Description"
                         value={line.description}
                         onChange={e => updateLine(idx, "description", e.target.value)}

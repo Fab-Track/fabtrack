@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import AutoGrowTextarea from "@/components/ui/auto-grow-textarea";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
@@ -129,8 +130,8 @@ export default function ChangeOrderEditor({ changeOrder, job, originalEstimateTo
           </div>
           <div className="space-y-1.5">
             {lines.map((line, idx) => (
-              <div key={line._id} className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-1.5 items-center">
-                <Input className="h-8 text-xs" placeholder="Description" value={line.description} onChange={e => updateLine(idx, "description", e.target.value)} />
+              <div key={line._id} className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-1.5 items-start">
+                <AutoGrowTextarea className="text-xs" placeholder="Description" value={line.description} onChange={e => updateLine(idx, "description", e.target.value)} />
                 <Select value={line.category} onValueChange={v => updateLine(idx, "category", v)}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}</SelectContent>

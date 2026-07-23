@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import AutoGrowTextarea from "@/components/ui/auto-grow-textarea";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, AlignJustify, LayoutList, Send } from "lucide-react";
@@ -439,13 +440,13 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
                </div>
                <div className="space-y-1.5">
                  {lines.map((line, idx) => (
-                   <div key={line._id} className="grid grid-cols-[1.3fr_1.7fr_1.1fr_1fr_0.5fr_0.9fr_0.9fr_auto] gap-1.5 items-center">
-                     <ProductServiceDropdown
-                       value={line.service_name}
-                       onChange={v => updateLine(idx, "service_name", v)}
-                       onSelect={item => handleServiceSelect(idx, item)}
-                     />
-                     <Input className="h-8 text-xs" placeholder="Description" value={line.description} onChange={e => updateLine(idx, "description", e.target.value)} />
+                   <div key={line._id} className="grid grid-cols-[1.3fr_1.7fr_1.1fr_1fr_0.5fr_0.9fr_0.9fr_auto] gap-1.5 items-start">
+                       <ProductServiceDropdown
+                         value={line.service_name}
+                         onChange={v => updateLine(idx, "service_name", v)}
+                         onSelect={item => handleServiceSelect(idx, item)}
+                       />
+                       <AutoGrowTextarea className="text-xs" placeholder="Description" value={line.description} onChange={e => updateLine(idx, "description", e.target.value)} />
                      <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)}>
                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                        <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
