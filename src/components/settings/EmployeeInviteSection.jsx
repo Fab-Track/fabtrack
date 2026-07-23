@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { UserPlus, Mail, Link2, AlertTriangle, Shield, MoreVertical } from "lucide-react";
+import { UserPlus, Mail, Link2, AlertTriangle, Shield, MoreVertical, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import {
@@ -36,6 +36,9 @@ export default function EmployeeInviteSection() {
   const [showInvite, setShowInvite] = useState(false);
   const [invite, setInvite] = useState({ name: "", email: "", role: "estimator", hire_date: "" });
   const [inviting, setInviting] = useState(false);
+  const [editingName, setEditingName] = useState(null); // employee being renamed
+  const [editNameValue, setEditNameValue] = useState("");
+  const [savingName, setSavingName] = useState(false);
 
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ["employees", orgFilter],
@@ -147,6 +150,29 @@ export default function EmployeeInviteSection() {
     }
   }
 
+  async function handleSaveName() {
+    const newName = editNameValue.trim();
+    if (!newName) {
+      toast.error("Name cannot be empty");
+      return;
+    }
+    setSavingName(true);
+    try {
+      await base44.entities.Employee.update(editingName.id, { name: newName });
+      // If linked to a User, sync their full_name too
+      if (editingName.user_id) {
+        await base44.entities.User.update(editingName.user_id, { full_name: newName });
+      }
+      toast.success("Name updated");
+      setEditingName(null);
+      qc.invalidateQueries({ queryKey: ["employees"] });
+    } catch (err) {
+      toast.error(err?.response?.data?.error || err?.message || "Failed to update name");
+    } finally {
+      setSavingName(false);
+    }
+  }
+
   async function handleResendInvite(emp) {
     try {
       const normalized = emp.email.trim().toLowerCase();
@@ -245,6 +271,13 @@ export default function EmployeeInviteSection() {
                         <MoreVertical className="w-4 h-4 text-muted-foreground" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => {
+                          setEditingName(emp);
+                          setEditNameValue(emp.name || "");
+                        }}>
+                          <Pencil className="w-3.5 h-3.5 mr-1.5" /> Edit Name
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <DropdownMenuLabel>Change Role</DropdownMenuLabel>
                         {INVITE_ROLES.map(r => (
                           <DropdownMenuItem
@@ -282,6 +315,38 @@ export default function EmployeeInviteSection() {
           <p>Current Owner: <strong>{currentOwner.name}</strong> ({currentOwner.email}). Only one employee can hold the Owner role at a time.</p>
         </div>
       )}
+
+      {/* Edit Name Dialog */}
+      <Dialog open={!!editingName} onOpenChange={(open) => { if (!open) setEditingName(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="w-4 h-4" /> Edit Name
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Full Name</Label>
+            <Input
+              value={editNameValue}
+              onChange={e => setEditNameValue(e.target.value)}
+              placeholder="John Smith"
+              onKeyDown={e => { if (e.key === "Enter") handleSaveName(); }}
+              autoFocus
+            />
+            {editingName?.user_id && (
+              <p className="text-xs text-muted-foreground">
+                This will also update the linked User account name.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingName(null)}>Cancel</Button>
+            <Button onClick={handleSaveName} disabled={savingName || !editNameValue.trim()}>
+              {savingName ? "Saving…" : "Save Name"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Invite Dialog */}
       <Dialog open={showInvite} onOpenChange={setShowInvite}>

@@ -69,7 +69,15 @@ export default function MyAccountSection() {
     setSaving(true);
     try {
       const full_name = [form.first_name.trim(), form.last_name.trim()].filter(Boolean).join(" ");
-      await base44.auth.updateMe({ full_name, phone: form.phone });
+      // full_name is a built-in User field that updateMe cannot override — use User.update directly
+      await base44.entities.User.update(user.id, { full_name });
+      // phone is a custom field — updateMe handles it
+      await base44.auth.updateMe({ phone: form.phone });
+      // Sync the linked Employee record's name so it matches everywhere
+      if (myEmployee && myEmployee.name !== full_name) {
+        await base44.entities.Employee.update(myEmployee.id, { name: full_name });
+        qc.invalidateQueries({ queryKey: ["employees"] });
+      }
       qc.invalidateQueries();
       // Refresh the auth context so the name updates everywhere
       if (typeof checkUserAuth === "function") await checkUserAuth();
