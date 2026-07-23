@@ -26,7 +26,7 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
   const [deleteOpen, setDeleteOpen] = useState(false);
   const qc = useQueryClient();
   const days = daysInStage(job);
-  const paymentStatus = getPaymentStatus(invoices);
+  const paymentStatus = job.manual_payment_status || "not_invoiced";
   const isStale = days > 5;
   const installDate = job.promised_install_date && isValid(parseISO(job.promised_install_date))
     ? format(parseISO(job.promised_install_date), "MMM d")

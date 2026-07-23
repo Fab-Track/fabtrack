@@ -1,14 +1,11 @@
 import React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FileText } from "lucide-react";
 import JobScopeSection from "@/components/jobs/JobScopeSection";
 import KeyDatesCard from "@/components/jobs/KeyDatesCard";
 import JobNotesSection from "@/components/jobs/JobNotesSection";
-import PaymentStatusBadge from "@/components/pipeline/PaymentStatusBadge";
-import { getPaymentStatus } from "@/lib/pipelineHelpers";
+import PaymentStatusSelector from "@/components/jobs/PaymentStatusSelector";
 import { StickyNote } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
@@ -17,13 +14,6 @@ export default function JobOverviewTab({ job, highlightNoteId }) {
   const { user } = useAuth();
   const effectiveRole = useEffectiveRole(user?.role || "admin");
   const isFabricator = ["fabricator", "installer"].includes(effectiveRole.toLowerCase());
-
-  const { data: jobInvoices = [] } = useQuery({
-    queryKey: ["invoices", job.id],
-    queryFn: () => base44.entities.Invoice.filter({ job_id: job.id }),
-    enabled: !!job.id,
-  });
-  const paymentStatus = getPaymentStatus(jobInvoices);
 
   const productEntries = job.job_level_data?.product_details || [];
   const productsList = productEntries
@@ -45,7 +35,7 @@ export default function JobOverviewTab({ job, highlightNoteId }) {
           {job.powder_coat_color && (
             <DetailRow label="Powder Coat" value={`${job.powder_coat_color}${job.powder_coat_code ? ` (${job.powder_coat_code})` : ""}`} />
           )}
-          <DetailRow label="Payment" value={<PaymentStatusBadge status={paymentStatus} className="text-xs px-2 py-0.5" />} />
+          <DetailRow label="Payment" value={<PaymentStatusSelector job={job} />} />
           {job.lead_outcome && (
             <DetailRow label="Lead Outcome" value={
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${

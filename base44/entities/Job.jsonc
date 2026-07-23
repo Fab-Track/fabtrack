@@ -177,6 +177,16 @@
       ],
       "default": "pending"
     },
+    "manual_payment_status": {
+      "type": "string",
+      "enum": [
+        "not_invoiced",
+        "50_percent",
+        "100_percent"
+      ],
+      "default": "not_invoiced",
+      "description": "Manual payment status \u2014 set by users to track invoice payment progress (50% deposit, 100% paid). Not auto-derived from invoices."
+    },
     "scope_approval": {
       "type": "object",
       "description": "Manager sign-off of the job scope \u2014 timestamp signature recorded when a manager approves the scope",

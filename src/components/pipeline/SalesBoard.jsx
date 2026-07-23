@@ -31,7 +31,7 @@ const EST_PILL = {
 function SalesCard({ job, isDragging, onPromote, estimates = [], invoices = [], customer, onCloseLead, onDeleteJob, canDelete, stage, columnJobs, onPriorityChange }) {
   const navigate = useNavigate();
   const days = daysInStage(job);
-  const paymentStatus = getPaymentStatus(invoices);
+  const paymentStatus = job.manual_payment_status || "not_invoiced";
   const isStale = days > 7 && job.stage !== "Deposit Received / Sale Won";
 
   // Most recent estimate for this job

@@ -1,9 +1,11 @@
 import React from "react";
 
 const CONFIG = {
-  not_invoiced: { label: "Not Invoiced", className: "bg-muted text-muted-foreground" },
-  partial:      { label: "Partial / Deposit", className: "bg-amber-100 text-amber-800" },
-  paid_in_full: { label: "Paid in Full", className: "bg-emerald-100 text-emerald-800" },
+  "not_invoiced": { label: "Not Invoiced", className: "bg-muted text-muted-foreground" },
+  "50_percent":   { label: "50% Paid", className: "bg-amber-100 text-amber-800" },
+  "100_percent":  { label: "100% Paid", className: "bg-emerald-100 text-emerald-800" },
+  "partial":      { label: "Partial / Deposit", className: "bg-amber-100 text-amber-800" },
+  "paid_in_full": { label: "Paid in Full", className: "bg-emerald-100 text-emerald-800" },
 };
 
 export default function PaymentStatusBadge({ status, className = "" }) {

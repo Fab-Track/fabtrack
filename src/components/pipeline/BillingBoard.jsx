@@ -76,7 +76,7 @@ function BillingSummary({ jobs, invoiceMap }) {
 // ── Billing Card ───────────────────────────────────────────────────────────────
 function BillingCard({ job, isDragging, invoice, jobInvoices = [], customer, onMarkPaid, onSendReminder, onDeleteJob, canDelete, stage, columnJobs, onPriorityChange }) {
   const navigate = useNavigate();
-  const paymentStatus = getPaymentStatus(jobInvoices);
+  const paymentStatus = job.manual_payment_status || "not_invoiced";
   const days = job.invoice_sent_date && isValid(parseISO(job.invoice_sent_date))
     ? differenceInDays(new Date(), parseISO(job.invoice_sent_date))
     : null;
