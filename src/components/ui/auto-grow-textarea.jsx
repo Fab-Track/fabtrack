@@ -1,15 +1,15 @@
-import React, { useRef, useEffect } from "react";
-import { Textarea } from "@/components/ui/textarea";
+import React, { useRef, useLayoutEffect } from "react";
 import { cn } from "@/lib/utils";
 
 /**
  * A textarea that auto-grows to fit its content.
- * Starts at 1 row, expands as the user types, caps at maxHeight before scrolling.
+ * Uses a raw <textarea> (not the base Textarea) to avoid the
+ * base component's min-h-[60px] which fights the auto-resize.
  */
 export default function AutoGrowTextarea({
   value,
   onChange,
-  maxHeight = 160,
+  maxHeight = 200,
   className,
   ...props
 }) {
@@ -22,16 +22,23 @@ export default function AutoGrowTextarea({
     el.style.height = Math.min(el.scrollHeight, maxHeight) + "px";
   };
 
-  useEffect(() => { resize(); }, [value]);
+  // useLayoutEffect runs before paint — no flicker
+  useLayoutEffect(() => { resize(); });
 
   return (
-    <Textarea
+    <textarea
       ref={ref}
       value={value}
       onChange={(e) => { onChange?.(e); resize(); }}
       rows={1}
-      className={cn("resize-none overflow-y-auto !min-h-0 py-1.5", className)}
-      style={{ maxHeight }}
+      className={cn(
+        "flex w-full rounded-md border border-input bg-transparent px-3 py-1.5 text-sm shadow-sm",
+        "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        "disabled:cursor-not-allowed disabled:opacity-50",
+        "resize-none overflow-hidden break-words whitespace-pre-wrap",
+        className
+      )}
+      style={{ maxHeight, minHeight: "1.75rem" }}
       {...props}
     />
   );
