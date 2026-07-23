@@ -30,7 +30,7 @@ export default function AutoGrowTextarea({
       value={value}
       onChange={(e) => { onChange?.(e); resize(); }}
       rows={1}
-      className={cn("resize-none overflow-hidden min-h-[32px] py-1.5", className)}
+      className={cn("resize-none overflow-y-auto !min-h-0 py-1.5", className)}
       style={{ maxHeight }}
       {...props}
     />
