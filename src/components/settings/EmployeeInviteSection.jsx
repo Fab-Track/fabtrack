@@ -158,11 +158,10 @@ export default function EmployeeInviteSection() {
     }
     setSavingName(true);
     try {
-      await base44.entities.Employee.update(editingName.id, { name: newName });
-      // If linked to a User, sync their full_name too
-      if (editingName.user_id) {
-        await base44.entities.User.update(editingName.user_id, { full_name: newName });
-      }
+      await base44.functions.invoke("updateEmployeeName", {
+        employee_id: editingName.id,
+        full_name: newName,
+      });
       toast.success("Name updated");
       setEditingName(null);
       qc.invalidateQueries({ queryKey: ["employees"] });
