@@ -31,10 +31,15 @@ export const OUTCOME_REASONS = {
     { id: "hold_follow_up", label: "Not Ready — Follow Up Later" },
     { id: "hold_no_follow_up", label: "Not Ready — Do Not Follow Up" },
   ],
+  Testing: [
+    { id: "testing_general", label: "Testing — General" },
+  ],
   Other: [
     { id: "other_none", label: "No Reason Given / Other" },
   ],
 };
+
+const IS_FREE_TEXT_OUTCOME = (cat) => cat === "Other";
 
 const OUTCOME_CATEGORIES = Object.keys(OUTCOME_REASONS);
 
@@ -50,19 +55,21 @@ export default function CloseLeadModal({ open, onClose, job }) {
   const [reasonId, setReasonId] = useState("");
   const [lostTo, setLostTo] = useState("");
   const [notes, setNotes] = useState("");
+  const [otherReasonText, setOtherReasonText] = useState("");
   const [followUpDate, setFollowUpDate] = useState(null);
   const qc = useQueryClient();
 
   const requiresFollowUp = reasonId === "hold_follow_up";
+  const isFreeText = IS_FREE_TEXT_OUTCOME(outcomeCategory);
 
   const closeMutation = useMutation({
     mutationFn: () => {
       const reason = OUTCOME_REASONS[outcomeCategory]?.find(r => r.id === reasonId);
       const isWon = outcomeCategory === "Won";
       const update = {
-        lead_outcome: reason?.label || outcomeCategory,
+        lead_outcome: isFreeText ? (otherReasonText || outcomeCategory) : (reason?.label || outcomeCategory),
         lead_outcome_category: outcomeCategory,
-        lead_close_reason: reasonId,
+        lead_close_reason: isFreeText ? "other_custom" : reasonId,
         lead_lost_to: ["lost_price_competitor", "lost_price_expensive"].includes(reasonId) ? (lostTo || null) : null,
         lead_closed_at: new Date().toISOString(),
         is_lead_closed: !isWon,
@@ -94,13 +101,18 @@ export default function CloseLeadModal({ open, onClose, job }) {
     setReasonId("");
     setLostTo("");
     setNotes("");
+    setOtherReasonText("");
     setFollowUpDate(null);
     onClose();
   }
 
   const reasons = outcomeCategory ? OUTCOME_REASONS[outcomeCategory] || [] : [];
   const showLostTo = reasonId && ["lost_price_competitor", "lost_price_expensive"].includes(reasonId);
-  const isValid = outcomeCategory && reasonId && (!requiresFollowUp || (requiresFollowUp && followUpDate));
+  const isValid = outcomeCategory && (
+    isFreeText
+      ? otherReasonText.trim().length > 0
+      : (reasonId && (!requiresFollowUp || (requiresFollowUp && followUpDate)))
+  );
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -134,8 +146,18 @@ export default function CloseLeadModal({ open, onClose, job }) {
             </Select>
           </div>
 
-          {/* Step 2: Specific Reason */}
-          {reasons.length > 0 && (
+          {/* Step 2: Specific Reason — free-text for "Other", dropdown otherwise */}
+          {isFreeText ? (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Reason <span className="text-destructive">*</span></Label>
+              <Textarea
+                value={otherReasonText}
+                onChange={e => setOtherReasonText(e.target.value)}
+                placeholder="Any additional context about why this lead closed…"
+                className="text-sm h-20 resize-none"
+              />
+            </div>
+          ) : reasons.length > 0 && (
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Reason</Label>
               <Select value={reasonId} onValueChange={(v) => { setReasonId(v); if (v !== "hold_follow_up") setFollowUpDate(null); }}>
