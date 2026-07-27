@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Pencil, Phone, Mail, User } from "lucide-react";
+import { Pencil, Phone, Mail, User, Loader2, Check } from "lucide-react";
+import { useAutosave } from "@/hooks/useAutosave";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { formatPhoneDisplay } from "@/lib/phoneFormat";
 
@@ -57,7 +58,8 @@ export default function CustomerContactsSection({ customer, onUpdated }) {
   const queryClient = useQueryClient();
   const [jobSheetOpen, setJobSheetOpen] = useState(false);
   const [billingSheetOpen, setBillingSheetOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [jobDirty, setJobDirty] = useState(false);
+  const [billingDirty, setBillingDirty] = useState(false);
 
   const [jobForm, setJobForm] = useState({
     job_contact_name: customer.job_contact_name || "",
@@ -72,23 +74,36 @@ export default function CustomerContactsSection({ customer, onUpdated }) {
     billing_same_as_job: customer.billing_same_as_job !== false, // default true
   });
 
-  async function saveJobContact() {
-    setSaving(true);
-    await base44.entities.Customer.update(customer.id, jobForm);
+  const updateJobForm = (updater) => { setJobDirty(true); setJobForm(updater); };
+  const updateBillingForm = (updater) => { setBillingDirty(true); setBillingForm(updater); };
+
+  async function onSaveJob(data) {
+    await base44.entities.Customer.update(customer.id, data);
     queryClient.invalidateQueries({ queryKey: ["customers"] });
-    onUpdated({ ...customer, ...jobForm });
-    setSaving(false);
-    setJobSheetOpen(false);
+    onUpdated({ ...customer, ...data });
   }
 
-  async function saveBillingContact() {
-    setSaving(true);
-    await base44.entities.Customer.update(customer.id, billingForm);
+  const { isSaving: isSavingJob } = useAutosave({
+    data: jobForm,
+    dirty: jobDirty,
+    onSave: onSaveJob,
+    onSaved: () => setJobDirty(false),
+    enabled: !!customer?.id,
+  });
+
+  async function onSaveBilling(data) {
+    await base44.entities.Customer.update(customer.id, data);
     queryClient.invalidateQueries({ queryKey: ["customers"] });
-    onUpdated({ ...customer, ...billingForm });
-    setSaving(false);
-    setBillingSheetOpen(false);
+    onUpdated({ ...customer, ...data });
   }
+
+  const { isSaving: isSavingBilling } = useAutosave({
+    data: billingForm,
+    dirty: billingDirty,
+    onSave: onSaveBilling,
+    onSaved: () => setBillingDirty(false),
+    enabled: !!customer?.id,
+  });
 
   const billingSameAsJob = billingForm.billing_same_as_job;
 
@@ -190,21 +205,27 @@ export default function CustomerContactsSection({ customer, onUpdated }) {
           <div className="space-y-4">
             <div>
               <Label className="text-xs">Name</Label>
-              <Input value={jobForm.job_contact_name} onChange={e => setJobForm(p => ({ ...p, job_contact_name: e.target.value }))} placeholder="Contact name" />
+              <Input value={jobForm.job_contact_name} onChange={e => updateJobForm(p => ({ ...p, job_contact_name: e.target.value }))} placeholder="Contact name" />
             </div>
             <div>
               <Label className="text-xs">Email</Label>
-              <Input type="email" value={jobForm.job_contact_email} onChange={e => setJobForm(p => ({ ...p, job_contact_email: e.target.value }))} placeholder="email@example.com" />
+              <Input type="email" value={jobForm.job_contact_email} onChange={e => updateJobForm(p => ({ ...p, job_contact_email: e.target.value }))} placeholder="email@example.com" />
             </div>
             <div>
               <Label className="text-xs">Phone</Label>
-              <PhoneInput value={jobForm.job_contact_phone} onChange={e => setJobForm(p => ({ ...p, job_contact_phone: e.target.value }))} placeholder="000-000-0000" />
+              <PhoneInput value={jobForm.job_contact_phone} onChange={e => updateJobForm(p => ({ ...p, job_contact_phone: e.target.value }))} placeholder="000-000-0000" />
             </div>
-            <div className="flex gap-2 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setJobSheetOpen(false)}>Cancel</Button>
-              <Button className="flex-1" onClick={saveJobContact} disabled={saving}>
-                {saving ? "Saving…" : "Save"}
-              </Button>
+            <div className="flex items-center justify-between pt-2">
+              <Button variant="outline" onClick={() => setJobSheetOpen(false)}>Close</Button>
+              {isSavingJob || jobDirty ? (
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Check className="w-3.5 h-3.5" /> Saved
+                </span>
+              )}
             </div>
           </div>
         </SheetContent>
@@ -223,7 +244,7 @@ export default function CustomerContactsSection({ customer, onUpdated }) {
               <Checkbox
                 id="billing-same"
                 checked={billingForm.billing_same_as_job}
-                onCheckedChange={v => setBillingForm(p => ({ ...p, billing_same_as_job: !!v }))}
+                onCheckedChange={v => updateBillingForm(p => ({ ...p, billing_same_as_job: !!v }))}
               />
               <label htmlFor="billing-same" className="text-sm cursor-pointer select-none">
                 Billing contact is the same as job contact
@@ -234,24 +255,30 @@ export default function CustomerContactsSection({ customer, onUpdated }) {
               <>
                 <div>
                   <Label className="text-xs">Name</Label>
-                  <Input value={billingForm.billing_contact_name} onChange={e => setBillingForm(p => ({ ...p, billing_contact_name: e.target.value }))} placeholder="Billing contact name" />
+                  <Input value={billingForm.billing_contact_name} onChange={e => updateBillingForm(p => ({ ...p, billing_contact_name: e.target.value }))} placeholder="Billing contact name" />
                 </div>
                 <div>
                   <Label className="text-xs">Email</Label>
-                  <Input type="email" value={billingForm.billing_contact_email} onChange={e => setBillingForm(p => ({ ...p, billing_contact_email: e.target.value }))} placeholder="billing@example.com" />
+                  <Input type="email" value={billingForm.billing_contact_email} onChange={e => updateBillingForm(p => ({ ...p, billing_contact_email: e.target.value }))} placeholder="billing@example.com" />
                 </div>
                 <div>
                   <Label className="text-xs">Phone</Label>
-                  <PhoneInput value={billingForm.billing_contact_phone} onChange={e => setBillingForm(p => ({ ...p, billing_contact_phone: e.target.value }))} placeholder="000-000-0000" />
+                  <PhoneInput value={billingForm.billing_contact_phone} onChange={e => updateBillingForm(p => ({ ...p, billing_contact_phone: e.target.value }))} placeholder="000-000-0000" />
                 </div>
               </>
             )}
 
-            <div className="flex gap-2 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setBillingSheetOpen(false)}>Cancel</Button>
-              <Button className="flex-1" onClick={saveBillingContact} disabled={saving}>
-                {saving ? "Saving…" : "Save"}
-              </Button>
+            <div className="flex items-center justify-between pt-2">
+              <Button variant="outline" onClick={() => setBillingSheetOpen(false)}>Close</Button>
+              {isSavingBilling || billingDirty ? (
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Check className="w-3.5 h-3.5" /> Saved
+                </span>
+              )}
             </div>
           </div>
         </SheetContent>
