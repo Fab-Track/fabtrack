@@ -13,6 +13,7 @@ import { Link } from "react-router-dom";
 import { generateJobNumber } from "@/lib/jobHelpers";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/lib/AuthContext";
 import { useWriteOrgId } from "@/lib/orgContext";
 
@@ -36,6 +37,13 @@ export default function NewJob() {
   const prefilledCustomer = useMemo(() =>
     customers.find(c => c.id === prefilledCustomerId) || null,
     [customers, prefilledCustomerId]
+  );
+
+  const [sameAsCustomer, setSameAsCustomer] = useState(false);
+
+  const selectedCustomer = useMemo(() =>
+    customers.find(c => c.id === form.customer_id) || null,
+    [customers, form.customer_id]
   );
 
   const [form, setForm] = useState({
@@ -73,7 +81,22 @@ export default function NewJob() {
       customer_id: customer?.id || "",
       customer_name: customer?.name || "",
       site_address: customer?.address || prev.site_address,
+      ...(sameAsCustomer ? {
+        onsite_contact_name: customer?.job_contact_name || "",
+        onsite_contact_phone: customer?.job_contact_phone || "",
+      } : {}),
     }));
+  };
+
+  const handleSameAsCustomer = (checked) => {
+    setSameAsCustomer(checked);
+    if (checked && selectedCustomer) {
+      setForm(prev => ({
+        ...prev,
+        onsite_contact_name: selectedCustomer.job_contact_name || "",
+        onsite_contact_phone: selectedCustomer.job_contact_phone || "",
+      }));
+    }
   };
 
   const handleSubmit = (e) => {
@@ -171,12 +194,24 @@ export default function NewJob() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 flex items-center gap-2">
+                <Checkbox
+                  id="same-as-customer"
+                  checked={sameAsCustomer}
+                  onCheckedChange={handleSameAsCustomer}
+                  disabled={!form.customer_id}
+                />
+                <Label htmlFor="same-as-customer" className="text-xs cursor-pointer">
+                  Use customer's job contact for on-site contact
+                </Label>
+              </div>
               <div>
                 <Label className="text-xs">On-Site Contact Name</Label>
                 <Input
                   value={form.onsite_contact_name}
                   onChange={e => updateField("onsite_contact_name", e.target.value)}
                   placeholder="Contact name"
+                  disabled={sameAsCustomer}
                 />
               </div>
               <div>
@@ -185,6 +220,7 @@ export default function NewJob() {
                   value={form.onsite_contact_phone}
                   onChange={e => updateField("onsite_contact_phone", e.target.value)}
                   placeholder="(555) 555-5555"
+                  disabled={sameAsCustomer}
                 />
               </div>
             </div>
