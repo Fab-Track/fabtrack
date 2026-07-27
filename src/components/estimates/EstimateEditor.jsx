@@ -392,6 +392,7 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                           value={line.description}
                           onChange={e => updateLine(idx, "description", e.target.value)}
                           disabled={isLocked && !!estimate?.id}
+                          maxHeight={600}
                         />
                          <button
                            type="button"
@@ -471,6 +472,7 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                           value={line.description}
                           onChange={e => updateLine(idx, "description", e.target.value)}
                           disabled={isLocked && !!estimate?.id}
+                          maxHeight={600}
                         />
                         <button
                           type="button"
