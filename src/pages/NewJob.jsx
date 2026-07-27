@@ -41,11 +41,6 @@ export default function NewJob() {
 
   const [sameAsCustomer, setSameAsCustomer] = useState(false);
 
-  const selectedCustomer = useMemo(() =>
-    customers.find(c => c.id === form.customer_id) || null,
-    [customers, form.customer_id]
-  );
-
   const [form, setForm] = useState({
     job_number: generateJobNumber(),
     job_name: "",
@@ -62,6 +57,11 @@ export default function NewJob() {
     assigned_rep_name: user?.full_name || "",
     notes_text: "",
   });
+
+  const selectedCustomer = useMemo(() =>
+    customers.find(c => c.id === form.customer_id) || null,
+    [customers, form.customer_id]
+  );
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Job.create(data),
