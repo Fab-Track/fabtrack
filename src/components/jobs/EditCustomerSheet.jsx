@@ -8,9 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "sonner";
-import { Building2, Mail, StickyNote, Users, Receipt } from "lucide-react";
+import { Building2, Mail, StickyNote, Users, Receipt, Save, Loader2, Check } from "lucide-react";
 import { PhoneInput } from "@/components/ui/PhoneInput";
+import { useAutosave } from "@/hooks/useAutosave";
 
 const CUSTOMER_TYPES = [
   "Homeowner", "General Contractor", "Builder / Developer",
@@ -19,7 +19,7 @@ const CUSTOMER_TYPES = [
 
 export default function EditCustomerSheet({ open, onOpenChange, customerId, jobId, onSaved }) {
   const qc = useQueryClient();
-  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [form, setForm] = useState({});
 
   const { data: customer } = useQuery({
@@ -51,54 +51,58 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
     }
   }, [customer, open]);
 
-  const f = (field, val) => setForm(p => {
-    const next = { ...p, [field]: val };
-    // When checking "same as primary info", copy name/email/phone into billing contact
-    if (field === "billing_same_as_primary" && val === true) {
-      next.billing_contact_name = p.name || "";
-      next.billing_contact_email = p.email || "";
-      next.billing_contact_phone = p.phone || "";
-      next.billing_contact_address = p.address || "";
-    }
-    return next;
-  });
-
-  async function handleSave() {
-    if (!customer || !form.name?.trim()) return;
-    setSaving(true);
-    try {
-      await base44.entities.Customer.update(customer.id, {
-        name: form.name,
-        company: form.company || null,
-        email: form.email || null,
-        phone: form.phone || null,
-        address: form.address || null,
-        type: form.type || null,
-        billing_same_as_primary: form.billing_same_as_primary,
-        billing_contact_name: form.billing_contact_name || null,
-        billing_contact_email: form.billing_contact_email || null,
-        billing_contact_phone: form.billing_contact_phone || null,
-        billing_contact_address: form.billing_contact_address || null,
-        payment_terms: form.payment_terms || null,
-        payment_terms_custom_days: form.payment_terms === "Custom" && form.payment_terms_custom_days !== "" ? Number(form.payment_terms_custom_days) : null,
-        billing_deadline_date: form.billing_deadline_date || null,
-        notes: form.notes || null,
-      });
-      // Update denormalized customer name on the job if name changed
-      if (form.name !== customer.name && jobId) {
-        await base44.entities.Job.update(jobId, { customer_name: form.name });
+  const f = (field, val) => {
+    setDirty(true);
+    setForm(p => {
+      const next = { ...p, [field]: val };
+      // When checking "same as primary info", copy name/email/phone into billing contact
+      if (field === "billing_same_as_primary" && val === true) {
+        next.billing_contact_name = p.name || "";
+        next.billing_contact_email = p.email || "";
+        next.billing_contact_phone = p.phone || "";
+        next.billing_contact_address = p.address || "";
       }
-      qc.invalidateQueries({ queryKey: ["customer", customerId] });
-      qc.invalidateQueries({ queryKey: ["job", jobId] });
-      onSaved?.();
-      onOpenChange(false);
-      toast.success("Customer updated.");
-    } catch (err) {
-      toast.error("Failed to save customer.");
-    } finally {
-      setSaving(false);
+      return next;
+    });
+  };
+
+  const enabled = !!customer && !!form.name?.trim();
+
+  const onSave = async (formData) => {
+    if (!customer) return;
+    await base44.entities.Customer.update(customer.id, {
+      name: formData.name,
+      company: formData.company || null,
+      email: formData.email || null,
+      phone: formData.phone || null,
+      address: formData.address || null,
+      type: formData.type || null,
+      billing_same_as_primary: formData.billing_same_as_primary,
+      billing_contact_name: formData.billing_contact_name || null,
+      billing_contact_email: formData.billing_contact_email || null,
+      billing_contact_phone: formData.billing_contact_phone || null,
+      billing_contact_address: formData.billing_contact_address || null,
+      payment_terms: formData.payment_terms || null,
+      payment_terms_custom_days: formData.payment_terms === "Custom" && formData.payment_terms_custom_days !== "" ? Number(formData.payment_terms_custom_days) : null,
+      billing_deadline_date: formData.billing_deadline_date || null,
+      notes: formData.notes || null,
+    });
+    // Update denormalized customer name on the job if name changed
+    if (formData.name !== customer.name && jobId) {
+      await base44.entities.Job.update(jobId, { customer_name: formData.name });
     }
-  }
+    qc.invalidateQueries({ queryKey: ["customer", customerId] });
+    qc.invalidateQueries({ queryKey: ["job", jobId] });
+    onSaved?.();
+  };
+
+  const { isSaving, saveNow } = useAutosave({
+    data: form,
+    dirty,
+    onSave,
+    onSaved: () => setDirty(false),
+    enabled,
+  });
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -265,13 +269,23 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
           </fieldset>
 
           {/* Actions */}
-          <div className="flex gap-2 pt-2 sticky bottom-0 bg-background py-3 border-t">
-            <Button variant="outline" className="flex-1 h-10" onClick={() => onOpenChange(false)}>
+          <div className="flex items-center justify-end gap-3 pt-2 sticky bottom-0 bg-background py-3 border-t">
+            <Button variant="outline" className="h-9" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button className="flex-1 h-10" onClick={handleSave} disabled={saving || !form.name?.trim()}>
-              {saving ? "Saving…" : "Save Customer"}
-            </Button>
+            {isSaving ? (
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
+              </span>
+            ) : dirty ? (
+              <Button className="h-9 gap-1.5" onClick={saveNow} disabled={!form.name?.trim()}>
+                <Save className="w-3.5 h-3.5" /> Save
+              </Button>
+            ) : (
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Check className="w-3.5 h-3.5" /> Saved
+              </span>
+            )}
           </div>
         </div>
       </SheetContent>
