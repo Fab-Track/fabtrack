@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Check, PenLine } from "lucide-react";
@@ -333,12 +334,13 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
               <Label className="text-xs font-medium">
                 Description {isCustom && <span className="text-destructive">*</span>}
               </Label>
-              <Input
-                className="h-8 text-sm mt-1"
+              <Textarea
+                className="text-sm mt-1"
                 placeholder={isCustom ? "Enter line item description…" : "Auto-filled from service type"}
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 autoFocus={isCustom}
+                maxHeight={200}
               />
             </div>
 
