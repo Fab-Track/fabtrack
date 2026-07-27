@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Save } from "lucide-react";
+import { Save, Loader2, Check } from "lucide-react";
 import EmployeeSMSNumberSection from "./EmployeeSMSNumberSection";
+import { useAutosave } from "@/hooks/useAutosave";
 import { Separator } from "@/components/ui/separator";
 
 const ROLES = ["welder","fitter","cutter","installer","foreman","admin","grinder","estimator","design_specialist","accountant","owner"];
@@ -28,13 +29,12 @@ export default function EmployeeWorkInfoTab({ employee, canEdit, canSeeRate }) {
     can_operate_boom_lift: employee.can_operate_boom_lift ?? false,
     internal_notes: employee.internal_notes || "",
   });
-  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k, v) => { setDirty(true); setForm(f => ({ ...f, [k]: v })); };
 
-  const handleSave = async () => {
-    setSaving(true);
-    const payload = { ...form };
+  const onSave = async (data) => {
+    const payload = { ...data };
     if (!canSeeRate) delete payload.hourly_rate;
     if (payload.hourly_rate === "" || payload.hourly_rate === null) delete payload.hourly_rate;
     else payload.hourly_rate = parseFloat(payload.hourly_rate);
@@ -43,8 +43,15 @@ export default function EmployeeWorkInfoTab({ employee, canEdit, canSeeRate }) {
     await base44.entities.Employee.update(employee.id, payload);
     qc.invalidateQueries({ queryKey: ["employee", employee.id] });
     qc.invalidateQueries({ queryKey: ["employees"] });
-    setSaving(false);
   };
+
+  const { isSaving, saveNow } = useAutosave({
+    data: form,
+    dirty,
+    onSave,
+    onSaved: () => setDirty(false),
+    enabled: canEdit,
+  });
 
   return (
     <div className="space-y-5">
@@ -111,9 +118,21 @@ export default function EmployeeWorkInfoTab({ employee, canEdit, canSeeRate }) {
       </div>
 
       {canEdit && (
-        <Button onClick={handleSave} disabled={saving}>
-          <Save className="w-4 h-4 mr-1.5" />{saving ? "Saving..." : "Save Work Info"}
-        </Button>
+        <div>
+          {isSaving ? (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
+            </span>
+          ) : dirty ? (
+            <Button onClick={saveNow}>
+              <Save className="w-4 h-4 mr-1.5" /> Save Work Info
+            </Button>
+          ) : (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Check className="w-3.5 h-3.5" /> Saved
+            </span>
+          )}
+        </div>
       )}
 
       <Separator />

@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, Coffee } from "lucide-react";
+import { Save, Coffee, Loader2, Check } from "lucide-react";
+import { useAutosave } from "@/hooks/useAutosave";
 import { differenceInMonths, parseISO } from "date-fns";
 
 function tenure(startDate) {
@@ -36,15 +37,21 @@ export default function EmployeeCultureTab({ employee, canEdit, isOwnerOrManager
   const [form, setForm] = useState(
     Object.fromEntries([...fields.map(f => [f.key, employee[f.key] || ""]), ["fun_fact_team", employee.fun_fact_team || ""]])
   );
-  const [saving, setSaving] = useState(false);
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const [dirty, setDirty] = useState(false);
+  const set = (k, v) => { setDirty(true); setForm(f => ({ ...f, [k]: v })); };
 
-  const handleSave = async () => {
-    setSaving(true);
-    await base44.entities.Employee.update(employee.id, form);
+  const onSave = async (data) => {
+    await base44.entities.Employee.update(employee.id, data);
     qc.invalidateQueries({ queryKey: ["employee", employee.id] });
-    setSaving(false);
   };
+
+  const { isSaving, saveNow } = useAutosave({
+    data: form,
+    dirty,
+    onSave,
+    onSaved: () => setDirty(false),
+    enabled: canEdit,
+  });
 
   const tenureStr = tenure(employee.start_date);
 
@@ -77,9 +84,21 @@ export default function EmployeeCultureTab({ employee, canEdit, isOwnerOrManager
       </div>
 
       {canEdit && (
-        <Button onClick={handleSave} disabled={saving}>
-          <Save className="w-4 h-4 mr-1.5" />{saving ? "Saving..." : "Save Culture Info"}
-        </Button>
+        <div>
+          {isSaving ? (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
+            </span>
+          ) : dirty ? (
+            <Button onClick={saveNow}>
+              <Save className="w-4 h-4 mr-1.5" /> Save Culture Info
+            </Button>
+          ) : (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Check className="w-3.5 h-3.5" /> Saved
+            </span>
+          )}
+        </div>
       )}
     </div>
   );

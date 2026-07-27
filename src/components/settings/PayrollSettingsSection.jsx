@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
-import { Info, Wrench, Truck } from "lucide-react";
+import { Info, Wrench, Truck, Save, Loader2, Check } from "lucide-react";
+import { useAutosave } from "@/hooks/useAutosave";
 
 const DAY_OPTIONS = [
   { value: 0, label: "Sunday" },
@@ -22,12 +22,11 @@ const DAY_OPTIONS = [
 ];
 
 export default function PayrollSettingsSection() {
-  const { toast } = useToast();
   const qc = useQueryClient();
   const [weekStart, setWeekStart] = useState(1);
   const [fabRate, setFabRate] = useState(0);
   const [installRate, setInstallRate] = useState(0);
-  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
   const [orgId, setOrgId] = useState(null);
   useEffect(() => {
@@ -53,13 +52,14 @@ export default function PayrollSettingsSection() {
     }
   }, [settings]);
 
-  const save = async () => {
-    if (!orgId) return toast({ title: "Organization not loaded", variant: "destructive" });
-    setSaving(true);
+  const enabled = !!orgId;
+
+  const onSave = async (data) => {
+    if (!orgId) return;
     const payload = {
-      payroll_workweek_start_day: weekStart,
-      labor_fab_rate: parseFloat(fabRate) || 0,
-      labor_install_rate: parseFloat(installRate) || 0,
+      payroll_workweek_start_day: data.weekStart,
+      labor_fab_rate: parseFloat(data.fabRate) || 0,
+      labor_install_rate: parseFloat(data.installRate) || 0,
     };
     if (settings) {
       await base44.entities.AppSettings.update(settings.id, payload);
@@ -67,9 +67,15 @@ export default function PayrollSettingsSection() {
       await base44.entities.AppSettings.create({ setting_key: "main", ...payload, organization_id: orgId });
     }
     qc.invalidateQueries({ queryKey: ["appSettings"] });
-    toast({ title: "Payroll settings saved" });
-    setSaving(false);
   };
+
+  const { isSaving, saveNow } = useAutosave({
+    data: { weekStart, fabRate, installRate },
+    dirty,
+    onSave,
+    onSaved: () => setDirty(false),
+    enabled,
+  });
 
   return (
     <div className="space-y-6">
@@ -84,7 +90,7 @@ export default function PayrollSettingsSection() {
           <p className="text-xs text-muted-foreground">
             This defines when the 40-hour overtime calculation resets. Under FLSA, any consistent 7-day period is valid.
           </p>
-          <Select value={String(weekStart)} onValueChange={v => setWeekStart(Number(v))}>
+          <Select value={String(weekStart)} onValueChange={v => { setDirty(true); setWeekStart(Number(v)); }}>
             <SelectTrigger className="w-72">
               <SelectValue />
             </SelectTrigger>
@@ -104,9 +110,19 @@ export default function PayrollSettingsSection() {
           </div>
         </div>
 
-        <Button onClick={save} disabled={saving} className="w-full sm:w-auto">
-          {saving ? "Saving…" : "Save Settings"}
-        </Button>
+        {isSaving ? (
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
+          </span>
+        ) : dirty ? (
+          <Button onClick={saveNow} className="w-full sm:w-auto">
+            <Save className="w-3.5 h-3.5" /> Save Settings
+          </Button>
+        ) : (
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Check className="w-3.5 h-3.5" /> Saved
+          </span>
+        )}
       </div>
 
       {/* Labor Rates */}
@@ -127,7 +143,7 @@ export default function PayrollSettingsSection() {
               step="0.01"
               className="h-9"
               value={fabRate}
-              onChange={e => setFabRate(e.target.value)}
+              onChange={e => { setDirty(true); setFabRate(e.target.value); }}
             />
           </div>
           <div className="space-y-1.5">
@@ -139,7 +155,7 @@ export default function PayrollSettingsSection() {
               step="0.01"
               className="h-9"
               value={installRate}
-              onChange={e => setInstallRate(e.target.value)}
+              onChange={e => { setDirty(true); setInstallRate(e.target.value); }}
             />
           </div>
         </div>

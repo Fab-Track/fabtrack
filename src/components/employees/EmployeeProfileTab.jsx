@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, Save } from "lucide-react";
+import { Upload, Save, Loader2, Check } from "lucide-react";
 import { PhoneInput } from "@/components/ui/PhoneInput";
+import { useAutosave } from "@/hooks/useAutosave";
 
 const TSHIRT_SIZES = ["XS","S","M","L","XL","XXL","XXXL"];
 const EMPLOYMENT_STATUSES = ["Full Time","Part Time","Seasonal","Terminated"];
@@ -29,18 +30,24 @@ export default function EmployeeProfileTab({ employee, canEdit }) {
     tshirt_size: employee.tshirt_size || "",
     profile_photo_url: employee.profile_photo_url || "",
   });
-  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k, v) => { setDirty(true); setForm(f => ({ ...f, [k]: v })); };
 
-  const handleSave = async () => {
-    setSaving(true);
-    await base44.entities.Employee.update(employee.id, form);
+  const onSave = async (data) => {
+    await base44.entities.Employee.update(employee.id, data);
     qc.invalidateQueries({ queryKey: ["employee", employee.id] });
     qc.invalidateQueries({ queryKey: ["employees"] });
-    setSaving(false);
   };
+
+  const { isSaving, saveNow } = useAutosave({
+    data: form,
+    dirty,
+    onSave,
+    onSaved: () => setDirty(false),
+    enabled: canEdit,
+  });
 
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
@@ -129,9 +136,21 @@ export default function EmployeeProfileTab({ employee, canEdit }) {
       </div>
 
       {canEdit && (
-        <Button onClick={handleSave} disabled={saving} className="mt-2">
-          <Save className="w-4 h-4 mr-1.5" />{saving ? "Saving..." : "Save Profile"}
-        </Button>
+        <div className="mt-2">
+          {isSaving ? (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
+            </span>
+          ) : dirty ? (
+            <Button onClick={saveNow}>
+              <Save className="w-4 h-4 mr-1.5" /> Save Profile
+            </Button>
+          ) : (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Check className="w-3.5 h-3.5" /> Saved
+            </span>
+          )}
+        </div>
       )}
     </div>
   );

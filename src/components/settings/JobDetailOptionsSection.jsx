@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronUp, ChevronDown, Plus, Trash2, Save, Loader2, ListChecks } from "lucide-react";
+import { ChevronUp, ChevronDown, Plus, Trash2, Save, Loader2, Check, ListChecks } from "lucide-react";
 import { useJobDetailConfig } from "@/hooks/useJobDetailConfig";
 import { JOB_DETAIL_DEFAULTS } from "@/lib/jobDetailDefaults";
 import { useToast } from "@/components/ui/use-toast";
+import { useAutosave } from "@/hooks/useAutosave";
 
 const LIST_META = [
   { key: "products", label: "Product", defaults: JOB_DETAIL_DEFAULTS.products },
@@ -110,17 +111,21 @@ export default function JobDetailOptionsSection() {
 
   const dirty = lists && config && LIST_META.some(m => JSON.stringify(lists[m.key]) !== JSON.stringify(config[m.key]));
 
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      if (configId) {
-        return base44.entities.JobDetailConfig.update(configId, lists);
-      }
-      return base44.entities.JobDetailConfig.create({ organization_id: user.organization_id, ...lists });
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["jobDetailConfig"] });
-      toast({ title: "Job detail options saved" });
-    },
+  const onSave = async (data) => {
+    if (configId) {
+      await base44.entities.JobDetailConfig.update(configId, data);
+    } else {
+      await base44.entities.JobDetailConfig.create({ organization_id: user.organization_id, ...data });
+    }
+    qc.invalidateQueries({ queryKey: ["jobDetailConfig"] });
+  };
+
+  const { isSaving, saveNow } = useAutosave({
+    data: lists,
+    dirty: !!dirty,
+    onSave,
+    onSaved: () => {},
+    enabled: !!lists,
   });
 
   if (isLoading || !lists) {
@@ -137,11 +142,18 @@ export default function JobDetailOptionsSection() {
       </div>
 
       <div className="flex justify-end">
-        {dirty && (
-          <Button size="sm" className="gap-1.5" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-            {saveMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            Save Changes
+        {isSaving ? (
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
+          </span>
+        ) : dirty ? (
+          <Button size="sm" className="gap-1.5" onClick={saveNow}>
+            <Save className="w-3.5 h-3.5" /> Save Changes
           </Button>
+        ) : (
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Check className="w-3.5 h-3.5" /> Saved
+          </span>
         )}
       </div>
 

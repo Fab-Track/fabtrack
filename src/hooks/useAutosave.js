@@ -46,7 +46,7 @@ export function useAutosave({ data, dirty, onSave, onSaved, delay = 1500, enable
   useEffect(() => {
     if (!enabled || !dirty) return;
     const timer = setTimeout(() => {
-      saveNow();
+      saveNow().catch(() => {});
     }, delay);
     return () => clearTimeout(timer);
   }, [data, dirty, enabled, delay, saveNow]);
@@ -67,7 +67,7 @@ export function useAutosave({ data, dirty, onSave, onSaved, delay = 1500, enable
   useEffect(() => {
     return () => {
       if (enabledRef.current && dirtyRef.current && !savingRef.current) {
-        onSaveRef.current(dataRef.current);
+        onSaveRef.current(dataRef.current).catch(() => {});
       }
     };
   }, []);

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+import { Save, Loader2, Check } from "lucide-react";
+import { useAutosave } from "@/hooks/useAutosave";
 
 const SETTING_KEY = "estimate_settings";
 
@@ -29,6 +30,7 @@ export default function EstimateContractSection() {
   const qc = useQueryClient();
   const [contractText, setContractText] = useState("");
   const [emailEnabled, setEmailEnabled] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [recordId, setRecordId] = useState(null);
 
   const [orgId, setOrgId] = React.useState(null);
@@ -53,23 +55,31 @@ export default function EstimateContractSection() {
     }
   }, [settings]);
 
-  const save = useMutation({
-    mutationFn: () => {
-      if (!orgId) throw new Error("Organization not loaded");
-      const payload = {
-        setting_key: SETTING_KEY,
-        organization_id: orgId,
-        estimate_contract_text: contractText,
-        estimate_approval_email_enabled: emailEnabled,
-      };
-      return recordId
-        ? base44.entities.AppSettings.update(recordId, payload)
-        : base44.entities.AppSettings.create(payload);
-    },
-    onSuccess: () => {
-      qc.invalidateQueries(["appSettings", SETTING_KEY]);
-      toast.success("Contract settings saved");
-    },
+  const enabled = !!orgId;
+
+  const onSave = async (data) => {
+    if (!orgId) return;
+    const payload = {
+      setting_key: SETTING_KEY,
+      organization_id: orgId,
+      estimate_contract_text: data.contractText,
+      estimate_approval_email_enabled: data.emailEnabled,
+    };
+    if (recordId) {
+      await base44.entities.AppSettings.update(recordId, payload);
+    } else {
+      const created = await base44.entities.AppSettings.create(payload);
+      setRecordId(created.id);
+    }
+    qc.invalidateQueries(["appSettings", SETTING_KEY]);
+  };
+
+  const { isSaving, saveNow } = useAutosave({
+    data: { contractText, emailEnabled },
+    dirty,
+    onSave,
+    onSaved: () => setDirty(false),
+    enabled,
   });
 
   if (isLoading) return <p className="text-sm text-muted-foreground py-4">Loading…</p>;
@@ -87,7 +97,7 @@ export default function EstimateContractSection() {
           <p className="text-sm font-medium">Email notification on approval</p>
           <p className="text-xs text-muted-foreground mt-0.5">Send an email to the job owner when an estimate is approved by any method.</p>
         </div>
-        <Switch checked={emailEnabled} onCheckedChange={setEmailEnabled} />
+        <Switch checked={emailEnabled} onCheckedChange={v => { setDirty(true); setEmailEnabled(v); }} />
       </div>
 
       {/* Contract text editor */}
@@ -97,17 +107,27 @@ export default function EstimateContractSection() {
         <Textarea
           rows={16}
           value={contractText}
-          onChange={e => setContractText(e.target.value)}
+          onChange={e => { setDirty(true); setContractText(e.target.value); }}
           className="text-xs font-mono leading-relaxed"
           placeholder="Enter your contract terms here…"
         />
       </div>
 
-      <div className="flex gap-3">
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>
-          {save.isPending ? "Saving…" : "Save Settings"}
-        </Button>
-        <Button variant="outline" onClick={() => setContractText(DEFAULT_CONTRACT)}>
+      <div className="flex items-center gap-3">
+        {isSaving ? (
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
+          </span>
+        ) : dirty ? (
+          <Button onClick={saveNow}>
+            <Save className="w-3.5 h-3.5" /> Save Settings
+          </Button>
+        ) : (
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Check className="w-3.5 h-3.5" /> Saved
+          </span>
+        )}
+        <Button variant="outline" onClick={() => { setDirty(true); setContractText(DEFAULT_CONTRACT); }}>
           Reset to Default
         </Button>
       </div>

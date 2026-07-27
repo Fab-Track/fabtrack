@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Upload, Building2, Loader2 } from "lucide-react";
+import { Upload, Building2, Loader2, Save, Check } from "lucide-react";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import { PhoneInput } from "@/components/ui/PhoneInput";
+import { useAutosave } from "@/hooks/useAutosave";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -22,7 +23,7 @@ const DEFAULT_HOURS = {
 
 export default function CompanySection() {
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [orgId, setOrgId] = useState(null);
   const [form, setForm] = useState({
     name: "",
@@ -33,6 +34,9 @@ export default function CompanySection() {
   });
   const [hours, setHours] = useState(DEFAULT_HOURS);
   const [uploading, setUploading] = useState(false);
+
+  const updateForm = (updater) => { setDirty(true); setForm(updater); };
+  const updateHours = (updater) => { setDirty(true); setHours(updater); };
 
   // Load org + business hours on mount
   useEffect(() => {
@@ -74,7 +78,7 @@ export default function CompanySection() {
     setUploading(true);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setForm(p => ({ ...p, logo_url: file_url }));
+      updateForm(p => ({ ...p, logo_url: file_url }));
       toast.success("Logo uploaded");
     } catch {
       toast.error("Logo upload failed");
@@ -82,41 +86,41 @@ export default function CompanySection() {
     setUploading(false);
   }
 
-  async function handleSave() {
-    if (!orgId) return;
-    setSaving(true);
-    try {
-      // Save org fields
-      await base44.entities.Organization.update(orgId, {
-        name: form.name,
-        phone: form.phone,
-        email: form.email,
-        address: form.address,
-        logo_url: form.logo_url,
-      });
+  const enabled = !!orgId && !!form.name?.trim();
 
-      // Save business hours to AppSettings
-      const existing = await base44.entities.AppSettings.filter({
+  const onSave = async (formData) => {
+    if (!orgId) return;
+    // Save org fields
+    await base44.entities.Organization.update(orgId, {
+      name: formData.name,
+      phone: formData.phone,
+      email: formData.email,
+      address: formData.address,
+      logo_url: formData.logo_url,
+    });
+    // Save business hours to AppSettings
+    const existing = await base44.entities.AppSettings.filter({
+      organization_id: orgId,
+      setting_key: "business_hours",
+    }, null, 1);
+    if (existing.length > 0) {
+      await base44.entities.AppSettings.update(existing[0].id, { business_hours: formData.hours });
+    } else {
+      await base44.entities.AppSettings.create({
         organization_id: orgId,
         setting_key: "business_hours",
-      }, null, 1);
-
-      if (existing.length > 0) {
-        await base44.entities.AppSettings.update(existing[0].id, { business_hours: hours });
-      } else {
-        await base44.entities.AppSettings.create({
-          organization_id: orgId,
-          setting_key: "business_hours",
-          business_hours: hours,
-        });
-      }
-
-      toast.success("Company settings saved");
-    } catch {
-      toast.error("Failed to save company settings");
+        business_hours: formData.hours,
+      });
     }
-    setSaving(false);
-  }
+  };
+
+  const { isSaving, saveNow } = useAutosave({
+    data: { ...form, hours },
+    dirty,
+    onSave,
+    onSaved: () => setDirty(false),
+    enabled,
+  });
 
   if (loading) {
     return (
@@ -136,21 +140,21 @@ export default function CompanySection() {
       <div className="grid gap-4">
         <div>
           <Label className="text-xs">Company Name</Label>
-          <Input className="h-9" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
+          <Input className="h-9" value={form.name} onChange={e => updateForm(p => ({ ...p, name: e.target.value }))} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label className="text-xs">Primary Phone</Label>
-            <PhoneInput className="h-9" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="000-000-0000" />
+            <PhoneInput className="h-9" value={form.phone} onChange={e => updateForm(p => ({ ...p, phone: e.target.value }))} placeholder="000-000-0000" />
           </div>
           <div>
             <Label className="text-xs">Primary Email</Label>
-            <Input className="h-9" type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
+            <Input className="h-9" type="email" value={form.email} onChange={e => updateForm(p => ({ ...p, email: e.target.value }))} />
           </div>
         </div>
         <div>
           <Label className="text-xs">Business Address</Label>
-          <Input className="h-9" value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="123 Main St, City, State 84000" />
+          <Input className="h-9" value={form.address} onChange={e => updateForm(p => ({ ...p, address: e.target.value }))} placeholder="123 Main St, City, State 84000" />
         </div>
 
         {/* Logo */}
@@ -183,7 +187,7 @@ export default function CompanySection() {
             <div key={day} className="flex items-center gap-3">
               <Switch
                 checked={hours[day].enabled}
-                onCheckedChange={v => setHours(p => ({ ...p, [day]: { ...p[day], enabled: v } }))}
+                onCheckedChange={v => updateHours(p => ({ ...p, [day]: { ...p[day], enabled: v } }))}
                 className="scale-75"
               />
               <span className="w-8 text-sm font-medium">{day}</span>
@@ -193,14 +197,14 @@ export default function CompanySection() {
                     type="time"
                     className="h-7 w-28 text-xs"
                     value={hours[day].start}
-                    onChange={e => setHours(p => ({ ...p, [day]: { ...p[day], start: e.target.value } }))}
+                    onChange={e => updateHours(p => ({ ...p, [day]: { ...p[day], start: e.target.value } }))}
                   />
                   <span className="text-xs text-muted-foreground">to</span>
                   <Input
                     type="time"
                     className="h-7 w-28 text-xs"
                     value={hours[day].end}
-                    onChange={e => setHours(p => ({ ...p, [day]: { ...p[day], end: e.target.value } }))}
+                    onChange={e => updateHours(p => ({ ...p, [day]: { ...p[day], end: e.target.value } }))}
                   />
                 </>
               ) : (
@@ -211,10 +215,21 @@ export default function CompanySection() {
         </div>
       </div>
 
-      <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto gap-1.5">
-        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-        Save Changes
-      </Button>
+      <div className="flex items-center gap-3">
+        {isSaving ? (
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
+          </span>
+        ) : dirty ? (
+          <Button onClick={saveNow} className="gap-1.5" disabled={!form.name?.trim()}>
+            <Save className="w-3.5 h-3.5" /> Save Changes
+          </Button>
+        ) : (
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Check className="w-3.5 h-3.5" /> Saved
+          </span>
+        )}
+      </div>
     </div>
   );
 }

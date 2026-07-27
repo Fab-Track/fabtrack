@@ -7,16 +7,17 @@ import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Wrench, Hash, CalendarDays, MapPin, ClipboardList, UserCheck, Building2 } from "lucide-react";
+import { Wrench, Hash, CalendarDays, MapPin, ClipboardList, UserCheck, Building2, Save, Loader2, Check } from "lucide-react";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
 import { SHOP_STAGES } from "@/lib/pipelineHelpers";
+import { useAutosave } from "@/hooks/useAutosave";
 
 const JOB_TYPES = ["Railing", "Gate", "Fence", "Staircase", "Custom Structure", "Other"];
 const BOARDS = ["Sales", "Shop", "Billing"];
 
 export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
   const qc = useQueryClient();
-  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [form, setForm] = useState({});
 
   // Employees for rep assignment
@@ -53,60 +54,64 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
     }
   }, [job, open]);
 
-  const f = (field, val) => setForm(p => ({ ...p, [field]: val }));
+  const f = (field, val) => {
+    setDirty(true);
+    setForm(p => ({ ...p, [field]: val }));
+  };
 
   // Rep employees: estimators, admins, owners
   const repCandidates = employees.filter(e =>
     ["estimator", "admin", "owner"].includes((e.role || "").toLowerCase())
   );
 
-  async function handleSave() {
-    if (!job || !form.job_name?.trim()) return;
-    const enteringShop = form.pipeline_board === "Shop" && !SHOP_STAGES.includes(job.stage);
+  const enabled = !!job && !!form.job_name?.trim();
+
+  const onSave = async (formData) => {
+    if (!job) return;
+    // Shop flow validation — throws to prevent saving without an invoice
+    const enteringShop = formData.pipeline_board === "Shop" && !SHOP_STAGES.includes(job.stage);
     if (enteringShop) {
       const jobInvoices = await base44.entities.Invoice.filter({ job_id: job.id });
       if (!jobInvoices.length) {
-        toast.error("An invoice must be created before this job can move to Shop Flow.");
-        return;
+        throw new Error("An invoice must be created before this job can move to Shop Flow.");
       }
     }
-    setSaving(true);
-    try {
-      const updates = {
-        job_name: form.job_name,
-        job_number: form.job_number || null,
-        job_type: form.job_type || null,
-        expected_install_date: form.expected_install_date || null,
-        site_address: form.site_address || null,
-        onsite_contact_name: form.onsite_contact_name || null,
-        onsite_contact_phone: form.onsite_contact_phone || null,
-        pipeline_board: form.pipeline_board || "Sales",
-        stage: form.stage || null,
-        assigned_rep_id: form.assigned_rep_id || null,
-        assigned_rep_name: form.assigned_rep_id
-          ? employees.find(e => e.id === form.assigned_rep_id)?.name || null
-          : null,
-      };
+    const updates = {
+      job_name: formData.job_name,
+      job_number: formData.job_number || null,
+      job_type: formData.job_type || null,
+      expected_install_date: formData.expected_install_date || null,
+      site_address: formData.site_address || null,
+      onsite_contact_name: formData.onsite_contact_name || null,
+      onsite_contact_phone: formData.onsite_contact_phone || null,
+      pipeline_board: formData.pipeline_board || "Sales",
+      stage: formData.stage || null,
+      assigned_rep_id: formData.assigned_rep_id || null,
+      assigned_rep_name: formData.assigned_rep_id
+        ? employees.find(e => e.id === formData.assigned_rep_id)?.name || null
+        : null,
+    };
 
-      // If customer changed, update customer_id and customer_name
-      if (form.customer_id !== job.customer_id) {
-        updates.customer_id = form.customer_id || null;
-        updates.customer_name = form.customer_id
-          ? allCustomers.find(c => c.id === form.customer_id)?.name || null
-          : null;
-      }
-
-      await base44.entities.Job.update(job.id, updates);
-      qc.invalidateQueries({ queryKey: ["job", job.id] });
-      onSaved?.();
-      onOpenChange(false);
-      toast.success("Job updated.");
-    } catch (err) {
-      toast.error("Failed to save job.");
-    } finally {
-      setSaving(false);
+    // If customer changed, update customer_id and customer_name
+    if (formData.customer_id !== job.customer_id) {
+      updates.customer_id = formData.customer_id || null;
+      updates.customer_name = formData.customer_id
+        ? allCustomers.find(c => c.id === formData.customer_id)?.name || null
+        : null;
     }
-  }
+
+    await base44.entities.Job.update(job.id, updates);
+    qc.invalidateQueries({ queryKey: ["job", job.id] });
+    onSaved?.();
+  };
+
+  const { isSaving, saveNow } = useAutosave({
+    data: form,
+    dirty,
+    onSave,
+    onSaved: () => setDirty(false),
+    enabled,
+  });
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -208,13 +213,31 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
           </fieldset>
 
           {/* Actions */}
-          <div className="flex gap-2 pt-2 sticky bottom-0 bg-background py-3 border-t">
-            <Button variant="outline" className="flex-1 h-10" onClick={() => onOpenChange(false)}>
+          <div className="flex items-center justify-end gap-3 pt-2 sticky bottom-0 bg-background py-3 border-t">
+            <Button variant="outline" className="h-9" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button className="flex-1 h-10" onClick={handleSave} disabled={saving || !form.job_name?.trim()}>
-              {saving ? "Saving…" : "Save Job"}
-            </Button>
+            {isSaving ? (
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
+              </span>
+            ) : dirty ? (
+              <Button
+                className="h-9 gap-1.5"
+                onClick={async () => {
+                  try { await saveNow(); } catch (e) {
+                    toast.error(e?.message || "Failed to save job.");
+                  }
+                }}
+                disabled={!form.job_name?.trim()}
+              >
+                <Save className="w-3.5 h-3.5" /> Save
+              </Button>
+            ) : (
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Check className="w-3.5 h-3.5" /> Saved
+              </span>
+            )}
           </div>
         </div>
       </SheetContent>
