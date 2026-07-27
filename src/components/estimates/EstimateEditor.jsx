@@ -11,7 +11,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import AutoGrowTextarea from "@/components/ui/auto-grow-textarea";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, CheckCircle2, FileText, LayoutList, AlignJustify, AlertCircle, ImageOff, Image, Lock } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, FileText, LayoutList, AlignJustify, AlertCircle, ImageOff, Image, Lock, Maximize2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import AddLineItemWizard from "./AddLineItemWizard";
 import LineItemCostBreakdown from "./LineItemCostBreakdown";
 import { useJobDetailConfig } from "@/hooks/useJobDetailConfig";
@@ -85,6 +86,7 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
   // Only lock editing when the estimate is already saved as Approved in the DB
   const isLocked = estimate?.status === "Approved" && !!estimate?.id;
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [expandedDescIdx, setExpandedDescIdx] = useState(null);
   const { config: detailConfig } = useJobDetailConfig();
   const powdercoatColors = detailConfig.powdercoat_colors || [];
   const [editorView, setEditorView] = useState("detail"); // always start in detail for editing
@@ -383,13 +385,23 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                 {lines.map((line, idx) => (
                   <div key={line._id} className="space-y-1">
                     <div className="grid grid-cols-[2fr_1.5fr_1fr_0.7fr_1fr_1fr_auto] gap-1.5 items-start">
-                       <AutoGrowTextarea
-                          className="text-xs"
+                       <div className="relative">
+                         <AutoGrowTextarea
+                          className="text-xs pr-6"
                           placeholder="Description"
                           value={line.description}
                           onChange={e => updateLine(idx, "description", e.target.value)}
                           disabled={isLocked && !!estimate?.id}
                         />
+                         <button
+                           type="button"
+                           className="absolute top-1 right-1 text-muted-foreground hover:text-foreground bg-background/70 rounded p-0.5"
+                           title="Expand"
+                           onClick={() => setExpandedDescIdx(idx)}
+                         >
+                           <Maximize2 className="w-3 h-3" />
+                         </button>
+                       </div>
                        <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)} disabled={isLocked && !!estimate?.id}>
                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                          <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
@@ -452,13 +464,23 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                   <div key={line._id} className="bg-card rounded-xl border p-3 space-y-2.5">
                     <div>
                       <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Description</Label>
-                      <AutoGrowTextarea
-                        className="text-sm mt-0.5"
-                        placeholder="Description"
-                        value={line.description}
-                        onChange={e => updateLine(idx, "description", e.target.value)}
-                        disabled={isLocked && !!estimate?.id}
-                      />
+                      <div className="relative">
+                        <AutoGrowTextarea
+                          className="text-sm mt-0.5 pr-6"
+                          placeholder="Description"
+                          value={line.description}
+                          onChange={e => updateLine(idx, "description", e.target.value)}
+                          disabled={isLocked && !!estimate?.id}
+                        />
+                        <button
+                          type="button"
+                          className="absolute top-1 right-1 text-muted-foreground hover:text-foreground bg-background/70 rounded p-0.5"
+                          title="Expand"
+                          onClick={() => setExpandedDescIdx(idx)}
+                        >
+                          <Maximize2 className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                     <div>
                       <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Install Location</Label>
@@ -671,6 +693,23 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
         onClose={() => setWizardOpen(false)}
         onAdd={handleWizardAdd}
       />
+
+      <Dialog open={expandedDescIdx !== null && !!lines[expandedDescIdx]} onOpenChange={(o) => { if (!o) setExpandedDescIdx(null); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Edit Description</DialogTitle></DialogHeader>
+          <AutoGrowTextarea
+            value={expandedDescIdx !== null ? (lines[expandedDescIdx]?.description || "") : ""}
+            onChange={e => updateLine(expandedDescIdx, "description", e.target.value)}
+            disabled={isLocked && !!estimate?.id}
+            className="text-sm w-full"
+            maxHeight={480}
+            autoFocus
+          />
+          <div className="flex justify-end pt-2">
+            <Button onClick={() => setExpandedDescIdx(null)}>Done</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
