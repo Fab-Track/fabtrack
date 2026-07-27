@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 const ROLE_BADGE = {
   designer: "bg-blue-100 text-blue-700",
@@ -63,8 +64,8 @@ export default function ProductSectionForm({ fields, data, onChange, viewFilter 
                 />
               )}
               {field.type === "textarea" && (
-                <textarea
-                  className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring col-span-full"
+                <Textarea
+                  className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring col-span-full"
                   value={data[field.key] || ""}
                   onChange={e => onChange(field.key, e.target.value)}
                   placeholder={field.label}

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Send, Paperclip, Camera, X } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function MessageComposer({ channel, currentUser, onSent, replyTo, onCancelReply }) {
   const [text, setText] = useState("");
@@ -180,7 +181,7 @@ export default function MessageComposer({ channel, currentUser, onSent, replyTo,
         </label>
 
         {/* Text input */}
-        <textarea
+        <Textarea
           ref={textRef}
           value={text}
           onChange={handleChange}
@@ -190,9 +191,9 @@ export default function MessageComposer({ channel, currentUser, onSent, replyTo,
               ? `Message ${channel?.display_name || "user"}…`
               : `Message #${channel?.display_name || "channel"}…`
           }
-          rows={1}
           disabled={sending}
-          className="flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring min-h-[38px] max-h-32 overflow-y-auto"
+          maxHeight={160}
+          className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           style={{ lineHeight: "1.5" }}
         />
 

@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -424,12 +425,13 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
                 ))}
               </div>
             )}
-            <textarea
+            <Textarea
               ref={textareaRef}
-              className="w-full min-h-[160px] p-3 text-sm border rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-ring bg-background"
+              className="w-full p-3 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-background"
               value={body}
               onChange={e => setBody(e.target.value)}
               placeholder={channel === "SMS" ? "Type your SMS message…" : "Type your email message…"}
+              maxHeight={160}
             />
             {channel === "SMS" && (
               <p className="text-xs text-muted-foreground mt-1">{body.length} chars · {segments} SMS segment{segments !== 1 ? "s" : ""}</p>

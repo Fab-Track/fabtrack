@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { Send, MessageSquare, RefreshCw, AlertCircle } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { toast } from "sonner";
@@ -196,13 +197,13 @@ export default function CustomerSMSThread({ customer, jobFilter = null }) {
       {/* Reply composer */}
       <div className="px-4 py-3 border-t bg-background shrink-0">
         <div className="flex items-end gap-2">
-          <textarea
-            className="flex-1 resize-none min-h-[44px] max-h-[120px] p-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-ring bg-background leading-relaxed"
+          <Textarea
+            className="flex-1 p-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-ring bg-background leading-relaxed"
             placeholder="Type a message… (Enter to send)"
             value={replyText}
             onChange={e => setReplyText(e.target.value)}
             onKeyDown={handleKeyDown}
-            rows={1}
+            maxHeight={160}
           />
           <Button
             size="sm"

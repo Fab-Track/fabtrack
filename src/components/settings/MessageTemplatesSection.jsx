@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -139,8 +140,8 @@ function InlineEditor({ template, onSave, onCancel }) {
               {(form.sms_body || "").length} chars · {segments} msg
             </span>
           </div>
-          <textarea
-            className="w-full min-h-[80px] p-2.5 text-sm border rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-ring bg-background"
+          <Textarea
+            className="w-full p-2.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-background"
             value={form.sms_body || ""}
             onChange={e => setForm(p => ({ ...p, sms_body: e.target.value }))}
             placeholder="SMS message…"
@@ -151,8 +152,8 @@ function InlineEditor({ template, onSave, onCancel }) {
       {(form.channel === "Email" || form.channel === "Both") && (
         <div>
           <Label className="text-xs">Email Body</Label>
-          <textarea
-            className="w-full min-h-[140px] p-2.5 text-sm border rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-ring bg-background"
+          <Textarea
+            className="w-full p-2.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-background"
             value={form.email_body || ""}
             onChange={e => setForm(p => ({ ...p, email_body: e.target.value }))}
             placeholder="Email message…"
