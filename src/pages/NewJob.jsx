@@ -33,6 +33,15 @@ export default function NewJob() {
     queryFn: () => base44.entities.Customer.list("-created_date", 100),
   });
 
+  // Employees for rep assignment — estimators, admins, owners
+  const { data: employees = [] } = useQuery({
+    queryKey: ["employees"],
+    queryFn: () => base44.entities.Employee.list("-created_date", 200),
+  });
+  const repCandidates = employees.filter(e =>
+    ["estimator", "admin", "owner"].includes((e.role || "").toLowerCase())
+  );
+
   // Find the pre-filled customer record to get site_address
   const prefilledCustomer = useMemo(() =>
     customers.find(c => c.id === prefilledCustomerId) || null,
@@ -227,11 +236,27 @@ export default function NewJob() {
 
             <div>
               <Label className="text-xs">Assigned Rep (Sales Owner)</Label>
-              <Input 
-                value={form.assigned_rep_name} 
-                onChange={e => updateField("assigned_rep_name", e.target.value)}
-                placeholder="Sales rep name"
-              />
+              <Select
+                value={form.assigned_rep_id || ""}
+                onValueChange={val => {
+                  const emp = repCandidates.find(e => e.id === val);
+                  setForm(prev => ({
+                    ...prev,
+                    assigned_rep_id: val || "",
+                    assigned_rep_name: emp?.name || "",
+                  }));
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select rep…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={null}>None</SelectItem>
+                  {repCandidates.map(e => (
+                    <SelectItem key={e.id} value={e.id}>{e.name} ({e.role})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-[10px] text-muted-foreground mt-0.5">This rep gets credit for all estimates and revenue on this job.</p>
             </div>
 
