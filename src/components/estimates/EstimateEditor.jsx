@@ -385,7 +385,7 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                 {lines.map((line, idx) => (
                   <div key={line._id} className="space-y-1">
                     <div className="grid grid-cols-[2fr_1.5fr_1fr_0.7fr_1fr_1fr_auto] gap-1.5 items-start">
-                       <div className="relative">
+                       <div className="relative min-w-0">
                          <AutoGrowTextarea
                           className="text-xs pr-6"
                           placeholder="Description"

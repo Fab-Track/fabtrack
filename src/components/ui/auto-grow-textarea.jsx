@@ -18,7 +18,7 @@ export default function AutoGrowTextarea({
       value={value}
       onChange={onChange}
       maxHeight={maxHeight}
-      className={cn("py-1.5 text-sm break-words whitespace-pre-wrap", className)}
+      className={cn("py-1.5 text-sm break-all whitespace-pre-wrap", className)}
       style={{ minHeight: "1.75rem" }}
       {...props}
     />
