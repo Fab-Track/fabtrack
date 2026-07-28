@@ -141,7 +141,18 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
       {/* Divider */}
       <div className="border-t border-border mt-3 pt-3">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          <InfoCell label="Site Address" icon={MapPin} value={job.site_address} />
+          <InfoCell label="Site Address" icon={MapPin} value={
+            job.site_address ? (
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.site_address)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent hover:underline"
+              >
+                {job.site_address}
+              </a>
+            ) : null
+          } />
           <InfoCell label="On-Site Contact" icon={User} value={job.onsite_contact_name} />
           <InfoCell label="On-Site Contact Phone" icon={Phone} value={job.onsite_contact_phone ? formatPhoneDisplay(job.onsite_contact_phone) : null} />
           <InfoCell label="Customer Email" icon={Mail} value={customer?.email} />
