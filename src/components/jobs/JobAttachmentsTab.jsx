@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Upload, Paperclip, Image, File, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AttachmentCategoryGroup from "./AttachmentCategoryGroup";
 
@@ -14,6 +15,7 @@ export default function JobAttachmentsTab({ job }) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState(null); // { type: "success"|"error", message }
+  const [uploadNote, setUploadNote] = useState("");
   const dropZoneRef = useRef(null);
 
   // Fetch categories from manageable entity
@@ -82,6 +84,7 @@ export default function JobAttachmentsTab({ job }) {
           file_name: fileName,
           file_type: file.type || "application/octet-stream",
           uploaded_by: "me",
+          notes: uploadNote.trim() || undefined,
         });
         succeeded++;
       } catch (err) {
@@ -105,10 +108,11 @@ export default function JobAttachmentsTab({ job }) {
     }
 
     setUploading(false);
+    setUploadNote("");
     // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = "";
     setTimeout(() => setUploadStatus(null), 4000);
-  }, [selectedCategory, job, qc]);
+  }, [selectedCategory, job, qc, uploadNote]);
 
   // Drag-and-drop handlers
   const onDragOver = (e) => { e.preventDefault(); setDragOver(true); };
@@ -227,6 +231,20 @@ export default function JobAttachmentsTab({ job }) {
                       ? "Images, PDFs, documents — tap for camera on mobile"
                       : "Upload is disabled until you choose a category"}
                   </p>
+                  {selectedCategory && (
+                    <div
+                      className="mt-3 max-w-md mx-auto text-left"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <Textarea
+                        value={uploadNote}
+                        onChange={e => setUploadNote(e.target.value)}
+                        placeholder="Add a note for this upload (optional)…"
+                        rows={2}
+                        className="text-xs resize-none"
+                      />
+                    </div>
+                  )}
                 </>
               )}
             </>

@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -11,7 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  ExternalLink, Download, Trash2, Image, FileText, File, MoreVertical, FolderOpen
+  ExternalLink, Download, Trash2, Image, FileText, File, MoreVertical, FolderOpen, Pencil
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -43,6 +44,8 @@ export default function AttachmentFileCard({ file, isLatest = false, jobId }) {
   const [newCategory, setNewCategory] = useState(file.category || "");
   const [deleting, setDeleting] = useState(false);
   const [catList, setCatList] = useState([]);
+  const [showEditNote, setShowEditNote] = useState(false);
+  const [noteDraft, setNoteDraft] = useState(file.notes || "");
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -72,6 +75,12 @@ export default function AttachmentFileCard({ file, isLatest = false, jobId }) {
 
   const handleView = () => {
     window.open(file.file_url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleSaveNote = async () => {
+    await base44.entities.JobAttachment.update(file.id, { notes: noteDraft.trim() || undefined });
+    qc.invalidateQueries({ queryKey: ["attachments", jobId] });
+    setShowEditNote(false);
   };
 
   const handleDownload = () => {
@@ -137,6 +146,9 @@ export default function AttachmentFileCard({ file, isLatest = false, jobId }) {
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleDownload} title="Download">
               <Download className="w-3.5 h-3.5" />
             </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setNoteDraft(file.notes || ""); setShowEditNote(true); }} title="Edit note">
+              <Pencil className="w-3.5 h-3.5" />
+            </Button>
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={openRecategorize} title="Move to another category">
               <FolderOpen className="w-3.5 h-3.5" />
             </Button>
@@ -167,6 +179,9 @@ export default function AttachmentFileCard({ file, isLatest = false, jobId }) {
                 <DropdownMenuItem onClick={handleDownload}>
                   <Download className="w-4 h-4 mr-2" /> Download
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setNoteDraft(file.notes || ""); setShowEditNote(true); }}>
+                  <Pencil className="w-4 h-4 mr-2" /> Edit Note
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={openRecategorize}>
                   <FolderOpen className="w-4 h-4 mr-2" /> Re-categorize
                 </DropdownMenuItem>
@@ -178,6 +193,28 @@ export default function AttachmentFileCard({ file, isLatest = false, jobId }) {
           </div>
         </div>
       </div>
+
+      {/* Edit note dialog */}
+      <Dialog open={showEditNote} onOpenChange={setShowEditNote}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Note</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <Textarea
+              value={noteDraft}
+              onChange={e => setNoteDraft(e.target.value)}
+              placeholder="Add a note for this file…"
+              rows={3}
+              className="text-sm"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditNote(false)}>Cancel</Button>
+            <Button onClick={handleSaveNote}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Re-categorize dialog */}
       <Dialog open={showRecategorize} onOpenChange={setShowRecategorize}>
