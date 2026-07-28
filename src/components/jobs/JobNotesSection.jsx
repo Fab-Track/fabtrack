@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Send, ListTodo, User, Check, CalendarDays } from "lucide-react";
+import { Loader2, Send, ListTodo, User, Check, CalendarDays, Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { format, parseISO } from "date-fns";
 
@@ -23,6 +23,8 @@ export default function JobNotesSection({ job, highlightNoteId }) {
   const [assigneeName, setAssigneeName] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [editingId, setEditingId] = useState(null);
+  const [textEditId, setTextEditId] = useState(null);
+  const [textDraft, setTextDraft] = useState("");
   const highlightRef = useRef(null);
 
   useEffect(() => {
@@ -73,6 +75,22 @@ export default function JobNotesSection({ job, highlightNoteId }) {
   const updateNote = (id, changes) => {
     const updated = notes.map(n => (n.id === id ? { ...n, ...changes } : n));
     saveNotesMutation.mutate(updated);
+  };
+
+  const handleDeleteNote = (note) => {
+    saveNotesMutation.mutate(notes.filter(n => n.id !== note.id));
+  };
+
+  const handleStartEditText = (note) => {
+    setTextEditId(note.id);
+    setTextDraft(note.text);
+  };
+
+  const handleSaveEditText = () => {
+    if (!textDraft.trim()) return;
+    saveNotesMutation.mutate(notes.map(n => n.id === textEditId ? { ...n, text: textDraft.trim() } : n));
+    setTextEditId(null);
+    setTextDraft("");
   };
 
   const handleMakeTodo = (note) => updateNote(note.id, { is_todo: true, is_completed: false });
@@ -156,6 +174,8 @@ export default function JobNotesSection({ job, highlightNoteId }) {
           sortedNotes.map((note) => {
             const isHighlighted = highlightNoteId && note.id === highlightNoteId;
             const isEditing = editingId === note.id;
+            const isEditingText = textEditId === note.id;
+            const canEdit = note.author_id === user?.id;
             return (
             <div
               key={note.id || note.created_at}
@@ -181,9 +201,28 @@ export default function JobNotesSection({ job, highlightNoteId }) {
                 </button>
               )}
               <div className="flex-1 min-w-0">
-                <p className={`text-sm whitespace-pre-wrap ${note.is_todo && note.is_completed ? "line-through text-muted-foreground" : ""}`}>
-                  {note.text}
-                </p>
+                {isEditingText ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      value={textDraft}
+                      onChange={(e) => setTextDraft(e.target.value)}
+                      rows={2}
+                      className="text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" className="h-8 text-xs" onClick={handleSaveEditText} disabled={!textDraft.trim()}>
+                        Save
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => { setTextEditId(null); setTextDraft(""); }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className={`text-sm whitespace-pre-wrap ${note.is_todo && note.is_completed ? "line-through text-muted-foreground" : ""}`}>
+                    {note.text}
+                  </p>
+                )}
                 <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-xs text-muted-foreground">
                   <span className="font-medium">Added by {note.author_name}</span>
                   <span>·</span>
@@ -249,6 +288,16 @@ export default function JobNotesSection({ job, highlightNoteId }) {
                   )
                 )}
               </div>
+              {canEdit && !isEditingText && (
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleStartEditText(note)} title="Edit note">
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDeleteNote(note)} title="Delete note">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              )}
             </div>
             );
           })
