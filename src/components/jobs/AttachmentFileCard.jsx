@@ -17,6 +17,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import AttachmentPreviewModal from "./AttachmentPreviewModal";
 
 function FileIcon({ type }) {
   if (type?.startsWith("image/")) return <Image className="w-5 h-5 text-purple-400 shrink-0" />;
@@ -46,6 +47,7 @@ export default function AttachmentFileCard({ file, isLatest = false, jobId }) {
   const [catList, setCatList] = useState([]);
   const [showEditNote, setShowEditNote] = useState(false);
   const [noteDraft, setNoteDraft] = useState(file.notes || "");
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -74,7 +76,7 @@ export default function AttachmentFileCard({ file, isLatest = false, jobId }) {
   };
 
   const handleView = () => {
-    window.open(file.file_url, "_blank", "noopener,noreferrer");
+    setShowPreview(true);
   };
 
   const handleSaveNote = async () => {
@@ -109,21 +111,30 @@ export default function AttachmentFileCard({ file, isLatest = false, jobId }) {
     <>
       <div className="flex items-start gap-3 p-2.5 rounded-lg border bg-card hover:bg-muted/20 transition-colors group">
         {/* Thumbnail or icon */}
-        {isImage ? (
-          <img
-            src={file.file_url}
-            alt={file.file_name}
-            className="w-10 h-10 rounded object-cover shrink-0 bg-muted"
-            loading="lazy"
-          />
-        ) : (
-          <FileIcon type={file.file_type} />
-        )}
+        <button
+          type="button"
+          onClick={handleView}
+          className="shrink-0 rounded focus:outline-none focus:ring-1 focus:ring-ring"
+          title="Preview"
+        >
+          {isImage ? (
+            <img
+              src={file.file_url}
+              alt={file.file_name}
+              className="w-10 h-10 rounded object-cover bg-muted"
+              loading="lazy"
+            />
+          ) : (
+            <FileIcon type={file.file_type} />
+          )}
+        </button>
 
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <p className="text-sm font-medium truncate">{getDisplayName(file)}</p>
+            <button type="button" onClick={handleView} className="text-left text-sm font-medium truncate hover:text-accent transition-colors" title="Preview">
+              {getDisplayName(file)}
+            </button>
             {isLatest && (
               <Badge className="text-[10px] shrink-0 bg-success text-success-foreground">Latest</Badge>
             )}
@@ -215,6 +226,9 @@ export default function AttachmentFileCard({ file, isLatest = false, jobId }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Preview modal */}
+      <AttachmentPreviewModal file={file} open={showPreview} onOpenChange={setShowPreview} />
 
       {/* Re-categorize dialog */}
       <Dialog open={showRecategorize} onOpenChange={setShowRecategorize}>
