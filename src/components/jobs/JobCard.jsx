@@ -143,8 +143,8 @@ export default function JobCard({ job, isDragging }) {
         </div>
       </div>
 
-      <h4 className="text-sm font-semibold leading-tight mb-1 line-clamp-2">{job.job_name}</h4>
-      <p className="text-xs text-muted-foreground mb-2">{job.customer_name}</p>
+      <h4 className="text-sm font-bold leading-tight mb-0.5 line-clamp-2">{job.customer_name}</h4>
+      <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{job.job_name}</p>
 
       <div className="flex flex-wrap gap-1.5">
         {job.expected_install_date && (
