@@ -84,9 +84,11 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], invoices = [], 
         </div>
       </div>
       <Link to={`/jobs/${job.id}?board=Sales`}>
-        <h4 className="text-sm font-semibold leading-tight mb-0.5 line-clamp-2 hover:text-accent transition-colors">{job.job_name}</h4>
+        <h4 className="text-sm font-bold leading-tight mb-0.5 line-clamp-2 hover:text-accent transition-colors">
+          {job.customer_name || "—"}{customer?.company ? <span className="font-medium text-muted-foreground"> — {customer.company}</span> : null}
+        </h4>
+        <p className="text-xs text-muted-foreground leading-tight mb-2 line-clamp-2">{job.job_name}</p>
       </Link>
-      <JobCardCustomerInfo customerName={job.customer_name} customer={customer} />
 
       <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
         {latestEst && (
