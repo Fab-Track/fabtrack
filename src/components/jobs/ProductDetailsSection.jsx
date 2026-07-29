@@ -17,6 +17,7 @@ const PICKET_OPTIONS = [
   '1" round rod', "cable raw", "cable powder coated", "custom picket", "other",
 ];
 const BASE_PLATE_OPTIONS = ['4"x4" square', '4" round'];
+const PICKET_DIRECTION_OPTIONS = ["Vertical", "Horizontal", "Custom"];
 
 // ─── Small field helpers ───────────────────────────────────────────────────
 function FieldRow({ label, children }) {
@@ -42,8 +43,8 @@ function OptionSelect({ value, onChange, options, placeholder = "Select..." }) {
 // Custom railing detail field — supports an "other" free-text option and an
 // optional link/attachment input that appears when a specific value is chosen
 // (e.g. "Molded Cap" for top rail, "custom picket" for pickets).
-function CustomDetailField({ label, value, onChange, options, linkTriggerValue, linkValue, onLinkChange, otherNotes, onOtherNotesChange, otherPlaceholder = "Describe..." }) {
-  const isOther = value === "other";
+function CustomDetailField({ label, value, onChange, options, linkTriggerValue, linkValue, onLinkChange, otherNotes, onOtherNotesChange, otherPlaceholder = "Describe...", otherTriggerValue = "other" }) {
+  const isOther = value === otherTriggerValue;
   const showLink = linkTriggerValue && value === linkTriggerValue;
   return (
     <FieldRow label={label}>
@@ -107,6 +108,7 @@ function ProductEntry({ entry, index, config, onChange, onRemove }) {
                 <CustomDetailField label="Post" value={entry.custom_post} onChange={v => onChange({ ...entry, custom_post: v })} options={POST_OPTIONS} otherNotes={entry.custom_post_notes} onOtherNotesChange={v => onChange({ ...entry, custom_post_notes: v })} otherPlaceholder="Describe post..." />
                 <CustomDetailField label="Pickets" value={entry.custom_pickets} onChange={v => onChange({ ...entry, custom_pickets: v })} options={PICKET_OPTIONS} linkTriggerValue="custom picket" linkValue={entry.custom_pickets_link} onLinkChange={v => onChange({ ...entry, custom_pickets_link: v })} otherNotes={entry.custom_pickets_notes} onOtherNotesChange={v => onChange({ ...entry, custom_pickets_notes: v })} otherPlaceholder="Describe pickets..." />
                 <CustomDetailField label="Base Plate Size" value={entry.custom_base_plate} onChange={v => onChange({ ...entry, custom_base_plate: v })} options={BASE_PLATE_OPTIONS} />
+                <CustomDetailField label="Picket Direction" value={entry.custom_picket_direction} onChange={v => onChange({ ...entry, custom_picket_direction: v })} options={PICKET_DIRECTION_OPTIONS} otherTriggerValue="Custom" otherNotes={entry.custom_picket_direction_notes} onOtherNotesChange={v => onChange({ ...entry, custom_picket_direction_notes: v })} otherPlaceholder="Describe picket direction..." />
               </div>
             </>
           )}
