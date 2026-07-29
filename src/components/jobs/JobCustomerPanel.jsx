@@ -11,13 +11,13 @@ import EditJobSheet from "@/components/jobs/EditJobSheet";
 import { formatPhoneDisplay } from "@/lib/phoneFormat";
 
 // A small info cell: label + value
-function InfoCell({ label, value, icon: Icon }) {
+function InfoCell({ label, value, icon: Icon, wrap }) {
   return (
     <div className="min-w-0">
       <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5 flex items-center gap-1">
         {Icon && <Icon className="w-3 h-3" />}{label}
       </p>
-      <p className="text-sm font-medium truncate">{value || <span className="text-muted-foreground">—</span>}</p>
+      <p className={`text-sm font-medium ${wrap ? "break-words" : "truncate"}`}>{value || <span className="text-muted-foreground">—</span>}</p>
     </div>
   );
 }
@@ -141,10 +141,10 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
       {/* Divider */}
       <div className="border-t border-border mt-3 pt-3">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          <InfoCell label="Site Address" icon={MapPin} value={
+          <InfoCell label="Site Address" icon={MapPin} wrap value={
             job.site_address ? (
               <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.site_address)}`}
+                href={`https://maps.apple.com/?q=${encodeURIComponent(job.site_address)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-accent hover:underline"
