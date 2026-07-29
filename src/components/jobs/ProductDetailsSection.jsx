@@ -7,6 +7,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import CollapsibleSection from "@/components/jobs/CollapsibleSection";
 import { CONDITIONAL_PRODUCT_KEYS as C } from "@/lib/jobDetailDefaults";
 
+// ─── Custom railing component options ──────────────────────────────────────
+const TOP_RAIL_OPTIONS = ['1.5"x1.5', '2"x2"', '2"x1"', '3"x1"', '2"x.5"', "C-channel", "Molded Cap", "other"];
+const BOTTOM_RAIL_OPTIONS = ['1.5"x1.5', '2"x2"', '2"x1"', '3"x1"', '2"x.5"', "C-channel", "other"];
+const POST_OPTIONS = ['1.5"x1.5', '2"x2"', '2"x1"', '3"x1"', '2"x.5"', "C-channel", "other"];
+const PICKET_OPTIONS = [
+  '.5"x.5', '3/4"x 3/4"', '1"x1', '2"x.5"', '1.5"x.5"',
+  '2"x 1/4" flat bar', '1.5"x1/4" flat bar', ".5\" round rod",
+  '1" round rod', "cable raw", "cable powder coated", "custom picket", "other",
+];
+const BASE_PLATE_OPTIONS = ['4"x4" square', '4" round'];
+
 // ─── Small field helpers ───────────────────────────────────────────────────
 function FieldRow({ label, children }) {
   return (
@@ -25,6 +36,25 @@ function OptionSelect({ value, onChange, options, placeholder = "Select..." }) {
         {options.map(o => <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>)}
       </SelectContent>
     </Select>
+  );
+}
+
+// Custom railing detail field — supports an "other" free-text option and an
+// optional link/attachment input that appears when a specific value is chosen
+// (e.g. "Molded Cap" for top rail, "custom picket" for pickets).
+function CustomDetailField({ label, value, onChange, options, linkTriggerValue, linkValue, onLinkChange, otherNotes, onOtherNotesChange, otherPlaceholder = "Describe..." }) {
+  const isOther = value === "other";
+  const showLink = linkTriggerValue && value === linkTriggerValue;
+  return (
+    <FieldRow label={label}>
+      <OptionSelect value={value || ""} onChange={onChange} options={options} />
+      {isOther && (
+        <Input className="h-8 text-xs" value={otherNotes || ""} onChange={e => onOtherNotesChange(e.target.value)} placeholder={otherPlaceholder} />
+      )}
+      {showLink && (
+        <Input className="h-8 text-xs" value={linkValue || ""} onChange={e => onLinkChange(e.target.value)} placeholder="Paste link or attachment URL..." />
+      )}
+    </FieldRow>
   );
 }
 
@@ -67,9 +97,18 @@ function ProductEntry({ entry, index, config, onChange, onRemove }) {
             </FieldRow>
           </div>
           {entry.railing_style === C.CUSTOM && (
-            <FieldRow label="Custom Railing Style Notes">
-              <Input className="h-8 text-xs" value={entry.railing_style_notes || ""} onChange={e => onChange({ ...entry, railing_style_notes: e.target.value })} placeholder="Describe custom style..." />
-            </FieldRow>
+            <>
+              <FieldRow label="Custom Railing Style Notes">
+                <Input className="h-8 text-xs" value={entry.railing_style_notes || ""} onChange={e => onChange({ ...entry, railing_style_notes: e.target.value })} placeholder="Describe custom style..." />
+              </FieldRow>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <CustomDetailField label="Top Rail" value={entry.custom_top_rail} onChange={v => onChange({ ...entry, custom_top_rail: v })} options={TOP_RAIL_OPTIONS} linkTriggerValue="Molded Cap" linkValue={entry.custom_top_rail_link} onLinkChange={v => onChange({ ...entry, custom_top_rail_link: v })} otherNotes={entry.custom_top_rail_notes} onOtherNotesChange={v => onChange({ ...entry, custom_top_rail_notes: v })} otherPlaceholder="Describe top rail..." />
+                <CustomDetailField label="Bottom Rail" value={entry.custom_bottom_rail} onChange={v => onChange({ ...entry, custom_bottom_rail: v })} options={BOTTOM_RAIL_OPTIONS} otherNotes={entry.custom_bottom_rail_notes} onOtherNotesChange={v => onChange({ ...entry, custom_bottom_rail_notes: v })} otherPlaceholder="Describe bottom rail..." />
+                <CustomDetailField label="Post" value={entry.custom_post} onChange={v => onChange({ ...entry, custom_post: v })} options={POST_OPTIONS} otherNotes={entry.custom_post_notes} onOtherNotesChange={v => onChange({ ...entry, custom_post_notes: v })} otherPlaceholder="Describe post..." />
+                <CustomDetailField label="Pickets" value={entry.custom_pickets} onChange={v => onChange({ ...entry, custom_pickets: v })} options={PICKET_OPTIONS} linkTriggerValue="custom picket" linkValue={entry.custom_pickets_link} onLinkChange={v => onChange({ ...entry, custom_pickets_link: v })} otherNotes={entry.custom_pickets_notes} onOtherNotesChange={v => onChange({ ...entry, custom_pickets_notes: v })} otherPlaceholder="Describe pickets..." />
+                <CustomDetailField label="Base Plate Size" value={entry.custom_base_plate} onChange={v => onChange({ ...entry, custom_base_plate: v })} options={BASE_PLATE_OPTIONS} />
+              </div>
+            </>
           )}
         </>
       )}
