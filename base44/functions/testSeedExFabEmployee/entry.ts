@@ -1,11 +1,18 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
-// TEMPORARY test-only function for a cross-org isolation test. Delete after use.
+// TEMPORARY test-only function for a cross-org isolation test.
+// Restricted to platform super admins to prevent cross-org mutation by standard users.
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const roles = (user.roles || []) as string[];
+    const isSuperAdmin = roles.includes('super_admin');
+    if (!isSuperAdmin) {
+      return Response.json({ error: 'Forbidden: super admin only' }, { status: 403 });
+    }
 
     const body = await req.json().catch(() => ({}));
 
