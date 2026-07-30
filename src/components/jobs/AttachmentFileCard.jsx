@@ -39,7 +39,7 @@ function getDisplayName(file) {
   return name || "Untitled file";
 }
 
-export default function AttachmentFileCard({ file, isLatest = false, jobId }) {
+export default function AttachmentFileCard({ file, isLatest = false, jobId, onImageOpen, allImages }) {
   const qc = useQueryClient();
   const [showRecategorize, setShowRecategorize] = useState(false);
   const [newCategory, setNewCategory] = useState(file.category || "");
@@ -76,6 +76,16 @@ export default function AttachmentFileCard({ file, isLatest = false, jobId }) {
   };
 
   const handleView = () => {
+    // If this is an image and a gallery handler is available, open the
+    // carousel at this photo so the user can browse all photos in the
+    // category without re-opening a modal for each one.
+    if (isImage && onImageOpen && Array.isArray(allImages)) {
+      const idx = allImages.findIndex(f => f.id === file.id);
+      if (idx >= 0) {
+        onImageOpen(idx);
+        return;
+      }
+    }
     setShowPreview(true);
   };
 
