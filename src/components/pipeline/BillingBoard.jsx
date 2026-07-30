@@ -31,7 +31,17 @@ import {
 } from "@/components/ui/alert-dialog";
 
 // ── Summary bar ────────────────────────────────────────────────────────────────
-function BillingSummary({ jobs, invoiceMap }) {
+// Outstanding balance for a billing job. Prefer the linked 2nd-half invoice, but
+// fall back to the sum of all the job's invoice balances so final-only invoices
+// (and any other invoices) still roll up correctly.
+function jobBalanceDue(job, invoiceMap, invoicesByJob) {
+  const linked = invoiceMap[job.second_half_invoice_id];
+  if (linked) return linked.balance_due || 0;
+  const list = invoicesByJob[job.id] || [];
+  return list.reduce((s, inv) => s + (inv.balance_due || inv.total || 0) - (inv.amount_paid || 0), 0);
+}
+
+function BillingSummary({ jobs, invoiceMap, invoicesByJob }) {
   const buckets = [
     { label: "Invoice Sent", stages: ["2nd Half Invoice Sent"] },
     { label: "10–14d Overdue", stages: ["10 Days Overdue"] },
@@ -42,10 +52,7 @@ function BillingSummary({ jobs, invoiceMap }) {
 
   const totalOutstanding = jobs
     .filter(j => j.stage !== "Paid / Closed" && j.stage !== "Needs 2nd Half Invoice Created")
-    .reduce((s, j) => {
-      const inv = invoiceMap[j.second_half_invoice_id];
-      return s + (inv?.balance_due || 0);
-    }, 0);
+    .reduce((s, j) => s + jobBalanceDue(j, invoiceMap, invoicesByJob), 0);
 
   return (
     <div className="mb-4 shrink-0">
@@ -56,10 +63,7 @@ function BillingSummary({ jobs, invoiceMap }) {
         </div>
         {buckets.map(b => {
           const bucketJobs = jobs.filter(j => b.stages.includes(j.stage));
-          const amt = bucketJobs.reduce((s, j) => {
-            const inv = invoiceMap[j.second_half_invoice_id];
-            return s + (inv?.balance_due || 0);
-          }, 0);
+          const amt = bucketJobs.reduce((s, j) => s + jobBalanceDue(j, invoiceMap, invoicesByJob), 0);
           return (
             <div key={b.label} className="bg-card border rounded-lg px-4 py-3">
               <p className="text-xs text-muted-foreground">{b.label}</p>
@@ -80,6 +84,10 @@ function BillingCard({ job, isDragging, invoice, jobInvoices = [], customer, onM
   const days = job.invoice_sent_date && isValid(parseISO(job.invoice_sent_date))
     ? differenceInDays(new Date(), parseISO(job.invoice_sent_date))
     : null;
+
+  // Prefer the linked 2nd-half invoice; otherwise use the job's outstanding invoice
+  // (e.g. a Final invoice) so the balance and reminder still work.
+  const displayInvoice = invoice || jobInvoices.find(i => (i.balance_due || i.total || 0) > 0) || jobInvoices[0];
 
   const bg = BILLING_CARD_BG[job.stage] || "bg-card";
   const isOverdue = days !== null && days > 0 && job.stage !== "Paid / Closed";
@@ -127,10 +135,10 @@ function BillingCard({ job, isDragging, invoice, jobInvoices = [], customer, onM
         <p className="text-xs text-muted-foreground leading-tight mb-2 line-clamp-1">{job.job_name}</p>
       </Link>
 
-      {invoice && (
+      {displayInvoice && (
         <div className="flex items-center gap-1 text-sm font-bold mb-2">
           <DollarSign className="w-3.5 h-3.5 text-muted-foreground" />
-          ${(invoice.balance_due || invoice.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+          ${(displayInvoice.balance_due || displayInvoice.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
         </div>
       )}
 
@@ -144,12 +152,12 @@ function BillingCard({ job, isDragging, invoice, jobInvoices = [], customer, onM
             >
               <CheckCircle2 className="w-3 h-3" /> Mark Paid
             </Button>
-            {invoice?.customer_id && (
+            {displayInvoice?.customer_id && (
               <Button
                 size="sm"
                 variant="outline"
                 className="h-7 px-2 text-[10px] gap-1"
-                onClick={e => { e.preventDefault(); e.stopPropagation(); onSendReminder(job, invoice); }}
+                onClick={e => { e.preventDefault(); e.stopPropagation(); onSendReminder(job, displayInvoice); }}
               >
                 <Send className="w-3 h-3" />
               </Button>
@@ -317,7 +325,7 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
 
   return (
     <>
-      <BillingSummary jobs={activeJobs} invoiceMap={invoiceMap} />
+      <BillingSummary jobs={activeJobs} invoiceMap={invoiceMap} invoicesByJob={invoicesByJob} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0">
         <TabsList className="mb-3 self-start shrink-0">
