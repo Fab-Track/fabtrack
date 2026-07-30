@@ -5,13 +5,58 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, Search, Plus } from "lucide-react";
 
-export default function MaterialCombobox({ materials, value, onChange, onAddNew }) {
+function getUses(m) {
+  const raw = Array.isArray(m.component_type) ? m.component_type : (m.component_type ? [m.component_type] : []);
+  return raw.filter(u => u && u !== "Other");
+}
+
+// Case-insensitive, trimmed match on a material's uses array against a component label.
+function matchesLabel(m, label) {
+  if (!label) return false;
+  const target = label.trim().toLowerCase();
+  if (!target || target === "other") return false;
+  return getUses(m).some(u => u.trim().toLowerCase() === target);
+}
+
+export default function MaterialCombobox({ materials, value, onChange, onAddNew, componentLabel }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const selected = materials.find(m => m.id === value);
 
   const filtered = materials.filter(m =>
     m.name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const hasLabel = !!(componentLabel && componentLabel.trim());
+  const suggested = hasLabel ? filtered.filter(m => matchesLabel(m, componentLabel)) : [];
+  const suggestedIds = new Set(suggested.map(m => m.id));
+  const rest = hasLabel ? filtered.filter(m => !suggestedIds.has(m.id)) : [];
+
+  const renderRow = (m) => (
+    <button
+      key={m.id}
+      type="button"
+      onClick={() => { onChange(m); setOpen(false); setSearch(""); }}
+      className={`w-full text-left px-3 py-2 hover:bg-muted transition-colors flex items-center justify-between gap-2 ${value === m.id ? "bg-muted" : ""}`}
+    >
+      <span className="text-sm truncate">{m.name}</span>
+      <span className="flex items-center gap-1 shrink-0">
+        {getUses(m).map(u => (
+          <Badge key={u} variant="outline" className="text-[10px] shrink-0">{u}</Badge>
+        ))}
+      </span>
+    </button>
+  );
+
+  const renderSection = (title, items) => (
+    <div>
+      <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted/50 border-b">
+        {title}
+      </div>
+      {items.length === 0 ? (
+        <p className="text-xs text-muted-foreground px-3 py-2 italic">No matches</p>
+      ) : items.map(renderRow)}
+    </div>
   );
 
   return (
@@ -45,24 +90,13 @@ export default function MaterialCombobox({ materials, value, onChange, onAddNew 
         <div className="max-h-52 overflow-y-auto">
           {filtered.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-4">No materials found</p>
+          ) : hasLabel ? (
+            <>
+              {renderSection(`Suggested for ${componentLabel.trim()}`, suggested)}
+              {renderSection("All materials", rest)}
+            </>
           ) : (
-            filtered.map(m => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => { onChange(m); setOpen(false); setSearch(""); }}
-                className={`w-full text-left px-3 py-2 hover:bg-muted transition-colors flex items-center justify-between gap-2 ${value === m.id ? "bg-muted" : ""}`}
-              >
-                <span className="text-sm truncate">{m.name}</span>
-                <span className="flex items-center gap-1 shrink-0">
-                  {(Array.isArray(m.component_type) ? m.component_type : (m.component_type ? [m.component_type] : []))
-                    .filter(u => u && u !== "Other")
-                    .map(u => (
-                      <Badge key={u} variant="outline" className="text-[10px] shrink-0">{u}</Badge>
-                    ))}
-                </span>
-              </button>
-            ))
+            filtered.map(renderRow)
           )}
         </div>
         {onAddNew && (

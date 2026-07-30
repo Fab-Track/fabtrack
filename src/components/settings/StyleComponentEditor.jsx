@@ -139,6 +139,7 @@ export default function StyleComponentEditor({ open, onOpenChange, styleName, or
                     value={row.material_id}
                     onChange={(m) => updateRow(idx, "material", m)}
                     onAddNew={() => { setAddMatRowIdx(idx); setAddMatOpen(true); }}
+                    componentLabel={row.component_label}
                   />
                 </div>
               </div>

@@ -56,6 +56,7 @@ export default function LineItemComponentsEditor({ components = [], onChange, ma
                 value={materialIdForName(row.name)}
                 onChange={(m) => updateRow(idx, "name", m.name)}
                 onAddNew={() => { setAddMatRowIdx(idx); setAddMatOpen(true); }}
+                componentLabel={row.component_type}
               />
             </div>
             <Button
