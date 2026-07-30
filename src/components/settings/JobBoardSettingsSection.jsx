@@ -2,13 +2,42 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GripVertical, Trash2, Plus } from "lucide-react";
+import { GripVertical, Trash2, Plus, Info } from "lucide-react";
 import { toast } from "sonner";
+import {
+  SALES_STAGES, SHOP_STAGES, BILLING_STAGES,
+  SALES_COLORS, SHOP_COLORS, BILLING_COLORS,
+} from "@/lib/pipelineHelpers";
 
-const DEFAULT_SALES = ["New Lead", "Estimate Sent", "Awaiting Approval", "Awaiting Deposit", "Deposit Received"];
-const DEFAULT_PRODUCTION = ["In Fabrication", "At Powder Coat", "Ready for Install", "Install Scheduled", "Install Complete", "Closed"];
+// Map the tailwind `border-t-<color>-<shade>` classes used in pipelineHelpers
+// to a hex swatch so the color picker shows the real column color.
+const TAILWIND_TO_HEX = {
+  "slate-400": "#94a3b8",
+  "sky-400": "#38bdf8", "sky-600": "#0284c7",
+  "blue-400": "#60a5fa", "blue-600": "#2563eb",
+  "violet-400": "#a78bfa", "violet-600": "#7c3aed",
+  "amber-400": "#fbbf24", "amber-500": "#f59e0b", "amber-600": "#d97706",
+  "orange-400": "#fb923c", "orange-500": "#f97316", "orange-600": "#ea580c",
+  "cyan-500": "#06b6d4", "cyan-700": "#0e7490",
+  "emerald-500": "#10b981",
+  "yellow-300": "#fde047", "yellow-500": "#eab308",
+  "red-500": "#ef4444", "red-800": "#991b1b",
+};
 
-const COLORS = ["#94a3b8", "#60a5fa", "#34d399", "#fbbf24", "#f87171", "#a78bfa", "#fb923c", "#38bdf8"];
+function hexForColorClass(cls = "") {
+  const m = cls.match(/border-t-([a-z]+)-(\d+)/);
+  if (!m) return "#94a3b8";
+  return TAILWIND_TO_HEX[`${m[1]}-${m[2]}`] || "#94a3b8";
+}
+
+// Build the seed list of {name, color} from a real stage array + its color map.
+function stagesToSeed(stages, colorMap) {
+  return stages.map((name, i) => ({
+    id: i + 1,
+    name,
+    color: hexForColorClass(colorMap[name]),
+  }));
+}
 
 function StageRow({ stage, onRename, onDelete, onColorChange }) {
   return (
@@ -39,28 +68,26 @@ function StageRow({ stage, onRename, onDelete, onColorChange }) {
   );
 }
 
-function PipelineEditor({ title, defaultStages }) {
-  const [stages, setStages] = useState(() =>
-    defaultStages.map((name, i) => ({ id: i + 1, name, color: COLORS[i % COLORS.length] }))
-  );
+function PipelineEditor({ title, stages, colorMap }) {
+  const [stageRows, setStageRows] = useState(() => stagesToSeed(stages, colorMap));
 
   function addStage() {
-    setStages(p => [...p, { id: Date.now(), name: "New Stage", color: "#94a3b8" }]);
+    setStageRows(p => [...p, { id: Date.now(), name: "New Stage", color: "#94a3b8" }]);
   }
 
   function updateStage(id, patch) {
-    setStages(p => p.map(s => s.id === id ? { ...s, ...patch } : s));
+    setStageRows(p => p.map(s => s.id === id ? { ...s, ...patch } : s));
   }
 
   function deleteStage(id) {
-    setStages(p => p.filter(s => s.id !== id));
+    setStageRows(p => p.filter(s => s.id !== id));
   }
 
   return (
     <div>
       <h3 className="text-sm font-semibold mb-2">{title}</h3>
       <div className="space-y-1.5">
-        {stages.map(s => (
+        {stageRows.map(s => (
           <StageRow
             key={s.id}
             stage={s}
@@ -91,10 +118,11 @@ export default function JobBoardSettingsSection() {
         <p className="text-sm text-muted-foreground">Configure pipeline stages and job defaults.</p>
       </div>
 
-      {/* Pipeline editors */}
+      {/* Pipeline editors — seeded from the live stage definitions in pipelineHelpers */}
       <div className="space-y-6">
-        <PipelineEditor title="Sales Pipeline" defaultStages={DEFAULT_SALES} />
-        <PipelineEditor title="Production Pipeline" defaultStages={DEFAULT_PRODUCTION} />
+        <PipelineEditor title="Sales Pipeline" stages={SALES_STAGES} colorMap={SALES_COLORS} />
+        <PipelineEditor title="Shop Pipeline" stages={SHOP_STAGES} colorMap={SHOP_COLORS} />
+        <PipelineEditor title="Billing Pipeline" stages={BILLING_STAGES} colorMap={BILLING_COLORS} />
       </div>
 
       {/* Defaults */}
@@ -125,6 +153,15 @@ export default function JobBoardSettingsSection() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/40 border rounded-lg p-3">
+        <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+        <p>
+          The stages shown above reflect the current pipeline definitions used by the Job Board.
+          Renaming, adding, or removing stages here is not yet wired to the live board — the board's
+          columns are defined in code. Reach out to have a stage permanently added or renamed.
+        </p>
       </div>
 
       <Button onClick={() => toast.success("Job board settings saved")} className="w-full sm:w-auto">Save Changes</Button>
