@@ -176,6 +176,26 @@ export async function generateEstimatePDF({ estimate, job, customer, businessInf
   doc.line(margin, y, pageW - margin, y);
   y += 7;
 
+  // Preload line-item reference photos (only those flagged to show on the estimate)
+  const linePhotos = {};
+  await Promise.all(lines.map(async (line, idx) => {
+    if (!line.photo_url || line.show_photo === false) return;
+    try {
+      const res = await fetch(line.photo_url, { mode: "cors" });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      linePhotos[idx] = { dataUrl, props: doc.getImageProperties(dataUrl) };
+    } catch {
+      // skip photos that fail to load
+    }
+  }));
+
   // Line items header
   doc.setFillColor(245, 247, 249);
   doc.rect(margin, y - 3, contentW, 8, "F");
@@ -224,6 +244,27 @@ export async function generateEstimatePDF({ estimate, job, customer, businessInf
       doc.text(`$${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`, pageW - margin - 2, y, { align: "right" });
     }
     y += rowH;
+
+    // Reference photo (optional — shown to customer on the estimate)
+    if (linePhotos[idx]) {
+      const { dataUrl, props } = linePhotos[idx];
+      const maxImgW = contentW * 0.45;
+      const maxImgH = 28;
+      const ratio = props.width / props.height;
+      let ih = maxImgH;
+      let iw = ih * ratio;
+      if (iw > maxImgW) { iw = maxImgW; ih = iw / ratio; }
+      checkBreak(ih + 8);
+      doc.setDrawColor(220, 225, 230);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(margin + 1, y, iw + 4, ih + 4, 1, 1, "S");
+      try {
+        doc.addImage(dataUrl, props.fileType || "PNG", margin + 3, y + 2, iw, ih);
+      } catch {
+        // skip unrenderable images
+      }
+      y += ih + 8;
+    }
   });
 
   checkBreak(10);
