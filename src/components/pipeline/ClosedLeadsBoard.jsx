@@ -2,9 +2,14 @@ import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, X, XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, X, XCircle, RotateCcw } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 import { OUTCOME_REASONS } from "@/components/jobs/CloseLeadModal";
+import { SALES_STAGES } from "@/lib/pipelineHelpers";
 
 const CATEGORY_COLORS = {
   Won:        "bg-emerald-100 text-emerald-800 border-emerald-200",
@@ -23,7 +28,30 @@ const REASON_LABELS = Object.entries(OUTCOME_REASONS).reduce((acc, [_, reasons])
 
 export default function ClosedLeadsBoard({ jobs = [] }) {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [q, setQ] = useState("");
+
+  const reopenMutation = useMutation({
+    mutationFn: (job) => {
+      const now = new Date().toISOString();
+      // Keep the existing stage if it's already a valid Sales stage; otherwise reset to "New Lead"
+      const keepStage = job.stage && SALES_STAGES.includes(job.stage);
+      const update = {
+        is_lead_closed: false,
+        pipeline_board: "Sales",
+        stage: keepStage ? job.stage : "New Lead",
+        stage_entered_at: now,
+        last_activity_date: now,
+        lead_closed_at: null,
+      };
+      return base44.entities.Job.update(job.id, update);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["jobs"] });
+      toast.success("Lead reopened — moved back to Sales Pipeline.");
+    },
+    onError: () => toast.error("Could not reopen this lead. Try again."),
+  });
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -84,11 +112,12 @@ export default function ClosedLeadsBoard({ jobs = [] }) {
         <div className="flex-1 overflow-y-auto border rounded-lg">
           <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-muted/40 border-b text-xs font-medium text-muted-foreground sticky top-0">
             <span className="col-span-2">Job #</span>
-            <span className="col-span-3">Job Name</span>
+            <span className="col-span-2">Job Name</span>
             <span className="col-span-2">Customer</span>
             <span className="col-span-2">Outcome</span>
             <span className="col-span-1">Reason</span>
             <span className="col-span-2">Closed</span>
+            <span className="col-span-1"></span>
           </div>
           {filtered.map(job => {
             const closedDate = job.lead_closed_at && isValid(parseISO(job.lead_closed_at))
@@ -102,7 +131,7 @@ export default function ClosedLeadsBoard({ jobs = [] }) {
                 onClick={() => navigate(`/jobs/${job.id}?board=Sales`)}
               >
                 <span className="col-span-2 font-mono text-xs text-muted-foreground truncate">{job.job_number || "—"}</span>
-                <span className="col-span-3 font-medium truncate">{job.job_name || "—"}</span>
+                <span className="col-span-2 font-medium truncate">{job.job_name || "—"}</span>
                 <span className="col-span-2 text-muted-foreground truncate">{job.customer_name || "—"}</span>
                 <span className="col-span-2">
                   {job.lead_outcome_category && (
@@ -115,6 +144,21 @@ export default function ClosedLeadsBoard({ jobs = [] }) {
                   {reasonLabel}
                 </span>
                 <span className="col-span-2 text-xs text-muted-foreground">{closedDate}</span>
+                <span className="col-span-1 flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs gap-1"
+                    disabled={reopenMutation.isPending}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      reopenMutation.mutate(job);
+                    }}
+                    title="Reopen this lead back into the Sales Pipeline"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" /> Reopen
+                  </Button>
+                </span>
               </div>
             );
           })}
