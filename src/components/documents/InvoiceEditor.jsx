@@ -23,8 +23,8 @@ const LABEL_STYLES = {
   "Change Order Invoice":   "bg-orange-100 text-orange-800 border-orange-200",
 };
 import { toast } from "sonner";
-import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
 import { buildStageTransition } from "@/lib/pipelineHelpers";
+import { useBackwardMoveGuard } from "@/lib/useBackwardMoveGuard.jsx";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -132,6 +132,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
 
   const requiresPaymentMethod = status === "Paid" || status === "Partial";
   const actorName = currentUser?.full_name || currentUser?.email || "Team Member";
+  const backwardGuard = useBackwardMoveGuard(actorName);
   const [afterSaveAction, setAfterSaveAction] = useState(null); // "close" | "review"
 
   function handleSave() {
@@ -205,15 +206,16 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
       const isDepositNowPaid = invoiceType === "Deposit" && status === "Paid" && prevStatus !== "Paid";
 
       if (isDepositNowPaid) {
-        await autoMoveSalesStage(
+        const res = await backwardGuard.requestMove(
           job,
           "Deposit Received / Sale Won",
-          `Deposit invoice marked Paid — job auto-moved to Deposit Received / Sale Won`,
-          actorName
+          `Deposit invoice marked Paid — job auto-moved to Deposit Received / Sale Won`
         );
         qc.invalidateQueries(["invoices", job.id]);
         qc.invalidateQueries(["job", job.id]);
-        setShopPrompt(true);
+        // Only offer the Shop move if the job actually advanced to Deposit Received.
+        // If the user declined a backward move, the job stays where it is.
+        if (!res?.declined) setShopPrompt(true);
         return;
       }
 
@@ -564,6 +566,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {backwardGuard.dialog}
     </div>
   );
 }

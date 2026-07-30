@@ -18,8 +18,51 @@ function stageIndex(stage) {
   return SALES_ORDER.indexOf(stage ?? "New Lead");
 }
 
-function isBeforeOrAt(currentStage, targetStage) {
-  return stageIndex(currentStage) <= stageIndex(targetStage);
+// Boards flow strictly forward: Sales → Shop → Billing. A customer-signed
+// estimate must never drag a job that's already in Shop or Billing back to a
+// Sales stage. (There's no one to prompt on a public link, so we simply skip.)
+const SHOP_STAGES = [
+  "New Jobs Landed — Needs Approval",
+  "On Deck for Measure",
+  "Ready for Measure",
+  "Needs Drawing",
+  "Drawing Needs Approval",
+  "On Deck for Fabrication",
+  "Fabricate",
+  "Fabrication Complete — Needs Powder Coat",
+  "At Powder Coat",
+  "Ready for Install",
+  "Install in Progress / Not Complete",
+  "Install Complete",
+];
+const BILLING_STAGES = [
+  "Needs 2nd Half Invoice Created",
+  "2nd Half Invoice Sent",
+  "10 Days Overdue",
+  "15 Days Overdue",
+  "20 Days Overdue",
+  "30 Days Overdue",
+  "30+ Days Overdue",
+  "Paid / Closed",
+];
+const BOARD_ORDER = { Sales: 0, Shop: 1, Billing: 2 };
+const boardRank = (board) => BOARD_ORDER[board] ?? 0;
+function stageIndexInBoard(board, stage) {
+  const arr =
+    board === "Shop" ? SHOP_STAGES : board === "Billing" ? BILLING_STAGES : SALES_ORDER;
+  return arr.indexOf(stage);
+}
+function isBackwardMove(job, toBoard, toStage) {
+  const fromBoard = job?.pipeline_board || "Sales";
+  const fromStage = job?.stage || "";
+  const fb = boardRank(fromBoard);
+  const tb = boardRank(toBoard);
+  if (tb < fb) return true;
+  if (tb > fb) return false;
+  const fi = stageIndexInBoard(fromBoard, fromStage);
+  const ti = stageIndexInBoard(toBoard, toStage);
+  if (fi === -1 || ti === -1) return false;
+  return ti < fi;
 }
 
 function stageToStatus(toStage) {
@@ -56,8 +99,8 @@ function buildStageTransition(job, toBoard, toStage, note = "") {
 }
 
 async function autoMoveSalesStage(base44, job, toStage, triggerNote, actorName) {
-  if (!isBeforeOrAt(job.stage, toStage)) return null; // already past this stage
-  if (job.stage === toStage) return null;              // already there
+  if (job?.pipeline_board === "Sales" && job?.stage === toStage) return null; // already there
+  if (isBackwardMove(job, "Sales", toStage)) return null; // never move backward silently
 
   const transition = buildStageTransition(job, "Sales", toStage, triggerNote);
   const history = [...transition.stage_history];

@@ -18,7 +18,7 @@ import LineItemPhotoUpload from "./LineItemPhotoUpload";
 import LineItemCostBreakdown from "./LineItemCostBreakdown";
 import { useJobDetailConfig } from "@/hooks/useJobDetailConfig";
 import { toast } from "sonner";
-import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
+import { useBackwardMoveGuard } from "@/lib/useBackwardMoveGuard.jsx";
 
 const INSTALL_LOCATIONS = [
   "Interior — Main Staircase",
@@ -102,6 +102,7 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
   const total = afterOverhead * (1 + tax / 100);
 
   const actorName = currentUser?.full_name || currentUser?.email || "Team Member";
+  const backwardGuard = useBackwardMoveGuard(actorName);
 
   const save = useMutation({
     mutationFn: () => {
@@ -143,13 +144,12 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
 
       // Trigger 1 — New estimate created while job is in "New Lead"
       if (isNew) {
-        const moved = await autoMoveSalesStage(
+        const res = await backwardGuard.requestMove(
           job,
           "Estimate In Progress",
-          "Estimate created — job auto-moved to Estimate In Progress",
-          actorName
+          "Estimate created — job auto-moved to Estimate In Progress"
         );
-        if (moved) {
+        if (res?.moved) {
           // update local job ref for downstream triggers in same save
           job = { ...job, stage: "Estimate In Progress", pipeline_board: "Sales" };
         }
@@ -157,15 +157,16 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
 
       // Trigger 2 — Estimate status changed to "Sent"
       if (status === "Sent" && prevStatus !== "Sent") {
-        const moved = await autoMoveSalesStage(
+        const res = await backwardGuard.requestMove(
           job,
           "Estimate Sent",
-          `Estimate marked Sent — job auto-moved to Estimate Sent`,
-          actorName
+          `Estimate marked Sent — job auto-moved to Estimate Sent`
         );
-        if (moved) {
+        if (res?.moved) {
           toast("Job moved to Estimate Sent");
           job = { ...job, stage: "Estimate Sent", pipeline_board: "Sales" };
+        } else if (res?.declined) {
+          toast("Estimate sent — job stays in its current board");
         }
       }
 
@@ -173,14 +174,15 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
       if (status === "Approved" && prevStatus !== "Approved") {
         const estUpdate = { estimate_total: total, customer_approval_status: "approved" };
         await base44.entities.Job.update(job.id, estUpdate);
-        const moved = await autoMoveSalesStage(
+        const res = await backwardGuard.requestMove(
           { ...job, ...estUpdate },
           "Awaiting Deposit",
-          `Estimate approved by ${signature || actorName} — job auto-moved to Awaiting Deposit`,
-          actorName
+          `Estimate approved by ${signature || actorName} — job auto-moved to Awaiting Deposit`
         );
-        if (moved) {
+        if (res?.moved) {
           toast("Estimate approved — job moved to Awaiting Deposit");
+        } else if (res?.declined) {
+          toast("Estimate approved — job stays in its current board");
         }
         // Fire in-app notification
         await base44.entities.Notification.create({
@@ -702,6 +704,7 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
           </div>
         </DialogContent>
       </Dialog>
+      {backwardGuard.dialog}
     </div>
   );
 }

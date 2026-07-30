@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Plus, Trash2, Send, AlignJustify, LayoutList, CheckCircle2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { format, addDays, parseISO } from "date-fns";
-import { autoMoveSalesStage } from "@/lib/salesPipelineTriggers";
+import { useBackwardMoveGuard } from "@/lib/useBackwardMoveGuard.jsx";
 import { useAuth } from "@/lib/AuthContext";
 import { useWriteOrgId } from "@/lib/orgContext";
 import ProductServiceDropdown from "@/components/estimates/ProductServiceDropdown";
@@ -166,6 +166,7 @@ export default function EstimatePage() {
   const total = afterOverhead + taxAmt;
 
   const actorName = user?.full_name || user?.email || "Team Member";
+  const backwardGuard = useBackwardMoveGuard(actorName);
 
   const save = useMutation({
     mutationFn: (nextStatus) => {
@@ -200,16 +201,22 @@ export default function EstimatePage() {
       const finalStatus = savedEstimate?.status || status;
 
       if (isNew) {
-        await autoMoveSalesStage(job, "Estimate In Progress", "Estimate created", actorName);
+        await backwardGuard.requestMove(job, "Estimate In Progress", "Estimate created");
       }
       if (finalStatus === "Sent" && prevStatus !== "Sent") {
-        await autoMoveSalesStage(job, "Estimate Sent", "Estimate marked Sent", actorName);
+        const res = await backwardGuard.requestMove(job, "Estimate Sent", "Estimate marked Sent");
+        if (res?.moved) toast.success("Estimate sent — job moved to Estimate Sent");
+        else if (res?.declined) toast("Estimate sent — job stays in its current board");
       }
       if (finalStatus === "Approved" && prevStatus !== "Approved") {
         await base44.entities.Job.update(jobId, { estimate_total: total, customer_approval_status: "approved" });
-        await autoMoveSalesStage({ ...job, estimate_total: total }, "Awaiting Deposit", `Estimate approved by ${signature}`, actorName);
-
-        toast.success("Estimate approved — job moved to Awaiting Deposit");
+        const res = await backwardGuard.requestMove(
+          { ...job, estimate_total: total },
+          "Awaiting Deposit",
+          `Estimate approved by ${signature}`
+        );
+        if (res?.moved) toast.success("Estimate approved — job moved to Awaiting Deposit");
+        else if (res?.declined) toast("Estimate approved — job stays in its current board");
       }
 
       qc.invalidateQueries(["estimates"]);
@@ -818,6 +825,7 @@ export default function EstimatePage() {
           </TabsContent>
         </Tabs>
       </div>
+      {backwardGuard.dialog}
     </div>
   );
 }

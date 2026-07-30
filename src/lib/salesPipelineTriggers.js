@@ -1,39 +1,77 @@
 import { base44 } from "@/api/base44Client";
-import { buildStageTransition } from "@/lib/pipelineHelpers";
+import {
+  buildStageTransition,
+  SALES_STAGES,
+  SHOP_STAGES,
+  BILLING_STAGES,
+  getBoardForJob,
+} from "@/lib/pipelineHelpers";
 
-// Stage ordering for "don't go back" guard
-const SALES_ORDER = [
-  "New Lead",
-  "Estimate In Progress",
-  "Estimate Sent",
-  "Negotiation / In Review",
-  "Awaiting Deposit",
-  "Deposit Received / Sale Won",
-];
-
-function stageIndex(stage) {
-  return SALES_ORDER.indexOf(stage ?? "New Lead");
-}
-
-function isBeforeOrAt(currentStage, targetStage) {
-  return stageIndex(currentStage) <= stageIndex(targetStage);
+// Boards flow strictly forward: Sales → Shop → Billing. Cards never move
+// backward automatically; the UI must ask for permission first.
+const BOARD_ORDER = { Sales: 0, Shop: 1, Billing: 2 };
+const boardRank = (board) => BOARD_ORDER[board] ?? 0;
+function stageIndexInBoard(board, stage) {
+  const arr =
+    board === "Shop" ? SHOP_STAGES : board === "Billing" ? BILLING_STAGES : SALES_STAGES;
+  return arr.indexOf(stage);
 }
 
 /**
- * Moves a job to a new Sales stage if it hasn't already passed it,
- * appending a history entry with the trigger reason.
- * Returns the updated job payload or null if no move was needed.
+ * Is moving `job` → (toBoard, toStage) a backward move in the Sales→Shop→Billing flow?
+ * A move is backward when the target board is earlier than the current board,
+ * or — within the same board — the target stage is earlier than the current stage.
  */
-export async function autoMoveSalesStage(job, toStage, triggerNote, actorName) {
-  if (!isBeforeOrAt(job.stage, toStage)) return null; // already past this stage
-  if (job.stage === toStage) return null;              // already there
+export function isBackwardMove(job, toBoard, toStage) {
+  const fromBoard = job?.pipeline_board || getBoardForJob(job) || "Sales";
+  const fromStage = job?.stage || "";
+  const fb = boardRank(fromBoard);
+  const tb = boardRank(toBoard);
+  if (tb < fb) return true;
+  if (tb > fb) return false;
+  const fi = stageIndexInBoard(fromBoard, fromStage);
+  const ti = stageIndexInBoard(toBoard, toStage);
+  if (fi === -1 || ti === -1) return false; // unknown stage → treat as forward
+  return ti < fi;
+}
 
-  const transition = buildStageTransition(job, "Sales", toStage, triggerNote);
-  // Enrich the last history entry with actor name
+/**
+ * Moves a job to a new Sales stage, unless that would be a backward move.
+ *
+ * Returns:
+ *   { moved: true, payload }            — move performed
+ *   { moved: false, backward: true, … } — move blocked (backward); caller should prompt
+ *   { moved: false, reason: "already" } — job already at the target stage
+ *
+ * Pass { force: true } to perform a backward move after the user has confirmed.
+ */
+export async function autoMoveSalesStage(job, toStage, triggerNote, actorName, opts = {}) {
+  const toBoard = "Sales";
+
+  if (job?.pipeline_board === toBoard && job?.stage === toStage) {
+    return { moved: false, reason: "already" };
+  }
+
+  if (!opts.force && isBackwardMove(job, toBoard, toStage)) {
+    return {
+      moved: false,
+      backward: true,
+      from: { board: job?.pipeline_board || "Sales", stage: job?.stage || "" },
+      to: { board: toBoard, stage: toStage },
+      job,
+      toStage,
+      triggerNote,
+    };
+  }
+
+  const transition = buildStageTransition(job, toBoard, toStage, triggerNote);
   const history = [...transition.stage_history];
-  history[history.length - 1] = { ...history[history.length - 1], triggered_by: actorName || "System" };
+  history[history.length - 1] = {
+    ...history[history.length - 1],
+    triggered_by: actorName || "System",
+  };
   const payload = { ...transition, stage_history: history };
 
   await base44.entities.Job.update(job.id, payload);
-  return payload;
+  return { moved: true, payload };
 }
