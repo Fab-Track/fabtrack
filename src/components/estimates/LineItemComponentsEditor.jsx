@@ -6,9 +6,9 @@
  */
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import MaterialCombobox from "@/components/settings/MaterialCombobox";
 import AddMaterialDialog from "@/components/settings/AddMaterialDialog";
 
@@ -44,12 +44,19 @@ export default function LineItemComponentsEditor({ components = [], onChange, ma
       <div className="space-y-1.5">
         {components.map((row, idx) => (
           <div key={idx} className="flex items-center gap-1.5">
-            <Input
-              list="li-component-labels"
-              className="h-8 text-xs w-28 shrink-0"
+            <Select
               value={row.component_type}
-              onChange={e => updateRow(idx, "component_type", e.target.value)}
-            />
+              onValueChange={v => updateRow(idx, "component_type", v)}
+            >
+              <SelectTrigger className="h-8 text-xs w-28 shrink-0">
+                <SelectValue placeholder="Select…" />
+              </SelectTrigger>
+              <SelectContent>
+                {COMPONENT_LABELS.map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="flex-1 min-w-0">
               <MaterialCombobox
                 materials={materials}
@@ -70,10 +77,6 @@ export default function LineItemComponentsEditor({ components = [], onChange, ma
           </div>
         ))}
       </div>
-
-      <datalist id="li-component-labels">
-        {COMPONENT_LABELS.map(c => <option key={c} value={c} />)}
-      </datalist>
 
       <Button variant="outline" size="sm" className="w-full h-8 text-xs gap-1.5" onClick={addRow}>
         <Plus className="w-3.5 h-3.5" /> Add Component

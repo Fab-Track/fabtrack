@@ -3,10 +3,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import MaterialCombobox from "./MaterialCombobox";
 import AddMaterialDialog from "./AddMaterialDialog";
 
@@ -124,13 +124,19 @@ export default function StyleComponentEditor({ open, onOpenChange, styleName, or
               <div className="flex-1 space-y-2">
                 <div>
                   <Label className="text-[10px]">Component Label</Label>
-                  <Input
-                    list="component-labels"
-                    className="h-8 text-xs"
+                  <Select
                     value={row.component_label}
-                    onChange={e => updateRow(idx, "component_label", e.target.value)}
-                    placeholder="e.g. Top Rail"
-                  />
+                    onValueChange={v => updateRow(idx, "component_label", v)}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Select label…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COMPONENT_LABELS.map(c => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label className="text-[10px]">Material</Label>
@@ -153,10 +159,6 @@ export default function StyleComponentEditor({ open, onOpenChange, styleName, or
               </Button>
             </div>
           ))}
-
-          <datalist id="component-labels">
-            {COMPONENT_LABELS.map(c => <option key={c} value={c} />)}
-          </datalist>
 
           <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={addRow}>
             <Plus className="w-4 h-4" /> Add Component
