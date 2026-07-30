@@ -57,7 +57,6 @@ export default function NewJob() {
     customer_name: prefilledCustomerName,
     status: "Estimate",
     site_address: prefilledCustomer?.address || "",
-    customer_type: prefilledCustomer?.type || "",
     onsite_contact_name: "",
     onsite_contact_phone: "",
     expected_install_date: "",
@@ -91,7 +90,6 @@ export default function NewJob() {
       customer_id: customer?.id || "",
       customer_name: customer?.name || "",
       site_address: customer?.address || prev.site_address,
-      customer_type: customer?.type || "",
       ...(sameAsCustomer ? {
         onsite_contact_name: customer?.job_contact_name || "",
         onsite_contact_phone: customer?.job_contact_phone || "",
@@ -176,23 +174,6 @@ export default function NewJob() {
                   onChange={e => updateField("expected_install_date", e.target.value)}
                 />
               </div>
-            </div>
-
-            <div>
-              <Label className="text-xs">Customer Type</Label>
-              <Select value={form.customer_type || ""} onValueChange={val => updateField("customer_type", val)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select customer type…" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Homeowner">Homeowner</SelectItem>
-                  <SelectItem value="General Contractor">General Contractor</SelectItem>
-                  <SelectItem value="Builder / Developer">Builder / Developer</SelectItem>
-                  <SelectItem value="Commercial Business">Commercial Business</SelectItem>
-                  <SelectItem value="Subcontractor">Subcontractor</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             <div>
