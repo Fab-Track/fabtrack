@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -130,9 +130,15 @@ export default function EstimatePage() {
     enabled: !!jobId,
   });
 
-  // Populate form from existing estimate
+  // Populate form from existing estimate — only ONCE per estimate. React Query
+  // refetches on window focus (e.g. when the native file picker closes after
+  // selecting a line-item photo), and an unguarded effect would reset `lines`
+  // back to the saved DB state, wiping unsaved edits like a newly uploaded
+  // photo before the user clicks Save.
+  const populatedFor = useRef(null);
   useEffect(() => {
-    if (existingEstimate) {
+    if (existingEstimate && populatedFor.current !== estimateId) {
+      populatedFor.current = estimateId;
       setStatus(existingEstimate.status || "Draft");
       setLines((existingEstimate.line_items || []).map(l => ({ ...l, _id: Math.random().toString(36).slice(2), _is_railing: false, _railing_style: null, _is_staircase: false, _staircase_type: null })));
       setMarkup(existingEstimate.markup_percent || 0);
@@ -147,7 +153,7 @@ export default function EstimatePage() {
       if (existingEstimate.estimate_date) setEstimateDate(existingEstimate.estimate_date);
       if (existingEstimate.expiration_date) setExpirationDate(existingEstimate.expiration_date);
     }
-  }, [existingEstimate]);
+  }, [existingEstimate, estimateId]);
 
   // Generate estimate number for new estimates
   useEffect(() => {
@@ -221,6 +227,7 @@ export default function EstimatePage() {
 
       qc.invalidateQueries(["estimates"]);
       qc.invalidateQueries(["estimates", jobId]);
+      qc.invalidateQueries(["estimate", estimateId]);
       qc.invalidateQueries(["job", jobId]);
 
       if (isNew && savedEstimate?.id) {
