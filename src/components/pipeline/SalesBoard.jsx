@@ -49,7 +49,7 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], invoices = [], 
 
   return (
     <div
-      className={`bg-card rounded-lg border p-3 hover:shadow-md transition-all ${isDragging ? "shadow-lg ring-2 ring-accent/50" : ""} ${job.is_lead_closed ? "opacity-50" : ""}`}
+      className={`bg-card rounded-lg border p-3 hover:shadow-md transition-all ${isDragging ? "shadow-lg ring-2 ring-accent/50" : ""}`}
       onClick={() => navigate(`/jobs/${job.id}?board=Sales`)}
     >
       <div className="flex items-start justify-between mb-1">
@@ -144,7 +144,6 @@ export default function SalesBoard({ jobs = [] }) {
   const [promoting, setPromoting] = useState(null);
   const [closingLead, setClosingLead] = useState(null);
   const [deletingJob, setDeletingJob] = useState(null);
-  const [showClosed, setShowClosed] = useState(false);
   const [promoteRepId, setPromoteRepId] = useState(null);
   const { user } = useAuth();
   const effectiveRole = useEffectiveRole(user?.role || "admin");
@@ -204,10 +203,8 @@ export default function SalesBoard({ jobs = [] }) {
     return acc;
   }, {});
 
-  // Split open vs closed leads
-  const openJobs = jobs.filter(j => !j.is_lead_closed);
-  const closedJobs = jobs.filter(j => j.is_lead_closed);
-  const displayJobs = showClosed ? jobs : openJobs;
+  // Closed leads live in their own view; only open leads show on the Sales board
+  const displayJobs = jobs.filter(j => !j.is_lead_closed);
 
   const columns = {};
   SALES_STAGES.forEach(s => { columns[s] = []; });
@@ -287,18 +284,6 @@ export default function SalesBoard({ jobs = [] }) {
 
   return (
     <>
-      {/* Show Closed toggle */}
-      {closedJobs.length > 0 && (
-        <div className="flex items-center gap-2 mb-2 shrink-0">
-          <button
-            onClick={() => setShowClosed(v => !v)}
-            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${showClosed ? "bg-muted text-foreground border-border" : "text-muted-foreground border-transparent hover:border-border"}`}
-          >
-            <span className="w-3 h-3 rounded-full bg-muted-foreground/40 inline-block" />
-            {showClosed ? "Hide Closed Leads" : `Show Closed Leads (${closedJobs.length})`}
-          </button>
-        </div>
-      )}
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="flex gap-3 overflow-x-auto flex-1 pb-4">
           {SALES_STAGES.map(stage => (

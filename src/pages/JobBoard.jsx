@@ -13,10 +13,11 @@ const BOARD_STAGES = { Sales: SALES_STAGES, Shop: SHOP_STAGES, Billing: BILLING_
 import SalesBoard from "@/components/pipeline/SalesBoard";
 import ShopBoard from "@/components/pipeline/ShopBoard";
 import BillingBoard from "@/components/pipeline/BillingBoard";
+import ClosedLeadsBoard from "@/components/pipeline/ClosedLeadsBoard";
 import PipelineRowView from "@/components/pipeline/PipelineRowView";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Filter, TrendingUp, Wrench, DollarSign, LayoutGrid, List, Archive, RotateCcw, Search, X } from "lucide-react";
+import { Plus, Filter, TrendingUp, Wrench, DollarSign, LayoutGrid, List, Archive, RotateCcw, Search, X, XCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -24,15 +25,17 @@ import { format, parseISO } from "date-fns";
 import { Link, useSearchParams } from "react-router-dom";
 
 const BOARD_ICONS = {
-  Sales:   TrendingUp,
-  Shop:    Wrench,
-  Billing: DollarSign,
+  Sales:        TrendingUp,
+  Shop:         Wrench,
+  Billing:      DollarSign,
+  "Closed Leads": XCircle,
 };
 
 const BOARD_COLORS = {
-  Sales:   "text-blue-600",
-  Shop:    "text-amber-600",
-  Billing: "text-emerald-600",
+  Sales:        "text-blue-600",
+  Shop:         "text-amber-600",
+  Billing:      "text-emerald-600",
+  "Closed Leads": "text-red-500",
 };
 
 export default function JobBoard() {
@@ -67,7 +70,8 @@ export default function JobBoard() {
   useEffect(() => {
     const boardParam = searchParams.get("board");
     const allowed = getBoardsForRole(effectiveRole);
-    if (boardParam && allowed.includes(boardParam)) {
+    const validTabs = allowed.includes("Sales") ? [...allowed, "Closed Leads"] : allowed;
+    if (boardParam && validTabs.includes(boardParam)) {
       setActiveBoard(boardParam);
     } else {
       setActiveBoard(getDefaultBoard(effectiveRole));
@@ -107,12 +111,17 @@ export default function JobBoard() {
   });
 
   const allowedBoards = getBoardsForRole(effectiveRole);
+  // Closed Leads view is available to anyone with Sales access
+  const allTabs = allowedBoards.includes("Sales")
+    ? [...allowedBoards, "Closed Leads"]
+    : allowedBoards;
 
-  // Partition jobs by board — closed leads are handled inside SalesBoard with its own toggle
+  // Partition jobs by board — closed leads are pulled into their own view
   const boardJobs = {
-    Sales:   jobs.filter(j => (j.pipeline_board === "Sales"   || (!j.pipeline_board && SALES_STAGES.includes(j.stage)) || (!j.pipeline_board && !j.stage && (j.status === "Estimate" || j.status === "Approved")))),
+    Sales:   jobs.filter(j => !j.is_lead_closed && (j.pipeline_board === "Sales"   || (!j.pipeline_board && SALES_STAGES.includes(j.stage)) || (!j.pipeline_board && !j.stage && (j.status === "Estimate" || j.status === "Approved")))),
     Shop:    jobs.filter(j => j.pipeline_board === "Shop"    || (!j.pipeline_board && SHOP_STAGES.includes(j.stage))   || (!j.pipeline_board && !j.stage && ["Fab Queue","In Fabrication","Powder Coat","Install Scheduled","Install Complete"].includes(j.status))),
     Billing: jobs.filter(j => j.pipeline_board === "Billing" || (!j.pipeline_board && BILLING_STAGES.includes(j.stage)) || (!j.pipeline_board && !j.stage && j.status === "Invoiced")),
+    "Closed Leads": jobs.filter(j => j.is_lead_closed),
   };
 
   const filtered = {};
@@ -182,7 +191,7 @@ export default function JobBoard() {
             </SelectContent>
           </Select>
           {/* View toggle */}
-          {activeBoard && (
+          {activeBoard && activeBoard !== "Closed Leads" && (
             <div className="flex items-center border rounded-md h-9 overflow-hidden">
               <button
                 onClick={() => setViewMode(v => ({ ...v, [activeBoard]: "kanban" }))}
@@ -224,7 +233,7 @@ export default function JobBoard() {
 
       {/* Board Tabs */}
       <div className="flex items-center gap-1 mb-3 shrink-0 border-b pb-0 overflow-x-auto">
-        {allowedBoards.map(board => {
+        {allTabs.map(board => {
           const Icon = BOARD_ICONS[board];
           const isActive = activeBoard === board;
           const count = filtered[board].length;
@@ -267,6 +276,9 @@ export default function JobBoard() {
           viewMode.Billing === "row"
             ? <PipelineRowView jobs={filtered.Billing} stages={BILLING_STAGES} board="Billing" />
             : <BillingBoard jobs={filtered.Billing} readOnly={isAccountant} />
+        )}
+        {activeBoard === "Closed Leads" && (
+          <ClosedLeadsBoard jobs={filtered["Closed Leads"]} />
         )}
       </div>
 
