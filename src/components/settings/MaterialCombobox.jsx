@@ -54,9 +54,13 @@ export default function MaterialCombobox({ materials, value, onChange, onAddNew 
                 className={`w-full text-left px-3 py-2 hover:bg-muted transition-colors flex items-center justify-between gap-2 ${value === m.id ? "bg-muted" : ""}`}
               >
                 <span className="text-sm truncate">{m.name}</span>
-                {m.component_type && m.component_type !== "Other" && (
-                  <Badge variant="outline" className="text-[10px] shrink-0">{m.component_type}</Badge>
-                )}
+                <span className="flex items-center gap-1 shrink-0">
+                  {(Array.isArray(m.component_type) ? m.component_type : (m.component_type ? [m.component_type] : []))
+                    .filter(u => u && u !== "Other")
+                    .map(u => (
+                      <Badge key={u} variant="outline" className="text-[10px] shrink-0">{u}</Badge>
+                    ))}
+                </span>
               </button>
             ))
           )}

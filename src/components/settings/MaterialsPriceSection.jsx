@@ -4,15 +4,14 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Save, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { DEFAULT_MATERIALS } from "@/lib/railingData";
 import AddMaterialDialog from "./AddMaterialDialog";
 import CategorySelect from "./CategorySelect";
+import ComponentUseSelect from "./ComponentUseSelect";
 
 const CATEGORIES = ["Square Tube", "Rectangle Tube", "Flat Bar", "HR Channel", "Angle", "Round Bar", "Stair", "Other"];
-const COMPONENT_TYPES = ["Top Rail", "Bottom Rail", "Post", "Picket", "Cap", "Other"];
 
 export default function MaterialsPriceSection() {
   const qc = useQueryClient();
@@ -41,7 +40,7 @@ export default function MaterialsPriceSection() {
           base44.entities.MaterialPriceList.create({
             name: m.name,
             category: m.category,
-            component_type: "Other",
+            component_type: ["Other"],
             cost_per_foot: m.costPerFoot,
             organization_id: orgId,
           })
@@ -94,10 +93,18 @@ export default function MaterialsPriceSection() {
   }
 
   const allCategories = [...new Set([...CATEGORIES, ...materials.map(m => m.category).filter(Boolean)])];
+  const allComponentUses = [...new Set(materials.flatMap(m => Array.isArray(m.component_type) ? m.component_type : (m.component_type ? [m.component_type] : [])))];
   const grouped = allCategories.reduce((acc, cat) => {
     acc[cat] = materials.filter(m => (m.category || "Other") === cat);
     return acc;
   }, {});
+
+  const getUses = (mat) => {
+    const v = edits[mat.id]?.component_type !== undefined ? edits[mat.id].component_type : mat.component_type;
+    if (Array.isArray(v)) return v;
+    if (v) return [v];
+    return [];
+  };
 
   return (
     <div className="space-y-4">
@@ -151,13 +158,12 @@ export default function MaterialsPriceSection() {
                         onChange={v => setField(mat.id, "category", v)}
                         className="h-7"
                       />
-                      <Select
-                        value={getField(mat, "component_type")}
-                        onValueChange={v => setField(mat.id, "component_type", v)}
-                      >
-                        <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>{COMPONENT_TYPES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                      </Select>
+                      <ComponentUseSelect
+                        value={getUses(mat)}
+                        onChange={v => setField(mat.id, "component_type", v)}
+                        options={allComponentUses}
+                        className="h-7"
+                      />
                       <div className="flex items-center gap-1">
                         {isMissing && !dirty && <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />}
                         <Input

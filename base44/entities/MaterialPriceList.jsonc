@@ -16,17 +16,14 @@
       "description": "Material category \u2014 used to group materials in Settings. Org can add new categories freely."
     },
     "component_type": {
-      "type": "string",
-      "enum": [
-        "Top Rail",
-        "Bottom Rail",
-        "Post",
-        "Picket",
-        "Cap",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
         "Other"
       ],
-      "default": "Other",
-      "description": "Which part of a railing this material typically serves as (display-only spec; pricing is handled by the Service Catalog cost model)"
+      "description": "Which part(s) of a railing this material can serve as (multi-select, display-only spec; pricing is handled by the Service Catalog cost model). Values are free-form strings \u2014 defaults come from the shared DEFAULT_COMPONENT_TYPES constant; orgs can add their own via the '+ Add new use' option."
     },
     "cost_per_foot": {
       "type": "number",

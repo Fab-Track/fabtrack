@@ -4,16 +4,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import CategorySelect from "./CategorySelect";
+import ComponentUseSelect from "./ComponentUseSelect";
 
 const CATEGORIES = ["Square Tube", "Rectangle Tube", "Flat Bar", "HR Channel", "Angle", "Round Bar", "Stair", "Other"];
-const COMPONENT_TYPES = ["Top Rail", "Bottom Rail", "Post", "Picket", "Cap", "Other"];
 
 export default function AddMaterialDialog({ open, onOpenChange, orgId, onCreated }) {
-  const [form, setForm] = useState({ name: "", category: "Other", component_type: "Other", cost_per_foot: "" });
+  const [form, setForm] = useState({ name: "", category: "Other", component_type: ["Other"], cost_per_foot: "" });
   const [saving, setSaving] = useState(false);
 
   const { data: existingMaterials = [] } = useQuery({
@@ -37,7 +36,7 @@ export default function AddMaterialDialog({ open, onOpenChange, orgId, onCreated
         organization_id: orgId,
       });
       onCreated?.(created);
-      setForm({ name: "", category: "Other", component_type: "Other", cost_per_foot: "" });
+      setForm({ name: "", category: "Other", component_type: ["Other"], cost_per_foot: "" });
       onOpenChange(false);
       toast.success("Material added");
     } catch {
@@ -69,10 +68,11 @@ export default function AddMaterialDialog({ open, onOpenChange, orgId, onCreated
             </div>
             <div>
               <Label className="text-xs">Component Type</Label>
-              <Select value={form.component_type} onValueChange={v => set("component_type", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{COMPONENT_TYPES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
+              <ComponentUseSelect
+                value={form.component_type}
+                onChange={v => set("component_type", v)}
+                options={[...new Set(existingMaterials.flatMap(m => Array.isArray(m.component_type) ? m.component_type : (m.component_type ? [m.component_type] : [])))]}
+              />
             </div>
           </div>
           <div>
