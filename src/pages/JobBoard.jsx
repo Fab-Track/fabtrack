@@ -251,7 +251,7 @@ export default function JobBoard() {
               }`}
             >
               <Icon className="w-4 h-4" />
-              <span>{board} Flow</span>
+              <span>{board} Pipeline</span>
               <span className={`text-xs px-1.5 py-0.5 rounded-full ${isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
                 {count}
               </span>
