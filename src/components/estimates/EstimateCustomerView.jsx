@@ -13,23 +13,7 @@ const STATUS_COLORS = {
   Rejected: "bg-red-100 text-red-800",
 };
 
-const DEFAULT_CONTRACT = `TERMS AND CONDITIONS
-
-By signing this estimate, you ("Customer") agree to authorize High Country Metal Works ("Company") to proceed with the scope of work described above at the agreed-upon price.
-
-1. SCOPE OF WORK — Work is limited to the items described in this estimate. Any changes must be submitted as a written Change Order and approved by both parties before additional work begins.
-
-2. PAYMENT TERMS — A 50% deposit is due before fabrication begins. The remaining 50% balance is due upon project completion, before or at the time of installation.
-
-3. MATERIALS — All materials will be sourced and fabricated by the Company. Substitutions may occur if materials are unavailable, with equivalent quality maintained.
-
-4. TIMELINE — Project timelines are estimates only. The Company is not liable for delays caused by supply chain issues, weather, or circumstances outside our control.
-
-5. WARRANTIES — The Company warrants all workmanship for one (1) year from the date of installation. Material warranties are subject to manufacturer terms.
-
-6. APPROVAL — Your digital signature below constitutes a legally binding agreement to the terms above and authorizes the Company to begin work upon receipt of the required deposit.`;
-
-export default function EstimateCustomerView({ estimate, job, customer, businessInfo, onApprove, onRequestChanges, contractText }) {
+export default function EstimateCustomerView({ estimate, job, customer, businessInfo, onApprove, onRequestChanges }) {
   const [showAcceptFlow, setShowAcceptFlow] = useState(false);
   const [typedName, setTypedName] = useState("");
 
@@ -46,8 +30,6 @@ export default function EstimateCustomerView({ estimate, job, customer, business
   const afterOverhead = afterMarkup + overheadAmt;
   const taxAmt = afterOverhead * ((estimate?.tax_percent || 0) / 100);
   const total = afterOverhead + taxAmt;
-
-  const contractBody = contractText || DEFAULT_CONTRACT;
 
   function handleSubmit() {
     if (!typedName.trim()) return;
@@ -218,16 +200,6 @@ export default function EstimateCustomerView({ estimate, job, customer, business
 
         <Separator />
 
-        {/* ── Terms & Conditions — always visible ──────────────────── */}
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Terms &amp; Conditions</p>
-          <div className="border rounded-lg p-4 bg-muted/10 text-xs leading-relaxed whitespace-pre-wrap font-mono text-foreground">
-            {contractBody}
-          </div>
-        </div>
-
-        <Separator />
-
         {/* ── Signature Block ───────────────────────────────────────── */}
 
         {/* STATUS: Approved — show read-only signed record */}
@@ -302,7 +274,7 @@ export default function EstimateCustomerView({ estimate, job, customer, business
               <div className="space-y-4">
                 <div>
                   <p className="font-semibold text-sm mb-1">Sign Agreement</p>
-                  <p className="text-xs text-muted-foreground">Please scroll through the Terms &amp; Conditions above, then type your full name to sign.</p>
+                  <p className="text-xs text-muted-foreground">Please type your full name to sign and accept this estimate.</p>
                 </div>
                 <div className="space-y-4 max-w-sm">
                   <div className="space-y-1.5">

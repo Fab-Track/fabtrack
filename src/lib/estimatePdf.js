@@ -4,7 +4,7 @@ import { format, parseISO } from "date-fns";
 // Generates a formatted, paginated PDF of an estimate — mirrors the
 // EstimateCustomerView layout. Used so users can download a copy to email/text
 // to the customer manually.
-export function generateEstimatePDF({ estimate, job, customer, businessInfo, contractText }) {
+export function generateEstimatePDF({ estimate, job, customer, businessInfo }) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
   const pageW = 215.9;
   const pageH = 279.4;
@@ -225,28 +225,6 @@ export function generateEstimatePDF({ estimate, job, customer, businessInfo, con
     doc.text(noteLines, margin + 4, y + 12);
     y += noteH + 8;
   }
-
-  // Terms & Conditions
-  checkBreak(14);
-  doc.setFontSize(7.5);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(100, 110, 120);
-  doc.text("TERMS & CONDITIONS", margin, y);
-  y += 6;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.5);
-  doc.setTextColor(80, 90, 100);
-  const termsText = contractText || "";
-  if (termsText) {
-    const termsLines = doc.splitTextToSize(termsText, contentW);
-    termsLines.forEach(line => {
-      checkBreak(LINE_H + 1);
-      doc.text(line, margin, y);
-      y += LINE_H;
-    });
-  }
-
-  y += 6;
 
   // Signature block
   checkBreak(24);

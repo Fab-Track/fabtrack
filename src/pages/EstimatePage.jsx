@@ -762,7 +762,6 @@ export default function EstimatePage() {
                       job,
                       customer,
                       businessInfo: { address: "High Country Metal Works", phone: "" },
-                      contractText,
                     })}
                   >
                     <Download className="w-4 h-4" /> Download PDF
@@ -781,7 +780,6 @@ export default function EstimatePage() {
                   estimate={estimateForView}
                   job={job}
                   customer={customer}
-                  contractText={contractText}
                   onClose={() => setSendPanelOpen(false)}
                   onSent={(email) => {
                     setSendPanelOpen(false);
