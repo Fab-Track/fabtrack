@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { X, Send, Link, Check, Mail, MessageSquare } from "lucide-react";
+import { X, Send, Link, Check, Mail, MessageSquare, Download } from "lucide-react";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
+import { generateEstimatePDF } from "@/lib/estimatePdf";
 
 function getBillingEmail(customer) {
   if (!customer) return "";
@@ -25,7 +26,7 @@ function getShareableLink(estimate) {
 
 const METHODS = ["email", "text", "both"];
 
-export default function SendEstimatePanel({ estimate, job, customer, onClose, onSent }) {
+export default function SendEstimatePanel({ estimate, job, customer, contractText, onClose, onSent }) {
   const { user } = useAuth();
   const orgName = user?.organization_name || "";
   const firstName = customer?.name?.split(" ")[0] || customer?.name || "there";
@@ -176,6 +177,17 @@ export default function SendEstimatePanel({ estimate, job, customer, onClose, on
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Link className="w-3.5 h-3.5" />}
             {copied ? "Copied!" : "Copy Shareable Link"}
+          </button>
+        </div>
+
+        {/* Download PDF */}
+        <div className="pt-1">
+          <button
+            onClick={() => generateEstimatePDF({ estimate, job, customer, contractText })}
+            className="w-full flex items-center justify-center gap-2 border rounded-md px-3 py-2 text-xs hover:bg-muted transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Download PDF
           </button>
         </div>
       </div>

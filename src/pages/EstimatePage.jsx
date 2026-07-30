@@ -23,6 +23,8 @@ import RailingInlineCalc from "@/components/estimates/RailingInlineCalc";
 import StaircaseInlineCalc from "@/components/estimates/StaircaseInlineCalc";
 import EstimateCustomerView from "@/components/estimates/EstimateCustomerView";
 import SendEstimatePanel from "@/components/estimates/SendEstimatePanel";
+import { generateEstimatePDF } from "@/lib/estimatePdf";
+import { Download } from "lucide-react";
 
 const CATEGORIES = ["Labor", "Material", "Equipment", "Sub-contractor", "Other"];
 const INSTALL_LOCATIONS = [
@@ -750,6 +752,22 @@ export default function EstimatePage() {
           <TabsContent value="customer" className="mt-0">
             <div className="relative">
               <div className="max-w-4xl mx-auto px-4 py-8">
+                <div className="flex justify-end mb-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() => generateEstimatePDF({
+                      estimate: estimateForView,
+                      job,
+                      customer,
+                      businessInfo: { address: "High Country Metal Works", phone: "" },
+                      contractText,
+                    })}
+                  >
+                    <Download className="w-4 h-4" /> Download PDF
+                  </Button>
+                </div>
                 <EstimateCustomerView
                   estimate={estimateForView}
                   job={job}
@@ -763,6 +781,7 @@ export default function EstimatePage() {
                   estimate={estimateForView}
                   job={job}
                   customer={customer}
+                  contractText={contractText}
                   onClose={() => setSendPanelOpen(false)}
                   onSent={(email) => {
                     setSendPanelOpen(false);
