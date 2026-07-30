@@ -13,6 +13,16 @@ import ComponentUseSelect from "./ComponentUseSelect";
 
 const CATEGORIES = ["Square Tube", "Rectangle Tube", "Flat Bar", "HR Channel", "Angle", "Round Bar", "Stair", "Other"];
 
+const GRID_COLS = "2fr 1.2fr 1.2fr 0.7fr 0.7fr 0.7fr 0.85fr 60px";
+
+// Auto-derive cost_per_foot when both stick cost and stock length are present.
+function deriveCostPerFoot(stick, stock) {
+  if (stick > 0 && stock > 0) {
+    return Math.round((stick / stock) * 10000) / 10000;
+  }
+  return null;
+}
+
 export default function MaterialsPriceSection() {
   const qc = useQueryClient();
   const [orgId, setOrgId] = useState(null);
@@ -28,7 +38,7 @@ export default function MaterialsPriceSection() {
 
   const { data: materials = [], isLoading } = useQuery({
     queryKey: ["materialPriceList", orgId],
-    queryFn: () => orgId ? base44.entities.MaterialPriceList.filter({ organization_id: orgId }) : [],
+    queryFn: () => orgId ? base44.entities.MaterialPriceList.filter({ organization_id: orgId }, undefined, 500) : [],
     enabled: !!orgId,
   });
 
@@ -70,7 +80,17 @@ export default function MaterialsPriceSection() {
       if (e.name !== undefined) updates.name = e.name;
       if (e.category !== undefined) updates.category = e.category;
       if (e.component_type !== undefined) updates.component_type = e.component_type;
-      if (e.cost_per_foot !== undefined) updates.cost_per_foot = parseFloat(e.cost_per_foot) || 0;
+      if (e.stock_length_ft !== undefined) updates.stock_length_ft = parseFloat(e.stock_length_ft) || 0;
+      if (e.cost_per_stick !== undefined) updates.cost_per_stick = parseFloat(e.cost_per_stick) || 0;
+      if (e.weight_per_ft !== undefined) updates.weight_per_ft = parseFloat(e.weight_per_ft) || 0;
+      const stick = parseFloat(e.cost_per_stick !== undefined ? e.cost_per_stick : mat.cost_per_stick) || 0;
+      const stock = parseFloat(e.stock_length_ft !== undefined ? e.stock_length_ft : mat.stock_length_ft) || 0;
+      const derived = deriveCostPerFoot(stick, stock);
+      if (derived !== null) {
+        updates.cost_per_foot = derived;
+      } else if (e.cost_per_foot !== undefined) {
+        updates.cost_per_foot = parseFloat(e.cost_per_foot) || 0;
+      }
       await base44.entities.MaterialPriceList.update(mat.id, updates);
       qc.invalidateQueries({ queryKey: ["materialPriceList"] });
       setEdits(prev => { const n = { ...prev }; delete n[mat.id]; return n; });
@@ -131,22 +151,29 @@ export default function MaterialsPriceSection() {
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{cat}</h3>
               <div className="border rounded-lg overflow-hidden">
                 <div className="grid gap-2 px-3 py-2 bg-muted/40 border-b text-xs font-medium text-muted-foreground"
-                     style={{ gridTemplateColumns: "2fr 1.3fr 1.3fr 1fr 72px" }}>
+                     style={{ gridTemplateColumns: GRID_COLS }}>
                   <span>Material</span>
                   <span>Category</span>
                   <span>Component</span>
+                  <span>Stock (ft)</span>
+                  <span>$/stick</span>
+                  <span>lb/ft</span>
                   <span>$/ft</span>
                   <span></span>
                 </div>
                 {grouped[cat].map(mat => {
-                  const price = getField(mat, "cost_per_foot");
+                  const stick = parseFloat(getField(mat, "cost_per_stick")) || 0;
+                  const stock = parseFloat(getField(mat, "stock_length_ft")) || 0;
+                  const isAuto = stick > 0 && stock > 0;
+                  const autoCost = deriveCostPerFoot(stick, stock);
+                  const price = isAuto ? String(autoCost) : getField(mat, "cost_per_foot");
                   const parsedPrice = parseFloat(price);
                   const isMissing = !parsedPrice || parsedPrice <= 0;
                   const dirty = isDirty(mat);
                   return (
                     <div key={mat.id}
                       className="grid gap-2 px-3 py-2 border-b last:border-0 items-center"
-                      style={{ gridTemplateColumns: "2fr 1.3fr 1.3fr 1fr 72px" }}>
+                      style={{ gridTemplateColumns: GRID_COLS }}>
                       <Input
                         className="h-7 text-xs"
                         value={getField(mat, "name")}
@@ -164,15 +191,49 @@ export default function MaterialsPriceSection() {
                         options={allComponentUses}
                         className="h-7"
                       />
+                      <Input
+                        type="number"
+                        className="h-7 text-xs"
+                        step="0.01"
+                        value={getField(mat, "stock_length_ft")}
+                        onChange={e => setField(mat.id, "stock_length_ft", e.target.value)}
+                        placeholder="0"
+                      />
+                      <Input
+                        type="number"
+                        className="h-7 text-xs"
+                        step="0.01"
+                        value={getField(mat, "cost_per_stick")}
+                        onChange={e => setField(mat.id, "cost_per_stick", e.target.value)}
+                        placeholder="0.00"
+                      />
+                      <Input
+                        type="number"
+                        className="h-7 text-xs"
+                        step="0.0001"
+                        value={getField(mat, "weight_per_ft")}
+                        onChange={e => setField(mat.id, "weight_per_ft", e.target.value)}
+                        placeholder="0.00"
+                      />
                       <div className="flex items-center gap-1">
-                        {isMissing && !dirty && <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />}
-                        <Input
-                          type="number"
-                          className={`h-7 text-xs ${isMissing && !dirty ? "border-amber-400" : ""}`}
-                          step="0.0001"
-                          value={price}
-                          onChange={e => setField(mat.id, "cost_per_foot", e.target.value)}
-                        />
+                        {isMissing && !dirty && !isAuto && <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />}
+                        {isAuto ? (
+                          <div
+                            className="flex items-center gap-1 h-7 px-2 text-xs bg-muted rounded border border-dashed"
+                            title={`Auto-derived: $${autoCost} = $${stick} / ${stock} ft`}
+                          >
+                            <span className="tabular-nums">${autoCost.toFixed(4)}</span>
+                            <span className="text-[9px] uppercase tracking-wide text-muted-foreground">auto</span>
+                          </div>
+                        ) : (
+                          <Input
+                            type="number"
+                            className={`h-7 text-xs ${isMissing && !dirty ? "border-amber-400" : ""}`}
+                            step="0.0001"
+                            value={price}
+                            onChange={e => setField(mat.id, "cost_per_foot", e.target.value)}
+                          />
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
                         {dirty ? (

@@ -25,9 +25,24 @@
       ],
       "description": "Which part(s) of a railing this material can serve as (multi-select, display-only spec; pricing is handled by the Service Catalog cost model). Values are free-form strings \u2014 defaults come from the shared DEFAULT_COMPONENT_TYPES constant; orgs can add their own via the '+ Add new use' option."
     },
+    "stock_length_ft": {
+      "type": "number",
+      "default": 0,
+      "description": "Length a stick is ordered in, in feet (e.g. 24). When > 0 and cost_per_stick > 0, cost_per_foot is auto-derived."
+    },
+    "cost_per_stick": {
+      "type": "number",
+      "default": 0,
+      "description": "Purchase cost per stick in USD. When > 0 and stock_length_ft > 0, cost_per_foot is auto-derived."
+    },
+    "weight_per_ft": {
+      "type": "number",
+      "default": 0,
+      "description": "Weight in pounds per linear foot (from the steel table)."
+    },
     "cost_per_foot": {
       "type": "number",
-      "description": "Cost per linear foot in USD (legacy reference only \u2014 not used for pricing)",
+      "description": "Cost per linear foot in USD (legacy reference only \u2014 not used for pricing). Auto-derived from cost_per_stick / stock_length_ft when both are > 0; otherwise manually editable.",
       "default": 0
     }
   },
