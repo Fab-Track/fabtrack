@@ -40,11 +40,20 @@ export default function EstimateCustomerView({ estimate, job, customer, business
     <div className="max-w-3xl mx-auto bg-white rounded-xl border shadow-sm overflow-hidden">
       {/* Header */}
       <div className="bg-primary px-8 py-6 text-primary-foreground">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-xl font-bold">High Country Metal Works</h1>
-            {businessInfo?.address && <p className="text-sm opacity-80 mt-0.5">{businessInfo.address}</p>}
-            {businessInfo?.phone && <p className="text-sm opacity-80">{businessInfo.phone}</p>}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3 min-w-0">
+            {businessInfo?.logo_url && (
+              <img
+                src={businessInfo.logo_url}
+                alt={businessInfo?.name || "Company logo"}
+                className="h-12 w-auto max-w-[120px] object-contain rounded bg-white/95 p-1 shrink-0"
+              />
+            )}
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold">{businessInfo?.name || "High Country Metal Works"}</h1>
+              {businessInfo?.address && <p className="text-sm opacity-80 mt-0.5">{businessInfo.address}</p>}
+              {businessInfo?.phone && <p className="text-sm opacity-80">{formatPhoneDisplay(businessInfo.phone)}</p>}
+            </div>
           </div>
           <div className="text-right">
             <p className="text-sm font-semibold opacity-80">ESTIMATE</p>

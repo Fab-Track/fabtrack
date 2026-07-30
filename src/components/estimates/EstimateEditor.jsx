@@ -11,9 +11,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import AutoGrowTextarea from "@/components/ui/auto-grow-textarea";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, CheckCircle2, FileText, LayoutList, AlignJustify, AlertCircle, ImageOff, Image, Lock, Maximize2 } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, FileText, LayoutList, AlignJustify, AlertCircle, Lock, Maximize2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import AddLineItemWizard from "./AddLineItemWizard";
+import LineItemPhotoUpload from "./LineItemPhotoUpload";
 import LineItemCostBreakdown from "./LineItemCostBreakdown";
 import { useJobDetailConfig } from "@/hooks/useJobDetailConfig";
 import { toast } from "sonner";
@@ -439,19 +440,13 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                       )}
                       {(isLocked && !!estimate?.id) && <span className="w-7" />}
                     </div>
-                    {line.photo_url && (
-                      <div className="flex items-center gap-2 pl-1">
-                        <img src={line.photo_url} alt="" className="h-10 w-16 object-cover rounded border" />
-                        <button
-                          className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded border transition-colors ${line.show_photo !== false ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-border"}`}
-                          onClick={() => updateLine(idx, "show_photo", line.show_photo === false)}
-                          title="Toggle photo visibility on customer estimate"
-                        >
-                          {line.show_photo !== false ? <Image className="w-2.5 h-2.5" /> : <ImageOff className="w-2.5 h-2.5" />}
-                          {line.show_photo !== false ? "Show photo" : "Hide photo"}
-                        </button>
-                      </div>
-                    )}
+                    <LineItemPhotoUpload
+                      photoUrl={line.photo_url}
+                      showPhoto={line.show_photo}
+                      onChange={(url) => updateLine(idx, "photo_url", url)}
+                      onToggleShow={() => updateLine(idx, "show_photo", line.show_photo === false)}
+                      disabled={isLocked && !!estimate?.id}
+                    />
                     <LineItemCostBreakdown line={line} onMarkupChange={v => updateLine(idx, "_markup_multiplier", v)} disabled={isLocked && !!estimate?.id} />
                   </div>
                 ))}
@@ -537,18 +532,13 @@ export default function EstimateEditor({ estimate, job, onClose, onCreateDeposit
                         </Button>
                       )}
                     </div>
-                    {line.photo_url && (
-                      <div className="flex items-center gap-2">
-                        <img src={line.photo_url} alt="" className="h-12 w-20 object-cover rounded border" />
-                        <button
-                          className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${line.show_photo !== false ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-border"}`}
-                          onClick={() => updateLine(idx, "show_photo", line.show_photo === false)}
-                        >
-                          {line.show_photo !== false ? <Image className="w-3 h-3" /> : <ImageOff className="w-3 h-3" />}
-                          {line.show_photo !== false ? "Show photo" : "Hide photo"}
-                        </button>
-                      </div>
-                    )}
+                    <LineItemPhotoUpload
+                      photoUrl={line.photo_url}
+                      showPhoto={line.show_photo}
+                      onChange={(url) => updateLine(idx, "photo_url", url)}
+                      onToggleShow={() => updateLine(idx, "show_photo", line.show_photo === false)}
+                      disabled={isLocked && !!estimate?.id}
+                    />
                     <LineItemCostBreakdown line={line} onMarkupChange={v => updateLine(idx, "_markup_multiplier", v)} disabled={isLocked && !!estimate?.id} />
                   </div>
                 ))}

@@ -24,6 +24,7 @@ import StaircaseInlineCalc from "@/components/estimates/StaircaseInlineCalc";
 import EstimateCustomerView from "@/components/estimates/EstimateCustomerView";
 import SendEstimatePanel from "@/components/estimates/SendEstimatePanel";
 import { generateEstimatePDF } from "@/lib/estimatePdf";
+import LineItemPhotoUpload from "@/components/estimates/LineItemPhotoUpload";
 import { Download } from "lucide-react";
 
 const CATEGORIES = ["Labor", "Material", "Equipment", "Sub-contractor", "Other"];
@@ -47,6 +48,8 @@ const blankLine = () => ({
   unit: "ls",
   unit_cost: 0,
   total: 0,
+  photo_url: null,
+  show_photo: true,
   _is_railing: false,
   _railing_style: null,
   _is_staircase: false,
@@ -112,17 +115,20 @@ export default function EstimatePage() {
     enabled: !!job?.customer_id,
   });
 
+  const { data: org } = useQuery({
+    queryKey: ["organization", user?.organization_id],
+    queryFn: () => base44.entities.Organization.get(user.organization_id),
+    enabled: !!user?.organization_id,
+  });
+  const businessInfo = org
+    ? { name: org.name, logo_url: org.logo_url || null, address: org.address || null, phone: org.phone || null }
+    : { name: "High Country Metal Works", logo_url: null, address: null, phone: null };
+
   const { data: allEstimates = [] } = useQuery({
     queryKey: ["estimates", jobId],
     queryFn: () => base44.entities.Estimate.filter({ job_id: jobId }),
     enabled: !!jobId,
   });
-
-  const { data: contractSettings = [] } = useQuery({
-    queryKey: ["appSettings", "estimate_settings"],
-    queryFn: () => base44.entities.AppSettings.filter({ setting_key: "estimate_settings" }),
-  });
-  const contractText = contractSettings[0]?.estimate_contract_text || null;
 
   // Populate form from existing estimate
   useEffect(() => {
@@ -509,6 +515,16 @@ export default function EstimatePage() {
                             </Button>
                           </div>
 
+                          {/* Reference photo — shown to customer on the estimate */}
+                          <div className="ml-1 mr-8 mb-1">
+                            <LineItemPhotoUpload
+                              photoUrl={line.photo_url}
+                              showPhoto={line.show_photo}
+                              onChange={(url) => updateLine(idx, "photo_url", url)}
+                              onToggleShow={() => updateLine(idx, "show_photo", line.show_photo === false)}
+                            />
+                          </div>
+
                           {/* Inline Railing Calculator */}
                           {line._is_railing && (
                             <div className="ml-1 mr-8">
@@ -609,6 +625,14 @@ export default function EstimatePage() {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
+
+                      {/* Reference photo — shown to customer on the estimate */}
+                      <LineItemPhotoUpload
+                        photoUrl={line.photo_url}
+                        showPhoto={line.show_photo}
+                        onChange={(url) => updateLine(idx, "photo_url", url)}
+                        onToggleShow={() => updateLine(idx, "show_photo", line.show_photo === false)}
+                      />
 
                       {/* Inline calculators */}
                       {line._is_railing && (
@@ -761,7 +785,7 @@ export default function EstimatePage() {
                       estimate: estimateForView,
                       job,
                       customer,
-                      businessInfo: { address: "High Country Metal Works", phone: "" },
+                      businessInfo,
                     })}
                   >
                     <Download className="w-4 h-4" /> Download PDF
@@ -771,8 +795,7 @@ export default function EstimatePage() {
                   estimate={estimateForView}
                   job={job}
                   customer={customer}
-                  businessInfo={{ address: "High Country Metal Works", phone: "" }}
-                  contractText={contractText}
+                  businessInfo={businessInfo}
                 />
               </div>
               {sendPanelOpen && (
@@ -780,6 +803,7 @@ export default function EstimatePage() {
                   estimate={estimateForView}
                   job={job}
                   customer={customer}
+                  businessInfo={businessInfo}
                   onClose={() => setSendPanelOpen(false)}
                   onSent={(email) => {
                     setSendPanelOpen(false);

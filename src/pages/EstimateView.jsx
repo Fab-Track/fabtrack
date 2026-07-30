@@ -26,7 +26,7 @@ export default function EstimateView() {
   const estimate = data?.document;
   const job = data?.job;
   const customer = data?.customer;
-  const contractText = data?.contract_text || null;
+  const businessInfo = data?.business_info || { name: "High Country Metal Works", address: null, phone: null };
 
   const approve = useMutation({
     mutationFn: (customerName) => base44.functions.invoke("approvePublicEstimate", { token, customerName }),
@@ -64,9 +64,8 @@ export default function EstimateView() {
         estimate={estimate}
         job={job}
         customer={customer}
-        businessInfo={{ address: "High Country Metal Works", phone: "" }}
+        businessInfo={businessInfo}
         onApprove={(name) => approve.mutate(name)}
-        contractText={contractText}
       />
       {approve.isPending && (
         <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">

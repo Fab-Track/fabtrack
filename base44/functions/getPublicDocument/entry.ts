@@ -41,6 +41,7 @@ Deno.serve(async (req) => {
     }
 
     let contractText = null;
+    let businessInfo = null;
     if (doc.organization_id) {
       try {
         const settings = await base44.asServiceRole.entities.AppSettings.filter({
@@ -50,6 +51,19 @@ Deno.serve(async (req) => {
         contractText = settings[0]?.estimate_contract_text || null;
       } catch {
         contractText = null;
+      }
+      try {
+        const org = await base44.asServiceRole.entities.Organization.get(doc.organization_id);
+        businessInfo = {
+          name: org?.name || null,
+          logo_url: org?.logo_url || null,
+          address: org?.address || null,
+          phone: org?.phone || null,
+          email: org?.email || null,
+          website: org?.website || null,
+        };
+      } catch {
+        businessInfo = null;
       }
     }
 
@@ -116,6 +130,7 @@ Deno.serve(async (req) => {
       job: jobSubset,
       customer: customerSubset,
       contract_text: contractText,
+      business_info: businessInfo,
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

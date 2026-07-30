@@ -4,7 +4,7 @@ import { format, parseISO } from "date-fns";
 // Generates a formatted, paginated PDF of an estimate — mirrors the
 // EstimateCustomerView layout. Used so users can download a copy to email/text
 // to the customer manually.
-export function generateEstimatePDF({ estimate, job, customer, businessInfo }) {
+export async function generateEstimatePDF({ estimate, job, customer, businessInfo }) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
   const pageW = 215.9;
   const pageH = 279.4;
@@ -32,6 +32,29 @@ export function generateEstimatePDF({ estimate, job, customer, businessInfo }) {
   const taxPct = estimate?.tax_percent || 0;
   const taxAmt = afterOverhead * (taxPct / 100);
   const total = afterOverhead + taxAmt;
+  const companyTitle = businessInfo?.name || "High Country Metal Works";
+
+  // Load org logo (if any) for embedding in the PDF header
+  let logoDataUrl = null;
+  let logoProps = null;
+  if (businessInfo?.logo_url) {
+    try {
+      const res = await fetch(businessInfo.logo_url, { mode: "cors" });
+      if (res.ok) {
+        const blob = await res.blob();
+        logoDataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        logoProps = doc.getImageProperties(logoDataUrl);
+      }
+    } catch {
+      logoDataUrl = null;
+      logoProps = null;
+    }
+  }
 
   function drawContinuationHeader() {
     doc.setFillColor(34, 47, 62);
@@ -39,7 +62,7 @@ export function generateEstimatePDF({ estimate, job, customer, businessInfo }) {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.text("High Country Metal Works", margin, 9);
+    doc.text(companyTitle, margin, 9);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(200, 210, 220);
@@ -59,18 +82,48 @@ export function generateEstimatePDF({ estimate, job, customer, businessInfo }) {
   // Page 1 header
   doc.setFillColor(34, 47, 62);
   doc.rect(0, 0, pageW, 38, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("High Country Metal Works", margin, 16);
-  if (businessInfo?.address) {
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(200, 210, 220);
-    doc.text(businessInfo.address, margin, 22);
-  }
-  if (businessInfo?.phone) {
-    doc.text(businessInfo.phone, margin, 27);
+
+  let textX = margin;
+  if (logoDataUrl && logoProps) {
+    const maxH = 20;
+    const maxW = 42;
+    const ratio = logoProps.width / logoProps.height;
+    let lh = maxH;
+    let lw = lh * ratio;
+    if (lw > maxW) { lw = maxW; lh = lw / ratio; }
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin, 9, lw + 4, lh + 4, 1.5, 1.5, "F");
+    doc.addImage(logoDataUrl, logoProps.fileType || "PNG", margin + 2, 11, lw, lh);
+    textX = margin + lw + 8;
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.text(companyTitle, textX, 17);
+    let detailY = 23;
+    if (businessInfo?.address) {
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(200, 210, 220);
+      doc.text(doc.splitTextToSize(businessInfo.address, 70), textX, detailY);
+      detailY += 5;
+    }
+    if (businessInfo?.phone) {
+      doc.text(businessInfo.phone, textX, detailY);
+    }
+  } else {
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(companyTitle, margin, 16);
+    if (businessInfo?.address) {
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(200, 210, 220);
+      doc.text(businessInfo.address, margin, 22);
+    }
+    if (businessInfo?.phone) {
+      doc.text(businessInfo.phone, margin, 27);
+    }
   }
 
   doc.setFontSize(8);
