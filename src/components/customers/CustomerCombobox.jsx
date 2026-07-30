@@ -85,7 +85,11 @@ function NewCustomerModal({ open, onClose, onCreated }) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Homeowner">Homeowner</SelectItem>
-                <SelectItem value="General Contractor">Contractor</SelectItem>
+                <SelectItem value="General Contractor">General Contractor</SelectItem>
+                <SelectItem value="Builder / Developer">Builder / Developer</SelectItem>
+                <SelectItem value="Commercial Business">Commercial Business</SelectItem>
+                <SelectItem value="Subcontractor">Subcontractor</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>
