@@ -22,6 +22,7 @@ export const OUTCOME_REASONS = {
     { id: "lost_dark", label: "Non-Responsive / Went Dark" },
     { id: "lost_diy", label: "Chose to DIY / In-House" },
     { id: "lost_cancelled", label: "Project Cancelled / Fell Through" },
+    { id: "lost_lead_time", label: "Too Short of Lead Time" },
   ],
   Unqualified: [
     { id: "unq_area", label: "Unqualified — Out of Service Area" },
@@ -57,15 +58,19 @@ export default function CloseLeadModal({ open, onClose, job }) {
   const [notes, setNotes] = useState("");
   const [otherReasonText, setOtherReasonText] = useState("");
   const [followUpDate, setFollowUpDate] = useState(null);
+  const [leadTimeWeeks, setLeadTimeWeeks] = useState("");
   const qc = useQueryClient();
 
   const requiresFollowUp = reasonId === "hold_follow_up";
+  const requiresLeadTime = reasonId === "lost_lead_time";
   const isFreeText = IS_FREE_TEXT_OUTCOME(outcomeCategory);
 
   const closeMutation = useMutation({
     mutationFn: () => {
       const reason = OUTCOME_REASONS[outcomeCategory]?.find(r => r.id === reasonId);
       const isWon = outcomeCategory === "Won";
+      const leadTimeNote = requiresLeadTime && leadTimeWeeks ? `Needed lead time: ${leadTimeWeeks} weeks` : "";
+      const combinedNotes = [leadTimeNote, notes].filter(Boolean).join("\n");
       const update = {
         lead_outcome: isFreeText ? (otherReasonText || outcomeCategory) : (reason?.label || outcomeCategory),
         lead_outcome_category: outcomeCategory,
@@ -73,7 +78,7 @@ export default function CloseLeadModal({ open, onClose, job }) {
         lead_lost_to: ["lost_price_competitor", "lost_price_expensive"].includes(reasonId) ? (lostTo || null) : null,
         lead_closed_at: new Date().toISOString(),
         is_lead_closed: !isWon,
-        close_notes: notes || null,
+        close_notes: combinedNotes || null,
       };
       // Won leads move to "Deposit Received / Sale Won" instead of being archived
       if (isWon) {
@@ -103,6 +108,7 @@ export default function CloseLeadModal({ open, onClose, job }) {
     setNotes("");
     setOtherReasonText("");
     setFollowUpDate(null);
+    setLeadTimeWeeks("");
     onClose();
   }
 
@@ -111,7 +117,7 @@ export default function CloseLeadModal({ open, onClose, job }) {
   const isValid = outcomeCategory && (
     isFreeText
       ? otherReasonText.trim().length > 0
-      : (reasonId && (!requiresFollowUp || (requiresFollowUp && followUpDate)))
+      : (reasonId && (!requiresFollowUp || (requiresFollowUp && followUpDate)) && (!requiresLeadTime || (requiresLeadTime && leadTimeWeeks)))
   );
 
   return (
@@ -160,7 +166,7 @@ export default function CloseLeadModal({ open, onClose, job }) {
           ) : reasons.length > 0 && (
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Reason</Label>
-              <Select value={reasonId} onValueChange={(v) => { setReasonId(v); if (v !== "hold_follow_up") setFollowUpDate(null); }}>
+              <Select value={reasonId} onValueChange={(v) => { setReasonId(v); if (v !== "hold_follow_up") setFollowUpDate(null); if (v !== "lost_lead_time") setLeadTimeWeeks(""); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select reason…" />
                 </SelectTrigger>
@@ -183,6 +189,23 @@ export default function CloseLeadModal({ open, onClose, job }) {
                 placeholder="Competitor name or alternative…"
                 className="text-sm"
               />
+            </div>
+          )}
+
+          {/* Needed Lead Time (dependent on lost_lead_time reason) */}
+          {requiresLeadTime && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Needed Lead Time <span className="text-destructive">*</span></Label>
+              <Select value={leadTimeWeeks} onValueChange={setLeadTimeWeeks}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select lead time…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["3 weeks", "4 weeks", "5 weeks", "6 weeks"].map(lt => (
+                    <SelectItem key={lt} value={lt.replace(" weeks", "")}>{lt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
