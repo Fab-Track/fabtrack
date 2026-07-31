@@ -68,6 +68,53 @@ export default function MaterialsPriceSection() {
     }
   }, [steelSettingsArr]);
 
+  // Org-level railing dimension standards (residential / commercial)
+  const [railingStd, setRailingStd] = useState({ res_post_height_in: "", res_picket_length_in: "", comm_post_height_in: "", comm_picket_length_in: "" });
+  const [railingStdDirty, setRailingStdDirty] = useState(false);
+  const [savingRailingStd, setSavingRailingStd] = useState(false);
+
+  const { data: railingStdArr = [] } = useQuery({
+    queryKey: ["appSettings", "railing_standards", orgId],
+    queryFn: () => orgId ? base44.entities.AppSettings.filter({ setting_key: "railing_standards", organization_id: orgId }, undefined, 1) : [],
+    enabled: !!orgId,
+  });
+
+  useEffect(() => {
+    const r = railingStdArr[0];
+    setRailingStd({
+      res_post_height_in: String(r?.res_post_height_in ?? 36),
+      res_picket_length_in: String(r?.res_picket_length_in ?? 29.5),
+      comm_post_height_in: String(r?.comm_post_height_in ?? 43),
+      comm_picket_length_in: String(r?.comm_picket_length_in ?? 36.5),
+    });
+    setRailingStdDirty(false);
+  }, [railingStdArr]);
+
+  async function saveRailingStandards() {
+    if (!orgId) return;
+    setSavingRailingStd(true);
+    try {
+      const val = {
+        res_post_height_in: parseFloat(railingStd.res_post_height_in) || 0,
+        res_picket_length_in: parseFloat(railingStd.res_picket_length_in) || 0,
+        comm_post_height_in: parseFloat(railingStd.comm_post_height_in) || 0,
+        comm_picket_length_in: parseFloat(railingStd.comm_picket_length_in) || 0,
+      };
+      const existing = railingStdArr[0];
+      if (existing) {
+        await base44.entities.AppSettings.update(existing.id, val);
+      } else {
+        await base44.entities.AppSettings.create({ organization_id: orgId, setting_key: "railing_standards", ...val });
+      }
+      qc.invalidateQueries({ queryKey: ["appSettings", "railing_standards"] });
+      setRailingStdDirty(false);
+      toast.success("Railing standards saved");
+    } catch {
+      toast.error("Failed to save railing standards");
+    }
+    setSavingRailingStd(false);
+  }
+
   useEffect(() => {
     if (!isLoading && materials.length === 0 && !seeded && orgId) {
       setSeeded(true);
@@ -217,6 +264,49 @@ export default function MaterialsPriceSection() {
         >
           <Save className="w-3.5 h-3.5" /> {savingSteel ? "Saving…" : "Save"}
         </Button>
+      </div>
+
+      {/* Org-level railing dimension standards (residential / commercial) */}
+      <div className="border rounded-lg p-3 bg-muted/20 space-y-3">
+        <div>
+          <p className="text-sm font-semibold">Railing Standards</p>
+          <p className="text-[11px] text-muted-foreground">
+            Default post heights and picket lengths applied at estimate time.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Residential</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Post height (in)</Label>
+                <Input type="number" step="0.01" className="h-9 text-sm" value={railingStd.res_post_height_in} onChange={e => { setRailingStd(s => ({ ...s, res_post_height_in: e.target.value })); setRailingStdDirty(true); }} />
+              </div>
+              <div>
+                <Label className="text-xs">Picket length (in)</Label>
+                <Input type="number" step="0.01" className="h-9 text-sm" value={railingStd.res_picket_length_in} onChange={e => { setRailingStd(s => ({ ...s, res_picket_length_in: e.target.value })); setRailingStdDirty(true); }} />
+              </div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Commercial</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Post height (in)</Label>
+                <Input type="number" step="0.01" className="h-9 text-sm" value={railingStd.comm_post_height_in} onChange={e => { setRailingStd(s => ({ ...s, comm_post_height_in: e.target.value })); setRailingStdDirty(true); }} />
+              </div>
+              <div>
+                <Label className="text-xs">Picket length (in)</Label>
+                <Input type="number" step="0.01" className="h-9 text-sm" value={railingStd.comm_picket_length_in} onChange={e => { setRailingStd(s => ({ ...s, comm_picket_length_in: e.target.value })); setRailingStdDirty(true); }} />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <Button size="sm" className="gap-1.5" disabled={!railingStdDirty || savingRailingStd} onClick={saveRailingStandards}>
+            <Save className="w-3.5 h-3.5" /> {savingRailingStd ? "Saving…" : "Save"}
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
