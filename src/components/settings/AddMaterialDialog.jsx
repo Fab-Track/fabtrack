@@ -11,8 +11,8 @@ import ComponentUseSelect from "./ComponentUseSelect";
 
 const CATEGORIES = ["Square Tube", "Rectangle Tube", "Flat Bar", "HR Channel", "Angle", "Round Bar", "Stair", "Other"];
 
-export default function AddMaterialDialog({ open, onOpenChange, orgId, onCreated }) {
-  const [form, setForm] = useState({ name: "", category: "Other", component_type: ["Other"], cost_per_foot: "", stock_length_ft: "", cost_per_stick: "", weight_per_ft: "" });
+export default function AddMaterialDialog({ open, onOpenChange, orgId, orgSteelPrice = 0, onCreated }) {
+  const [form, setForm] = useState({ name: "", category: "Other", component_type: ["Other"], cost_per_foot: "", stock_length_ft: "", cost_per_stick: "", weight_per_ft: "", price_per_lb_override: "" });
   const [saving, setSaving] = useState(false);
 
   const stickVal = parseFloat(form.cost_per_stick) || 0;
@@ -43,11 +43,12 @@ export default function AddMaterialDialog({ open, onOpenChange, orgId, onCreated
         stock_length_ft: parseFloat(form.stock_length_ft) || 0,
         cost_per_stick: parseFloat(form.cost_per_stick) || 0,
         weight_per_ft: parseFloat(form.weight_per_ft) || 0,
+        price_per_lb_override: (() => { const n = parseFloat(form.price_per_lb_override); return isNaN(n) || n <= 0 ? null : n; })(),
         cost_per_foot: costPerFoot,
         organization_id: orgId,
       });
       onCreated?.(created);
-      setForm({ name: "", category: "Other", component_type: ["Other"], cost_per_foot: "", stock_length_ft: "", cost_per_stick: "", weight_per_ft: "" });
+      setForm({ name: "", category: "Other", component_type: ["Other"], cost_per_foot: "", stock_length_ft: "", cost_per_stick: "", weight_per_ft: "", price_per_lb_override: "" });
       onOpenChange(false);
       toast.success("Material added");
     } catch {
@@ -117,6 +118,16 @@ export default function AddMaterialDialog({ open, onOpenChange, orgId, onCreated
                 placeholder="0.00"
               />
             </div>
+          </div>
+          <div>
+            <Label className="text-xs">$ /lb override <span className="text-muted-foreground">(optional)</span></Label>
+            <Input
+              type="number"
+              step="0.01"
+              value={form.price_per_lb_override}
+              onChange={e => set("price_per_lb_override", e.target.value)}
+              placeholder={orgSteelPrice > 0 ? `→ $${orgSteelPrice}` : "uses org price"}
+            />
           </div>
           <div>
             <Label className="text-xs">Cost / linear ft <span className="text-muted-foreground">(reference only — not used for pricing)</span></Label>

@@ -78,6 +78,11 @@
       "default": 0,
       "description": "Global install labor rate ($/hour) used by the Service Catalog cost model"
     },
+    "steel_price_per_lb": {
+      "type": "number",
+      "default": 0,
+      "description": "Org-level steel price per pound ($/lb). Used as the fallback $/lb for materials that do not set a per-material price_per_lb_override."
+    },
     "stripe_secret_key": {
       "type": "string",
       "description": "Stripe secret key (sk_live_... or sk_test_...)"

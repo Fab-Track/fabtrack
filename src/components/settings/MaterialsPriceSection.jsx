@@ -13,7 +13,8 @@ import ComponentUseSelect from "./ComponentUseSelect";
 
 const CATEGORIES = ["Square Tube", "Rectangle Tube", "Flat Bar", "HR Channel", "Angle", "Round Bar", "Stair", "Other"];
 
-const GRID_COLS = "2fr 1.2fr 1.2fr 0.7fr 0.7fr 0.7fr 0.85fr 60px";
+// Material | Category | Component | Stock | $/stick | lb/ft | $/lb override | $/ft | actions
+const GRID_COLS = "2fr 1.1fr 1.1fr 0.6fr 0.6fr 0.6fr 0.75fr 0.8fr 56px";
 
 // Auto-derive cost_per_foot when both stick cost and stock length are present.
 function deriveCostPerFoot(stick, stock) {
@@ -21,6 +22,12 @@ function deriveCostPerFoot(stick, stock) {
     return Math.round((stick / stock) * 10000) / 10000;
   }
   return null;
+}
+
+// Normalize an override edit to a stored value: empty/0/NaN → null (meaning "use org price").
+function normalizeOverride(raw) {
+  const n = parseFloat(raw);
+  return isNaN(n) || n <= 0 ? null : n;
 }
 
 export default function MaterialsPriceSection() {
@@ -32,6 +39,11 @@ export default function MaterialsPriceSection() {
   const [savingId, setSavingId] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
 
+  // Org-level steel price per pound (lives on a dedicated AppSettings row).
+  const [steelPrice, setSteelPrice] = useState("");
+  const [steelDirty, setSteelDirty] = useState(false);
+  const [savingSteel, setSavingSteel] = useState(false);
+
   useEffect(() => {
     base44.auth.me().then(u => setOrgId(u?.organization_id || null)).catch(() => {});
   }, []);
@@ -41,6 +53,20 @@ export default function MaterialsPriceSection() {
     queryFn: () => orgId ? base44.entities.MaterialPriceList.filter({ organization_id: orgId }, undefined, 500) : [],
     enabled: !!orgId,
   });
+
+  const { data: steelSettingsArr = [] } = useQuery({
+    queryKey: ["appSettings", "steel_price_per_lb", orgId],
+    queryFn: () => orgId ? base44.entities.AppSettings.filter({ setting_key: "steel_price_per_lb", organization_id: orgId }, undefined, 1) : [],
+    enabled: !!orgId,
+  });
+  const orgSteelPrice = steelSettingsArr[0]?.steel_price_per_lb ?? 0;
+
+  useEffect(() => {
+    if (steelSettingsArr.length > 0 && steelSettingsArr[0].steel_price_per_lb !== undefined) {
+      setSteelPrice(String(steelSettingsArr[0].steel_price_per_lb ?? ""));
+      setSteelDirty(false);
+    }
+  }, [steelSettingsArr]);
 
   useEffect(() => {
     if (!isLoading && materials.length === 0 && !seeded && orgId) {
@@ -62,7 +88,7 @@ export default function MaterialsPriceSection() {
   const getField = (mat, field) => {
     return edits[mat.id]?.[field] !== undefined
       ? edits[mat.id][field]
-      : mat[field]?.toString() ?? "";
+      : mat[field] == null ? "" : mat[field].toString();
   };
 
   const setField = (id, field, value) => {
@@ -83,6 +109,7 @@ export default function MaterialsPriceSection() {
       if (e.stock_length_ft !== undefined) updates.stock_length_ft = parseFloat(e.stock_length_ft) || 0;
       if (e.cost_per_stick !== undefined) updates.cost_per_stick = parseFloat(e.cost_per_stick) || 0;
       if (e.weight_per_ft !== undefined) updates.weight_per_ft = parseFloat(e.weight_per_ft) || 0;
+      if (e.price_per_lb_override !== undefined) updates.price_per_lb_override = normalizeOverride(e.price_per_lb_override);
       const stick = parseFloat(e.cost_per_stick !== undefined ? e.cost_per_stick : mat.cost_per_stick) || 0;
       const stock = parseFloat(e.stock_length_ft !== undefined ? e.stock_length_ft : mat.stock_length_ft) || 0;
       const derived = deriveCostPerFoot(stick, stock);
@@ -99,6 +126,30 @@ export default function MaterialsPriceSection() {
       toast.error("Failed to update material");
     }
     setSavingId(null);
+  }
+
+  async function saveSteelPrice() {
+    if (!orgId) return;
+    setSavingSteel(true);
+    try {
+      const val = parseFloat(steelPrice) || 0;
+      const existing = steelSettingsArr[0];
+      if (existing) {
+        await base44.entities.AppSettings.update(existing.id, { steel_price_per_lb: val });
+      } else {
+        await base44.entities.AppSettings.create({
+          organization_id: orgId,
+          setting_key: "steel_price_per_lb",
+          steel_price_per_lb: val,
+        });
+      }
+      qc.invalidateQueries({ queryKey: ["appSettings", "steel_price_per_lb"] });
+      setSteelDirty(false);
+      toast.success("Steel price saved");
+    } catch {
+      toast.error("Failed to save steel price");
+    }
+    setSavingSteel(false);
   }
 
   async function handleDelete(mat) {
@@ -126,6 +177,8 @@ export default function MaterialsPriceSection() {
     return [];
   };
 
+  const overridePlaceholder = orgSteelPrice > 0 ? `→ $${orgSteelPrice}` : "uses org price";
+
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
@@ -137,6 +190,32 @@ export default function MaterialsPriceSection() {
         </div>
         <Button size="sm" className="gap-1.5 shrink-0" onClick={() => setAddOpen(true)}>
           <Plus className="w-4 h-4" /> Add Material
+        </Button>
+      </div>
+
+      {/* Org-level steel price per pound (fallback for per-material $/lb overrides) */}
+      <div className="border rounded-lg p-3 bg-muted/20 flex flex-wrap items-end gap-3">
+        <div className="flex-1 min-w-[200px]">
+          <Label className="text-xs">Steel price per pound ($/lb)</Label>
+          <p className="text-[11px] text-muted-foreground mb-1.5">
+            Org-level default. Materials use this unless they set their own $/lb override.
+          </p>
+          <Input
+            type="number"
+            step="0.01"
+            className="h-9 text-sm max-w-[160px]"
+            value={steelPrice}
+            onChange={e => { setSteelPrice(e.target.value); setSteelDirty(true); }}
+            placeholder="0.00"
+          />
+        </div>
+        <Button
+          size="sm"
+          className="gap-1.5"
+          disabled={!steelDirty || savingSteel}
+          onClick={saveSteelPrice}
+        >
+          <Save className="w-3.5 h-3.5" /> {savingSteel ? "Saving…" : "Save"}
         </Button>
       </div>
 
@@ -158,6 +237,7 @@ export default function MaterialsPriceSection() {
                   <span>Stock (ft)</span>
                   <span>$/stick</span>
                   <span>lb/ft</span>
+                  <span>$/lb override</span>
                   <span>$/ft</span>
                   <span></span>
                 </div>
@@ -214,6 +294,14 @@ export default function MaterialsPriceSection() {
                         value={getField(mat, "weight_per_ft")}
                         onChange={e => setField(mat.id, "weight_per_ft", e.target.value)}
                         placeholder="0.00"
+                      />
+                      <Input
+                        type="number"
+                        className="h-7 text-xs"
+                        step="0.01"
+                        value={getField(mat, "price_per_lb_override")}
+                        onChange={e => setField(mat.id, "price_per_lb_override", e.target.value)}
+                        placeholder={overridePlaceholder}
                       />
                       <div className="flex items-center gap-1">
                         {isMissing && !dirty && !isAuto && <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />}
@@ -278,6 +366,7 @@ export default function MaterialsPriceSection() {
         open={addOpen}
         onOpenChange={setAddOpen}
         orgId={orgId}
+        orgSteelPrice={orgSteelPrice}
         onCreated={() => qc.invalidateQueries({ queryKey: ["materialPriceList"] })}
       />
     </div>

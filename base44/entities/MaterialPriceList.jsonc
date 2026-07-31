@@ -40,6 +40,10 @@
       "default": 0,
       "description": "Weight in pounds per linear foot (from the steel table)."
     },
+    "price_per_lb_override": {
+      "type": "number",
+      "description": "Optional per-material steel price override ($/lb). When null/empty/0 the material falls back to the org-level steel_price_per_lb. Do not store 0 as a meaningful value."
+    },
     "cost_per_foot": {
       "type": "number",
       "description": "Cost per linear foot in USD (legacy reference only \u2014 not used for pricing). Auto-derived from cost_per_stick / stock_length_ft when both are > 0; otherwise manually editable.",
