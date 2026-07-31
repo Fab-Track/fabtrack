@@ -13,9 +13,6 @@ import ComponentUseSelect from "./ComponentUseSelect";
 
 const CATEGORIES = ["Square Tube", "Rectangle Tube", "Flat Bar", "HR Channel", "Angle", "Round Bar", "Stair", "Other"];
 
-// Material | Category | Component | Stock | $/stick | Wt/stick | lb/ft | Eff $/lb | $/lb override | $/ft | actions
-const GRID_COLS = "2fr 1.1fr 1.1fr 0.55fr 0.55fr 0.55fr 0.55fr 0.6fr 0.55fr 0.7fr 56px";
-
 // Auto-derive cost_per_foot when both stick cost and stock length are present.
 function deriveCostPerFoot(stick, stock) {
   if (stick > 0 && stock > 0) {
@@ -54,6 +51,17 @@ function effectivePerLb(stickCost, stickWeight, override, orgPrice) {
 function normalizeOverride(raw) {
   const n = parseFloat(raw);
   return isNaN(n) || n <= 0 ? null : n;
+}
+
+// Small labeled field wrapper used inside each material card.
+function Field({ label, children, hint }) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      {children}
+      {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
+    </div>
+  );
 }
 
 export default function MaterialsPriceSection() {
@@ -351,21 +359,7 @@ export default function MaterialsPriceSection() {
           {allCategories.filter(cat => grouped[cat]?.length > 0).map(cat => (
             <div key={cat}>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{cat}</h3>
-              <div className="border rounded-lg overflow-x-auto">
-                <div className="grid gap-2 px-3 py-2 bg-muted/40 border-b text-xs font-medium text-muted-foreground"
-                     style={{ gridTemplateColumns: GRID_COLS }}>
-                  <span>Material</span>
-                  <span>Category</span>
-                  <span>Component</span>
-                  <span>Stock (ft)</span>
-                  <span>$/stick</span>
-                  <span>Wt/stick</span>
-                  <span>lb/ft</span>
-                  <span>Eff. $/lb</span>
-                  <span>$/lb override</span>
-                  <span>$/ft</span>
-                  <span></span>
-                </div>
+              <div className="space-y-2">
                 {grouped[cat].map(mat => {
                   const stick = parseFloat(getField(mat, "cost_per_stick")) || 0;
                   const stock = parseFloat(getField(mat, "stock_length_ft")) || 0;
@@ -381,138 +375,167 @@ export default function MaterialsPriceSection() {
                   const isMissing = !parsedPrice || parsedPrice <= 0;
                   const dirty = isDirty(mat);
                   return (
-                    <div key={mat.id}
-                      className="grid gap-2 px-3 py-2 border-b last:border-0 items-center"
-                      style={{ gridTemplateColumns: GRID_COLS }}>
-                      <Input
-                        className="h-7 text-xs"
-                        value={getField(mat, "name")}
-                        onChange={e => setField(mat.id, "name", e.target.value)}
-                      />
-                      <CategorySelect
-                        categories={allCategories}
-                        value={getField(mat, "category")}
-                        onChange={v => setField(mat.id, "category", v)}
-                        className="h-7"
-                      />
-                      <ComponentUseSelect
-                        value={getUses(mat)}
-                        onChange={v => setField(mat.id, "component_type", v)}
-                        options={allComponentUses}
-                        className="h-7"
-                      />
-                      <Input
-                        type="number"
-                        className="h-7 text-xs"
-                        step="0.01"
-                        value={getField(mat, "stock_length_ft")}
-                        onChange={e => setField(mat.id, "stock_length_ft", e.target.value)}
-                        placeholder="0"
-                      />
-                      <Input
-                        type="number"
-                        className="h-7 text-xs"
-                        step="0.01"
-                        value={getField(mat, "cost_per_stick")}
-                        onChange={e => setField(mat.id, "cost_per_stick", e.target.value)}
-                        placeholder="0.00"
-                      />
-                      <Input
-                        type="number"
-                        className="h-7 text-xs"
-                        step="0.01"
-                        value={getField(mat, "weight_per_stick")}
-                        onChange={e => setField(mat.id, "weight_per_stick", e.target.value)}
-                        placeholder="0.00"
-                      />
-                      {isAutoWt ? (
-                        <div
-                          className="flex items-center gap-1 h-7 px-2 text-xs bg-muted rounded border border-dashed"
-                          title={`Auto-derived: ${autoWt} = ${stickWt} lb / ${stock} ft`}
-                        >
-                          <span className="tabular-nums">{autoWt.toFixed(4)}</span>
-                          <span className="text-[9px] uppercase tracking-wide text-muted-foreground">auto</span>
+                    <div key={mat.id} className="border rounded-lg p-3 space-y-3 bg-card">
+                      {/* Top row: name + category + component + actions */}
+                      <div className="flex flex-wrap items-end gap-2">
+                        <div className="flex-1 min-w-[180px]">
+                          <Field label="Material">
+                            <Input
+                              className="h-9 text-sm"
+                              value={getField(mat, "name")}
+                              onChange={e => setField(mat.id, "name", e.target.value)}
+                            />
+                          </Field>
                         </div>
-                      ) : (
-                        <Input
-                          type="number"
-                          className="h-7 text-xs"
-                          step="0.0001"
-                          value={getField(mat, "weight_per_ft")}
-                          onChange={e => setField(mat.id, "weight_per_ft", e.target.value)}
-                          placeholder="0.00"
-                        />
-                      )}
-                      <div className="flex items-center h-7">
-                        {effPerLb.value != null ? (
-                          <div
-                            className="flex items-center gap-1 h-7 px-2 text-xs bg-muted rounded border border-dashed"
-                            title={effPerLb.mode === "auto" ? `Auto: $${stick} / ${stickWt} lb` : effPerLb.mode === "override" ? "From $/lb override" : "From org steel price"}
-                          >
-                            <span className="tabular-nums">${effPerLb.value.toFixed(2)}</span>
-                            <span className="text-[9px] uppercase tracking-wide text-muted-foreground">{effPerLb.mode}</span>
-                          </div>
-                        ) : (
-                          <span className="text-[11px] text-muted-foreground">—</span>
-                        )}
+                        <div className="min-w-[140px]">
+                          <Field label="Category">
+                            <CategorySelect
+                              categories={allCategories}
+                              value={getField(mat, "category")}
+                              onChange={v => setField(mat.id, "category", v)}
+                              className="h-9"
+                            />
+                          </Field>
+                        </div>
+                        <div className="min-w-[160px] flex-1">
+                          <Field label="Component">
+                            <ComponentUseSelect
+                              value={getUses(mat)}
+                              onChange={v => setField(mat.id, "component_type", v)}
+                              options={allComponentUses}
+                              className="h-9"
+                            />
+                          </Field>
+                        </div>
+                        <div className="flex items-end gap-1">
+                          {dirty ? (
+                            <Button
+                              size="sm"
+                              className="h-9 px-3"
+                              onClick={() => handleSave(mat)}
+                              disabled={savingId === mat.id}
+                            >
+                              {savingId === mat.id ? "…" : <Save className="w-4 h-4" />}
+                            </Button>
+                          ) : deleteId === mat.id ? (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="h-9 px-3"
+                              onClick={() => handleDelete(mat)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive"
+                              onClick={() => setDeleteId(deleteId === mat.id ? null : mat.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      <Input
-                        type="number"
-                        className="h-7 text-xs"
-                        step="0.01"
-                        value={getField(mat, "price_per_lb_override")}
-                        onChange={e => setField(mat.id, "price_per_lb_override", e.target.value)}
-                        placeholder={overridePlaceholder}
-                      />
-                      <div className="flex items-center gap-1">
-                        {isMissing && !dirty && !isAuto && <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />}
-                        {isAuto ? (
-                          <div
-                            className="flex items-center gap-1 h-7 px-2 text-xs bg-muted rounded border border-dashed"
-                            title={`Auto-derived: $${autoCost} = $${stick} / ${stock} ft`}
-                          >
-                            <span className="tabular-nums">${autoCost.toFixed(4)}</span>
-                            <span className="text-[9px] uppercase tracking-wide text-muted-foreground">auto</span>
-                          </div>
-                        ) : (
+
+                      {/* Numeric specs grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                        <Field label="Stock length (ft)">
                           <Input
                             type="number"
-                            className={`h-7 text-xs ${isMissing && !dirty ? "border-amber-400" : ""}`}
-                            step="0.0001"
-                            value={price}
-                            onChange={e => setField(mat.id, "cost_per_foot", e.target.value)}
+                            className="h-9 text-sm"
+                            step="0.01"
+                            value={getField(mat, "stock_length_ft")}
+                            onChange={e => setField(mat.id, "stock_length_ft", e.target.value)}
+                            placeholder="0"
                           />
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {dirty ? (
-                          <Button
-                            size="sm"
-                            className="h-7 text-xs px-2"
-                            onClick={() => handleSave(mat)}
-                            disabled={savingId === mat.id}
-                          >
-                            {savingId === mat.id ? "…" : <Save className="w-3 h-3" />}
-                          </Button>
-                        ) : deleteId === mat.id ? (
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            className="h-7 text-xs px-2"
-                            onClick={() => handleDelete(mat)}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                            onClick={() => setDeleteId(deleteId === mat.id ? null : mat.id)}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        )}
+                        </Field>
+                        <Field label="Cost / stick ($)">
+                          <Input
+                            type="number"
+                            className="h-9 text-sm"
+                            step="0.01"
+                            value={getField(mat, "cost_per_stick")}
+                            onChange={e => setField(mat.id, "cost_per_stick", e.target.value)}
+                            placeholder="0.00"
+                          />
+                        </Field>
+                        <Field label="Weight / stick (lb)">
+                          <Input
+                            type="number"
+                            className="h-9 text-sm"
+                            step="0.01"
+                            value={getField(mat, "weight_per_stick")}
+                            onChange={e => setField(mat.id, "weight_per_stick", e.target.value)}
+                            placeholder="0.00"
+                          />
+                        </Field>
+                        <Field label="Weight / ft (lb)">
+                          {isAutoWt ? (
+                            <div
+                              className="flex items-center gap-1 h-9 px-2 text-sm bg-muted rounded-md border border-dashed"
+                              title={`Auto-derived: ${autoWt} = ${stickWt} lb / ${stock} ft`}
+                            >
+                              <span className="tabular-nums">{autoWt.toFixed(4)}</span>
+                              <span className="text-[9px] uppercase tracking-wide text-muted-foreground">auto</span>
+                            </div>
+                          ) : (
+                            <Input
+                              type="number"
+                              className="h-9 text-sm"
+                              step="0.0001"
+                              value={getField(mat, "weight_per_ft")}
+                              onChange={e => setField(mat.id, "weight_per_ft", e.target.value)}
+                              placeholder="0.00"
+                            />
+                          )}
+                        </Field>
+                        <Field label="Effective $ /lb">
+                          {effPerLb.value != null ? (
+                            <div
+                              className="flex items-center gap-1 h-9 px-2 text-sm bg-muted rounded-md border border-dashed"
+                              title={effPerLb.mode === "auto" ? `Auto: $${stick} / ${stickWt} lb` : effPerLb.mode === "override" ? "From $/lb override" : "From org steel price"}
+                            >
+                              <span className="tabular-nums">${effPerLb.value.toFixed(2)}</span>
+                              <span className="text-[9px] uppercase tracking-wide text-muted-foreground">{effPerLb.mode}</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </Field>
+                        <Field label="$ /lb override" hint={orgSteelPrice > 0 ? `blank → org $${orgSteelPrice}` : "blank → org price"}>
+                          <Input
+                            type="number"
+                            className="h-9 text-sm"
+                            step="0.01"
+                            value={getField(mat, "price_per_lb_override")}
+                            onChange={e => setField(mat.id, "price_per_lb_override", e.target.value)}
+                            placeholder={overridePlaceholder}
+                          />
+                        </Field>
+                        <Field label="Cost / ft ($)" hint="reference only — not used for pricing">
+                          <div className="flex items-center gap-1">
+                            {isMissing && !dirty && !isAuto && <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                            {isAuto ? (
+                              <div
+                                className="flex items-center gap-1 h-9 px-2 text-sm bg-muted rounded-md border border-dashed w-full"
+                                title={`Auto-derived: $${autoCost} = $${stick} / ${stock} ft`}
+                              >
+                                <span className="tabular-nums">${autoCost.toFixed(4)}</span>
+                                <span className="text-[9px] uppercase tracking-wide text-muted-foreground">auto</span>
+                              </div>
+                            ) : (
+                              <Input
+                                type="number"
+                                className={`h-9 text-sm w-full ${isMissing && !dirty ? "border-amber-400" : ""}`}
+                                step="0.0001"
+                                value={price}
+                                onChange={e => setField(mat.id, "cost_per_foot", e.target.value)}
+                              />
+                            )}
+                          </div>
+                        </Field>
                       </div>
                     </div>
                   );
