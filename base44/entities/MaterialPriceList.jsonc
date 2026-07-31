@@ -35,14 +35,19 @@
       "default": 0,
       "description": "Purchase cost per stick in USD. When > 0 and stock_length_ft > 0, cost_per_foot is auto-derived."
     },
+    "weight_per_stick": {
+      "type": "number",
+      "default": 0,
+      "description": "Total weight per stick in pounds, mirroring the supplier invoice's Weight column (not per-foot). When > 0 and stock_length_ft > 0, weight_per_ft is auto-derived. When > 0 and cost_per_stick > 0, effective $/lb is auto-derived as cost_per_stick / weight_per_stick."
+    },
     "weight_per_ft": {
       "type": "number",
       "default": 0,
-      "description": "Weight in pounds per linear foot (from the steel table)."
+      "description": "Weight in pounds per linear foot (from the steel table). Auto-derived from weight_per_stick / stock_length_ft when both are > 0; otherwise manually editable."
     },
     "price_per_lb_override": {
       "type": "number",
-      "description": "Optional per-material steel price override ($/lb). When null/empty/0 the material falls back to the org-level steel_price_per_lb. Do not store 0 as a meaningful value."
+      "description": "Optional per-material steel price override ($/lb). When null/empty/0 the material falls back to the org-level steel_price_per_lb. Superseded in display priority by the auto-derived cost_per_stick / weight_per_stick when both stick values are present. Do not store 0 as a meaningful value."
     },
     "cost_per_foot": {
       "type": "number",

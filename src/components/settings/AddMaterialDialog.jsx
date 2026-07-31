@@ -12,13 +12,22 @@ import ComponentUseSelect from "./ComponentUseSelect";
 const CATEGORIES = ["Square Tube", "Rectangle Tube", "Flat Bar", "HR Channel", "Angle", "Round Bar", "Stair", "Other"];
 
 export default function AddMaterialDialog({ open, onOpenChange, orgId, orgSteelPrice = 0, onCreated }) {
-  const [form, setForm] = useState({ name: "", category: "Other", component_type: ["Other"], cost_per_foot: "", stock_length_ft: "", cost_per_stick: "", weight_per_ft: "", price_per_lb_override: "" });
+  const [form, setForm] = useState({ name: "", category: "Other", component_type: ["Other"], cost_per_foot: "", stock_length_ft: "", cost_per_stick: "", weight_per_stick: "", weight_per_ft: "", price_per_lb_override: "" });
   const [saving, setSaving] = useState(false);
 
   const stickVal = parseFloat(form.cost_per_stick) || 0;
   const stockVal = parseFloat(form.stock_length_ft) || 0;
+  const stickWtVal = parseFloat(form.weight_per_stick) || 0;
   const isAuto = stickVal > 0 && stockVal > 0;
   const autoCost = isAuto ? Math.round((stickVal / stockVal) * 10000) / 10000 : null;
+  const isAutoWt = stickWtVal > 0 && stockVal > 0;
+  const autoWt = isAutoWt ? Math.round((stickWtVal / stockVal) * 10000) / 10000 : null;
+  const overrideVal = parseFloat(form.price_per_lb_override) || 0;
+  const effPerLb = (stickVal > 0 && stickWtVal > 0)
+    ? { value: Math.round((stickVal / stickWtVal) * 10000) / 10000, mode: "auto" }
+    : (overrideVal > 0
+      ? { value: overrideVal, mode: "override" }
+      : (orgSteelPrice > 0 ? { value: orgSteelPrice, mode: "org" } : { value: null, mode: null }));
 
   const { data: existingMaterials = [] } = useQuery({
     queryKey: ["materialPriceList", orgId],
@@ -36,19 +45,23 @@ export default function AddMaterialDialog({ open, onOpenChange, orgId, orgSteelP
       const costPerFoot = isAuto
         ? autoCost
         : (parseFloat(form.cost_per_foot) || 0);
+      const weightPerFt = isAutoWt
+        ? autoWt
+        : (parseFloat(form.weight_per_ft) || 0);
       const created = await base44.entities.MaterialPriceList.create({
         name: form.name.trim(),
         category: form.category,
         component_type: form.component_type,
         stock_length_ft: parseFloat(form.stock_length_ft) || 0,
         cost_per_stick: parseFloat(form.cost_per_stick) || 0,
-        weight_per_ft: parseFloat(form.weight_per_ft) || 0,
+        weight_per_stick: parseFloat(form.weight_per_stick) || 0,
+        weight_per_ft: weightPerFt,
         price_per_lb_override: (() => { const n = parseFloat(form.price_per_lb_override); return isNaN(n) || n <= 0 ? null : n; })(),
         cost_per_foot: costPerFoot,
         organization_id: orgId,
       });
       onCreated?.(created);
-      setForm({ name: "", category: "Other", component_type: ["Other"], cost_per_foot: "", stock_length_ft: "", cost_per_stick: "", weight_per_ft: "", price_per_lb_override: "" });
+      setForm({ name: "", category: "Other", component_type: ["Other"], cost_per_foot: "", stock_length_ft: "", cost_per_stick: "", weight_per_stick: "", weight_per_ft: "", price_per_lb_override: "" });
       onOpenChange(false);
       toast.success("Material added");
     } catch {
@@ -87,7 +100,7 @@ export default function AddMaterialDialog({ open, onOpenChange, orgId, orgSteelP
               />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
               <Label className="text-xs">Stock length (ft)</Label>
               <Input
@@ -109,25 +122,63 @@ export default function AddMaterialDialog({ open, onOpenChange, orgId, orgSteelP
               />
             </div>
             <div>
-              <Label className="text-xs">Weight / ft (lb)</Label>
+              <Label className="text-xs">Weight / stick (lb)</Label>
               <Input
                 type="number"
-                step="0.0001"
-                value={form.weight_per_ft}
-                onChange={e => set("weight_per_ft", e.target.value)}
+                step="0.01"
+                value={form.weight_per_stick}
+                onChange={e => set("weight_per_stick", e.target.value)}
                 placeholder="0.00"
               />
             </div>
+            <div>
+              <Label className="text-xs">Weight / ft (lb)</Label>
+              {isAutoWt ? (
+                <div
+                  className="flex items-center gap-1 h-9 px-3 text-sm bg-muted rounded-md border border-dashed"
+                  title={`Auto-derived: ${autoWt} = ${stickWtVal} lb / ${stockVal} ft`}
+                >
+                  <span className="tabular-nums">{autoWt.toFixed(4)}</span>
+                  <span className="text-[9px] uppercase tracking-wide text-muted-foreground">auto</span>
+                </div>
+              ) : (
+                <Input
+                  type="number"
+                  step="0.0001"
+                  value={form.weight_per_ft}
+                  onChange={e => set("weight_per_ft", e.target.value)}
+                  placeholder="0.00"
+                />
+              )}
+            </div>
           </div>
-          <div>
-            <Label className="text-xs">$ /lb override <span className="text-muted-foreground">(optional)</span></Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={form.price_per_lb_override}
-              onChange={e => set("price_per_lb_override", e.target.value)}
-              placeholder={orgSteelPrice > 0 ? `→ $${orgSteelPrice}` : "uses org price"}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">$ /lb override <span className="text-muted-foreground">(optional)</span></Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={form.price_per_lb_override}
+                onChange={e => set("price_per_lb_override", e.target.value)}
+                placeholder={orgSteelPrice > 0 ? `→ $${orgSteelPrice}` : "uses org price"}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Effective $ /lb</Label>
+              <div
+                className="flex items-center gap-1 h-9 px-3 text-sm bg-muted rounded-md border border-dashed"
+                title={effPerLb.mode === "auto" ? `Auto: $${stickVal} / ${stickWtVal} lb` : effPerLb.mode === "override" ? "From $/lb override" : "From org steel price"}
+              >
+                {effPerLb.value != null ? (
+                  <>
+                    <span className="tabular-nums">${effPerLb.value.toFixed(2)}</span>
+                    <span className="text-[9px] uppercase tracking-wide text-muted-foreground">{effPerLb.mode}</span>
+                  </>
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                )}
+              </div>
+            </div>
           </div>
           <div>
             <Label className="text-xs">Cost / linear ft <span className="text-muted-foreground">(reference only — not used for pricing)</span></Label>

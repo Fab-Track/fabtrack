@@ -13,8 +13,8 @@ import ComponentUseSelect from "./ComponentUseSelect";
 
 const CATEGORIES = ["Square Tube", "Rectangle Tube", "Flat Bar", "HR Channel", "Angle", "Round Bar", "Stair", "Other"];
 
-// Material | Category | Component | Stock | $/stick | lb/ft | $/lb override | $/ft | actions
-const GRID_COLS = "2fr 1.1fr 1.1fr 0.6fr 0.6fr 0.6fr 0.75fr 0.8fr 56px";
+// Material | Category | Component | Stock | $/stick | Wt/stick | lb/ft | Eff $/lb | $/lb override | $/ft | actions
+const GRID_COLS = "2fr 1.1fr 1.1fr 0.55fr 0.55fr 0.55fr 0.55fr 0.6fr 0.55fr 0.7fr 56px";
 
 // Auto-derive cost_per_foot when both stick cost and stock length are present.
 function deriveCostPerFoot(stick, stock) {
@@ -22,6 +22,32 @@ function deriveCostPerFoot(stick, stock) {
     return Math.round((stick / stock) * 10000) / 10000;
   }
   return null;
+}
+
+// Auto-derive weight_per_ft when both stick weight and stock length are present.
+function deriveWeightPerFt(stickWeight, stock) {
+  if (stickWeight > 0 && stock > 0) {
+    return Math.round((stickWeight / stock) * 10000) / 10000;
+  }
+  return null;
+}
+
+// Resolve the effective $/lb for a material, in priority order:
+//   1. Auto: cost_per_stick / weight_per_stick (when both > 0)
+//   2. Manual price_per_lb_override (when > 0)
+//   3. Org-level steel_price_per_lb (when > 0)
+// Returns { value, mode } where mode is "auto" | "override" | "org" | null.
+function effectivePerLb(stickCost, stickWeight, override, orgPrice) {
+  if (stickCost > 0 && stickWeight > 0) {
+    return { value: Math.round((stickCost / stickWeight) * 10000) / 10000, mode: "auto" };
+  }
+  if (override && override > 0) {
+    return { value: override, mode: "override" };
+  }
+  if (orgPrice && orgPrice > 0) {
+    return { value: orgPrice, mode: "org" };
+  }
+  return { value: null, mode: null };
 }
 
 // Normalize an override edit to a stored value: empty/0/NaN → null (meaning "use org price").
@@ -155,15 +181,22 @@ export default function MaterialsPriceSection() {
       if (e.component_type !== undefined) updates.component_type = e.component_type;
       if (e.stock_length_ft !== undefined) updates.stock_length_ft = parseFloat(e.stock_length_ft) || 0;
       if (e.cost_per_stick !== undefined) updates.cost_per_stick = parseFloat(e.cost_per_stick) || 0;
-      if (e.weight_per_ft !== undefined) updates.weight_per_ft = parseFloat(e.weight_per_ft) || 0;
+      if (e.weight_per_stick !== undefined) updates.weight_per_stick = parseFloat(e.weight_per_stick) || 0;
       if (e.price_per_lb_override !== undefined) updates.price_per_lb_override = normalizeOverride(e.price_per_lb_override);
       const stick = parseFloat(e.cost_per_stick !== undefined ? e.cost_per_stick : mat.cost_per_stick) || 0;
       const stock = parseFloat(e.stock_length_ft !== undefined ? e.stock_length_ft : mat.stock_length_ft) || 0;
+      const stickWt = parseFloat(e.weight_per_stick !== undefined ? e.weight_per_stick : mat.weight_per_stick) || 0;
       const derived = deriveCostPerFoot(stick, stock);
       if (derived !== null) {
         updates.cost_per_foot = derived;
       } else if (e.cost_per_foot !== undefined) {
         updates.cost_per_foot = parseFloat(e.cost_per_foot) || 0;
+      }
+      const derivedWt = deriveWeightPerFt(stickWt, stock);
+      if (derivedWt !== null) {
+        updates.weight_per_ft = derivedWt;
+      } else if (e.weight_per_ft !== undefined) {
+        updates.weight_per_ft = parseFloat(e.weight_per_ft) || 0;
       }
       await base44.entities.MaterialPriceList.update(mat.id, updates);
       qc.invalidateQueries({ queryKey: ["materialPriceList"] });
@@ -318,7 +351,7 @@ export default function MaterialsPriceSection() {
           {allCategories.filter(cat => grouped[cat]?.length > 0).map(cat => (
             <div key={cat}>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{cat}</h3>
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-lg overflow-x-auto">
                 <div className="grid gap-2 px-3 py-2 bg-muted/40 border-b text-xs font-medium text-muted-foreground"
                      style={{ gridTemplateColumns: GRID_COLS }}>
                   <span>Material</span>
@@ -326,7 +359,9 @@ export default function MaterialsPriceSection() {
                   <span>Component</span>
                   <span>Stock (ft)</span>
                   <span>$/stick</span>
+                  <span>Wt/stick</span>
                   <span>lb/ft</span>
+                  <span>Eff. $/lb</span>
                   <span>$/lb override</span>
                   <span>$/ft</span>
                   <span></span>
@@ -336,6 +371,11 @@ export default function MaterialsPriceSection() {
                   const stock = parseFloat(getField(mat, "stock_length_ft")) || 0;
                   const isAuto = stick > 0 && stock > 0;
                   const autoCost = deriveCostPerFoot(stick, stock);
+                  const stickWt = parseFloat(getField(mat, "weight_per_stick")) || 0;
+                  const isAutoWt = stickWt > 0 && stock > 0;
+                  const autoWt = isAutoWt ? deriveWeightPerFt(stickWt, stock) : null;
+                  const overrideVal = parseFloat(getField(mat, "price_per_lb_override")) || 0;
+                  const effPerLb = effectivePerLb(stick, stickWt, overrideVal, orgSteelPrice);
                   const price = isAuto ? String(autoCost) : getField(mat, "cost_per_foot");
                   const parsedPrice = parseFloat(price);
                   const isMissing = !parsedPrice || parsedPrice <= 0;
@@ -380,11 +420,42 @@ export default function MaterialsPriceSection() {
                       <Input
                         type="number"
                         className="h-7 text-xs"
-                        step="0.0001"
-                        value={getField(mat, "weight_per_ft")}
-                        onChange={e => setField(mat.id, "weight_per_ft", e.target.value)}
+                        step="0.01"
+                        value={getField(mat, "weight_per_stick")}
+                        onChange={e => setField(mat.id, "weight_per_stick", e.target.value)}
                         placeholder="0.00"
                       />
+                      {isAutoWt ? (
+                        <div
+                          className="flex items-center gap-1 h-7 px-2 text-xs bg-muted rounded border border-dashed"
+                          title={`Auto-derived: ${autoWt} = ${stickWt} lb / ${stock} ft`}
+                        >
+                          <span className="tabular-nums">{autoWt.toFixed(4)}</span>
+                          <span className="text-[9px] uppercase tracking-wide text-muted-foreground">auto</span>
+                        </div>
+                      ) : (
+                        <Input
+                          type="number"
+                          className="h-7 text-xs"
+                          step="0.0001"
+                          value={getField(mat, "weight_per_ft")}
+                          onChange={e => setField(mat.id, "weight_per_ft", e.target.value)}
+                          placeholder="0.00"
+                        />
+                      )}
+                      <div className="flex items-center h-7">
+                        {effPerLb.value != null ? (
+                          <div
+                            className="flex items-center gap-1 h-7 px-2 text-xs bg-muted rounded border border-dashed"
+                            title={effPerLb.mode === "auto" ? `Auto: $${stick} / ${stickWt} lb` : effPerLb.mode === "override" ? "From $/lb override" : "From org steel price"}
+                          >
+                            <span className="tabular-nums">${effPerLb.value.toFixed(2)}</span>
+                            <span className="text-[9px] uppercase tracking-wide text-muted-foreground">{effPerLb.mode}</span>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground">—</span>
+                        )}
+                      </div>
                       <Input
                         type="number"
                         className="h-7 text-xs"
