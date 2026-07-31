@@ -110,7 +110,17 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
     enabled: !!orgId,
   });
 
-  // Style → components mapping — auto-fills components when a railing style is chosen
+  // Resolve the catalog item's linked RailingStyleLibrary record by id (style_id),
+  // then drive the style name + component map from that record rather than free text.
+  const linkedStyleId = selectedItem?.is_railing ? (selectedItem?.style_id || null) : null;
+  const { data: linkedStyle } = useQuery({
+    queryKey: ["railingStyleLibrary", "byId", linkedStyleId],
+    queryFn: () => linkedStyleId ? base44.entities.RailingStyleLibrary.get(linkedStyleId) : null,
+    enabled: !!linkedStyleId,
+  });
+
+  // Style → components mapping — auto-fills components when a railing style is chosen.
+  // Keyed by style_name (StyleComponentMap has no style_id field); style_name is unique per org.
   const { data: styleMapResults = [] } = useQuery({
     queryKey: ["styleComponentMap", orgId, railingStyle],
     queryFn: () => base44.entities.StyleComponentMap.filter({ organization_id: orgId, style_name: railingStyle }),
@@ -119,12 +129,21 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
 
   useEffect(() => {
     if (!selectedItem?.is_railing) return;
+    // Seed the style name from the catalog item's linked style record
+    if (linkedStyle?.style_name && !railingStyle) {
+      setRailingStyle(linkedStyle.style_name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkedStyle]);
+
+  useEffect(() => {
+    if (!selectedItem?.is_railing) return;
     if (!railingStyle || railingStyle === "Custom") {
       setComponents([]);
       return;
     }
     const map = styleMapResults[0];
-    setComponents((map?.components || []).map(c => ({ component_type: c.component_label, name: c.material_name })));
+    setComponents((map?.components || []).map(c => ({ component_type: c.component_label, name: c.material_name, material_id: c.material_id })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [railingStyle, styleMapResults]);
 
@@ -225,6 +244,7 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
       ...(selectedItem?.is_railing ? {
         _is_railing: true,
         _railing_style: railingStyle || selectedItem?.name || null,
+        _railing_style_id: selectedItem?.style_id || linkedStyle?.id || null,
         components: components.filter(c => c.name),
       } : {}),
       ...(selectedItem?.category === "Staircase" ? {

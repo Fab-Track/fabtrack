@@ -11,8 +11,20 @@ import { Plus, Pencil, Trash2, Check, X, EyeOff, Eye, Camera, Settings2, Calcula
 import { toast } from "sonner";
 import { DEFAULT_SERVICE_CATALOG, CATALOG_CATEGORIES as DEFAULT_CATEGORIES } from "@/lib/serviceCatalogData";
 import CostModelEditor from "@/components/settings/CostModelEditor";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const UNITS = ["lnft", "sqft", "ea", "ls", "per tread", "per inch elevation", "hr", "other"];
+
+// Match a catalog item name to a RailingStyleLibrary record by name.
+// Catalog items are named "<Style> Railing" (e.g. "Clearwater Railing"); style
+// library records are named by bare style ("Clearwater").
+function matchStyleIdByName(itemName, styles) {
+  if (!itemName || !Array.isArray(styles)) return null;
+  const base = itemName.replace(/\s+railing$/i, "").trim().toLowerCase();
+  if (!base) return null;
+  const hit = styles.find(s => (s.style_name || "").trim().toLowerCase() === base);
+  return hit?.id || null;
+}
 
 // ── Category dropdown with "Add New" inline ──────────────────────────────────
 function CategorySelect({ value, onChange, categories }) {
@@ -243,17 +255,29 @@ function PhotoCell({ photoUrl, onUpload, onRemove }) {
 }
 
 // ── Item form ─────────────────────────────────────────────────────────────────
-function CatalogItemForm({ initial = {}, categories, onSave, onCancel, fabRate = 0, installRate = 0 }) {
+function CatalogItemForm({ initial = {}, categories, styles = [], onSave, onCancel, fabRate = 0, installRate = 0 }) {
   const [name, setName] = useState(initial.name || "");
   const [category, setCategory] = useState(initial.category || categories[0] || "Other");
   const [unit, setUnit] = useState(initial.unit || "ls");
   const [unitPrice, setUnitPrice] = useState(initial.default_unit_price ?? 0);
   const [description, setDescription] = useState(initial.default_description || "");
   const [photoUrl, setPhotoUrl] = useState(initial.photo_url || "");
+  const [isRailing, setIsRailing] = useState(initial.is_railing === true);
+  const [styleId, setStyleId] = useState(initial.style_id || "");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
   const costModelRef = useRef({});
   const [showCostModel, setShowCostModel] = useState(false);
+
+  // If this is a railing item with no style_id yet but its name matches a style,
+  // pre-fill the selector once on mount.
+  useEffect(() => {
+    if (isRailing && !styleId) {
+      const matched = matchStyleIdByName(initial.name, styles);
+      if (matched) setStyleId(matched);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Initialize cost model ref from the item
   useEffect(() => {
@@ -325,6 +349,36 @@ function CatalogItemForm({ initial = {}, categories, onSave, onCancel, fabRate =
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFile} />
       </div>
 
+      {/* Railing flag + style link */}
+      <div className="space-y-2 border rounded-lg p-3 bg-muted/20">
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <Checkbox
+            checked={isRailing}
+            onCheckedChange={(v) => {
+              setIsRailing(!!v);
+              if (!v) setStyleId("");
+            }}
+          />
+          <span>This is a railing service (links to a Railing Style)</span>
+        </label>
+        {isRailing && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground shrink-0 w-24">Railing Style</span>
+            <Select value={styleId} onValueChange={setStyleId}>
+              <SelectTrigger className="h-8 text-sm flex-1"><SelectValue placeholder="Select style…" /></SelectTrigger>
+              <SelectContent>
+                {styles.map(s => (
+                  <SelectItem key={s.id} value={s.id}>{s.style_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {styleId && (
+              <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setStyleId("")}>Clear</Button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Cost Model toggle + editor */}
       <div>
         <button
@@ -355,6 +409,8 @@ function CatalogItemForm({ initial = {}, categories, onSave, onCancel, fabRate =
             default_unit_price: parseFloat(unitPrice) || 0,
             default_description: description,
             photo_url: photoUrl || null,
+            is_railing: isRailing,
+            style_id: isRailing ? (styleId || null) : null,
             ...costModelRef.current,
           })}
           disabled={!name.trim()}
@@ -396,6 +452,28 @@ export default function ServiceCatalogSection() {
   });
   const fabRate = settingsArr[0]?.labor_fab_rate ?? 0;
   const installRate = settingsArr[0]?.labor_install_rate ?? 0;
+
+  // Railing style library — for the per-item Railing Style selector + auto-backfill
+  const { data: styles = [] } = useQuery({
+    queryKey: ["railingStyleLibrary", orgId],
+    queryFn: () => orgId ? base44.entities.RailingStyleLibrary.filter({ organization_id: orgId }) : [],
+    enabled: !!orgId,
+  });
+
+  // One-time backfill: for railing catalog items with no style_id, link by name once.
+  // Only touches items that auto-match a style library record; others are left for manual linking.
+  const [backfilled, setBackfilled] = useState(false);
+  useEffect(() => {
+    if (!orgId || backfilled || catalog.length === 0 || styles.length === 0) return;
+    const toLink = catalog.filter(i => i.is_railing && !i.style_id);
+    if (toLink.length === 0) { setBackfilled(true); return; }
+    setBackfilled(true);
+    toLink.forEach(item => {
+      const id = matchStyleIdByName(item.name, styles);
+      if (id) base44.entities.ServiceCatalog.update(item.id, { style_id: id });
+    });
+    qc.invalidateQueries({ queryKey: ["serviceCatalog"] });
+  }, [orgId, backfilled, catalog, styles, qc]);
 
   // Derive categories from DB (unique) merged with defaults and any newly created ones
   const dbCategories = [...new Set(catalog.map(i => i.category).filter(Boolean))];
@@ -492,6 +570,7 @@ export default function ServiceCatalogSection() {
       {showAdd && (
         <CatalogItemForm
           categories={categories}
+          styles={styles}
           fabRate={fabRate}
           installRate={installRate}
           onSave={(data) => createItem.mutate(data)}
@@ -521,6 +600,7 @@ export default function ServiceCatalogSection() {
                     <CatalogItemForm
                       initial={item}
                       categories={categories}
+                      styles={styles}
                       fabRate={fabRate}
                       installRate={installRate}
                       onSave={(data) => updateItem.mutate({ id: item.id, data })}

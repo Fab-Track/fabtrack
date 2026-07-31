@@ -35,6 +35,13 @@ export default function LineItemComponentsEditor({ components = [], onChange, ma
     return materials.find(m => m.name === name)?.id || "";
   }
 
+  // Store both the material id and name when a material is picked from the combobox,
+  // so the line carries a stable link to the MaterialPriceList record.
+  function setMaterialForRow(idx, m) {
+    const next = components.map((r, i) => (i === idx ? { ...r, name: m.name, material_id: m.id } : r));
+    onChange(next);
+  }
+
   return (
     <div className="space-y-2">
       <Label className="text-xs font-medium">Components</Label>
@@ -60,8 +67,8 @@ export default function LineItemComponentsEditor({ components = [], onChange, ma
             <div className="flex-1 min-w-0">
               <MaterialCombobox
                 materials={materials}
-                value={materialIdForName(row.name)}
-                onChange={(m) => updateRow(idx, "name", m.name)}
+                value={row.material_id || materialIdForName(row.name)}
+                onChange={(m) => setMaterialForRow(idx, m)}
                 onAddNew={() => { setAddMatRowIdx(idx); setAddMatOpen(true); }}
                 componentLabel={row.component_type}
               />
@@ -89,7 +96,8 @@ export default function LineItemComponentsEditor({ components = [], onChange, ma
         onCreated={(mat) => {
           onMaterialCreated?.(mat);
           if (addMatRowIdx !== null) {
-            updateRow(addMatRowIdx, "name", mat.name);
+            const next = components.map((r, i) => (i === addMatRowIdx ? { ...r, name: mat.name, material_id: mat.id } : r));
+            onChange(next);
             setAddMatRowIdx(null);
           }
         }}

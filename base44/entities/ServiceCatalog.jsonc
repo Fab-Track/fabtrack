@@ -44,6 +44,10 @@
       "default": false,
       "description": "If true, volume discount tiers are applied based on lnft quantity"
     },
+    "style_id": {
+      "type": "string",
+      "description": "Railing styles only (is_railing: true). Reference to the RailingStyleLibrary record this catalog item corresponds to. Drives style resolution in the estimate wizard."
+    },
     "cost_primary_unit": {
       "type": "string",
       "description": "Display label for the primary pricing unit (e.g. 'Linear Foot', 'Riser', 'sqft')"
