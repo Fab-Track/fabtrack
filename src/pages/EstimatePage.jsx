@@ -19,7 +19,7 @@ import { useWriteOrgId } from "@/lib/orgContext";
 import ProductServiceDropdown from "@/components/estimates/ProductServiceDropdown";
 import { useJobDetailConfig } from "@/hooks/useJobDetailConfig";
 import { formatPhoneDisplay } from "@/lib/phoneFormat";
-import RailingInlineCalc from "@/components/estimates/RailingInlineCalc";
+import RailingTakeoffCalc from "@/components/estimates/RailingTakeoffCalc";
 import StaircaseInlineCalc from "@/components/estimates/StaircaseInlineCalc";
 import EstimateCustomerView from "@/components/estimates/EstimateCustomerView";
 import SendEstimatePanel from "@/components/estimates/SendEstimatePanel";
@@ -52,6 +52,7 @@ const blankLine = () => ({
   show_photo: true,
   _is_railing: false,
   _railing_style: null,
+  _railing_takeoff: null,
   _is_staircase: false,
   _staircase_type: null,
 });
@@ -140,7 +141,7 @@ export default function EstimatePage() {
     if (existingEstimate && populatedFor.current !== estimateId) {
       populatedFor.current = estimateId;
       setStatus(existingEstimate.status || "Draft");
-      setLines((existingEstimate.line_items || []).map(l => ({ ...l, _id: Math.random().toString(36).slice(2), _is_railing: false, _railing_style: null, _is_staircase: false, _staircase_type: null })));
+      setLines((existingEstimate.line_items || []).map(l => ({ ...l, _id: Math.random().toString(36).slice(2), _is_staircase: false, _staircase_type: null })));
       setMarkup(existingEstimate.markup_percent || 0);
       setOverhead(existingEstimate.overhead_percent || 0);
       setDiscount(existingEstimate.discount_percent || 0);
@@ -185,7 +186,7 @@ export default function EstimatePage() {
         estimate_number: estimateNumber,
         estimate_date: estimateDate,
         expiration_date: expirationDate,
-        line_items: lines.map(({ _id, _is_railing, _railing_style, _is_staircase, _staircase_type, ...rest }) => rest),
+        line_items: lines.map(({ _id, _railing_style, _is_staircase, _staircase_type, ...rest }) => rest),
         subtotal,
         discount_percent: discount,
         markup_percent: markup,
@@ -268,18 +269,16 @@ export default function EstimatePage() {
 
   function handleProductSelect(idx, item) {
     const isStaircaseCalc = STAIRCASE_CALC_ITEMS.some(n => item.name.includes(n.split("—")[0].trim()) || item.name === n);
-    const isStaircaseHandrail = item.name === "Staircase Handrail / Railing";
     setLines(prev => {
       const next = [...prev];
       next[idx] = calcLine({
         ...next[idx],
         service_name: item.name,
         description: item.default_description || item.name,
-        category: item.default_category || "Labor",
-        unit: item.default_unit || "ls",
+        category: item.category || "Labor",
+        unit: item.unit || "ls",
         unit_cost: item.default_unit_cost || 0,
-        _is_railing: !!item.is_railing || isStaircaseHandrail,
-        _railing_style: (item.is_railing || isStaircaseHandrail) ? item.name.replace(" Railing", "") : null,
+        _is_railing: !!item.is_railing,
         _is_staircase: isStaircaseCalc,
         _staircase_type: isStaircaseCalc ? getStaircaseType(item.name) : null,
       });
@@ -287,10 +286,10 @@ export default function EstimatePage() {
     });
   }
 
-  function handleRailingPrice(idx, totalPrice, lnft) {
+  function handleRailingPrice(idx, totalPrice, lnft, takeoffData) {
     setLines(prev => {
       const next = [...prev];
-      next[idx] = calcLine({ ...next[idx], quantity: lnft, unit: "lnft", unit_cost: totalPrice / (lnft || 1) });
+      next[idx] = calcLine({ ...next[idx], quantity: lnft, unit: "lnft", unit_cost: totalPrice / (lnft || 1), _railing_takeoff: takeoffData });
       return next;
     });
   }
@@ -305,7 +304,7 @@ export default function EstimatePage() {
 
   const estimateForView = {
     ...(existingEstimate || {}),
-    status, line_items: lines.map(({ _id, _is_railing, _railing_style, _is_staircase, _staircase_type, ...r }) => r),
+    status,     line_items: lines.map(({ _id, _is_railing, _railing_style, _is_staircase, _staircase_type, _railing_takeoff, ...r }) => r),
     discount_percent: discount, markup_percent: markup, overhead_percent: overhead, tax_percent: tax, total,
     notes, view_mode: viewMode, estimate_number: estimateNumber,
     estimate_date: estimateDate, expiration_date: expirationDate,
@@ -542,9 +541,10 @@ export default function EstimatePage() {
                           {/* Inline Railing Calculator */}
                           {line._is_railing && (
                             <div className="ml-1 mr-8">
-                              <RailingInlineCalc
-                                styleName={line._railing_style}
-                                onPriceChange={(total, lnft) => handleRailingPrice(idx, total, lnft)}
+                              <RailingTakeoffCalc
+                                line={line}
+                                orgId={user?.organization_id}
+                                onPriceChange={(total, lnft, takeoffData) => handleRailingPrice(idx, total, lnft, takeoffData)}
                               />
                             </div>
                           )}
@@ -650,9 +650,10 @@ export default function EstimatePage() {
 
                       {/* Inline calculators */}
                       {line._is_railing && (
-                        <RailingInlineCalc
-                          styleName={line._railing_style}
-                          onPriceChange={(total, lnft) => handleRailingPrice(idx, total, lnft)}
+                        <RailingTakeoffCalc
+                          line={line}
+                          orgId={user?.organization_id}
+                          onPriceChange={(total, lnft, takeoffData) => handleRailingPrice(idx, total, lnft, takeoffData)}
                         />
                       )}
                       {line._is_staircase && (
