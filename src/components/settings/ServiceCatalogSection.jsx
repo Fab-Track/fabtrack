@@ -11,6 +11,7 @@ import { Plus, Pencil, Trash2, Check, X, EyeOff, Eye, Camera, Settings2, Calcula
 import { toast } from "sonner";
 import { DEFAULT_SERVICE_CATALOG, CATALOG_CATEGORIES as DEFAULT_CATEGORIES } from "@/lib/serviceCatalogData";
 import CostModelEditor from "@/components/settings/CostModelEditor";
+import StyleComponentEditor from "@/components/settings/StyleComponentEditor";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const UNITS = ["lnft", "sqft", "ea", "ls", "per tread", "per inch elevation", "hr", "other"];
@@ -255,7 +256,7 @@ function PhotoCell({ photoUrl, onUpload, onRemove }) {
 }
 
 // ── Item form ─────────────────────────────────────────────────────────────────
-function CatalogItemForm({ initial = {}, categories, styles = [], onSave, onCancel, fabRate = 0, installRate = 0 }) {
+function CatalogItemForm({ initial = {}, categories, styles = [], onSave, onCancel, fabRate = 0, installRate = 0, orgId }) {
   const [name, setName] = useState(initial.name || "");
   const [category, setCategory] = useState(initial.category || categories[0] || "Other");
   const [unit, setUnit] = useState(initial.unit || "ls");
@@ -273,6 +274,14 @@ function CatalogItemForm({ initial = {}, categories, styles = [], onSave, onCanc
   const fileRef = useRef(null);
   const costModelRef = useRef({});
   const [showCostModel, setShowCostModel] = useState(false);
+  const [compEditorOpen, setCompEditorOpen] = useState(false);
+
+  // Resolve the linked style's bare name for backward-compat lookup in
+  // StyleComponentEditor (old records were keyed by style_name).
+  const linkedStyleName = React.useMemo(() => {
+    if (!styleId || !styles.length) return null;
+    return styles.find(s => s.id === styleId)?.style_name || null;
+  }, [styleId, styles]);
 
   // If this is a railing item with no style_id yet but its name matches a style,
   // pre-fill the selector once on mount.
@@ -415,6 +424,29 @@ function CatalogItemForm({ initial = {}, categories, styles = [], onSave, onCanc
           </div>
         )}
       </div>
+
+      {/* Components — railing items only, needs a saved catalog item id */}
+      {isRailing && initial.id && (
+        <div className="border rounded-lg p-3 bg-muted/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold">Components</p>
+              <p className="text-[11px] text-muted-foreground">Define which materials make up this railing style.</p>
+            </div>
+            <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => setCompEditorOpen(true)}>
+              <Settings2 className="w-3 h-3" /> Edit Components
+            </Button>
+          </div>
+          <StyleComponentEditor
+            open={compEditorOpen}
+            onOpenChange={setCompEditorOpen}
+            serviceCatalogId={initial.id}
+            orgId={orgId}
+            styleName={linkedStyleName}
+            displayName={name}
+          />
+        </div>
+      )}
 
       {/* Cost Model toggle + editor */}
       <div>
@@ -615,6 +647,7 @@ export default function ServiceCatalogSection() {
           styles={styles}
           fabRate={fabRate}
           installRate={installRate}
+          orgId={orgId}
           onSave={(data) => createItem.mutate(data)}
           onCancel={() => setShowAdd(false)}
         />
@@ -645,6 +678,7 @@ export default function ServiceCatalogSection() {
                       styles={styles}
                       fabRate={fabRate}
                       installRate={installRate}
+                      orgId={orgId}
                       onSave={(data) => updateItem.mutate({ id: item.id, data })}
                       onCancel={() => setEditingId(null)}
                     />

@@ -8,7 +8,11 @@
     },
     "style_name": {
       "type": "string",
-      "description": "Railing style name (links to RailingStyleLibrary.style_name)"
+      "description": "Railing style name (links to RailingStyleLibrary.style_name). Kept on existing records for backward read compatibility; new records created from the Service Catalog use service_catalog_id instead."
+    },
+    "service_catalog_id": {
+      "type": "string",
+      "description": "Service Catalog item ID this component map belongs to. New records are keyed by this field going forward."
     },
     "components": {
       "type": "array",
@@ -33,7 +37,6 @@
     }
   },
   "required": [
-    "style_name",
     "organization_id"
   ],
   "rls": {

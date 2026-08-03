@@ -12,7 +12,7 @@ import AddMaterialDialog from "./AddMaterialDialog";
 
 const COMPONENT_LABELS = ["Top Rail", "Bottom Rail", "Post", "Picket", "Cap", "Other"];
 
-export default function StyleComponentEditor({ open, onOpenChange, styleName, orgId }) {
+export default function StyleComponentEditor({ open, onOpenChange, serviceCatalogId, orgId, styleName, displayName }) {
   const qc = useQueryClient();
   const [rows, setRows] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -25,12 +25,26 @@ export default function StyleComponentEditor({ open, onOpenChange, styleName, or
     enabled: !!orgId && open,
   });
 
+  // Resolve the existing component map record. When opened from the Service
+  // Catalog (serviceCatalogId provided), look up by service_catalog_id first;
+  // fall back to style_name so old style-library-keyed records are carried over.
+  // When opened from the Style Library page (only styleName), use the legacy
+  // style_name lookup.
   const { data: existing } = useQuery({
-    queryKey: ["styleComponentMap", orgId, styleName],
-    queryFn: () => orgId && styleName
-      ? base44.entities.StyleComponentMap.filter({ organization_id: orgId, style_name: styleName }).then(r => r[0] || null)
-      : null,
-    enabled: !!orgId && !!styleName && open,
+    queryKey: ["styleComponentMap", orgId, serviceCatalogId, styleName],
+    queryFn: async () => {
+      if (!orgId) return null;
+      if (serviceCatalogId) {
+        const byCatalog = await base44.entities.StyleComponentMap.filter({ organization_id: orgId, service_catalog_id: serviceCatalogId });
+        if (byCatalog[0]) return byCatalog[0];
+      }
+      if (styleName) {
+        const byStyle = await base44.entities.StyleComponentMap.filter({ organization_id: orgId, style_name: styleName });
+        if (byStyle[0]) return byStyle[0];
+      }
+      return null;
+    },
+    enabled: !!orgId && open && (!!serviceCatalogId || !!styleName),
   });
 
   useEffect(() => {
@@ -74,9 +88,16 @@ export default function StyleComponentEditor({ open, onOpenChange, styleName, or
     try {
       const payload = {
         organization_id: orgId,
-        style_name: styleName,
         components: rows.filter(r => r.material_id),
       };
+      if (serviceCatalogId) payload.service_catalog_id = serviceCatalogId;
+      // Preserve style_name from an old record, or set it when saving from the
+      // Style Library page (which passes styleName but no serviceCatalogId).
+      if (existing?.style_name) {
+        payload.style_name = existing.style_name;
+      } else if (!serviceCatalogId && styleName) {
+        payload.style_name = styleName;
+      }
       if (existing) {
         await base44.entities.StyleComponentMap.update(existing.id, payload);
       } else {
@@ -96,7 +117,7 @@ export default function StyleComponentEditor({ open, onOpenChange, styleName, or
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader className="mb-4">
-          <SheetTitle className="text-base">Components — {styleName}</SheetTitle>
+          <SheetTitle className="text-base">Components — {displayName || styleName}</SheetTitle>
           <p className="text-xs text-muted-foreground">Define which materials make up this railing style.</p>
         </SheetHeader>
 
