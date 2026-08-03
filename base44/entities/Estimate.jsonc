@@ -162,6 +162,14 @@
           "_markup_multiplier": {
             "type": "number",
             "description": "Markup multiplier used for this line (internal only, editable per line)"
+          },
+          "_is_railing": {
+            "type": "boolean",
+            "description": "Whether this line item is priced via the railing takeoff calculator."
+          },
+          "_railing_takeoff": {
+            "type": "object",
+            "description": "Snapshot of the railing takeoff calculation: inputs (length, isResidential), computed steps, per-component breakdown, and cost totals. Written by RailingTakeoffCalc; read on reopen to re-populate the calculator."
           }
         }
       }
