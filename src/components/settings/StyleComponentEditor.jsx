@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
@@ -12,14 +11,6 @@ import MaterialCombobox from "./MaterialCombobox";
 import AddMaterialDialog from "./AddMaterialDialog";
 
 const COMPONENT_LABELS = ["Top Rail", "Bottom Rail", "Post", "Picket", "Cap", "Other"];
-
-const DEFAULT_PARAMS = {
-  post_spacing_in: 72,
-  post_width_in: 1.5,
-  picket_clear_gap_in: 4,
-  picket_width_in: 0.5,
-  rail_runs: 2,
-};
 
 export default function StyleComponentEditor({ open, onOpenChange, styleName, orgId }) {
   const qc = useQueryClient();
@@ -49,35 +40,6 @@ export default function StyleComponentEditor({ open, onOpenChange, styleName, or
       setRows([]);
     }
   }, [existing]);
-
-  // Railing takeoff parameters live on RailingStyleLibrary (the style record),
-  // not on StyleComponentMap (which only holds the component list). Load the
-  // style record so the parameters section can show and edit them.
-  const { data: styleRecord } = useQuery({
-    queryKey: ["railingStyleLibrary", orgId, styleName],
-    queryFn: () => orgId && styleName
-      ? base44.entities.RailingStyleLibrary.filter({ organization_id: orgId, style_name: styleName }).then(r => r[0] || null)
-      : null,
-    enabled: !!orgId && !!styleName && open,
-  });
-
-  const [params, setParams] = useState({
-    post_spacing_in: String(DEFAULT_PARAMS.post_spacing_in),
-    post_width_in: String(DEFAULT_PARAMS.post_width_in),
-    picket_clear_gap_in: String(DEFAULT_PARAMS.picket_clear_gap_in),
-    picket_width_in: String(DEFAULT_PARAMS.picket_width_in),
-    rail_runs: String(DEFAULT_PARAMS.rail_runs),
-  });
-
-  useEffect(() => {
-    setParams({
-      post_spacing_in: String(styleRecord?.post_spacing_in ?? DEFAULT_PARAMS.post_spacing_in),
-      post_width_in: String(styleRecord?.post_width_in ?? DEFAULT_PARAMS.post_width_in),
-      picket_clear_gap_in: String(styleRecord?.picket_clear_gap_in ?? DEFAULT_PARAMS.picket_clear_gap_in),
-      picket_width_in: String(styleRecord?.picket_width_in ?? DEFAULT_PARAMS.picket_width_in),
-      rail_runs: String(styleRecord?.rail_runs ?? DEFAULT_PARAMS.rail_runs),
-    });
-  }, [styleRecord]);
 
   function addRow() {
     setRows(prev => [...prev, { component_label: "Top Rail", material_id: "", material_name: "" }]);
@@ -122,21 +84,6 @@ export default function StyleComponentEditor({ open, onOpenChange, styleName, or
       }
       qc.invalidateQueries({ queryKey: ["styleComponentMap"] });
 
-      // Persist takeoff parameters on the style library record (create if missing)
-      const libPayload = {
-        post_spacing_in: parseFloat(params.post_spacing_in) || 0,
-        post_width_in: parseFloat(params.post_width_in) || 0,
-        picket_clear_gap_in: parseFloat(params.picket_clear_gap_in) || 0,
-        picket_width_in: parseFloat(params.picket_width_in) || 0,
-        rail_runs: parseInt(params.rail_runs) || 0,
-      };
-      if (styleRecord) {
-        await base44.entities.RailingStyleLibrary.update(styleRecord.id, libPayload);
-      } else {
-        await base44.entities.RailingStyleLibrary.create({ style_name: styleName, organization_id: orgId, ...libPayload });
-      }
-      qc.invalidateQueries({ queryKey: ["railingStyleLibrary"] });
-
       onOpenChange(false);
       toast.success("Saved");
     } catch {
@@ -152,37 +99,6 @@ export default function StyleComponentEditor({ open, onOpenChange, styleName, or
           <SheetTitle className="text-base">Components — {styleName}</SheetTitle>
           <p className="text-xs text-muted-foreground">Define which materials make up this railing style.</p>
         </SheetHeader>
-
-        <div className="border rounded-lg p-3 bg-muted/20 space-y-2 mb-4">
-          <div>
-            <p className="text-sm font-semibold">Railing Parameters</p>
-            <p className="text-[11px] text-muted-foreground">
-              Post height and picket length come from org standards at estimate time.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            <div>
-              <Label className="text-[10px]">Post spacing (in)</Label>
-              <Input type="number" step="0.01" className="h-8 text-xs" value={params.post_spacing_in} onChange={e => setParams(p => ({ ...p, post_spacing_in: e.target.value }))} />
-            </div>
-            <div>
-              <Label className="text-[10px]">Post width (in)</Label>
-              <Input type="number" step="0.01" className="h-8 text-xs" value={params.post_width_in} onChange={e => setParams(p => ({ ...p, post_width_in: e.target.value }))} />
-            </div>
-            <div>
-              <Label className="text-[10px]">Picket clear gap (in)</Label>
-              <Input type="number" step="0.01" className="h-8 text-xs" value={params.picket_clear_gap_in} onChange={e => setParams(p => ({ ...p, picket_clear_gap_in: e.target.value }))} />
-            </div>
-            <div>
-              <Label className="text-[10px]">Picket width (in)</Label>
-              <Input type="number" step="0.01" className="h-8 text-xs" value={params.picket_width_in} onChange={e => setParams(p => ({ ...p, picket_width_in: e.target.value }))} />
-            </div>
-            <div>
-              <Label className="text-[10px]">Rail runs</Label>
-              <Input type="number" step="1" className="h-8 text-xs" value={params.rail_runs} onChange={e => setParams(p => ({ ...p, rail_runs: e.target.value }))} />
-            </div>
-          </div>
-        </div>
 
         <div className="space-y-3 pb-8">
           {rows.length === 0 && (

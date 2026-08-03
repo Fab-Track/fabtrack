@@ -264,6 +264,11 @@ function CatalogItemForm({ initial = {}, categories, styles = [], onSave, onCanc
   const [photoUrl, setPhotoUrl] = useState(initial.photo_url || "");
   const [isRailing, setIsRailing] = useState(initial.is_railing === true);
   const [styleId, setStyleId] = useState(initial.style_id || "");
+  const [postSpacing, setPostSpacing] = useState(initial.post_spacing_in ?? 72);
+  const [postWidth, setPostWidth] = useState(initial.post_width_in ?? 1.5);
+  const [picketGap, setPicketGap] = useState(initial.picket_clear_gap_in ?? 4);
+  const [picketWidth, setPicketWidth] = useState(initial.picket_width_in ?? 0.5);
+  const [railRuns, setRailRuns] = useState(initial.rail_runs ?? 2);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
   const costModelRef = useRef({});
@@ -377,6 +382,38 @@ function CatalogItemForm({ initial = {}, categories, styles = [], onSave, onCanc
             )}
           </div>
         )}
+        {isRailing && (
+          <div className="border rounded-lg p-3 bg-muted/20 space-y-2">
+            <div>
+              <p className="text-sm font-semibold">Railing Parameters</p>
+              <p className="text-[11px] text-muted-foreground">
+                Post height and picket length come from org standards at estimate time.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div>
+                <span className="text-[10px] text-muted-foreground">Post spacing (in)</span>
+                <Input type="number" step="0.01" className="h-8 text-xs" value={postSpacing} onChange={e => setPostSpacing(e.target.value)} />
+              </div>
+              <div>
+                <span className="text-[10px] text-muted-foreground">Post width (in)</span>
+                <Input type="number" step="0.01" className="h-8 text-xs" value={postWidth} onChange={e => setPostWidth(e.target.value)} />
+              </div>
+              <div>
+                <span className="text-[10px] text-muted-foreground">Picket clear gap (in)</span>
+                <Input type="number" step="0.01" className="h-8 text-xs" value={picketGap} onChange={e => setPicketGap(e.target.value)} />
+              </div>
+              <div>
+                <span className="text-[10px] text-muted-foreground">Picket width (in)</span>
+                <Input type="number" step="0.01" className="h-8 text-xs" value={picketWidth} onChange={e => setPicketWidth(e.target.value)} />
+              </div>
+              <div>
+                <span className="text-[10px] text-muted-foreground">Rail runs</span>
+                <Input type="number" step="1" className="h-8 text-xs" value={railRuns} onChange={e => setRailRuns(e.target.value)} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Cost Model toggle + editor */}
@@ -411,6 +448,11 @@ function CatalogItemForm({ initial = {}, categories, styles = [], onSave, onCanc
             photo_url: photoUrl || null,
             is_railing: isRailing,
             style_id: isRailing ? (styleId || null) : null,
+            post_spacing_in: isRailing ? (parseFloat(postSpacing) || 0) : undefined,
+            post_width_in: isRailing ? (parseFloat(postWidth) || 0) : undefined,
+            picket_clear_gap_in: isRailing ? (parseFloat(picketGap) || 0) : undefined,
+            picket_width_in: isRailing ? (parseFloat(picketWidth) || 0) : undefined,
+            rail_runs: isRailing ? (parseInt(railRuns) || 0) : undefined,
             ...costModelRef.current,
           })}
           disabled={!name.trim()}
