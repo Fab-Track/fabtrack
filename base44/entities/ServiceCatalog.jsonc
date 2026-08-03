@@ -48,6 +48,31 @@
       "type": "string",
       "description": "Railing styles only (is_railing: true). Reference to the RailingStyleLibrary record this catalog item corresponds to. Drives style resolution in the estimate wizard."
     },
+    "post_spacing_in": {
+      "type": "number",
+      "default": 72,
+      "description": "Railing takeoff parameter: spacing between posts in inches."
+    },
+    "post_width_in": {
+      "type": "number",
+      "default": 1.5,
+      "description": "Railing takeoff parameter: post width in inches."
+    },
+    "picket_clear_gap_in": {
+      "type": "number",
+      "default": 4,
+      "description": "Railing takeoff parameter: clear gap between pickets in inches (code-compliant max is typically 4)."
+    },
+    "picket_width_in": {
+      "type": "number",
+      "default": 0.5,
+      "description": "Railing takeoff parameter: individual picket width in inches."
+    },
+    "rail_runs": {
+      "type": "number",
+      "default": 2,
+      "description": "Railing takeoff parameter: number of horizontal rail runs (top + bottom rails). Integer."
+    },
     "cost_primary_unit": {
       "type": "string",
       "description": "Display label for the primary pricing unit (e.g. 'Linear Foot', 'Riser', 'sqft')"
