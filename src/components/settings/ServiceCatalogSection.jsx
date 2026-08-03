@@ -16,17 +16,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 const UNITS = ["lnft", "sqft", "ea", "ls", "per tread", "per inch elevation", "hr", "other"];
 
-// Match a catalog item name to a RailingStyleLibrary record by name.
-// Catalog items are named "<Style> Railing" (e.g. "Clearwater Railing"); style
-// library records are named by bare style ("Clearwater").
-function matchStyleIdByName(itemName, styles) {
-  if (!itemName || !Array.isArray(styles)) return null;
-  const base = itemName.replace(/\s+railing$/i, "").trim().toLowerCase();
-  if (!base) return null;
-  const hit = styles.find(s => (s.style_name || "").trim().toLowerCase() === base);
-  return hit?.id || null;
-}
-
 // ── Category dropdown with "Add New" inline ──────────────────────────────────
 function CategorySelect({ value, onChange, categories }) {
   const [addingNew, setAddingNew] = useState(false);
@@ -256,7 +245,7 @@ function PhotoCell({ photoUrl, onUpload, onRemove }) {
 }
 
 // ── Item form ─────────────────────────────────────────────────────────────────
-function CatalogItemForm({ initial = {}, categories, styles = [], onSave, onCancel, fabRate = 0, installRate = 0, orgId }) {
+function CatalogItemForm({ initial = {}, categories, onSave, onCancel, fabRate = 0, installRate = 0, orgId }) {
   const [name, setName] = useState(initial.name || "");
   const [category, setCategory] = useState(initial.category || categories[0] || "Other");
   const [unit, setUnit] = useState(initial.unit || "ls");
@@ -264,7 +253,6 @@ function CatalogItemForm({ initial = {}, categories, styles = [], onSave, onCanc
   const [description, setDescription] = useState(initial.default_description || "");
   const [photoUrl, setPhotoUrl] = useState(initial.photo_url || "");
   const [isRailing, setIsRailing] = useState(initial.is_railing === true);
-  const [styleId, setStyleId] = useState(initial.style_id || "");
   const [postSpacing, setPostSpacing] = useState(initial.post_spacing_in ?? 72);
   const [postWidth, setPostWidth] = useState(initial.post_width_in ?? 1.5);
   const [picketGap, setPicketGap] = useState(initial.picket_clear_gap_in ?? 4);
@@ -276,22 +264,12 @@ function CatalogItemForm({ initial = {}, categories, styles = [], onSave, onCanc
   const [showCostModel, setShowCostModel] = useState(false);
   const [compEditorOpen, setCompEditorOpen] = useState(false);
 
-  // Resolve the linked style's bare name for backward-compat lookup in
-  // StyleComponentEditor (old records were keyed by style_name).
-  const linkedStyleName = React.useMemo(() => {
-    if (!styleId || !styles.length) return null;
-    return styles.find(s => s.id === styleId)?.style_name || null;
-  }, [styleId, styles]);
-
-  // If this is a railing item with no style_id yet but its name matches a style,
-  // pre-fill the selector once on mount.
-  useEffect(() => {
-    if (isRailing && !styleId) {
-      const matched = matchStyleIdByName(initial.name, styles);
-      if (matched) setStyleId(matched);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Derive the bare style name (e.g. "Columbia") from the catalog item name
+  // (e.g. "Columbia Railing") for backward-compat lookup in StyleComponentEditor.
+  // Old StyleComponentMap records were keyed by style_name, not service_catalog_id.
+  const styleNameForCompat = initial.name
+    ? initial.name.replace(/\s+railing$/i, "").trim() || null
+    : null;
 
   // Initialize cost model ref from the item
   useEffect(() => {
@@ -363,34 +341,15 @@ function CatalogItemForm({ initial = {}, categories, styles = [], onSave, onCanc
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFile} />
       </div>
 
-      {/* Railing flag + style link */}
+      {/* Railing flag */}
       <div className="space-y-2 border rounded-lg p-3 bg-muted/20">
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <Checkbox
             checked={isRailing}
-            onCheckedChange={(v) => {
-              setIsRailing(!!v);
-              if (!v) setStyleId("");
-            }}
+            onCheckedChange={(v) => setIsRailing(!!v)}
           />
-          <span>This is a railing service (links to a Railing Style)</span>
+          <span>This is a railing service</span>
         </label>
-        {isRailing && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground shrink-0 w-24">Railing Style</span>
-            <Select value={styleId} onValueChange={setStyleId}>
-              <SelectTrigger className="h-8 text-sm flex-1"><SelectValue placeholder="Select style…" /></SelectTrigger>
-              <SelectContent>
-                {styles.map(s => (
-                  <SelectItem key={s.id} value={s.id}>{s.style_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {styleId && (
-              <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setStyleId("")}>Clear</Button>
-            )}
-          </div>
-        )}
         {isRailing && (
           <div className="border rounded-lg p-3 bg-muted/20 space-y-2">
             <div>
@@ -442,7 +401,7 @@ function CatalogItemForm({ initial = {}, categories, styles = [], onSave, onCanc
             onOpenChange={setCompEditorOpen}
             serviceCatalogId={initial.id}
             orgId={orgId}
-            styleName={linkedStyleName}
+            styleName={styleNameForCompat}
             displayName={name}
           />
         </div>
@@ -479,7 +438,6 @@ function CatalogItemForm({ initial = {}, categories, styles = [], onSave, onCanc
             default_description: description,
             photo_url: photoUrl || null,
             is_railing: isRailing,
-            style_id: isRailing ? (styleId || null) : null,
             post_spacing_in: isRailing ? (parseFloat(postSpacing) || 0) : undefined,
             post_width_in: isRailing ? (parseFloat(postWidth) || 0) : undefined,
             picket_clear_gap_in: isRailing ? (parseFloat(picketGap) || 0) : undefined,
@@ -526,28 +484,6 @@ export default function ServiceCatalogSection() {
   });
   const fabRate = settingsArr[0]?.labor_fab_rate ?? 0;
   const installRate = settingsArr[0]?.labor_install_rate ?? 0;
-
-  // Railing style library — for the per-item Railing Style selector + auto-backfill
-  const { data: styles = [] } = useQuery({
-    queryKey: ["railingStyleLibrary", orgId],
-    queryFn: () => orgId ? base44.entities.RailingStyleLibrary.filter({ organization_id: orgId }) : [],
-    enabled: !!orgId,
-  });
-
-  // One-time backfill: for railing catalog items with no style_id, link by name once.
-  // Only touches items that auto-match a style library record; others are left for manual linking.
-  const [backfilled, setBackfilled] = useState(false);
-  useEffect(() => {
-    if (!orgId || backfilled || catalog.length === 0 || styles.length === 0) return;
-    const toLink = catalog.filter(i => i.is_railing && !i.style_id);
-    if (toLink.length === 0) { setBackfilled(true); return; }
-    setBackfilled(true);
-    toLink.forEach(item => {
-      const id = matchStyleIdByName(item.name, styles);
-      if (id) base44.entities.ServiceCatalog.update(item.id, { style_id: id });
-    });
-    qc.invalidateQueries({ queryKey: ["serviceCatalog"] });
-  }, [orgId, backfilled, catalog, styles, qc]);
 
   // Derive categories from DB (unique) merged with defaults and any newly created ones
   const dbCategories = [...new Set(catalog.map(i => i.category).filter(Boolean))];
@@ -644,7 +580,6 @@ export default function ServiceCatalogSection() {
       {showAdd && (
         <CatalogItemForm
           categories={categories}
-          styles={styles}
           fabRate={fabRate}
           installRate={installRate}
           orgId={orgId}
@@ -675,7 +610,6 @@ export default function ServiceCatalogSection() {
                     <CatalogItemForm
                       initial={item}
                       categories={categories}
-                      styles={styles}
                       fabRate={fabRate}
                       installRate={installRate}
                       orgId={orgId}
