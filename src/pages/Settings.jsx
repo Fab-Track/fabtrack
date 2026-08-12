@@ -13,10 +13,11 @@ import BillingSection from "@/components/settings/BillingSection";
 import MyAccountSection from "@/components/settings/MyAccountSection";
 import ServiceCatalogSection from "@/components/settings/ServiceCatalogSection";
 import AdminActivityLogSection from "@/components/settings/AdminActivityLogSection";
-import { BookOpen, Activity, DollarSign, Image, Timer, Paperclip, ListChecks } from "lucide-react";
+import { BookOpen, Activity, DollarSign, Image, Timer, Paperclip, ListChecks, Globe } from "lucide-react";
 import AttachmentCategoriesSection from "@/components/settings/AttachmentCategoriesSection";
 import StripeSettingsSection from "@/components/settings/StripeSettingsSection";
 import JobDetailOptionsSection from "@/components/settings/JobDetailOptionsSection";
+import GHLLeadWebhookSection from "@/components/settings/GHLLeadWebhookSection";
 
 // All settings nav items — visibility controlled per role below
 const ALL_SECTIONS = [
@@ -26,6 +27,7 @@ const ALL_SECTIONS = [
   { id: "notifications", label: "Notifications",    icon: Bell,            roles: ["owner","admin","shop_manager","estimator","fabricator","accountant"] },
   { id: "templates",  label: "Message Templates",    icon: MessageSquare,   roles: ["owner","admin","estimator"] },
   { id: "integrations", label: "Integrations",      icon: Plug,            ownerOnly: true },
+  { id: "ghl_webhook",  label: "Lead Webhook",      icon: Globe,           ownerOnly: true },
   { id: "jobboard",   label: "Job Board",            icon: LayoutDashboard, roles: ["owner","admin","shop_manager"] },
   { id: "catalog",    label: "Service Catalog",      icon: BookOpen,        ownerOnly: true },
   { id: "contracts",  label: "Estimate Contracts",   icon: ClipboardList,   ownerOnly: true },
@@ -70,6 +72,7 @@ export default function Settings() {
       case "notifications":return <NotificationsSection isOwner={isOwner} userRole={userRoles[0] || "user"} />;
       case "templates":    return <MessageTemplatesSection />;
       case "integrations": return <IntegrationsSection />;
+      case "ghl_webhook":  return <GHLLeadWebhookSection />;
       case "jobboard":     return <JobBoardSettingsSection />;
       case "catalog":      return <ServiceCatalogSection />;
       case "contracts":    return <EstimateContractSection />;
