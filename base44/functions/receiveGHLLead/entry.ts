@@ -84,6 +84,7 @@ export default async function(req) {
 
     // In-app notification
     await base44.asServiceRole.entities.Notification.create({
+      organization_id: orgId,
       title: `New Lead: ${name}`,
       body: `Website lead from ${name}. Phone: ${phone}. Email: ${email}. Project: ${jobType}.`,
       type: "new_lead",

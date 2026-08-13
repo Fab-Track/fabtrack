@@ -26,7 +26,14 @@ export default function LeadForm() {
     setLoading(true);
     setError("");
     try {
-      await base44.functions.invoke("submitLead", form);
+      const urlParams = new URLSearchParams(window.location.search);
+      const orgId = urlParams.get("org_id") || "";
+      if (!orgId) {
+        setError("Missing organization ID. Please use the lead form link provided by your fabricator.");
+        setLoading(false);
+        return;
+      }
+      await base44.functions.invoke("submitLead", { ...form, org_id: orgId });
       setSubmitted(true);
     } catch (err) {
       setError("Something went wrong. Please try again or call us directly.");
