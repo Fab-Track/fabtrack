@@ -91,8 +91,8 @@ export default function NewJob() {
       customer_name: customer?.name || "",
       site_address: customer?.address || prev.site_address,
       ...(sameAsCustomer ? {
-        onsite_contact_name: customer?.job_contact_name || "",
-        onsite_contact_phone: customer?.job_contact_phone || "",
+        onsite_contact_name: customer?.job_contact_name || customer?.name || "",
+        onsite_contact_phone: customer?.job_contact_phone || customer?.phone || "",
       } : {}),
     }));
   };
@@ -102,8 +102,8 @@ export default function NewJob() {
     if (checked && selectedCustomer) {
       setForm(prev => ({
         ...prev,
-        onsite_contact_name: selectedCustomer.job_contact_name || "",
-        onsite_contact_phone: selectedCustomer.job_contact_phone || "",
+        onsite_contact_name: selectedCustomer.job_contact_name || selectedCustomer.name || "",
+        onsite_contact_phone: selectedCustomer.job_contact_phone || selectedCustomer.phone || "",
       }));
     }
   };
