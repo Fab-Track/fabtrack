@@ -22,8 +22,6 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
   const [form, setForm] = useState({});
   const [sameAsCustomer, setSameAsCustomer] = useState(false);
 
-  const selectedCustomer = allCustomers.find(c => c.id === form.customer_id) || null;
-
   // Employees for rep assignment
   const { data: employees = [] } = useQuery({
     queryKey: ["employees"],
@@ -37,6 +35,8 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
     queryFn: () => base44.entities.Customer.list("-created_date", 200),
     enabled: open,
   });
+
+  const selectedCustomer = allCustomers.find(c => c.id === form.customer_id) || null;
 
   // Sync form when job changes or sheet opens
   useEffect(() => {
