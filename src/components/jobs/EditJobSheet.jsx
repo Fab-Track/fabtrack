@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Wrench, Hash, CalendarDays, MapPin, ClipboardList, UserCheck, Building2, Save, Loader2, Check } from "lucide-react";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
+import { Checkbox } from "@/components/ui/checkbox";
 import { SHOP_STAGES } from "@/lib/pipelineHelpers";
 import { useAutosave } from "@/hooks/useAutosave";
 
@@ -19,6 +20,9 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
   const qc = useQueryClient();
   const [dirty, setDirty] = useState(false);
   const [form, setForm] = useState({});
+  const [sameAsCustomer, setSameAsCustomer] = useState(false);
+
+  const selectedCustomer = allCustomers.find(c => c.id === form.customer_id) || null;
 
   // Employees for rep assignment
   const { data: employees = [] } = useQuery({
@@ -152,13 +156,34 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
               <Label className="text-xs">Expected Install Date</Label>
               <Input type="date" value={form.expected_install_date || ""} onChange={e => f("expected_install_date", e.target.value)} />
             </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="same-as-customer-edit"
+                checked={sameAsCustomer}
+                onCheckedChange={(checked) => {
+                  setSameAsCustomer(checked);
+                  if (checked && selectedCustomer) {
+                    setDirty(true);
+                    setForm(prev => ({
+                      ...prev,
+                      onsite_contact_name: selectedCustomer.job_contact_name || selectedCustomer.name || "",
+                      onsite_contact_phone: selectedCustomer.job_contact_phone || selectedCustomer.phone || "",
+                    }));
+                  }
+                }}
+                disabled={!form.customer_id}
+              />
+              <Label htmlFor="same-as-customer-edit" className="text-xs cursor-pointer">
+                Use customer's job contact for on-site contact
+              </Label>
+            </div>
             <div>
               <Label className="text-xs">On-Site Contact Name</Label>
-              <Input value={form.onsite_contact_name || ""} onChange={e => f("onsite_contact_name", e.target.value)} placeholder="Contact name" />
+              <Input value={form.onsite_contact_name || ""} onChange={e => f("onsite_contact_name", e.target.value)} placeholder="Contact name" disabled={sameAsCustomer} />
             </div>
             <div>
               <Label className="text-xs">On-Site Contact Phone</Label>
-              <Input value={form.onsite_contact_phone || ""} onChange={e => f("onsite_contact_phone", e.target.value)} placeholder="(555) 555-5555" />
+              <Input value={form.onsite_contact_phone || ""} onChange={e => f("onsite_contact_phone", e.target.value)} placeholder="(555) 555-5555" disabled={sameAsCustomer} />
             </div>
           </fieldset>
 
