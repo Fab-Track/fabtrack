@@ -17,6 +17,8 @@ import ScopeReviewDialog from "./ScopeReviewDialog";
 import DeleteJobModal from "@/components/jobs/DeleteJobModal";
 import { toast } from "sonner";
 import { format, parseISO, isValid } from "date-fns";
+import { useAuth } from "@/lib/AuthContext";
+import { isOwnerLevel } from "@/lib/roleHelpers";
 
 const FLOWS = { Sales: SALES_STAGES, Shop: SHOP_STAGES, Billing: BILLING_STAGES };
 
@@ -196,6 +198,8 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
 // ── Shop Board ─────────────────────────────────────────────────────────────────
 export default function ShopBoard({ jobs = [], readOnly = false }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const canSeeTotals = isOwnerLevel(user);
   const [completing, setCompleting] = useState(null);
   const [fabReview, setFabReview] = useState(null);
 
@@ -306,6 +310,14 @@ export default function ShopBoard({ jobs = [], readOnly = false }) {
                     ))}
                     {provided.placeholder}
                   </div>
+                  {canSeeTotals && (
+                    <div className="px-3 py-2 border-t bg-muted/50 flex items-center justify-between">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Total</span>
+                      <span className="text-xs font-bold text-emerald-600">
+                        ${columns[stage].reduce((sum, j) => sum + (j.estimate_total || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </Droppable>
