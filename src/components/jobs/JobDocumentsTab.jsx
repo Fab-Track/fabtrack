@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, parseISO } from "date-fns";
-import { Plus, FileText, FileDiff, Receipt, CheckCircle2, AlertCircle, Clock, Sparkles, RefreshCw, Archive, X } from "lucide-react";
+import { Plus, FileText, FileDiff, Receipt, CheckCircle2, AlertCircle, Clock, Sparkles, RefreshCw, Archive, X, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import InvoiceEditor from "@/components/documents/InvoiceEditor";
 import ChangeOrderEditor from "@/components/documents/ChangeOrderEditor";
 import JobFinancialSummary from "@/components/jobs/JobFinancialSummary";
@@ -86,6 +87,23 @@ export default function JobDocumentsTab({ job }) {
   const [invoiceBannerDismissed, setInvoiceBannerDismissed] = useState(
     () => !!localStorage.getItem(`inv-banner-dismissed-${job.id}`)
   );
+  const [invoiceToDelete, setInvoiceToDelete] = useState(null);
+
+  const deleteInvoiceMutation = useMutation({
+    mutationFn: (invId) => base44.entities.Invoice.delete(invId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["invoices", job.id] });
+      setInvoiceToDelete(null);
+    },
+  });
+
+  function handleDeleteInvoice(inv) {
+    setInvoiceToDelete(inv);
+  }
+
+  function confirmDeleteInvoice() {
+    if (invoiceToDelete?.id) deleteInvoiceMutation.mutate(invoiceToDelete.id);
+  }
 
   const { data: estimates = [] } = useQuery({
     queryKey: ["estimates", job.id],
@@ -395,6 +413,11 @@ export default function JobDocumentsTab({ job }) {
                     </Badge>
                   )}
                   <Badge className={`text-xs ${INV_STATUS[inv.status] || ""}`}>{inv.status}</Badge>
+                  <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                    onClick={e => { e.stopPropagation(); handleDeleteInvoice(inv); }}
+                    title="Delete invoice">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
               </div>
             ))}
@@ -493,6 +516,27 @@ export default function JobDocumentsTab({ job }) {
           />
         </DialogContent>
       </Dialog>
+
+      {/* ── Delete Invoice Confirmation ───────────────────────────── */}
+      <AlertDialog open={!!invoiceToDelete} onOpenChange={(open) => { if (!open) setInvoiceToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Invoice?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {invoiceToDelete?.invoice_number || `Invoice #${(invoiceToDelete?.id || "").slice(-6).toUpperCase()}`}. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteInvoiceMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteInvoice}
+              disabled={deleteInvoiceMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteInvoiceMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
