@@ -181,12 +181,13 @@
       "type": "string",
       "enum": [
         "not_invoiced",
+        "waiting_for_draw",
         "sent_pending_draw",
         "50_percent",
         "100_percent"
       ],
       "default": "not_invoiced",
-      "description": "Manual payment status \u2014 set by users to track invoice payment progress (Sent - Pending Draw, 50% deposit, 100% paid). Not auto-derived from invoices."
+      "description": "Manual payment status \u2014 set by users to track invoice payment progress (Waiting for Draw, Sent - Pending Draw, 50% deposit, 100% paid). Not auto-derived from invoices."
     },
     "scope_approval": {
       "type": "object",

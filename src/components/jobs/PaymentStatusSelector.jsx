@@ -8,6 +8,7 @@ import PaymentStatusBadge from "@/components/pipeline/PaymentStatusBadge";
 
 const OPTIONS = [
   { value: "not_invoiced", label: "Not Invoiced" },
+  { value: "waiting_for_draw", label: "Waiting for Draw" },
   { value: "sent_pending_draw", label: "Sent - Pending Draw" },
   { value: "50_percent",   label: "50% Paid" },
   { value: "100_percent",  label: "100% Paid" },
