@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -6,12 +6,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Wrench, Hash, CalendarDays, MapPin, ClipboardList, UserCheck, Building2, Save, Loader2, Check } from "lucide-react";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SHOP_STAGES } from "@/lib/pipelineHelpers";
-import { useAutosave } from "@/hooks/useAutosave";
 
 const JOB_TYPES = ["Railing", "Gate", "Fence", "Staircase", "Custom Structure", "Other"];
 const BOARDS = ["Sales", "Shop", "Billing"];
@@ -21,6 +30,14 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
   const [dirty, setDirty] = useState(false);
   const [form, setForm] = useState({});
   const [sameAsCustomer, setSameAsCustomer] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showDiscardPrompt, setShowDiscardPrompt] = useState(false);
+
+  // Track whether the sheet was open in the previous render so we only
+  // hydrate the form when it transitions from closed → open (or job id changes),
+  // NOT on every job prop update after a save. This is what was wiping typed text.
+  const prevOpenRef = useRef(false);
+  const jobIdRef = useRef(null);
 
   // Employees for rep assignment
   const { data: employees = [] } = useQuery({
@@ -38,9 +55,12 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
 
   const selectedCustomer = allCustomers.find(c => c.id === form.customer_id) || null;
 
-  // Sync form when job changes or sheet opens
+  // Sync form ONLY when the sheet opens or the underlying job record changes.
+  // This prevents the form from resetting while the user is typing.
   useEffect(() => {
-    if (job && open) {
+    const justOpened = open && !prevOpenRef.current;
+    const jobChanged = job?.id && jobIdRef.current !== job.id;
+    if (job && open && (justOpened || jobChanged)) {
       setForm({
         job_name: job.job_name || "",
         job_number: job.job_number || "",
@@ -55,8 +75,11 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
         customer_id: job.customer_id || "",
         customer_name: job.customer_name || "",
       });
+      setDirty(false);
     }
-  }, [job, open]);
+    prevOpenRef.current = open;
+    jobIdRef.current = job?.id || null;
+  }, [job?.id, open]);
 
   const f = (field, val) => {
     setDirty(true);
@@ -68,7 +91,7 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
     ["estimator", "admin", "owner"].includes((e.role || "").toLowerCase())
   );
 
-  const enabled = !!job && !!form.job_name?.trim();
+  const canSave = !!job && !!form.job_name?.trim();
 
   const onSave = async (formData) => {
     if (!job) return;
@@ -109,16 +132,33 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
     onSaved?.();
   };
 
-  const { isSaving, saveNow } = useAutosave({
-    data: form,
-    dirty,
-    onSave,
-    onSaved: () => setDirty(false),
-    enabled,
-  });
+  // Manual save — no debounce, no auto-fire. Not memoized because it closes
+  // over employees/allCustomers which may load after the form hydrates.
+  const saveNow = async () => {
+    if (!canSave || !dirty || isSaving) return;
+    setIsSaving(true);
+    try {
+      await onSave(form);
+      setDirty(false);
+      toast.success("Job saved.");
+    } catch (e) {
+      toast.error(e?.message || "Failed to save job.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Intercept close attempts: if there are unsaved changes, ask first.
+  const handleOpenChange = (next) => {
+    if (!next && dirty && !isSaving) {
+      setShowDiscardPrompt(true);
+      return;
+    }
+    onOpenChange(next);
+  };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader className="mb-4">
           <SheetTitle className="flex items-center gap-2 text-base">
@@ -239,7 +279,7 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-3 pt-2 sticky bottom-0 bg-background py-3 border-t">
-            <Button variant="outline" className="h-9" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" className="h-9" onClick={() => handleOpenChange(false)}>
               Cancel
             </Button>
             {isSaving ? (
@@ -249,12 +289,8 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
             ) : dirty ? (
               <Button
                 className="h-9 gap-1.5"
-                onClick={async () => {
-                  try { await saveNow(); } catch (e) {
-                    toast.error(e?.message || "Failed to save job.");
-                  }
-                }}
-                disabled={!form.job_name?.trim()}
+                onClick={() => saveNow()}
+                disabled={!canSave}
               >
                 <Save className="w-3.5 h-3.5" /> Save
               </Button>
@@ -266,6 +302,38 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
           </div>
         </div>
       </SheetContent>
+
+      {/* Unsaved changes confirmation */}
+      <AlertDialog open={showDiscardPrompt} onOpenChange={setShowDiscardPrompt}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Save changes before closing?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes to this job. Would you like to save them before closing?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setShowDiscardPrompt(false);
+                setDirty(false);
+                onOpenChange(false);
+              }}
+            >
+              Discard changes
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                setShowDiscardPrompt(false);
+                await saveNow();
+                onOpenChange(false);
+              }}
+            >
+              Save & close
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }
