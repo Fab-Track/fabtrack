@@ -1,0 +1,80 @@
+{
+  "name": "Task",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
+    "title": {
+      "type": "string",
+      "description": "Task title / text"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional additional details"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "High",
+        "Medium",
+        "Low"
+      ],
+      "default": "Medium"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Optional due date"
+    },
+    "assignee_id": {
+      "type": "string",
+      "description": "User ID assigned to this task"
+    },
+    "assignee_name": {
+      "type": "string",
+      "description": "Assignee display name"
+    },
+    "created_by_id": {
+      "type": "string",
+      "description": "User ID of the task creator"
+    },
+    "created_by_name": {
+      "type": "string",
+      "description": "Creator display name"
+    },
+    "is_completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_by_id": {
+      "type": "string"
+    },
+    "completed_by_name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title",
+    "organization_id"
+  ],
+  "rls": {
+    "create": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
+    "read": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
+    "update": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
+    "delete": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    }
+  }
+}
