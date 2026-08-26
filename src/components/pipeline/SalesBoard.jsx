@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { SALES_STAGES, SALES_COLORS, daysInStage, buildStageTransition, sortColumnJobs, closePriorityGap, reorderColumnPriority, getPaymentStatus } from "@/lib/pipelineHelpers";
+import { usePipelineStages, daysInStage, buildStageTransition, sortColumnJobs, closePriorityGap, reorderColumnPriority, getPaymentStatus } from "@/lib/pipelineHelpers";
 import PriorityBadge from "./PriorityBadge";
 import PriorityMenuItems from "./PriorityMenuItems";
 import PaymentStatusBadge from "./PaymentStatusBadge";
@@ -149,6 +149,12 @@ export default function SalesBoard({ jobs = [] }) {
   const effectiveRole = useEffectiveRole(user?.role || "admin");
   const isOwner = effectiveRole.toLowerCase() === "owner";
   const isEstimator = effectiveRole.toLowerCase() === "estimator";
+  const { sales: { stages: SALES_STAGES, colors: SALES_COLORS_HEX } = {} } = usePipelineStages();
+  const SALES_COLORS = React.useMemo(() => {
+    const m = {};
+    SALES_STAGES?.forEach(s => { m[s] = "border-t-4"; });
+    return m;
+  }, [SALES_STAGES]);
   function canDeleteJob(job) {
     if (isOwner) return true;
     if (isEstimator && job?.stage && ["New Lead", "Estimate In Progress"].includes(job?.stage)) return true;
@@ -207,13 +213,13 @@ export default function SalesBoard({ jobs = [] }) {
   const displayJobs = jobs.filter(j => !j.is_lead_closed);
 
   const columns = {};
-  SALES_STAGES.forEach(s => { columns[s] = []; });
+  (SALES_STAGES || []).forEach(s => { columns[s] = []; });
   displayJobs.forEach(j => {
-    const stage = j.stage || "New Lead";
+    const stage = j.stage || (SALES_STAGES?.[0] || "New Lead");
     if (columns[stage]) columns[stage].push(j);
-    else columns["New Lead"].push(j);
+    else columns[SALES_STAGES?.[0] || "New Lead"].push(j);
   });
-  SALES_STAGES.forEach(s => { columns[s] = sortColumnJobs(columns[s], s); });
+  (SALES_STAGES || []).forEach(s => { columns[s] = sortColumnJobs(columns[s], s); });
 
   const priorityMutation = useMutation({
     mutationFn: (updates) => base44.entities.Job.bulkUpdate(updates.map(u => ({ id: u.jobId, stage_priority: u.stage_priority }))),
@@ -286,13 +292,14 @@ export default function SalesBoard({ jobs = [] }) {
     <>
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="flex gap-3 overflow-x-auto flex-1 pb-4">
-          {SALES_STAGES.map(stage => (
+          {(SALES_STAGES || []).map(stage => (
             <Droppable key={stage} droppableId={stage}>
               {(provided, snapshot) => (
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className={`shrink-0 w-64 flex flex-col rounded-xl border border-t-4 ${SALES_COLORS[stage]} ${snapshot.isDraggingOver ? "bg-accent/20" : "bg-muted/30"}`}
+                  className={`shrink-0 w-64 flex flex-col rounded-xl border border-t-4 ${snapshot.isDraggingOver ? "bg-accent/20" : "bg-muted/30"}`}
+                  style={{ borderTopColor: SALES_COLORS_HEX?.[stage] || "#94a3b8" }}
                 >
                   <div className="px-3 py-2.5 flex items-center justify-between">
                     <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground leading-tight">{stage}</span>

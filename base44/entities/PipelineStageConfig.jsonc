@@ -1,0 +1,113 @@
+{
+  "name": "PipelineStageConfig",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
+    "board": {
+      "type": "string",
+      "enum": [
+        "Sales",
+        "Shop",
+        "Billing"
+      ],
+      "description": "Which pipeline board this config belongs to"
+    },
+    "stages": {
+      "type": "array",
+      "description": "Ordered list of pipeline stages for this board",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique stable id for drag-and-drop"
+          },
+          "name": {
+            "type": "string",
+            "description": "Stage display name"
+          },
+          "color": {
+            "type": "string",
+            "description": "Hex color for the stage column top border"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "organization_id",
+    "board",
+    "stages"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.organization_id": "{{user.data.organization_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "owner"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
+    "update": {
+      "$and": [
+        {
+          "data.organization_id": "{{user.data.organization_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "owner"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.organization_id": "{{user.data.organization_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "owner"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,4 +1,8 @@
 import { differenceInDays, parseISO, isValid } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { useOrgFilter } from "@/lib/orgContext";
+import React from "react";
 
 // ── Sales Board ────────────────────────────────────────────────────────────────
 export const SALES_STAGES = [
@@ -344,4 +348,106 @@ export function calcBillingStage(invoiceSentDate, amountPaid, total) {
   if (days >= 15) return "15 Days Overdue";
   if (days >= 10) return "10 Days Overdue";
   return "2nd Half Invoice Sent";
+}
+
+// ── Dynamic pipeline stage config (per-org, persisted) ──────────────────────────
+// Hex → Tailwind border-top class conversion. Builds an inline-style override
+// instead of trying to map back to Tailwind color tokens, so any hex works.
+export function hexToBorderClass(hex) {
+  // Return a real class so Tailwind keeps it; the actual color is applied
+  // via inline style in the board components.
+  return "border-t-4";
+}
+
+// Default stage arrays used when no org config exists yet.
+export const DEFAULT_STAGES = {
+  Sales: SALES_STAGES,
+  Shop: SHOP_STAGES,
+  Billing: BILLING_STAGES,
+};
+
+export const DEFAULT_COLORS = {
+  Sales: SALES_COLORS,
+  Shop: SHOP_COLORS,
+  Billing: BILLING_COLORS,
+};
+
+// Reverse lookup: Tailwind border-t class → hex (for seeding the editor)
+const BORDER_CLASS_TO_HEX = {
+  "border-t-slate-400": "#94a3b8",
+  "border-t-sky-400": "#38bdf8", "border-t-sky-600": "#0284c7",
+  "border-t-blue-400": "#60a5fa", "border-t-blue-600": "#2563eb",
+  "border-t-violet-400": "#a78bfa", "border-t-violet-600": "#7c3aed",
+  "border-t-amber-400": "#fbbf24", "border-t-amber-500": "#f59e0b", "border-t-amber-600": "#d97706",
+  "border-t-orange-400": "#fb923c", "border-t-orange-500": "#f97316", "border-t-orange-600": "#ea580c",
+  "border-t-cyan-500": "#06b6d4", "border-t-cyan-700": "#0e7490",
+  "border-t-emerald-500": "#10b981",
+  "border-t-yellow-300": "#fde047", "border-t-yellow-500": "#eab308",
+  "border-t-red-500": "#ef4444", "border-t-red-800": "#991b1b",
+};
+
+export function borderClassToHex(cls = "") {
+  return BORDER_CLASS_TO_HEX[cls] || "#94a3b8";
+}
+
+function seedStages(board) {
+  const stages = DEFAULT_STAGES[board] || [];
+  const colors = DEFAULT_COLORS[board] || {};
+  return stages.map((name, i) => ({
+    id: `default-${board}-${i}`,
+    name,
+    color: borderClassToHex(colors[name]),
+  }));
+}
+
+/**
+ * Hook that loads org-level pipeline stage configurations from the
+ * PipelineStageConfig entity, falling back to the code defaults when no
+ * saved config exists. Returns stages + color maps for all three boards.
+ */
+export function usePipelineStages() {
+  const orgFilter = useOrgFilter();
+
+  const { data: configs = [], isLoading } = useQuery({
+    queryKey: ["pipelineStageConfigs", orgFilter],
+    queryFn: () => base44.entities.PipelineStageConfig.filter(orgFilter),
+  });
+
+  const byBoard = React.useMemo(() => {
+    const map = { Sales: null, Shop: null, Billing: null };
+    configs.forEach(c => {
+      if (c.board && map.hasOwnProperty(c.board)) {
+        map[c.board] = c.stages || [];
+      }
+    });
+
+    const result = {};
+    Object.keys(map).forEach(board => {
+      const saved = map[board];
+      const stages = (saved && saved.length > 0)
+        ? saved
+        : seedStages(board);
+      result[board] = {
+        stages: stages.map(s => s.name),
+        colors: Object.fromEntries(stages.map(s => [s.name, s.color])),
+        raw: stages,
+      };
+    });
+    return result;
+  }, [configs]);
+
+  return {
+    sales: byBoard.Sales,
+    shop: byBoard.Shop,
+    billing: byBoard.Billing,
+    isLoading,
+  };
+}
+
+/**
+ * Hook that returns a resolve function to get stage config for a single board.
+ */
+export function usePipelineBoardStages() {
+  const { sales, shop, billing } = usePipelineStages();
+  return { Sales: sales, Shop: shop, Billing: billing };
 }

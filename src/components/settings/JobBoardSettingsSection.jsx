@@ -1,52 +1,37 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { useOrgFilter, useWriteOrgId } from "@/lib/orgContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GripVertical, Trash2, Plus, Info } from "lucide-react";
+import { GripVertical, Trash2, Plus, Info, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import {
   SALES_STAGES, SHOP_STAGES, BILLING_STAGES,
   SALES_COLORS, SHOP_COLORS, BILLING_COLORS,
+  borderClassToHex,
 } from "@/lib/pipelineHelpers";
 
-// Map the tailwind `border-t-<color>-<shade>` classes used in pipelineHelpers
-// to a hex swatch so the color picker shows the real column color.
-const TAILWIND_TO_HEX = {
-  "slate-400": "#94a3b8",
-  "sky-400": "#38bdf8", "sky-600": "#0284c7",
-  "blue-400": "#60a5fa", "blue-600": "#2563eb",
-  "violet-400": "#a78bfa", "violet-600": "#7c3aed",
-  "amber-400": "#fbbf24", "amber-500": "#f59e0b", "amber-600": "#d97706",
-  "orange-400": "#fb923c", "orange-500": "#f97316", "orange-600": "#ea580c",
-  "cyan-500": "#06b6d4", "cyan-700": "#0e7490",
-  "emerald-500": "#10b981",
-  "yellow-300": "#fde047", "yellow-500": "#eab308",
-  "red-500": "#ef4444", "red-800": "#991b1b",
-};
-
-function hexForColorClass(cls = "") {
-  const m = cls.match(/border-t-([a-z]+)-(\d+)/);
-  if (!m) return "#94a3b8";
-  return TAILWIND_TO_HEX[`${m[1]}-${m[2]}`] || "#94a3b8";
-}
-
-// Build the seed list of {name, color} from a real stage array + its color map.
+// Build the seed list of {id, name, color} from a default stage array + color map.
 function stagesToSeed(stages, colorMap) {
   return stages.map((name, i) => ({
-    id: i + 1,
+    id: `seed-${i}`,
     name,
-    color: hexForColorClass(colorMap[name]),
+    color: borderClassToHex(colorMap[name]),
   }));
 }
 
-function StageRow({ stage, onRename, onDelete, onColorChange }) {
+function StageRow({ stage, onRename, onDelete, onColorChange, index }) {
   return (
     <div className="flex items-center gap-2 px-3 py-2 bg-card border rounded-lg group">
       <GripVertical className="w-4 h-4 text-muted-foreground/40 cursor-grab" />
       <div className="relative">
         <input
           type="color"
-          value={stage.color || "#94a3b8"}
+          value={stage.color || "#94a3b8"
+          }
           onChange={e => onColorChange(e.target.value)}
           className="w-5 h-5 rounded cursor-pointer border-0 p-0 bg-transparent"
           title="Stage color"
@@ -68,11 +53,58 @@ function StageRow({ stage, onRename, onDelete, onColorChange }) {
   );
 }
 
-function PipelineEditor({ title, stages, colorMap }) {
-  const [stageRows, setStageRows] = useState(() => stagesToSeed(stages, colorMap));
+function PipelineEditor({ title, board, initialStages }) {
+  const orgFilter = useOrgFilter();
+  const writeOrgId = useWriteOrgId();
+  const qc = useQueryClient();
+
+  // Load saved config for this board
+  const { data: savedConfig } = useQuery({
+    queryKey: ["pipelineStageConfigs", orgFilter],
+    queryFn: () => base44.entities.PipelineStageConfig.filter(orgFilter),
+  });
+
+  const configRecord = savedConfig?.find(c => c.board === board) || null;
+
+  const [stageRows, setStageRows] = useState(() =>
+    configRecord?.stages?.length
+      ? configRecord.stages
+      : stagesToSeed(initialStages.stages, initialStages.colors)
+  );
+
+  // Re-sync when saved config loads (first load only)
+  const [didSync, setDidSync] = useState(false);
+  useEffect(() => {
+    if (!didSync && savedConfig) {
+      const rec = savedConfig.find(c => c.board === board);
+      if (rec?.stages?.length) {
+        setStageRows(rec.stages);
+      }
+      setDidSync(true);
+    }
+  }, [savedConfig, board, didSync]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (stages) => {
+      if (configRecord) {
+        await base44.entities.PipelineStageConfig.update(configRecord.id, { stages });
+      } else {
+        await base44.entities.PipelineStageConfig.create({
+          organization_id: writeOrgId,
+          board,
+          stages,
+        });
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pipelineStageConfigs"] });
+      toast.success(`${board} pipeline stages saved.`);
+    },
+    onError: (e) => toast.error(e?.message || "Failed to save stages."),
+  });
 
   function addStage() {
-    setStageRows(p => [...p, { id: Date.now(), name: "New Stage", color: "#94a3b8" }]);
+    setStageRows(p => [...p, { id: `new-${Date.now()}`, name: "New Stage", color: "#94a3b8" }]);
   }
 
   function updateStage(id, patch) {
@@ -83,22 +115,59 @@ function PipelineEditor({ title, stages, colorMap }) {
     setStageRows(p => p.filter(s => s.id !== id));
   }
 
+  function onDragEnd(result) {
+    if (!result.destination) return;
+    if (result.source.index === result.destination.index) return;
+    const reordered = Array.from(stageRows);
+    const [moved] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, moved);
+    setStageRows(reordered);
+  }
+
+  function handleSave() {
+    saveMutation.mutate(stageRows);
+  }
+
   return (
     <div>
       <h3 className="text-sm font-semibold mb-2">{title}</h3>
-      <div className="space-y-1.5">
-        {stageRows.map(s => (
-          <StageRow
-            key={s.id}
-            stage={s}
-            onRename={name => updateStage(s.id, { name })}
-            onColorChange={color => updateStage(s.id, { color })}
-            onDelete={() => deleteStage(s.id)}
-          />
-        ))}
-      </div>
+      <DragDropContext onDragEnd={onDragEnd}>
+        <Droppable droppableId={`pipeline-${board}`}>
+          {(provided) => (
+            <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-1.5">
+              {stageRows.map((s, index) => (
+                <Draggable key={s.id} draggableId={s.id} index={index}>
+                  {(prov) => (
+                    <div ref={prov.innerRef} {...prov.draggableProps}>
+                      <div {...prov.dragHandleProps}>
+                        <StageRow
+                          stage={s}
+                          onRename={name => updateStage(s.id, { name })}
+                          onColorChange={color => updateStage(s.id, { color })}
+                          onDelete={() => deleteStage(s.id)}
+                          index={index}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
       <Button size="sm" variant="outline" className="mt-2 gap-1.5 h-7 text-xs" onClick={addStage}>
         <Plus className="w-3 h-3" /> Add Stage
+      </Button>
+      <Button
+        size="sm"
+        className="mt-2 ml-2 h-7 text-xs gap-1.5"
+        onClick={handleSave}
+        disabled={saveMutation.isPending}
+      >
+        {saveMutation.isPending && <Loader2 className="w-3 h-3 animate-spin" />}
+        Save {board} Stages
       </Button>
     </div>
   );
@@ -118,11 +187,23 @@ export default function JobBoardSettingsSection() {
         <p className="text-sm text-muted-foreground">Configure pipeline stages and job defaults.</p>
       </div>
 
-      {/* Pipeline editors — seeded from the live stage definitions in pipelineHelpers */}
+      {/* Pipeline editors — persisted to PipelineStageConfig per org */}
       <div className="space-y-6">
-        <PipelineEditor title="Sales Pipeline" stages={SALES_STAGES} colorMap={SALES_COLORS} />
-        <PipelineEditor title="Shop Pipeline" stages={SHOP_STAGES} colorMap={SHOP_COLORS} />
-        <PipelineEditor title="Billing Pipeline" stages={BILLING_STAGES} colorMap={BILLING_COLORS} />
+        <PipelineEditor
+          title="Sales Pipeline"
+          board="Sales"
+          initialStages={{ stages: SALES_STAGES, colors: SALES_COLORS }}
+        />
+        <PipelineEditor
+          title="Shop Pipeline"
+          board="Shop"
+          initialStages={{ stages: SHOP_STAGES, colors: SHOP_COLORS }}
+        />
+        <PipelineEditor
+          title="Billing Pipeline"
+          board="Billing"
+          initialStages={{ stages: BILLING_STAGES, colors: BILLING_COLORS }}
+        />
       </div>
 
       {/* Defaults */}
@@ -158,13 +239,10 @@ export default function JobBoardSettingsSection() {
       <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/40 border rounded-lg p-3">
         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
         <p>
-          The stages shown above reflect the current pipeline definitions used by the Job Board.
-          Renaming, adding, or removing stages here is not yet wired to the live board — the board's
-          columns are defined in code. Reach out to have a stage permanently added or renamed.
+          Drag stages by the handle to reorder them. Click <strong>Save</strong> on each pipeline
+          to persist changes — they'll appear immediately on the Job Board.
         </p>
       </div>
-
-      <Button onClick={() => toast.success("Job board settings saved")} className="w-full sm:w-auto">Save Changes</Button>
     </div>
   );
 }

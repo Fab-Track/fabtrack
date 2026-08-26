@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { SHOP_STAGES, SHOP_COLORS, daysInStage, buildStageTransition, SALES_STAGES, BILLING_STAGES, sortColumnJobs, closePriorityGap, reorderColumnPriority, getPaymentStatus } from "@/lib/pipelineHelpers";
+import { usePipelineStages, daysInStage, buildStageTransition, SALES_STAGES as SALES_STAGES_DEFAULT, BILLING_STAGES as BILLING_STAGES_DEFAULT, sortColumnJobs, closePriorityGap, reorderColumnPriority, getPaymentStatus } from "@/lib/pipelineHelpers";
 import PriorityBadge from "./PriorityBadge";
 import PriorityMenuItems from "./PriorityMenuItems";
 import PaymentStatusBadge from "./PaymentStatusBadge";
@@ -20,7 +20,7 @@ import { format, parseISO, isValid } from "date-fns";
 import { useAuth } from "@/lib/AuthContext";
 import { isOwnerLevel } from "@/lib/roleHelpers";
 
-const FLOWS = { Sales: SALES_STAGES, Shop: SHOP_STAGES, Billing: BILLING_STAGES };
+const FLOWS = { Sales: SALES_STAGES_DEFAULT, Shop: BILLING_STAGES_DEFAULT, Billing: BILLING_STAGES_DEFAULT };
 
 // ── Shop Card ──────────────────────────────────────────────────────────────────
 function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, columnJobs, onPriorityChange, invoices = [], customer, onFabReview }) {
@@ -202,6 +202,7 @@ export default function ShopBoard({ jobs = [], readOnly = false }) {
   const canSeeTotals = isOwnerLevel(user);
   const [completing, setCompleting] = useState(null);
   const [fabReview, setFabReview] = useState(null);
+  const { shop: { stages: SHOP_STAGES, colors: SHOP_COLORS_HEX } = {} } = usePipelineStages();
 
   const jobIds = jobs.map(j => j.id);
   const { data: allInvoices = [] } = useQuery({
@@ -221,13 +222,13 @@ export default function ShopBoard({ jobs = [], readOnly = false }) {
   }, {});
 
   const columns = {};
-  SHOP_STAGES.forEach(s => { columns[s] = []; });
+  (SHOP_STAGES || []).forEach(s => { columns[s] = []; });
   jobs.forEach(j => {
-    const stage = j.stage || "New Jobs Landed — Needs Approval";
+    const stage = j.stage || (SHOP_STAGES?.[0] || "New Jobs Landed — Needs Approval");
     if (columns[stage]) columns[stage].push(j);
-    else columns["New Jobs Landed — Needs Approval"].push(j);
+    else columns[SHOP_STAGES?.[0] || "New Jobs Landed — Needs Approval"].push(j);
   });
-  SHOP_STAGES.forEach(s => { columns[s] = sortColumnJobs(columns[s], s); });
+  (SHOP_STAGES || []).forEach(s => { columns[s] = sortColumnJobs(columns[s], s); });
 
   const moveMutation = useMutation({
     mutationFn: async ({ job, toBoard, toStage, note }) => {
@@ -273,13 +274,14 @@ export default function ShopBoard({ jobs = [], readOnly = false }) {
     <>
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="flex gap-3 overflow-x-auto flex-1 pb-4">
-          {SHOP_STAGES.map(stage => (
+          {(SHOP_STAGES || []).map(stage => (
             <Droppable key={stage} droppableId={stage}>
               {(provided, snapshot) => (
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className={`shrink-0 w-64 flex flex-col rounded-xl border border-t-4 ${SHOP_COLORS[stage]} ${snapshot.isDraggingOver ? "bg-accent/20" : "bg-muted/30"}`}
+                  className={`shrink-0 w-64 flex flex-col rounded-xl border border-t-4 ${snapshot.isDraggingOver ? "bg-accent/20" : "bg-muted/30"}`}
+                  style={{ borderTopColor: SHOP_COLORS_HEX?.[stage] || "#94a3b8" }}
                 >
                   <div className="px-3 py-2.5 flex items-center justify-between">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground leading-tight">{stage}</span>
