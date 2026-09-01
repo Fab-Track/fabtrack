@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Check, PenLine } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ChevronLeft, ChevronRight, Check, PenLine, Save } from "lucide-react";
+import { toast } from "sonner";
 import CostModelPricing from "./CostModelPricing";
 import LineItemComponentsEditor from "./LineItemComponentsEditor";
 import { RAILING_STYLES } from "@/lib/railingData";
@@ -85,6 +87,11 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
   const [railingStyle, setRailingStyle] = useState("");
   const [components, setComponents] = useState([]);
   const [orgId, setOrgId] = useState(null);
+  const [saveToCatalog, setSaveToCatalog] = useState(false);
+  const [catalogCategory, setCatalogCategory] = useState("");
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [catalogItemName, setCatalogItemName] = useState("");
+  const qc = useQueryClient();
 
   useEffect(() => {
     base44.auth.me().then(u => setOrgId(u?.organization_id || null)).catch(() => {});
@@ -162,6 +169,14 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
 
   const hasCostModel = itemHasCostModel(selectedItem);
 
+  const createCatalogItem = useMutation({
+    mutationFn: async (payload) => base44.entities.ServiceCatalog.create(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["serviceCatalog"] });
+      qc.invalidateQueries({ queryKey: ["serviceCatalog", "active"] });
+    },
+  });
+
   function reset() {
     setStep(STEP_CATEGORY);
     setSelectedCategory(null);
@@ -176,6 +191,10 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
     setInstallLocation("");
     setRailingStyle("");
     setComponents([]);
+    setSaveToCatalog(false);
+    setCatalogCategory("");
+    setNewCategoryName("");
+    setCatalogItemName("");
   }
 
   function handleClose() {
@@ -210,6 +229,10 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
     setDescription("");
     setUnitCost("");
     setQuantity("1");
+    setSaveToCatalog(false);
+    setCatalogCategory("");
+    setNewCategoryName("");
+    setCatalogItemName("");
     setStep(STEP_PRICING);
   }
 
@@ -219,9 +242,40 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
     setCalcBreakdown(breakdown);
   }
 
-  function handleFinish() {
+  async function handleFinish() {
     const finalUnitCost = hasCostModel ? (calcPrice || 0) : (parseFloat(unitCost) || 0);
     const finalQty = hasCostModel ? (calcQty || 1) : (parseFloat(quantity) || 1);
+
+    // If custom item, optionally save to Service Catalog
+    let savedItem = null;
+    if (isCustom && saveToCatalog) {
+      const itemName = catalogItemName.trim() || description.trim().split("\n")[0].trim();
+      if (!itemName) {
+        toast.error("Enter a name for the catalog item.");
+        return;
+      }
+      const cat = newCategoryName.trim() || catalogCategory;
+      if (!cat) {
+        toast.error("Select or create a category for the catalog item.");
+        return;
+      }
+      try {
+        savedItem = await createCatalogItem.mutateAsync({
+          organization_id: orgId,
+          name: itemName,
+          category: cat,
+          unit: "ls",
+          default_unit_price: finalUnitCost || 0,
+          default_description: description,
+          is_active: true,
+          sort_order: 0,
+        });
+        toast.success(`Saved "${itemName}" to Service Catalog.`);
+      } catch (err) {
+        toast.error("Failed to save to catalog: " + (err?.message || "Unknown error"));
+        return;
+      }
+    }
 
     onAdd({
       _id: Math.random().toString(36).slice(2),
@@ -229,10 +283,10 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
       install_location: installLocation || "N/A",
       color: "",
       quantity: finalQty,
-      unit: selectedItem?.unit || "ls",
+      unit: selectedItem?.unit || (savedItem?.unit || "ls"),
       unit_cost: finalUnitCost,
       total: finalQty * finalUnitCost,
-      photo_url: selectedItem?.photo_url || null,
+      photo_url: selectedItem?.photo_url || savedItem?.photo_url || null,
       show_photo: true,
       // Cost model snapshot (if applicable)
       ...(hasCostModel && calcBreakdown ? {
@@ -435,6 +489,61 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
               </div>
             )}
 
+            {/* Save to Catalog — only for custom items */}
+            {isCustom && (
+              <div className="border rounded-lg p-3 bg-muted/20 space-y-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={saveToCatalog}
+                    onCheckedChange={(v) => setSaveToCatalog(v === true)}
+                  />
+                  <span className="text-xs font-medium flex items-center gap-1.5">
+                    <Save className="w-3.5 h-3.5" /> Save to Service Catalog
+                  </span>
+                </label>
+                {saveToCatalog && (
+                  <div className="space-y-2 pl-6">
+                    <div>
+                      <Label className="text-xs font-medium">Item Name</Label>
+                      <Input
+                        className="h-8 text-sm mt-1"
+                        placeholder={description.trim().split("\n")[0] || "Item name…"}
+                        value={catalogItemName}
+                        onChange={e => setCatalogItemName(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium">Category</Label>
+                      <Select
+                        value={catalogCategory}
+                        onValueChange={(v) => { setCatalogCategory(v); setNewCategoryName(""); }}
+                        disabled={!!newCategoryName}
+                      >
+                        <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Select existing…" /></SelectTrigger>
+                        <SelectContent>
+                          {categories.map(c => (
+                            <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium">…or New Category</Label>
+                      <Input
+                        className="h-8 text-sm mt-1"
+                        placeholder="Type a new category name"
+                        value={newCategoryName}
+                        onChange={e => setNewCategoryName(e.target.value)}
+                      />
+                    </div>
+                    {newCategoryName && catalogCategory && (
+                      <p className="text-[10px] text-muted-foreground">New category "{newCategoryName}" will be used.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex items-center justify-between pt-1">
               <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground" onClick={() => setStep(STEP_STYLE)}>
                 <ChevronLeft className="w-3.5 h-3.5" /> Back
@@ -443,7 +552,7 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
                 size="sm"
                 className="gap-1"
                 onClick={() => setStep(STEP_LOCATION)}
-                disabled={hasCostModel ? !canProceedFromPricing : (!description.trim() && isCustom)}
+                disabled={hasCostModel ? !canProceedFromPricing : (!description.trim() && isCustom) || (isCustom && saveToCatalog && !(catalogItemName.trim() || description.trim()))}
               >
                 Next — Install Location <ChevronRight className="w-3.5 h-3.5" />
               </Button>
