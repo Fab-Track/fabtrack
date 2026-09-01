@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, PenLine, X } from "lucide-react";
+import { toast } from "sonner";
 
 export default function ProductServiceDropdown({ value, onChange, onSelect, placeholder = "Service item" }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState(value || "");
+  const [customMode, setCustomMode] = useState(false);
+  const inputRef = useRef(null);
   const triggerRef = useRef(null);
   const dropdownRef = useRef(null);
   const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
@@ -66,10 +69,27 @@ export default function ProductServiceDropdown({ value, onChange, onSelect, plac
   }, [open]);
 
   function handleSelect(item) {
+    setCustomMode(false);
     setSearch(item.name);
     onChange(item.name);
     onSelect({ ...item, show_photo: true });
     setOpen(false);
+  }
+
+  function handleCustom() {
+    setCustomMode(true);
+    setSearch("");
+    onChange("");
+    onSelect({ isCustom: true, name: "" });
+    setOpen(false);
+    toast.info("Custom item started", { description: "Type a name and description — this line won't be linked to the Service Catalog." });
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
+
+  function exitCustom() {
+    setCustomMode(false);
+    setOpen(true);
+    setTimeout(() => inputRef.current?.focus(), 0);
   }
 
   const q = search.toLowerCase();
@@ -94,17 +114,39 @@ export default function ProductServiceDropdown({ value, onChange, onSelect, plac
 
   return (
     <div className="relative w-full">
-      <div ref={triggerRef}>
+      <div ref={triggerRef} className="relative">
         <input
-          className="flex h-8 w-full rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          placeholder={placeholder}
+          ref={inputRef}
+          className={`flex h-8 w-full rounded-md border bg-transparent px-3 py-1 text-xs shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 ${
+            customMode
+              ? "border-warning ring-1 ring-warning/40 pr-[4.5rem] focus-visible:ring-warning"
+              : "border-input focus-visible:ring-ring"
+          }`}
+          placeholder={customMode ? "Custom item name…" : placeholder}
           value={search}
-          onChange={e => { setSearch(e.target.value); onChange(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
+          onChange={e => { setSearch(e.target.value); onChange(e.target.value); if (!customMode) setOpen(true); }}
+          onFocus={() => { if (!customMode) setOpen(true); }}
         />
+        {customMode && (
+          <button
+            type="button"
+            title="Back to Service Catalog"
+            onClick={exitCustom}
+            className="absolute right-1 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 rounded bg-warning/15 text-warning-foreground px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide hover:bg-warning/25 transition-colors"
+          >
+            <PenLine className="w-3 h-3" />
+            Custom
+            <X className="w-3 h-3 opacity-60" />
+          </button>
+        )}
       </div>
+      {customMode && (
+        <p className="mt-1 text-[10px] text-muted-foreground leading-tight">
+          Not linked to the Service Catalog — enter the description and pricing manually.
+        </p>
+      )}
 
-      {open && (
+      {open && !customMode && (
         <div
           ref={dropdownRef}
           className="fixed z-[100] bg-popover border rounded-lg shadow-2xl overflow-hidden flex flex-col"
@@ -158,7 +200,7 @@ export default function ProductServiceDropdown({ value, onChange, onSelect, plac
           <div className="border-t shrink-0">
             <button
               className="w-full text-left px-4 py-3 hover:bg-muted text-sm flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors min-h-[44px]"
-              onMouseDown={e => { e.preventDefault(); setSearch(""); onChange(""); onSelect({ isCustom: true, name: "" }); setOpen(false); }}
+              onMouseDown={e => { e.preventDefault(); handleCustom(); }}
             >
               <Plus className="w-4 h-4" />
               Custom item — type description manually
