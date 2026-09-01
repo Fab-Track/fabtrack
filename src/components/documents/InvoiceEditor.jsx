@@ -107,6 +107,14 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
   }
 
   function handleServiceSelect(idx, item) {
+    if (item.isCustom) {
+      setLines(prev => {
+        const next = [...prev];
+        next[idx] = calcLine({ ...next[idx], service_name: "", description: "" });
+        return next;
+      });
+      return;
+    }
     setLines(prev => {
       const next = [...prev];
       next[idx] = calcLine({

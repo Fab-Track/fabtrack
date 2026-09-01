@@ -158,7 +158,7 @@ export default function ProductServiceDropdown({ value, onChange, onSelect, plac
           <div className="border-t shrink-0">
             <button
               className="w-full text-left px-4 py-3 hover:bg-muted text-sm flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors min-h-[44px]"
-              onMouseDown={e => { e.preventDefault(); setOpen(false); }}
+              onMouseDown={e => { e.preventDefault(); setSearch(""); onChange(""); onSelect({ isCustom: true, name: "" }); setOpen(false); }}
             >
               <Plus className="w-4 h-4" />
               Custom item — type description manually

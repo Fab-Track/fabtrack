@@ -268,6 +268,21 @@ export default function EstimatePage() {
   }
 
   function handleProductSelect(idx, item) {
+    if (item.isCustom) {
+      setLines(prev => {
+        const next = [...prev];
+        next[idx] = calcLine({
+          ...next[idx],
+          service_name: "",
+          description: "",
+          _is_railing: false,
+          _is_staircase: false,
+          _staircase_type: null,
+        });
+        return next;
+      });
+      return;
+    }
     const isStaircaseCalc = STAIRCASE_CALC_ITEMS.some(n => item.name.includes(n.split("—")[0].trim()) || item.name === n);
     setLines(prev => {
       const next = [...prev];
