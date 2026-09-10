@@ -50,9 +50,8 @@ export default function GHLLeadWebhookSection() {
   const [urlCopied, setUrlCopied] = useState(false);
   const [payloadCopied, setPayloadCopied] = useState(false);
 
-  const appId = import.meta.env.VITE_BASE44_APP_ID || "YOUR_APP_ID";
   const webhookUrl = orgId
-    ? `https://api.base44.com/v1/apps/${appId}/functions/receiveGHLLead?org_id=${orgId}`
+    ? `https://fab-track.base44.app/functions/receiveGHLLead?org_id=${orgId}`
     : "Sign in to generate your webhook URL";
 
   function copyUrl() {
