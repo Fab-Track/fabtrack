@@ -112,7 +112,15 @@ export default function NewJob() {
     e.preventDefault();
     const { notes_text, ...rest } = form;
     const notes = notes_text?.trim()
-      ? [{ text: notes_text.trim(), author_id: user?.id || "", author_name: user?.full_name || "Unknown", created_at: new Date().toISOString() }]
+      ? [{
+          id: crypto.randomUUID(),
+          text: notes_text.trim(),
+          author_id: user?.id || "",
+          author_name: user?.full_name || "Unknown",
+          created_at: new Date().toISOString(),
+          is_todo: false,
+          is_completed: false,
+        }]
       : [];
     createMutation.mutate({ ...rest, notes, organization_id: writeOrgId });
   };
