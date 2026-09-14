@@ -163,7 +163,7 @@ export default function JobBoard() {
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <Input
               type="text"
-              placeholder="Search job #, name, customer…"
+              placeholder="Search job name, company…"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="h-9 w-44 md:w-56 pl-8 pr-8 text-sm"
