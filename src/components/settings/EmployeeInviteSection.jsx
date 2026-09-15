@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { UserPlus, Mail, Link2, AlertTriangle, Shield, MoreVertical, Pencil } from "lucide-react";
+import { UserPlus, Mail, Link2, AlertTriangle, Shield, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import {
@@ -39,6 +39,8 @@ export default function EmployeeInviteSection() {
   const [editingName, setEditingName] = useState(null); // employee being renamed
   const [editNameValue, setEditNameValue] = useState("");
   const [savingName, setSavingName] = useState(false);
+  const [deletingEmp, setDeletingEmp] = useState(null);
+  const [deletePending, setDeletePending] = useState(false);
 
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ["employees", orgFilter],
@@ -172,6 +174,20 @@ export default function EmployeeInviteSection() {
     }
   }
 
+  async function handleDelete(emp) {
+    setDeletePending(true);
+    try {
+      await base44.entities.Employee.delete(emp.id);
+      toast.success(`${emp.name} has been removed`);
+      qc.invalidateQueries({ queryKey: ["employees"] });
+    } catch (err) {
+      toast.error(err?.response?.data?.error || err?.message || "Failed to delete employee");
+    } finally {
+      setDeletePending(false);
+      setDeletingEmp(null);
+    }
+  }
+
   async function handleResendInvite(emp) {
     try {
       const normalized = emp.email.trim().toLowerCase();
@@ -297,6 +313,14 @@ export default function EmployeeInviteSection() {
                             <Mail className="w-3.5 h-3.5 mr-1.5" /> Resend Invite
                           </DropdownMenuItem>
                         )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => setDeletingEmp(emp)}
+                          className="text-destructive focus:text-destructive"
+                          disabled={emp.role === "owner"}
+                        >
+                          <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>
@@ -342,6 +366,31 @@ export default function EmployeeInviteSection() {
             <Button variant="outline" onClick={() => setEditingName(null)}>Cancel</Button>
             <Button onClick={handleSaveName} disabled={savingName || !editNameValue.trim()}>
               {savingName ? "Saving…" : "Save Name"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deletingEmp} onOpenChange={(open) => { if (!open) setDeletingEmp(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="w-4 h-4" /> Delete Employee
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p className="text-sm">
+              Are you sure you want to permanently delete <strong>{deletingEmp?.name}</strong>?
+            </p>
+            <p className="text-xs text-muted-foreground">
+              This removes the employee record from your organization. {deletingEmp?.user_id ? "The linked user account will lose organization access." : "Any pending invite will remain, but they will not be linked to an employee."}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingEmp(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => handleDelete(deletingEmp)} disabled={deletePending}>
+              {deletePending ? "Deleting…" : "Delete Employee"}
             </Button>
           </DialogFooter>
         </DialogContent>
