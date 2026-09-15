@@ -85,7 +85,15 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [composerOpen, setComposerOpen] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ name: customer.name || "", phone: customer.phone || "", email: customer.email || "", address: customer.address || "" });
+  const [editForm, setEditForm] = useState({
+    name: customer.name || "",
+    phone: customer.phone || "",
+    email: customer.email || "",
+    address_street: customer.address_street || "",
+    address_city: customer.address_city || "",
+    address_state: customer.address_state || "",
+    address_zip: customer.address_zip || "",
+  });
   const [editSaving, setEditSaving] = useState(false);
 
   const customerJobs = useMemo(() =>
@@ -133,11 +141,16 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
 
   async function handleEditSave() {
     setEditSaving(true);
+    const composedAddress = [editForm.address_street, editForm.address_city, editForm.address_state, editForm.address_zip].filter(Boolean).join(", ");
     const updated = await base44.entities.Customer.update(customer.id, {
       name: editForm.name,
       phone: editForm.phone,
       email: editForm.email,
-      address: editForm.address,
+      address: composedAddress || null,
+      address_street: editForm.address_street || null,
+      address_city: editForm.address_city || null,
+      address_state: editForm.address_state || null,
+      address_zip: editForm.address_zip || null,
     });
     queryClient.invalidateQueries({ queryKey: ["customers"] });
     onUpdated({ ...customer, ...editForm });
@@ -199,7 +212,15 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
               size="sm"
               variant="outline"
               className="gap-1.5"
-              onClick={() => { setEditForm({ name: customer.name || "", phone: customer.phone || "", email: customer.email || "", address: customer.address || "" }); setEditSheetOpen(true); }}
+              onClick={() => { setEditForm({
+                name: customer.name || "",
+                phone: customer.phone || "",
+                email: customer.email || "",
+                address_street: customer.address_street || "",
+                address_city: customer.address_city || "",
+                address_state: customer.address_state || "",
+                address_zip: customer.address_zip || "",
+              }); setEditSheetOpen(true); }}
             >
               <Pencil className="w-3.5 h-3.5" /> Edit
             </Button>
@@ -262,8 +283,22 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
               <Input type="email" value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} placeholder="email@example.com" />
             </div>
             <div>
-              <Label className="text-xs">Billing Address</Label>
-              <Input value={editForm.address} onChange={e => setEditForm(p => ({ ...p, address: e.target.value }))} placeholder="123 Main St, City, State" />
+              <Label className="text-xs">Street</Label>
+              <Input value={editForm.address_street || ""} onChange={e => setEditForm(p => ({ ...p, address_street: e.target.value }))} placeholder="123 Main St, Unit 605" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">City</Label>
+                <Input value={editForm.address_city || ""} onChange={e => setEditForm(p => ({ ...p, address_city: e.target.value }))} placeholder="Provo" />
+              </div>
+              <div>
+                <Label className="text-xs">State</Label>
+                <Input value={editForm.address_state || ""} onChange={e => setEditForm(p => ({ ...p, address_state: e.target.value }))} placeholder="UT" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">ZIP</Label>
+              <Input value={editForm.address_zip || ""} onChange={e => setEditForm(p => ({ ...p, address_zip: e.target.value }))} placeholder="84604" />
             </div>
             <div className="flex gap-2 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setEditSheetOpen(false)}>Cancel</Button>
@@ -484,7 +519,7 @@ export default function Customers() {
   const [filterType, setFilterType] = useState("all");
   const [filterOutstanding, setFilterOutstanding] = useState(false);
   const [sortBy, setSortBy] = useState("name"); // name | outstanding | lastJob
-  const [form, setForm] = useState({ name: "", type: "", company: "", phone: "", email: "", address: "", notes: "" });
+  const [form, setForm] = useState({ name: "", type: "", company: "", phone: "", email: "", address_street: "", address_city: "", address_state: "", address_zip: "", notes: "" });
   const [editModeOpen, setEditModeOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -508,11 +543,14 @@ export default function Customers() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Customer.create({ ...data, organization_id: writeOrgId }),
+    mutationFn: (data) => {
+      const composedAddress = [data.address_street, data.address_city, data.address_state, data.address_zip].filter(Boolean).join(", ");
+      return base44.entities.Customer.create({ ...data, address: composedAddress || null, organization_id: writeOrgId });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       setDialogOpen(false);
-      setForm({ name: "", type: "", company: "", phone: "", email: "", address: "", notes: "" });
+      setForm({ name: "", type: "", company: "", phone: "", email: "", address_street: "", address_city: "", address_state: "", address_zip: "", notes: "" });
     },
   });
 
@@ -637,8 +675,22 @@ export default function Customers() {
                   </div>
                 </div>
                 <div>
-                  <Label className="text-xs">Address</Label>
-                  <Input value={form.address} onChange={e => setForm({...form, address: e.target.value})} />
+                  <Label className="text-xs">Street</Label>
+                  <Input value={form.address_street} onChange={e => setForm({...form, address_street: e.target.value})} placeholder="123 Main St, Unit 605" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">City</Label>
+                    <Input value={form.address_city} onChange={e => setForm({...form, address_city: e.target.value})} placeholder="Provo" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">State</Label>
+                    <Input value={form.address_state} onChange={e => setForm({...form, address_state: e.target.value})} placeholder="UT" />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs">ZIP</Label>
+                  <Input value={form.address_zip} onChange={e => setForm({...form, address_zip: e.target.value})} placeholder="84604" />
                 </div>
                 <div>
                   <Label className="text-xs">Notes</Label>
