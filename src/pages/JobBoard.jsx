@@ -45,7 +45,7 @@ export default function JobBoard() {
   const isFabricator = hasRole(user, "fabricator");
   const isAccountant = hasRole(user, "accountant");
 
-  const [filterType, setFilterType] = useState("all");
+  const [searchField, setSearchField] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeBoard, setActiveBoard] = useState(null);
   // Per-board view: "kanban" | "row" — persisted so the chosen view survives navigation
@@ -89,6 +89,9 @@ export default function JobBoard() {
   const q = searchQuery.trim().toLowerCase();
   const matchesSearch = (j) => {
     if (!q) return true;
+    if (searchField === "job_number") return (j.job_number || "").toLowerCase().includes(q);
+    if (searchField === "job_name") return (j.job_name || "").toLowerCase().includes(q);
+    if (searchField === "customer") return (j.customer_name || "").toLowerCase().includes(q);
     return (
       (j.job_number || "").toLowerCase().includes(q) ||
       (j.customer_name || "").toLowerCase().includes(q) ||
@@ -126,11 +129,7 @@ export default function JobBoard() {
 
   const filtered = {};
   Object.keys(boardJobs).forEach(board => {
-    let list = filterType === "all"
-      ? boardJobs[board]
-      : boardJobs[board].filter(j =>
-          j.product_instances?.some(i => i.product_type === filterType)
-        );
+    let list = boardJobs[board];
     if (q) list = list.filter(matchesSearch);
     filtered[board] = list;
   });
@@ -178,16 +177,16 @@ export default function JobBoard() {
               </button>
             )}
           </div>
-          <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="w-36 h-9 text-sm">
+          <Select value={searchField} onValueChange={setSearchField}>
+            <SelectTrigger className="w-40 h-9 text-sm">
               <Filter className="w-3.5 h-3.5 mr-1.5 shrink-0" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              {["Railing","Gate","Staircase","Structural","Pergola","Planter Box","Chimney Cap"].map(t => (
-                <SelectItem key={t} value={t}>{t}</SelectItem>
-              ))}
+              <SelectItem value="all">All Fields</SelectItem>
+              <SelectItem value="job_number">Job Number</SelectItem>
+              <SelectItem value="job_name">Job Name</SelectItem>
+              <SelectItem value="customer">Customer</SelectItem>
             </SelectContent>
           </Select>
           {/* View toggle */}
