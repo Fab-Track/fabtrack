@@ -37,6 +37,10 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
         email: customer.email || "",
         phone: customer.phone || "",
         address: customer.address || "",
+        address_street: customer.address_street || "",
+        address_city: customer.address_city || "",
+        address_state: customer.address_state || "",
+        address_zip: customer.address_zip || "",
         type: customer.type || "",
         billing_same_as_primary: customer.billing_same_as_primary ?? false,
         billing_contact_name: customer.billing_contact_name || "",
@@ -60,7 +64,7 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
         next.billing_contact_name = p.name || "";
         next.billing_contact_email = p.email || "";
         next.billing_contact_phone = p.phone || "";
-        next.billing_contact_address = p.address || "";
+        next.billing_contact_address = [p.address_street, p.address_city, p.address_state, p.address_zip].filter(Boolean).join(", ");
       }
       return next;
     });
@@ -70,12 +74,17 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
 
   const onSave = async (formData) => {
     if (!customer) return;
+    const composedAddress = [formData.address_street, formData.address_city, formData.address_state, formData.address_zip].filter(Boolean).join(", ");
     await base44.entities.Customer.update(customer.id, {
       name: formData.name,
       company: formData.company || null,
       email: formData.email || null,
       phone: formData.phone || null,
-      address: formData.address || null,
+      address: composedAddress || null,
+      address_street: formData.address_street || null,
+      address_city: formData.address_city || null,
+      address_state: formData.address_state || null,
+      address_zip: formData.address_zip || null,
       type: formData.type || null,
       billing_same_as_primary: formData.billing_same_as_primary,
       billing_contact_name: formData.billing_contact_name || null,
@@ -145,8 +154,22 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
               <Mail className="w-3.5 h-3.5" /> Contact
             </legend>
             <div>
-              <Label className="text-xs">Address</Label>
-              <Input value={form.address || ""} onChange={e => f("address", e.target.value)} placeholder="123 Main St, City, State" />
+              <Label className="text-xs">Street</Label>
+              <Input value={form.address_street || ""} onChange={e => f("address_street", e.target.value)} placeholder="123 Main St, Unit 605" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">City</Label>
+                <Input value={form.address_city || ""} onChange={e => f("address_city", e.target.value)} placeholder="Provo" />
+              </div>
+              <div>
+                <Label className="text-xs">State</Label>
+                <Input value={form.address_state || ""} onChange={e => f("address_state", e.target.value)} placeholder="UT" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">ZIP</Label>
+              <Input value={form.address_zip || ""} onChange={e => f("address_zip", e.target.value)} placeholder="84604" />
             </div>
             <div>
               <Label className="text-xs">Email</Label>

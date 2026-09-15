@@ -36,7 +36,23 @@
     },
     "address": {
       "type": "string",
-      "description": "Primary address"
+      "description": "Primary address (composed from street, city, state, zip)"
+    },
+    "address_street": {
+      "type": "string",
+      "description": "Street address line"
+    },
+    "address_city": {
+      "type": "string",
+      "description": "City"
+    },
+    "address_state": {
+      "type": "string",
+      "description": "State"
+    },
+    "address_zip": {
+      "type": "string",
+      "description": "ZIP code"
     },
     "notes": {
       "type": "string",
