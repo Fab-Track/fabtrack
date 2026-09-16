@@ -219,6 +219,9 @@ export default function NewJob() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">On-Site Contact</p>
+              </div>
               <div className="col-span-2 flex items-center gap-2">
                 <Checkbox
                   id="same-as-customer"
