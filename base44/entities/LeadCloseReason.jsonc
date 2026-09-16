@@ -1,0 +1,44 @@
+{
+  "name": "LeadCloseReason",
+  "type": "object",
+  "properties": {
+    "outcome_category": {
+      "type": "string",
+      "enum": [
+        "Won",
+        "Lost",
+        "Unqualified",
+        "On Hold",
+        "Testing",
+        "Other"
+      ],
+      "description": "The outcome category this reason belongs to"
+    },
+    "reason_label": {
+      "type": "string",
+      "description": "Display label for this reason"
+    },
+    "created_by_id": {
+      "type": "string",
+      "description": "User ID of the creator"
+    },
+    "created_by_name": {
+      "type": "string",
+      "description": "Name of the creator"
+    },
+    "created_by_org_name": {
+      "type": "string",
+      "description": "Org name of the creator (for visibility/tracking)"
+    }
+  },
+  "required": [
+    "outcome_category",
+    "reason_label"
+  ],
+  "rls": {
+    "create": {},
+    "read": {},
+    "update": {},
+    "delete": {}
+  }
+}

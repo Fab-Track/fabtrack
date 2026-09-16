@@ -1,16 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, addDays } from "date-fns";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, Plus } from "lucide-react";
 
 export const OUTCOME_REASONS = {
   Won: [
@@ -41,15 +41,7 @@ export const OUTCOME_REASONS = {
 };
 
 const IS_FREE_TEXT_OUTCOME = (cat) => cat === "Other";
-
 const OUTCOME_CATEGORIES = Object.keys(OUTCOME_REASONS);
-
-function getOutcomeCategory(reasonId) {
-  for (const [category, reasons] of Object.entries(OUTCOME_REASONS)) {
-    if (reasons.some(r => r.id === reasonId)) return category;
-  }
-  return null;
-}
 
 export default function CloseLeadModal({ open, onClose, job }) {
   const [outcomeCategory, setOutcomeCategory] = useState("");
@@ -59,15 +51,43 @@ export default function CloseLeadModal({ open, onClose, job }) {
   const [otherReasonText, setOtherReasonText] = useState("");
   const [followUpDate, setFollowUpDate] = useState(null);
   const [leadTimeWeeks, setLeadTimeWeeks] = useState("");
+  const [showAddReason, setShowAddReason] = useState(false);
+  const [newReasonText, setNewReasonText] = useState("");
   const qc = useQueryClient();
+
+  // Fetch platform-wide custom reasons
+  const { data: customReasons = [] } = useQuery({
+    queryKey: ["lead-close-reasons"],
+    queryFn: () => base44.entities.LeadCloseReason.list("-created_date", 200),
+  });
+
+  // Merge built-in + custom reasons for the selected outcome category
+  const reasons = useMemo(() => {
+    if (!outcomeCategory) return [];
+    const builtIn = OUTCOME_REASONS[outcomeCategory] || [];
+    const custom = customReasons
+      .filter(r => r.outcome_category === outcomeCategory)
+      .map(r => ({ id: `custom_${r.id}`, label: r.reason_label, isCustom: true }));
+    return [...builtIn, ...custom];
+  }, [outcomeCategory, customReasons]);
 
   const requiresFollowUp = reasonId === "hold_follow_up";
   const requiresLeadTime = reasonId === "lost_lead_time";
   const isFreeText = IS_FREE_TEXT_OUTCOME(outcomeCategory);
 
+  const addReasonMutation = useMutation({
+    mutationFn: (data) => base44.entities.LeadCloseReason.create(data),
+    onSuccess: (newReason) => {
+      qc.invalidateQueries({ queryKey: ["lead-close-reasons"] });
+      setReasonId(`custom_${newReason.id}`);
+      setShowAddReason(false);
+      setNewReasonText("");
+    },
+  });
+
   const closeMutation = useMutation({
     mutationFn: () => {
-      const reason = OUTCOME_REASONS[outcomeCategory]?.find(r => r.id === reasonId);
+      const reason = reasons.find(r => r.id === reasonId);
       const isWon = outcomeCategory === "Won";
       const leadTimeNote = requiresLeadTime && leadTimeWeeks ? `Needed lead time: ${leadTimeWeeks} weeks` : "";
       const combinedNotes = [leadTimeNote, notes].filter(Boolean).join("\n");
@@ -80,7 +100,6 @@ export default function CloseLeadModal({ open, onClose, job }) {
         is_lead_closed: !isWon,
         close_notes: combinedNotes || null,
       };
-      // Won leads move to "Deposit Received / Sale Won" instead of being archived
       if (isWon) {
         update.stage = "Deposit Received / Sale Won";
         update.pipeline_board = "Sales";
@@ -109,16 +128,25 @@ export default function CloseLeadModal({ open, onClose, job }) {
     setOtherReasonText("");
     setFollowUpDate(null);
     setLeadTimeWeeks("");
+    setShowAddReason(false);
+    setNewReasonText("");
     onClose();
   }
 
-  const reasons = outcomeCategory ? OUTCOME_REASONS[outcomeCategory] || [] : [];
   const showLostTo = reasonId && ["lost_price_competitor", "lost_price_expensive"].includes(reasonId);
   const isValid = outcomeCategory && (
     isFreeText
       ? otherReasonText.trim().length > 0
       : (reasonId && (!requiresFollowUp || (requiresFollowUp && followUpDate)) && (!requiresLeadTime || (requiresLeadTime && leadTimeWeeks)))
   );
+
+  function handleAddReason() {
+    if (!newReasonText.trim() || !outcomeCategory) return;
+    addReasonMutation.mutate({
+      outcome_category: outcomeCategory,
+      reason_label: newReasonText.trim(),
+    });
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -139,7 +167,7 @@ export default function CloseLeadModal({ open, onClose, job }) {
             <Label className="text-xs font-semibold">Outcome</Label>
             <Select
               value={outcomeCategory}
-              onValueChange={(v) => { setOutcomeCategory(v); setReasonId(""); setFollowUpDate(null); }}
+              onValueChange={(v) => { setOutcomeCategory(v); setReasonId(""); setFollowUpDate(null); setShowAddReason(false); }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select outcome…" />
@@ -176,6 +204,31 @@ export default function CloseLeadModal({ open, onClose, job }) {
                   ))}
                 </SelectContent>
               </Select>
+              {/* Add custom reason */}
+              {showAddReason ? (
+                <div className="flex gap-2">
+                  <Input
+                    value={newReasonText}
+                    onChange={e => setNewReasonText(e.target.value)}
+                    placeholder="Enter new reason…"
+                    className="text-sm"
+                    autoFocus
+                    onKeyDown={e => { if (e.key === "Enter" && newReasonText.trim()) handleAddReason(); }}
+                  />
+                  <Button size="sm" onClick={handleAddReason} disabled={!newReasonText.trim() || addReasonMutation.isPending}>
+                    {addReasonMutation.isPending ? "Saving…" : "Add"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setShowAddReason(false); setNewReasonText(""); }}>Cancel</Button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowAddReason(true)}
+                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  <Plus className="h-3 w-3" /> Add new reason
+                </button>
+              )}
             </div>
           )}
 
