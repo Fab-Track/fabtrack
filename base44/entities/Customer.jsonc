@@ -58,6 +58,36 @@
       "type": "string",
       "description": "Internal notes"
     },
+    "contacts": {
+      "type": "array",
+      "description": "Historical directory of contacts associated with this customer (gathered from jobs and manual entry)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique id for this contact entry"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "description": "Role / title (e.g. Super, PM, HOA rep)"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
     "job_contact_name": {
       "type": "string",
       "description": "Job contact full name"

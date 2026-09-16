@@ -74,7 +74,32 @@ export default function NewJob() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Job.create(data),
-    onSuccess: (newJob) => {
+    onSuccess: async (newJob) => {
+      // Auto-save the on-site contact to the customer's contacts directory
+      if (form.customer_id && form.onsite_contact_name?.trim() && form.onsite_contact_phone?.trim()) {
+        try {
+          const cust = customers.find(c => c.id === form.customer_id);
+          const existing = cust?.contacts || [];
+          const name = form.onsite_contact_name.trim();
+          const phone = form.onsite_contact_phone.trim();
+          const dup = existing.some(c =>
+            (c.name || "").trim().toLowerCase() === name.toLowerCase() &&
+            (c.phone || "").trim() === phone
+          );
+          if (!dup) {
+            const updatedContacts = [...existing, {
+              id: crypto.randomUUID(),
+              name,
+              phone,
+              email: "",
+              role: "",
+              created_at: new Date().toISOString(),
+            }];
+            await base44.entities.Customer.update(form.customer_id, { contacts: updatedContacts });
+            queryClient.invalidateQueries({ queryKey: ["customers"] });
+          }
+        } catch (e) { /* non-fatal */ }
+      }
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       navigate("/jobs");
     },
@@ -205,6 +230,32 @@ export default function NewJob() {
                   Use customer's job contact for on-site contact
                 </Label>
               </div>
+              {selectedCustomer?.contacts?.length > 0 && !sameAsCustomer && (
+                <div className="col-span-2">
+                  <Label className="text-xs">Choose from saved contacts</Label>
+                  <Select
+                    value=""
+                    onValueChange={(val) => {
+                      const c = selectedCustomer.contacts.find(c => c.id === val);
+                      if (c) {
+                        updateField("onsite_contact_name", c.name || "");
+                        updateField("onsite_contact_phone", c.phone || "");
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a saved contact…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedCustomer.contacts.map(c => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}{c.phone ? ` — ${c.phone}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div>
                 <Label className="text-xs">On-Site Contact Name</Label>
                 <Input

@@ -29,6 +29,7 @@ import PaymentBehaviorCard from "@/components/customers/PaymentBehaviorCard";
 import QuickActionsBar from "@/components/customers/QuickActionsBar";
 import CustomerARSummaryBar from "@/components/customers/CustomerARSummaryBar";
 import CustomerContactsSection from "@/components/customers/CustomerContactsSection";
+import CustomerContactsDirectory from "@/components/customers/CustomerContactsDirectory";
 import { useOrgFilter, useWriteOrgId } from "@/lib/orgContext";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { formatPhoneDisplay } from "@/lib/phoneFormat";
@@ -262,6 +263,7 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
 
         {/* Contacts */}
         <CustomerContactsSection customer={customer} onUpdated={onUpdated} />
+        <CustomerContactsDirectory customer={customer} onUpdated={onUpdated} />
       </div>
 
       {/* Edit slide-out panel */}
