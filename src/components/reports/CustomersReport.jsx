@@ -124,7 +124,7 @@ export default function CustomersReport() {
                     <tr key={c.id} className="hover:bg-muted/20">
                       <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
                       <td className="px-3 py-2 font-medium">
-                        <Link to={`/customers`} className="hover:underline text-blue-600">{c.name}</Link>
+                        <Link to={`/customers?id=${c.id}`} className="hover:underline text-blue-600">{c.name}</Link>
                       </td>
                       <td className="px-3 py-2">{c.jobCount}</td>
                       <td className="px-3 py-2 font-semibold">{c.revenue > 0 ? `$${c.revenue.toLocaleString()}` : "—"}</td>

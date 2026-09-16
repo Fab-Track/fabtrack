@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -516,6 +517,7 @@ export default function Customers() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [pendingCustomerId, setPendingCustomerId] = useState(null);
   const [filterType, setFilterType] = useState("all");
   const [filterOutstanding, setFilterOutstanding] = useState(false);
   const [sortBy, setSortBy] = useState("name"); // name | outstanding | lastJob
@@ -527,10 +529,25 @@ export default function Customers() {
   const orgFilter = useOrgFilter();
   const writeOrgId = useWriteOrgId();
 
+  const [searchParams] = useSearchParams();
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ["customers", orgFilter],
     queryFn: () => base44.entities.Customer.filter(orgFilter, "-created_date", 200),
   });
+
+  // Auto-open a customer's profile when navigated with ?id=<id>
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (id && customers.length && !selectedCustomer && !pendingCustomerId) {
+      const match = customers.find(c => c.id === id);
+      if (match) setSelectedCustomer(match);
+      else setPendingCustomerId(id);
+    }
+    if (pendingCustomerId && customers.length) {
+      const match = customers.find(c => c.id === pendingCustomerId);
+      if (match) { setSelectedCustomer(match); setPendingCustomerId(null); }
+    }
+  }, [searchParams, customers, pendingCustomerId, selectedCustomer]);
 
   const { data: allJobs = [] } = useQuery({
     queryKey: ["jobs", orgFilter],
