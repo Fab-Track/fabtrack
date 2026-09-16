@@ -229,7 +229,7 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
         </div>
 
         {/* Info cells row — mirrors job header style */}
-        {(customer.phone || customer.email || customer.address) && (
+        {(customer.phone || customer.email || customer.address || customer.address_street || customer.address_city) && (
           <div className="flex items-center gap-5 flex-wrap mt-2 pt-2 border-t border-border">
             {customer.phone && (
               <div className="min-w-0">
@@ -247,12 +247,14 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
                 <p className="text-sm font-medium">{customer.email}</p>
               </div>
             )}
-            {customer.address && (
+            {(customer.address || customer.address_street || customer.address_city) && (
               <div className="min-w-0">
                 <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5 flex items-center gap-1">
                   <MapPin className="w-3 h-3" />Billing Address
                 </p>
-                <p className="text-sm font-medium">{customer.address}</p>
+                <p className="text-sm font-medium">
+                  {customer.address || [customer.address_street, [customer.address_city, customer.address_state].filter(Boolean).join(", "), customer.address_zip].filter(Boolean).join(", ")}
+                </p>
               </div>
             )}
           </div>
