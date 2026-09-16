@@ -11,6 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Building2, Mail, StickyNote, Users, Receipt, Save, Loader2, Check } from "lucide-react";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { useAutosave } from "@/hooks/useAutosave";
+import CustomerCombobox from "@/components/customers/CustomerCombobox";
+import { Search } from "lucide-react";
 
 const CUSTOMER_TYPES = [
   "Homeowner", "General Contractor", "Builder / Developer",
@@ -26,6 +28,12 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
     queryKey: ["customer", customerId],
     queryFn: () => base44.entities.Customer.filter({ id: customerId }).then(r => r[0]),
     enabled: !!customerId && open,
+  });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ["customers"],
+    queryFn: () => base44.entities.Customer.list("-created_date", 200),
+    enabled: open,
   });
 
   // Sync form when customer data arrives
@@ -113,6 +121,19 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
     enabled,
   });
 
+  const handleReassignCustomer = async (newCustomer) => {
+    if (!newCustomer || !jobId || newCustomer.id === customerId) return;
+    // Update the job to point to the new customer
+    await base44.entities.Job.update(jobId, {
+      customer_id: newCustomer.id,
+      customer_name: newCustomer.name,
+    });
+    qc.invalidateQueries({ queryKey: ["customer", customerId] });
+    qc.invalidateQueries({ queryKey: ["job", jobId] });
+    qc.invalidateQueries({ queryKey: ["jobs"] });
+    onSaved?.();
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
@@ -124,6 +145,21 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
         </SheetHeader>
 
         <div className="space-y-4 pb-8">
+          {/* Reassign to different customer */}
+          {jobId && (
+            <div className="rounded-lg border border-dashed p-3 space-y-1.5">
+              <Label className="text-xs flex items-center gap-1.5">
+                <Search className="w-3.5 h-3.5" /> Reassign to Different Customer
+              </Label>
+              <CustomerCombobox
+                customers={customers}
+                value={customerId}
+                onChange={handleReassignCustomer}
+              />
+              <p className="text-[10px] text-muted-foreground">Select an existing customer to reassign this job. The fields below will update to the new customer's info.</p>
+            </div>
+          )}
+
           {/* Basic info */}
           <fieldset className="space-y-3 border rounded-lg p-3">
             <legend className="text-xs font-semibold text-muted-foreground px-1 flex items-center gap-1.5">
