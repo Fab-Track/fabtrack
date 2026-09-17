@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -326,6 +326,19 @@ export default function InvoiceReviewSend({
   const [qboPayUrl, setQboPayUrl] = useState(null);
 
   const previewRef = useRef(null);
+
+  // Pre-fetch QBO pay URL so the "Pay Now" button shows in the preview before sending
+  useEffect(() => {
+    let cancelled = false;
+    base44.functions.invoke("qboSyncInvoice", { invoice_id: invoice.id })
+      .then((res) => {
+        if (!cancelled && res.data?.ok && res.data?.qbo_pay_url) {
+          setQboPayUrl(res.data.qbo_pay_url);
+        }
+      })
+      .catch(() => { /* silent — will retry on send */ });
+    return () => { cancelled = true; };
+  }, [invoice.id]);
 
   const pdfProps = {
     invoice, job, customer, lines, subtotal, discountPct, discountAmt, tax, taxAmount,
