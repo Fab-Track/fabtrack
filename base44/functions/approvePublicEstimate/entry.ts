@@ -111,6 +111,101 @@ async function autoMoveSalesStage(base44, job, toStage, triggerNote, actorName) 
   return payload;
 }
 
+const VERIFIED_DOMAIN = '@invites.fab-track.io';
+
+// Resolves the job's assigned estimator + sales rep and the org's owner/admin users,
+// then fires an in-app bell Notification + an email alert to each when an estimate
+// is signed via the public customer link. Failures are swallowed so the approval
+// itself never breaks.
+async function notifyEstimateSigned(base44, job, estimate, customerName) {
+  const orgId = estimate.organization_id;
+  if (!orgId || !job) return;
+
+  // Build a deduplicated recipient list (user_id → { id, email, full_name })
+  const recipientMap = new Map();
+
+  const addUserById = async (userId) => {
+    if (!userId) return;
+    try {
+      const u = await base44.asServiceRole.entities.User.get(userId);
+      if (u?.email) recipientMap.set(u.id, { id: u.id, email: u.email, full_name: u.full_name });
+    } catch { /* non-fatal */ }
+  };
+
+  await addUserById(job.assigned_estimator);
+  await addUserById(job.assigned_rep_id);
+
+  // Org owners + admins
+  try {
+    const orgUsers = await base44.asServiceRole.entities.User.filter(
+      { organization_id: orgId }, '-created_date', 200
+    );
+    for (const u of orgUsers || []) {
+      if (u.account_status && u.account_status !== 'active') continue;
+      const roles = u.roles || (u.role ? [u.role] : []);
+      if (!roles.includes('owner') && !roles.includes('admin')) continue;
+      if (u.email) recipientMap.set(u.id, { id: u.id, email: u.email, full_name: u.full_name });
+    }
+  } catch { /* non-fatal */ }
+
+  if (recipientMap.size === 0) return;
+
+  // Fetch org name for the email "from" line
+  let orgName = 'FabTrack';
+  try {
+    const org = await base44.asServiceRole.entities.Organization.get(orgId);
+    if (org?.name) orgName = org.name;
+  } catch { /* non-fatal */ }
+
+  const jobLabel = job?.job_name || estimate.job_number || 'a job';
+  const notifTitle = 'Estimate Signed ✍️';
+  const notifBody = `${customerName} signed the estimate for ${jobLabel}.`;
+  const notifLink = job?.id ? `/jobs/${job.id}` : null;
+
+  let fromAddress = (Deno.env.get('RESEND_FROM_EMAIL') || '').trim();
+  if (!fromAddress.toLowerCase().endsWith(VERIFIED_DOMAIN)) {
+    fromAddress = `no-reply${VERIFIED_DOMAIN}`;
+  }
+  const apiKey = Deno.env.get('RESEND_API_KEY');
+
+  for (const recipient of recipientMap.values()) {
+    // 1) In-app bell notification
+    try {
+      await base44.asServiceRole.entities.Notification.create({
+        organization_id: orgId,
+        title: notifTitle,
+        body: notifBody,
+        type: 'info',
+        link: notifLink,
+        is_read: false,
+        target_roles: [],
+        assignee_id: recipient.id,
+      });
+    } catch { /* non-fatal */ }
+
+    // 2) Email alert (Resend)
+    if (apiKey) {
+      try {
+        const html = `<p>Hi ${recipient.full_name || 'there'},</p>
+<p><strong>${customerName}</strong> just signed the estimate for <strong>${jobLabel}</strong>.</p>
+<p>They've approved the scope and contract language. You can now send the invoice.</p>
+${job?.id ? `<p><a href="https://fab-track.base44.app/jobs/${job.id}">View the job →</a></p>` : ''}
+<p style="color:#888;font-size:12px;">This is an automated message from ${orgName}.</p>`;
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: `${orgName} <${fromAddress}>`,
+            to: [recipient.email],
+            subject: `Estimate Signed — ${jobLabel}`,
+            html,
+          }),
+        });
+      } catch { /* non-fatal */ }
+    }
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -164,6 +259,9 @@ Deno.serve(async (req) => {
           `Estimate approved by ${customerName} via customer link`,
           customerName
         );
+
+        // ── Notify assigned estimator/rep + org owners/admins ──
+        await notifyEstimateSigned(base44, job, estimate, customerName);
       }
     }
 
