@@ -135,6 +135,41 @@
       ],
       "default": "",
       "description": "Detected Stripe key mode"
+    },
+    "email_provider": {
+      "type": "string",
+      "enum": [
+        "resend"
+      ],
+      "default": "resend",
+      "description": "Email provider for outgoing customer-facing emails"
+    },
+    "resend_api_key": {
+      "type": "string",
+      "description": "Per-org Resend API key (re_...) for sending emails from the org's verified domain"
+    },
+    "resend_from_email": {
+      "type": "string",
+      "description": "Verified from-email address on the org's Resend account (e.g. billing@yourcompany.com)"
+    },
+    "resend_from_name": {
+      "type": "string",
+      "description": "Display name shown in the From header (e.g. the company name)"
+    },
+    "email_status": {
+      "type": "string",
+      "enum": [
+        "connected",
+        "disconnected",
+        "error"
+      ],
+      "default": "disconnected",
+      "description": "Connection status of the org's email provider"
+    },
+    "email_connected_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the org's email provider was last successfully connected"
     }
   },
   "required": [
