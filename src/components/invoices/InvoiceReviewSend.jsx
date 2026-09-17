@@ -17,7 +17,7 @@ const DEFAULT_PAYMENT_TERMS = `PAYMENT TERMS
 
 Payment is due within 30 days of invoice date unless otherwise agreed in writing.
 
-Accepted payment methods: Check, ACH, Credit Card, or Stripe.
+Accepted payment methods: Check, ACH, Credit Card, or QuickBooks Online.
 
 Late payments may be subject to a 1.5% monthly finance charge. For questions regarding this invoice, please contact us directly.`;
 
@@ -28,15 +28,13 @@ function buildDefaultMessage({ invoice, invoiceLabel, job, customer, total, bala
   const totalFmt = `$${(total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
   const dueFmt = dueDate ? format(parseISO(dueDate), "MMMM d, yyyy") : "the due date shown on your invoice";
 
-  const payLink = invoice?.id ? `\n\nView & Pay Online: ${window.location.origin}/invoice-view/${invoice.share_token || invoice.id}` : '';
-
   return `Hi ${name},
 
 Please find your ${label}${orgName ? ` from ${orgName}` : ""} attached.
 
 Invoice: ${invNum}
 Total: ${totalFmt}
-Due: ${dueFmt}${payLink}
+Due: ${dueFmt}
 
 Please don't hesitate to reach out with any questions.
 
@@ -324,6 +322,7 @@ export default function InvoiceReviewSend({
   );
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [syncError, setSyncError] = useState(null);
 
   const previewRef = useRef(null);
 
@@ -339,20 +338,34 @@ export default function InvoiceReviewSend({
 
   async function handleSend() {
     setSending(true);
+    setSyncError(null);
     try {
+      // ── Auto-sync to QuickBooks Online first — block the send if it fails ──
+      const syncRes = await base44.functions.invoke("qboSyncInvoice", { invoice_id: invoice.id });
+      if (!syncRes.data?.ok) {
+        const err = syncRes.data?.error || "QuickBooks sync failed.";
+        setSyncError(err);
+        toast.error("Couldn't sync to QuickBooks — send blocked. Fix the error below, then try again.");
+        return;
+      }
+
+      // Inject the QBO payment portal link into the message body (if Payments is enabled)
+      const payUrl = syncRes.data?.qbo_pay_url;
+      const finalBody = payUrl ? `${messageBody}\n\nPay Online: ${payUrl}` : messageBody;
+
       if (sendMode === "Email" || sendMode === "Both") {
-        const html = messageBody.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+        const html = finalBody.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
         const resp = await base44.functions.invoke("sendGmail", {
           to: toEmail,
           subject,
           html_body: html,
-          text_body: messageBody,
+          text_body: finalBody,
           routing_type: "invoice",
         });
         if (!resp.data?.ok) throw new Error(resp.data?.error || "Email failed to send");
       }
       if (sendMode === "Text" || sendMode === "Both") {
-        const smsBody = encodeURIComponent(`${subject}\n\n${messageBody}`);
+        const smsBody = encodeURIComponent(`${subject}\n\n${finalBody}`);
         window.open(`sms:${toPhone}?body=${smsBody}`);
       }
       setSent(true);
@@ -488,6 +501,17 @@ export default function InvoiceReviewSend({
             </div>
 
             <Separator />
+
+            {/* QBO sync error — blocks the send */}
+            {syncError && !sent && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm">
+                <p className="font-semibold text-red-800 mb-1">QuickBooks sync failed — send blocked</p>
+                <p className="text-red-700 text-xs leading-relaxed">{syncError}</p>
+                <p className="text-red-600 text-xs mt-2">
+                  Map your service items in Settings → QuickBooks Online → Item Mapping, then try again.
+                </p>
+              </div>
+            )}
 
             {/* Primary send action */}
             {sent ? (

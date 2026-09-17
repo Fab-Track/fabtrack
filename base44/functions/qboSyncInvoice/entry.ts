@@ -119,11 +119,15 @@ export default async function(req) {
       qbo_balance: state.balance,
     });
 
+    // QBO returns an InvoiceLink (QuickBooks Payments URL) when Payments is enabled on the account.
+    const qboPayUrl = saved.InvoiceLink || null;
+
     return Response.json({
       ok: true,
       qbo_invoice_id: saved.Id,
       qbo_doc_number: saved.DocNumber || null,
       qbo_payment_status: state.status,
+      qbo_pay_url: qboPayUrl,
     });
   } catch (error) {
     if (invoiceId) {
