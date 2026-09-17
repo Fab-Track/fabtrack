@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
 import {
-  getQboContext, qboRequest, resolveQboCustomer,
+  getQboContext, qboRequest, qboQuery, resolveQboCustomer,
   nextQboInvoiceNumber, fetchQboInvoice, derivePaymentState,
 } from '../../shared/qbo.js';
 
@@ -108,6 +108,19 @@ export default async function(req) {
     if (!saved?.Id) throw new Error('QuickBooks did not return a saved invoice.');
 
     const state = derivePaymentState(saved);
+
+    // QBO doesn't always include InvoiceLink in the POST response — query it explicitly.
+    let qboPayUrl = saved.InvoiceLink || null;
+    if (!qboPayUrl) {
+      try {
+        const { QueryResponse = {} } = await qboQuery(
+          ctx,
+          `select InvoiceLink from Invoice where Id = '${saved.Id}'`
+        );
+        qboPayUrl = QueryResponse?.Invoice?.[0]?.InvoiceLink || null;
+      } catch (_e) { /* non-fatal */ }
+    }
+
     await base44.asServiceRole.entities.Invoice.update(invoiceId, {
       qbo_invoice_id: saved.Id,
       qbo_sync_token: saved.SyncToken,
@@ -118,9 +131,6 @@ export default async function(req) {
       qbo_payment_status: state.status,
       qbo_balance: state.balance,
     });
-
-    // QBO returns an InvoiceLink (QuickBooks Payments URL) when Payments is enabled on the account.
-    const qboPayUrl = saved.InvoiceLink || null;
 
     return Response.json({
       ok: true,
