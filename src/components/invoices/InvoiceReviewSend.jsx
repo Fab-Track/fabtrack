@@ -370,14 +370,19 @@ export default function InvoiceReviewSend({
 
       if (sendMode === "Email" || sendMode === "Both") {
         const html = finalBody.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
-        const resp = await base44.functions.invoke("sendGmail", {
+        const resp = await base44.functions.invoke("sendOrgEmail", {
           to: toEmail,
           subject,
-          html_body: html,
-          text_body: finalBody,
-          routing_type: "invoice",
+          html,
+          text: finalBody,
         });
-        if (!resp.data?.ok) throw new Error(resp.data?.error || "Email failed to send");
+        if (!resp.data?.ok) {
+          if (resp.data?.code === "email_not_configured") {
+            toast.error("Email isn't configured. Go to Settings → Integrations to connect your company email first.");
+            return;
+          }
+          throw new Error(resp.data?.error || "Email failed to send");
+        }
       }
       if (sendMode === "Text" || sendMode === "Both") {
         const smsBody = encodeURIComponent(`${subject}\n\n${finalBody}`);

@@ -67,10 +67,16 @@ export default function SendEstimatePanel({ estimate, job, customer, businessInf
       if (showEmail) {
         const body = `${message}\n\nView your estimate: ${link}\n\n---\nEstimate Total: $${(estimate?.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
         const html = body.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
-        const resp = await base44.functions.invoke("sendGmail", {
-          to, subject, html_body: html, text_body: body, routing_type: "estimate",
+        const resp = await base44.functions.invoke("sendOrgEmail", {
+          to, subject, html, text: body,
         });
-        if (!resp.data?.ok) throw new Error(resp.data?.error || "Email failed to send");
+        if (!resp.data?.ok) {
+          if (resp.data?.code === "email_not_configured") {
+            toast.error("Email isn't configured. Go to Settings → Integrations to connect your company email first.");
+            return;
+          }
+          throw new Error(resp.data?.error || "Email failed to send");
+        }
       }
 
       if (showText) {

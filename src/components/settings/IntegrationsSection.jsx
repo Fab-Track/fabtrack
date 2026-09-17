@@ -8,6 +8,7 @@ import { Phone, Mail, CheckCircle2, AlertCircle, Circle, ExternalLink, Eye, EyeO
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import TwilioPhoneNumbersTable from "./TwilioPhoneNumbersTable";
+import ResendEmailSection from "./ResendEmailSection";
 
 function StatusDot({ status }) {
   if (status === "connected") return <Badge className="gap-1 bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="w-3 h-3" />Connected</Badge>;
@@ -121,55 +122,8 @@ export default function IntegrationsSection() {
 
       <Separator />
 
-      {/* SendGrid Email */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
-              <Mail className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-sm">SendGrid Email</h3>
-              <p className="text-xs text-muted-foreground">Send emails from your domain (e.g. info@yourcompany.com)</p>
-            </div>
-          </div>
-          <StatusDot status={sgStatus} />
-        </div>
-
-        <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-xs text-amber-800">
-          <strong>Setup:</strong> Add <code className="font-mono bg-amber-100 px-1 rounded">SENDGRID_API_KEY</code> to your environment variables. Until configured, emails fall back to FabTrack's built-in sender.
-          <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 ml-1 underline">SendGrid API Keys <ExternalLink className="w-3 h-3" /></a>
-        </div>
-
-        <div className="grid gap-3">
-          <div>
-            <Label className="text-xs">SendGrid API Key</Label>
-            <div className="relative">
-              <Input
-                className="h-8 text-sm font-mono pr-8"
-                type={showSendgridKey ? "text" : "password"}
-                value={sendgridKey}
-                onChange={e => setSendgridKey(e.target.value)}
-                placeholder="SG.xxxxxxxxxx"
-              />
-              <button onClick={() => setShowSendgridKey(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
-                {showSendgridKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">Default From Email</Label>
-              <Input className="h-8 text-sm" value={sendgridFrom} onChange={e => setSendgridFrom(e.target.value)} placeholder="info@yourcompany.com" />
-            </div>
-            <div>
-              <Label className="text-xs">From Name</Label>
-              <Input className="h-8 text-sm" value={sendgridFromName} onChange={e => setSendgridFromName(e.target.value)} placeholder="HCMW" />
-            </div>
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground">Domain authentication required in SendGrid for reliable delivery from your domain.</p>
-      </div>
+      {/* Resend Email (per-org) */}
+      <ResendEmailSection />
     </div>
   );
 }

@@ -1,4 +1,5 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.48';
+import { sendOrgEmailViaResend } from '../../shared/email.js';
 
 // Copied verbatim from src/lib/pipelineHelpers.js (SALES_ORDER, stageIndex, isBeforeOrAt,
 // the Sales-board branch of stageToStatus, and buildStageTransition) and from
@@ -111,8 +112,6 @@ async function autoMoveSalesStage(base44, job, toStage, triggerNote, actorName) 
   return payload;
 }
 
-const VERIFIED_DOMAIN = '@invites.fab-track.io';
-
 // Resolves the job's assigned estimator + sales rep and the org's owner/admin users,
 // then fires an in-app bell Notification + an email alert to each when an estimate
 // is signed via the public customer link. Failures are swallowed so the approval
@@ -162,12 +161,6 @@ async function notifyEstimateSigned(base44, job, estimate, customerName) {
   const notifBody = `${customerName} signed the estimate for ${jobLabel}.`;
   const notifLink = job?.id ? `/jobs/${job.id}` : null;
 
-  let fromAddress = (Deno.env.get('RESEND_FROM_EMAIL') || '').trim();
-  if (!fromAddress.toLowerCase().endsWith(VERIFIED_DOMAIN)) {
-    fromAddress = `no-reply${VERIFIED_DOMAIN}`;
-  }
-  const apiKey = Deno.env.get('RESEND_API_KEY');
-
   for (const recipient of recipientMap.values()) {
     // 1) In-app bell notification
     try {
@@ -183,26 +176,19 @@ async function notifyEstimateSigned(base44, job, estimate, customerName) {
       });
     } catch { /* non-fatal */ }
 
-    // 2) Email alert (Resend)
-    if (apiKey) {
-      try {
-        const html = `<p>Hi ${recipient.full_name || 'there'},</p>
+    // 2) Email alert (via org's Resend config)
+    try {
+      const html = `<p>Hi ${recipient.full_name || 'there'},</p>
 <p><strong>${customerName}</strong> just signed the estimate for <strong>${jobLabel}</strong>.</p>
 <p>They've approved the scope and contract language. You can now send the invoice.</p>
 ${job?.id ? `<p><a href="https://fab-track.base44.app/jobs/${job.id}">View the job →</a></p>` : ''}
 <p style="color:#888;font-size:12px;">This is an automated message from ${orgName}.</p>`;
-        await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            from: `${orgName} <${fromAddress}>`,
-            to: [recipient.email],
-            subject: `Estimate Signed — ${jobLabel}`,
-            html,
-          }),
-        });
-      } catch { /* non-fatal */ }
-    }
+      await sendOrgEmailViaResend(base44, orgId, {
+        to: recipient.email,
+        subject: `Estimate Signed — ${jobLabel}`,
+        html,
+      });
+    } catch { /* non-fatal */ }
   }
 }
 
