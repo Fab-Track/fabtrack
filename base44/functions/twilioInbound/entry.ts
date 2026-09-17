@@ -67,8 +67,13 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Derive organization_id from the matched phone number record
+    // (the "To" number tells us which org this inbound belongs to)
+    const orgId = matchedPhoneNumber?.organization_id || matchedCustomer?.organization_id;
+
     // Build the inbound CommMessage record
     const record = {
+      organization_id: orgId,
       channel: 'SMS',
       direction: 'inbound',
       status: 'delivered',

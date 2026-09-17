@@ -69,6 +69,7 @@ Deno.serve(async (req) => {
       }
 
       const created = await base44.asServiceRole.entities.TwilioPhoneNumber.create({
+        organization_id: user.organization_id,
         phone_number,
         friendly_name: is_main ? 'Main Business Number' : null,
         is_main: !!is_main,
