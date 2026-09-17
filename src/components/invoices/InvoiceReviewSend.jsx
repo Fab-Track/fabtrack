@@ -323,6 +323,7 @@ export default function InvoiceReviewSend({
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [syncError, setSyncError] = useState(null);
+  const [qboPayUrl, setQboPayUrl] = useState(null);
 
   const previewRef = useRef(null);
 
@@ -351,6 +352,7 @@ export default function InvoiceReviewSend({
 
       // Inject the QBO payment portal link into the message body (if Payments is enabled)
       const payUrl = syncRes.data?.qbo_pay_url;
+      setQboPayUrl(payUrl || null);
       const finalBody = payUrl ? `${messageBody}\n\nPay Online: ${payUrl}` : messageBody;
 
       if (sendMode === "Email" || sendMode === "Both") {
@@ -569,6 +571,7 @@ export default function InvoiceReviewSend({
               invoiceLabel={invoiceLabel}
               status={status}
               contractText={contractText}
+              qboPayUrl={qboPayUrl}
             />
           </div>
         </div>

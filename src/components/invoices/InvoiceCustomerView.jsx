@@ -20,7 +20,8 @@ Accepted payment methods: Check, ACH, Credit Card, or QuickBooks Online.
 
 Late payments may be subject to a 1.5% monthly finance charge. For questions regarding this invoice, please contact High Country Metal Works directly.`;
 
-export default function InvoiceCustomerView({ invoice, job, customer, lines, subtotal, discountPct, discountAmt, tax, taxAmount, total, amountPaid, balanceDue, notes, viewMode, issuedDate, dueDate, invoiceLabel, status, contractText }) {
+export default function InvoiceCustomerView({ invoice, job, customer, lines, subtotal, discountPct, discountAmt, tax, taxAmount, total, amountPaid, balanceDue, notes, viewMode, issuedDate, dueDate, invoiceLabel, status, contractText, qboPayUrl }) {
+  const showPayButton = qboPayUrl && balanceDue > 0 && (status === "Unpaid" || status === "Partial" || status === "Overdue");
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-xl border shadow-sm overflow-hidden">
       {/* Header */}
@@ -166,6 +167,26 @@ export default function InvoiceCustomerView({ invoice, job, customer, lines, sub
             )}
           </div>
         </div>
+
+        {/* Pay Now via QuickBooks Online */}
+        {showPayButton && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 sm:p-5 text-center">
+            <p className="text-sm font-semibold text-emerald-800 mb-3">
+              Ready to pay? Click below to pay securely via QuickBooks Online.
+            </p>
+            <a
+              href={qboPayUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-8 rounded-xl shadow-lg transition-colors text-sm sm:text-base touch-target"
+            >
+              Pay ${balanceDue.toLocaleString("en-US", { minimumFractionDigits: 2 })} Now
+            </a>
+            <p className="text-[11px] text-muted-foreground mt-2">
+              Secure payment powered by QuickBooks Online
+            </p>
+          </div>
+        )}
 
         {/* Customer Notes */}
         {notes && (
