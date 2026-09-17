@@ -103,6 +103,11 @@
       "default": 36.5,
       "description": "Org-level railing standard: commercial picket length in inches."
     },
+    "qbo_last_poll_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Cursor for the QuickBooks payment poller \u2014 last time QBO payments were checked"
+    },
     "stripe_secret_key": {
       "type": "string",
       "description": "Stripe secret key (sk_live_... or sk_test_...)"

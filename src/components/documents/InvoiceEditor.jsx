@@ -14,6 +14,7 @@ import InvoiceCustomerView from "@/components/invoices/InvoiceCustomerView";
 import InvoiceReviewSend from "@/components/invoices/InvoiceReviewSend";
 import { useJobDetailConfig } from "@/hooks/useJobDetailConfig";
 import ProductServiceDropdown from "@/components/estimates/ProductServiceDropdown";
+import QboSyncControl from "@/components/invoices/QboSyncControl";
 
 const LABEL_STYLES = {
   "Deposit Invoice (50%)":  "bg-blue-100 text-blue-800 border-blue-200",
@@ -338,6 +339,7 @@ export default function InvoiceEditor({ invoice, job, jobInvoices = [], estimate
                   <LayoutList className="w-3 h-3" /> Detail
                 </button>
               </div>
+              {savedInvoice?.id && <QboSyncControl invoice={savedInvoice} jobId={job.id} />}
               <Button size="sm" variant="outline" onClick={handleSave} disabled={save.isPending}>
                 {save.isPending && afterSaveAction === "close" ? "Saving…" : "Save"}
               </Button>

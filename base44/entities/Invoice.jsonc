@@ -98,6 +98,50 @@
       "default": "detail",
       "description": "Whether to show full line-item breakdown or summary view to customer"
     },
+    "qbo_invoice_id": {
+      "type": "string",
+      "description": "QuickBooks Online Invoice Id once this invoice has been pushed to QBO"
+    },
+    "qbo_sync_token": {
+      "type": "string",
+      "description": "QuickBooks SyncToken of the linked QBO invoice (required for updates)"
+    },
+    "qbo_doc_number": {
+      "type": "string",
+      "description": "The DocNumber (invoice no.) assigned in QuickBooks Online"
+    },
+    "qbo_synced_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this invoice was last successfully pushed to QuickBooks"
+    },
+    "qbo_sync_status": {
+      "type": "string",
+      "enum": [
+        "not_synced",
+        "synced",
+        "error"
+      ],
+      "default": "not_synced",
+      "description": "Result of the most recent QuickBooks sync attempt"
+    },
+    "qbo_sync_error": {
+      "type": "string",
+      "description": "Error message from the last failed QuickBooks sync attempt"
+    },
+    "qbo_payment_status": {
+      "type": "string",
+      "enum": [
+        "Unpaid",
+        "Partial",
+        "Paid"
+      ],
+      "description": "Payment status as last read from QuickBooks Online (distinct from the manual FabTrack status)"
+    },
+    "qbo_balance": {
+      "type": "number",
+      "description": "Outstanding balance on the linked QuickBooks invoice, from the last poll"
+    },
     "line_items": {
       "type": "array",
       "items": {

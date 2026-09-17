@@ -39,6 +39,14 @@
       "type": "number",
       "default": 0
     },
+    "qbo_item_id": {
+      "type": "string",
+      "description": "Mapped QuickBooks Online Item (Product/Service) Id \u2014 required before invoices using this service can sync to QBO"
+    },
+    "qbo_item_name": {
+      "type": "string",
+      "description": "Denormalized QuickBooks Item name for display in the mapping table"
+    },
     "is_railing": {
       "type": "boolean",
       "default": false,

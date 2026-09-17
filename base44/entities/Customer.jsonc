@@ -58,6 +58,10 @@
       "type": "string",
       "description": "Internal notes"
     },
+    "qbo_customer_id": {
+      "type": "string",
+      "description": "Linked QuickBooks Online Customer Id (resolved by name on first invoice sync)"
+    },
     "contacts": {
       "type": "array",
       "description": "Historical directory of contacts associated with this customer (gathered from jobs and manual entry)",
