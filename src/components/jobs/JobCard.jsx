@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Users, Paintbrush, MoreHorizontal, Archive, Trash2, ArrowRightLeft } from "lucide-react";
+import { CalendarDays, Users, Paintbrush, MoreHorizontal, Archive, Trash2, ArrowRightLeft, UserCircle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { getJobHealth, getHealthBorder } from "@/lib/jobHelpers";
 import { SALES_STAGES, SHOP_STAGES, BILLING_STAGES, buildStageTransition } from "@/lib/pipelineHelpers";
@@ -163,6 +163,12 @@ export default function JobCard({ job, isDragging }) {
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Users className="w-3 h-3" />
             {job.assigned_crew_names.length}
+          </div>
+        )}
+        {job.assigned_rep_name && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <UserCircle className="w-3 h-3" />
+            {job.assigned_rep_name}
           </div>
         )}
       </div>
