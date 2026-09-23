@@ -115,12 +115,12 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], invoices = [], 
         </div>
       </div>
 
-      {job.assigned_estimator_name && (
+      {job.assigned_rep_name && (
         <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-          <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[9px] font-bold text-primary">
-            {job.assigned_estimator_name[0]}
+          <div className="w-4 h-4 rounded-full bg-accent/20 flex items-center justify-center text-[9px] font-bold text-accent">
+            {job.assigned_rep_name[0]}
           </div>
-          <span>{job.assigned_estimator_name}</span>
+          <span>{job.assigned_rep_name}</span>
         </div>
       )}
 
