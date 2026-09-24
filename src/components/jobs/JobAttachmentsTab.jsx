@@ -1,10 +1,12 @@
 import React, { useState, useCallback, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Upload, Paperclip, Image, File, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Upload, Paperclip, Image, File, Loader2, CheckCircle2, AlertCircle, Plus } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import AttachmentCategoryGroup from "./AttachmentCategoryGroup";
 
 export default function JobAttachmentsTab({ job }) {
@@ -16,6 +18,9 @@ export default function JobAttachmentsTab({ job }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState(null); // { type: "success"|"error", message }
   const [uploadNote, setUploadNote] = useState("");
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [creatingCategory, setCreatingCategory] = useState(false);
   const dropZoneRef = useRef(null);
 
   // Fetch categories from manageable entity
@@ -41,6 +46,29 @@ export default function JobAttachmentsTab({ job }) {
   const dedupedCategories = Array.from(
     new Map(activeCategories.map(c => [c.name.trim(), c])).values()
   );
+
+  const handleCreateCategory = async () => {
+    const name = newCategoryName.trim();
+    if (!name) return;
+    setCreatingCategory(true);
+    try {
+      const maxSort = dedupedCategories.reduce((max, c) => Math.max(max, c.sort_order || 0), 0);
+      await base44.entities.AttachmentCategory.create({
+        name,
+        sort_order: maxSort + 10,
+        is_active: true,
+        organization_id: job.organization_id,
+      });
+      await qc.invalidateQueries({ queryKey: ["attachment-categories"] });
+      setSelectedCategory(name);
+      setNewCategoryName("");
+      setShowNewCategoryInput(false);
+    } catch (err) {
+      setUploadStatus({ type: "error", message: "Failed to create category." });
+      setTimeout(() => setUploadStatus(null), 3000);
+    }
+    setCreatingCategory(false);
+  };
 
   // Pick file(s) — category must be selected first
   const triggerFilePick = () => {
@@ -159,7 +187,14 @@ export default function JobAttachmentsTab({ job }) {
           <span className="text-xs font-medium text-muted-foreground shrink-0">Category:</span>
           <Select
             value={selectedCategory}
-            onValueChange={(v) => { setSelectedCategory(v); setUploadStatus(null); }}
+            onValueChange={(v) => {
+              if (v === "__add_new__") {
+                setShowNewCategoryInput(true);
+              } else {
+                setSelectedCategory(v);
+                setUploadStatus(null);
+              }
+            }}
           >
             <SelectTrigger className="w-[220px] h-9 text-xs">
               <SelectValue placeholder="Select a category…" />
@@ -170,8 +205,40 @@ export default function JobAttachmentsTab({ job }) {
                   {cat.name}
                 </SelectItem>
               ))}
+              <div className="border-t my-1" />
+              <SelectItem value="__add_new__" className="text-xs text-accent font-medium">
+                <Plus className="w-3 h-3 inline mr-1" /> Add new category…
+              </SelectItem>
             </SelectContent>
           </Select>
+          {showNewCategoryInput && (
+            <div className="flex items-center gap-1">
+              <Input
+                value={newCategoryName}
+                onChange={e => setNewCategoryName(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") handleCreateCategory(); }}
+                placeholder="New category name…"
+                className="w-[180px] h-9 text-xs"
+                autoFocus
+              />
+              <Button
+                size="sm"
+                className="h-9 text-xs"
+                onClick={handleCreateCategory}
+                disabled={!newCategoryName.trim() || creatingCategory}
+              >
+                {creatingCategory ? <Loader2 className="w-3 h-3 animate-spin" /> : "Add"}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-9 text-xs"
+                onClick={() => { setShowNewCategoryInput(false); setNewCategoryName(""); }}
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Drop zone + upload button — disabled until category selected */}
