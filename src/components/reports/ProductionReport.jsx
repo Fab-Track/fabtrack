@@ -8,6 +8,7 @@ import EmptyState from "./shared/EmptyState";
 import ReportHeader from "./shared/ReportHeader";
 import ReportExportButtons from "./ReportExportButtons";
 import PhaseDurationReport from "./PhaseDurationReport";
+import ShopLogReport from "./ShopLogReport";
 import { useOrgFilter } from "@/lib/orgContext";
 
 const STAGE_ORDER = ["In Fabrication", "At Powder Coat", "Ready for Install", "Install Scheduled", "Install Complete"];
@@ -158,6 +159,9 @@ export default function ProductionReport() {
 
       {/* Phase Duration Analysis */}
       <PhaseDurationReport />
+
+      {/* Shop Log Performance */}
+      <ShopLogReport jobs={jobs} range={range} />
 
       {/* Work center utilization */}
       {wcData.length > 0 && (

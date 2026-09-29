@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+
 import { Clock, User, QrCode, Plus, Pencil, Trash2, DollarSign } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import ShopLogQrModal from "./ShopLogQrModal";
@@ -38,6 +39,7 @@ export default function JobShopLogTab({ timeEntries, job, purchaseOrders = [] })
   const [qrOpen, setQrOpen] = useState(false);
   const [estOpen, setEstOpen] = useState(false);
   const [entryOpen, setEntryOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState(null);
 
   const canEdit = ["owner", "admin", "estimator"].includes((user?.role || "").toLowerCase());
 
@@ -104,6 +106,18 @@ export default function JobShopLogTab({ timeEntries, job, purchaseOrders = [] })
     qc.invalidateQueries({ queryKey: ["job", job.id] });
   };
 
+  const handleUpdateEntry = async (entryId, payload) => {
+    await base44.entities.ShopLogEntry.update(entryId, payload);
+    await base44.functions.invoke("recalcShopLogTotals", { job_id: job.id });
+    qc.invalidateQueries({ queryKey: ["shopLogEntries", job.id] });
+    qc.invalidateQueries({ queryKey: ["job", job.id] });
+  };
+
+  const handleEditEntry = (entry) => {
+    setEditingEntry(entry);
+    setEntryOpen(true);
+  };
+
   const handleDeleteEntry = async (entryId) => {
     if (!window.confirm("Delete this entry?")) return;
     await base44.entities.ShopLogEntry.delete(entryId);
@@ -120,15 +134,27 @@ export default function JobShopLogTab({ timeEntries, job, purchaseOrders = [] })
     const estimated = job[cat.estKey] || 0;
     const variance = actual - estimated;
     const fmt = isHours ? fmtHrs : fmtUSD;
+    const pct = estimated > 0 ? Math.min((actual / estimated) * 100, 100) : (actual > 0 ? 100 : 0);
+    const overBudget = estimated > 0 && actual > estimated;
     return (
-      <tr key={cat.key} className="border-b last:border-0">
-        <td className="py-2 text-sm font-medium">{cat.label}</td>
-        <td className="py-2 text-sm text-right text-muted-foreground">{fmt(estimated)}</td>
-        <td className="py-2 text-sm text-right font-semibold">{fmt(actual)}</td>
-        <td className={`py-2 text-sm text-right ${variance > 0 ? "text-amber-600" : "text-emerald-600"}`}>
-          {variance > 0 ? "+" : ""}{fmt(variance)}
-        </td>
-      </tr>
+      <React.Fragment key={cat.key}>
+        <tr className="border-b last:border-0">
+          <td className="py-2 text-sm font-medium">{cat.label}</td>
+          <td className="py-2 text-sm text-right text-muted-foreground">{fmt(estimated)}</td>
+          <td className="py-2 text-sm text-right font-semibold">{fmt(actual)}</td>
+          <td className={`py-2 text-sm text-right ${variance > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+            {variance > 0 ? "+" : ""}{fmt(variance)}
+          </td>
+        </tr>
+        <tr className="border-b last:border-0">
+          <td colSpan={4} className="pb-2 pt-0">
+            <Progress
+              value={pct}
+              className={`h-2 ${overBudget ? '[&>div]:bg-red-500' : pct >= 90 ? '[&>div]:bg-amber-500' : '[&>div]:bg-emerald-500'}`}
+            />
+          </td>
+        </tr>
+      </React.Fragment>
     );
   };
 
@@ -266,14 +292,24 @@ export default function JobShopLogTab({ timeEntries, job, purchaseOrders = [] })
                         )}
                       </div>
                       {canEdit && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleDeleteEntry(entry.id)}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
+                        <div className="flex items-center gap-0.5">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={() => handleEditEntry(entry)}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleDeleteEntry(entry.id)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -368,8 +404,10 @@ export default function JobShopLogTab({ timeEntries, job, purchaseOrders = [] })
       />
       <ShopLogEntryModal
         open={entryOpen}
-        onClose={() => setEntryOpen(false)}
+        onClose={() => { setEntryOpen(false); setEditingEntry(null); }}
         onSubmit={handleCreateEntry}
+        entry={editingEntry}
+        onUpdate={handleUpdateEntry}
       />
     </div>
   );

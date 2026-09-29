@@ -14,7 +14,8 @@ const FIELDS = [
   { key: "fuel_cost", label: "Fuel ($)" }
 ];
 
-export default function ShopLogEntryModal({ open, onClose, onSubmit }) {
+export default function ShopLogEntryModal({ open, onClose, onSubmit, entry, onUpdate }) {
+  const isEditing = !!entry;
   const [form, setForm] = useState({
     entry_date: new Date().toISOString().slice(0, 10),
     submitted_by_name: "",
@@ -28,7 +29,19 @@ export default function ShopLogEntryModal({ open, onClose, onSubmit }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    if (entry) {
+      setForm({
+        entry_date: entry.entry_date || new Date().toISOString().slice(0, 10),
+        submitted_by_name: entry.submitted_by_name || "",
+        shop_labor_hours: String(entry.shop_labor_hours ?? ""),
+        install_labor_hours: String(entry.install_labor_hours ?? ""),
+        draw_measure_hours: String(entry.draw_measure_hours ?? ""),
+        materials_cost: String(entry.materials_cost ?? ""),
+        powder_coat_cost: String(entry.powder_coat_cost ?? ""),
+        fuel_cost: String(entry.fuel_cost ?? "")
+      });
+    } else {
       setForm({
         entry_date: new Date().toISOString().slice(0, 10),
         submitted_by_name: "",
@@ -40,7 +53,7 @@ export default function ShopLogEntryModal({ open, onClose, onSubmit }) {
         fuel_cost: ""
       });
     }
-  }, [open]);
+  }, [open, entry]);
 
   const handleChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -51,7 +64,11 @@ export default function ShopLogEntryModal({ open, onClose, onSubmit }) {
     setSaving(true);
     const payload = { ...form };
     FIELDS.forEach(f => { payload[f.key] = Number(payload[f.key]) || 0; });
-    await onSubmit(payload);
+    if (isEditing) {
+      await onUpdate(entry.id, payload);
+    } else {
+      await onSubmit(payload);
+    }
     setSaving(false);
     onClose();
   };
@@ -60,7 +77,7 @@ export default function ShopLogEntryModal({ open, onClose, onSubmit }) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Log Shop Entry</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit Entry" : "Log Shop Entry"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3 py-2">
           <div className="grid grid-cols-2 gap-3">
@@ -100,7 +117,7 @@ export default function ShopLogEntryModal({ open, onClose, onSubmit }) {
           <DialogFooter>
             <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
             <Button type="submit" disabled={saving} className="gap-1.5">
-              {saving && <Loader2 className="w-4 h-4 animate-spin" />} Save Entry
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />} {isEditing ? "Update Entry" : "Save Entry"}
             </Button>
           </DialogFooter>
         </form>
