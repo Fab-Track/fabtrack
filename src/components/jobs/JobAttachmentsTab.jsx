@@ -47,6 +47,29 @@ export default function JobAttachmentsTab({ job }) {
     new Map(activeCategories.map(c => [c.name.trim(), c])).values()
   );
 
+  const handleDeleteCategory = async (catName) => {
+    const count = attachments.filter(a => a.category === catName).length;
+    if (count > 0) {
+      setUploadStatus({ type: "error", message: `Cannot delete "${catName}" — ${count} file${count !== 1 ? "s" : ""} attached.` });
+      setTimeout(() => setUploadStatus(null), 4000);
+      return;
+    }
+    if (!window.confirm(`Delete category "${catName}"?`)) return;
+    const cat = dedupedCategories.find(c => c.name === catName);
+    try {
+      if (cat?.id) {
+        await base44.entities.AttachmentCategory.delete(cat.id);
+        await qc.invalidateQueries({ queryKey: ["attachment-categories"] });
+      }
+      if (selectedCategory === catName) setSelectedCategory("");
+      setUploadStatus({ type: "success", message: `Category "${catName}" deleted.` });
+      setTimeout(() => setUploadStatus(null), 3000);
+    } catch (err) {
+      setUploadStatus({ type: "error", message: "Failed to delete category." });
+      setTimeout(() => setUploadStatus(null), 3000);
+    }
+  };
+
   const handleCreateCategory = async () => {
     const name = newCategoryName.trim();
     if (!name) return;
@@ -201,9 +224,19 @@ export default function JobAttachmentsTab({ job }) {
             </SelectTrigger>
             <SelectContent>
               {dedupedCategories.map(cat => (
-                <SelectItem key={cat.name} value={cat.name} className="text-xs">
-                  {cat.name}
-                </SelectItem>
+                <div key={cat.name} className="flex items-center group">
+                  <SelectItem value={cat.name} className="text-xs flex-1">
+                    {cat.name}
+                  </SelectItem>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleDeleteCategory(cat.name); }}
+                    className="opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive/80 p-1 text-xs"
+                    title="Delete category"
+                  >
+                    ✕
+                  </button>
+                </div>
               ))}
               <div className="border-t my-1" />
               <SelectItem value="__add_new__" className="text-xs text-accent font-medium">
