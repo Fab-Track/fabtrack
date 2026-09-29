@@ -40,6 +40,7 @@ export default function JobShopLogTab({ timeEntries, job, purchaseOrders = [] })
   const [estOpen, setEstOpen] = useState(false);
   const [entryOpen, setEntryOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
+  const [inlineEdit, setInlineEdit] = useState(null); // { estKey, value }
 
   const canEdit = ["owner", "admin", "estimator"].includes((user?.role || "").toLowerCase());
 
@@ -94,6 +95,14 @@ export default function JobShopLogTab({ timeEntries, job, purchaseOrders = [] })
     qc.invalidateQueries({ queryKey: ["job", job.id] });
   };
 
+  const handleInlineSave = async (estKey, value) => {
+    const numVal = Number(value) || 0;
+    setInlineEdit(null);
+    if ((job[estKey] || 0) === numVal) return;
+    await base44.entities.Job.update(job.id, { [estKey]: numVal });
+    qc.invalidateQueries({ queryKey: ["job", job.id] });
+  };
+
   const handleCreateEntry = async (payload) => {
     await base44.entities.ShopLogEntry.create({
       organization_id: job.organization_id,
@@ -136,11 +145,37 @@ export default function JobShopLogTab({ timeEntries, job, purchaseOrders = [] })
     const fmt = isHours ? fmtHrs : fmtUSD;
     const pct = estimated > 0 ? Math.min((actual / estimated) * 100, 100) : (actual > 0 ? 100 : 0);
     const overBudget = estimated > 0 && actual > estimated;
+    const isEditing = inlineEdit?.estKey === cat.estKey;
     return (
       <React.Fragment key={cat.key}>
         <tr className="border-b last:border-0">
           <td className="py-2 text-sm font-medium">{cat.label}</td>
-          <td className="py-2 text-sm text-right text-muted-foreground">{fmt(estimated)}</td>
+          <td className="py-2 text-sm text-right text-muted-foreground">
+            {canEdit ? (
+              isEditing ? (
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  autoFocus
+                  defaultValue={estimated}
+                  onBlur={(e) => handleInlineSave(cat.estKey, e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setInlineEdit(null); }}
+                  className="w-20 text-right border rounded px-1 py-0.5 text-sm bg-background"
+                />
+              ) : (
+                <button
+                  onClick={() => setInlineEdit({ estKey: cat.estKey, value: estimated })}
+                  className="hover:text-foreground hover:underline underline-offset-2 cursor-text"
+                  title="Click to edit estimated value"
+                >
+                  {fmt(estimated)}
+                </button>
+              )
+            ) : (
+              fmt(estimated)
+            )}
+          </td>
           <td className="py-2 text-sm text-right font-semibold">{fmt(actual)}</td>
           <td className={`py-2 text-sm text-right ${variance > 0 ? "text-amber-600" : "text-emerald-600"}`}>
             {variance > 0 ? "+" : ""}{fmt(variance)}
@@ -207,6 +242,11 @@ export default function JobShopLogTab({ timeEntries, job, purchaseOrders = [] })
               </tr>
             </tbody>
           </table>
+          {canEdit && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Click any estimated value above to edit it inline.
+            </p>
+          )}
           {timeEntryHours > 0 && (
             <p className="text-xs text-muted-foreground mt-2">
               Includes {timeEntryHours.toFixed(1)}h from clock-in entries (see breakdown below).
@@ -249,8 +289,8 @@ export default function JobShopLogTab({ timeEntries, job, purchaseOrders = [] })
           <Button size="sm" onClick={() => setEntryOpen(true)} className="gap-1.5">
             <Plus className="w-3.5 h-3.5" /> Log Entry
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setEstOpen(true)} className="gap-1.5">
-            <Pencil className="w-3.5 h-3.5" /> Edit Estimates
+          <Button size="sm" variant="secondary" onClick={() => setEstOpen(true)} className="gap-1.5">
+            <Pencil className="w-3.5 h-3.5" /> Edit All Estimates
           </Button>
           <Button size="sm" variant="outline" onClick={() => setQrOpen(true)} className="gap-1.5">
             <QrCode className="w-3.5 h-3.5" /> Show QR Code
