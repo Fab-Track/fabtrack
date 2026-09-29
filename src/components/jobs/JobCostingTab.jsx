@@ -6,7 +6,7 @@ import { DollarSign } from "lucide-react";
 export default function JobCostingTab({ job, timeEntries, purchaseOrders }) {
   const estimateTotal = job.estimate_total || 0;
   const actualCost = job.actual_cost || 0;
-  const laborHours = timeEntries.reduce((s, te) => s + (te.duration_hours || 0), 0);
+  const laborHours = job.actual_labor_hours || 0;
   const poTotal = purchaseOrders.reduce((s, po) => s + (po.total || 0), 0);
   
   const margin = estimateTotal > 0 ? ((estimateTotal - actualCost) / estimateTotal * 100) : 0;

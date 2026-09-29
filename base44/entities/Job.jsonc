@@ -283,6 +283,40 @@
       "type": "number",
       "default": 0
     },
+    "shop_log_share_token": {
+      "type": "string",
+      "description": "Opaque random token used in public shop-log QR links instead of the raw record id"
+    },
+    "est_shop_labor_hours": {
+      "type": "number",
+      "default": 0,
+      "description": "Estimated shop labor hours (manual entry on Shop Log tab)"
+    },
+    "est_install_labor_hours": {
+      "type": "number",
+      "default": 0,
+      "description": "Estimated install labor hours (manual entry on Shop Log tab)"
+    },
+    "est_materials_cost": {
+      "type": "number",
+      "default": 0,
+      "description": "Estimated materials cost $ (manual entry on Shop Log tab)"
+    },
+    "est_powder_coat_cost": {
+      "type": "number",
+      "default": 0,
+      "description": "Estimated powder coat cost $ (manual entry on Shop Log tab)"
+    },
+    "est_draw_measure_hours": {
+      "type": "number",
+      "default": 0,
+      "description": "Estimated draw/measure hours (manual entry on Shop Log tab)"
+    },
+    "est_fuel_cost": {
+      "type": "number",
+      "default": 0,
+      "description": "Estimated fuel cost $ (manual entry on Shop Log tab)"
+    },
     "last_activity_date": {
       "type": "string",
       "format": "date-time"

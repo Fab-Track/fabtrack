@@ -79,6 +79,7 @@ const Login            = lazy(() => import('@/pages/Login'));
 const Register         = lazy(() => import('@/pages/Register'));
 const ForgotPassword   = lazy(() => import('@/pages/ForgotPassword'));
 const ResetPassword    = lazy(() => import('@/pages/ResetPassword'));
+const ShopLogPublicForm = lazy(() => import('@/pages/ShopLogPublicForm'));
 
 // Minimal fallback shown while a lazy chunk loads
 function PageLoader() {
@@ -223,7 +224,8 @@ const AuthenticatedApp = () => {
         publicPath === "/privacy-policy" ||
         publicPath === "/terms-of-service" ||
         publicPath.startsWith("/estimate-view/") ||
-        publicPath.startsWith("/invoice-view/");
+        publicPath.startsWith("/invoice-view/") ||
+        publicPath.startsWith("/shop-log/");
       if (!isPublicPath) {
         navigateToLogin();
         return null;
@@ -256,6 +258,7 @@ const AuthenticatedApp = () => {
         <Route path="/terms-of-service" element={<TermsOfService />} />
         <Route path="/estimate-view/:token" element={<EstimateView />} />
         <Route path="/invoice-view/:token" element={<InvoiceView />} />
+        <Route path="/shop-log/:token" element={<ShopLogPublicForm />} />
         
         {/* Main app with sidebar layout */}
         <Route element={<AppLayout />}>

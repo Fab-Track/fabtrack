@@ -1,0 +1,75 @@
+{
+  "name": "ShopLogEntry",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Linked job ID"
+    },
+    "job_number": {
+      "type": "string",
+      "description": "Job number (denormalized)"
+    },
+    "entry_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the work was performed"
+    },
+    "shop_labor_hours": {
+      "type": "number",
+      "default": 0,
+      "description": "Shop labor hours logged for this entry"
+    },
+    "install_labor_hours": {
+      "type": "number",
+      "default": 0,
+      "description": "Install labor hours logged for this entry"
+    },
+    "materials_cost": {
+      "type": "number",
+      "default": 0,
+      "description": "Materials cost in dollars for this entry"
+    },
+    "powder_coat_cost": {
+      "type": "number",
+      "default": 0,
+      "description": "Powder coat cost in dollars for this entry"
+    },
+    "draw_measure_hours": {
+      "type": "number",
+      "default": 0,
+      "description": "Draw/measure hours logged for this entry"
+    },
+    "fuel_cost": {
+      "type": "number",
+      "default": 0,
+      "description": "Fuel cost in dollars for this entry"
+    },
+    "submitted_by_name": {
+      "type": "string",
+      "description": "Name of the person who submitted this entry (free text on public form)"
+    }
+  },
+  "required": [
+    "job_id",
+    "organization_id"
+  ],
+  "rls": {
+    "create": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
+    "read": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
+    "update": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
+    "delete": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    }
+  }
+}
