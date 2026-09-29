@@ -17,7 +17,7 @@ import DeleteJobModal from "@/components/jobs/DeleteJobModal";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import JobOverviewTab from "@/components/jobs/JobOverviewTab";
 import JobShopLogTab from "@/components/jobs/JobShopLogTab";
-import JobCostingTab from "@/components/jobs/JobCostingTab";
+
 import JobAttachmentsTab from "@/components/jobs/JobAttachmentsTab.jsx";
 import ProductionSchedule from "@/components/jobs/ProductionSchedule";
 import JobDocumentsTab from "@/components/jobs/JobDocumentsTab";
@@ -104,7 +104,7 @@ export default function JobDetail() {
   // Fabricator / Design Specialist see only these tabs in this order
   const SHOP_TABS = ["overview", "schedule", "project-details", "attachments", "messages", "shop-log", "appointments"];
   // All other roles see all tabs in this order
-  const ALL_TABS = ["overview", "schedule", "project-details", "attachments", "messages", "shop-log", "appointments", "documents", "costing", "communications", "history"];
+  const ALL_TABS = ["overview", "schedule", "project-details", "attachments", "messages", "shop-log", "appointments", "documents", "communications", "history"];
 
   const visibleTabs = isShopRole ? SHOP_TABS : ALL_TABS;
 
@@ -196,7 +196,7 @@ export default function JobDetail() {
           {visibleTabs.includes("messages") && <TabsTrigger value="messages" className="shrink-0">Messages</TabsTrigger>}
           {visibleTabs.includes("shop-log") && <TabsTrigger value="shop-log" className="shrink-0">Shop Log</TabsTrigger>}
           {visibleTabs.includes("documents") && <TabsTrigger value="documents" className="shrink-0">Documents</TabsTrigger>}
-          {visibleTabs.includes("costing") && <TabsTrigger value="costing" className="shrink-0">Costing</TabsTrigger>}
+
           {visibleTabs.includes("appointments") && (
             <TabsTrigger value="appointments" className="shrink-0">Appointments</TabsTrigger>
           )}
@@ -216,9 +216,8 @@ export default function JobDetail() {
         <TabsContent value="project-details"><ProjectDetailsTab job={job} userRole={effectiveRole} /></TabsContent>
         <TabsContent value="attachments"><JobAttachmentsTab job={job} /></TabsContent>
         <TabsContent value="messages"><JobMessagesTab job={job} /></TabsContent>
-        <TabsContent value="shop-log"><JobShopLogTab timeEntries={timeEntries} job={job} /></TabsContent>
+        <TabsContent value="shop-log"><JobShopLogTab timeEntries={timeEntries} job={job} purchaseOrders={purchaseOrders} /></TabsContent>
         <TabsContent value="documents"><JobDocumentsTab job={job} /></TabsContent>
-        <TabsContent value="costing"><JobCostingTab job={job} timeEntries={timeEntries} purchaseOrders={purchaseOrders} employees={employees} /></TabsContent>
         <TabsContent value="appointments"><JobEventsList job={job} /></TabsContent>
         <TabsContent value="communications"><JobCommunicationsTab job={job} /></TabsContent>
         <TabsContent value="history"><JobHistoryTab job={job} /></TabsContent>

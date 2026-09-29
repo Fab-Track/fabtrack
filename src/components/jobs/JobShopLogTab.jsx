@@ -5,7 +5,8 @@ import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, User, QrCode, Plus, Pencil, Trash2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Clock, User, QrCode, Plus, Pencil, Trash2, DollarSign } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import ShopLogQrModal from "./ShopLogQrModal";
 import ShopLogEstimateModal from "./ShopLogEstimateModal";
@@ -13,7 +14,17 @@ import ShopLogEntryModal from "./ShopLogEntryModal";
 
 const WORK_CENTERS = ["Cut", "Fit", "Weld", "Grind", "Powder Coat", "Install", "Demo", "Design"];
 
-const EST_FIELDS = ["est_shop_labor_hours", "est_install_labor_hours", "est_draw_measure_hours"];
+const HOUR_CATEGORIES = [
+  { key: "shop_labor_hours", estKey: "est_shop_labor_hours", label: "Shop Labor", unit: "hrs" },
+  { key: "install_labor_hours", estKey: "est_install_labor_hours", label: "Install Labor", unit: "hrs" },
+  { key: "draw_measure_hours", estKey: "est_draw_measure_hours", label: "Draw / Measure", unit: "hrs" },
+];
+
+const COST_CATEGORIES = [
+  { key: "materials_cost", estKey: "est_materials_cost", label: "Materials", unit: "$" },
+  { key: "powder_coat_cost", estKey: "est_powder_coat_cost", label: "Powder Coat", unit: "$" },
+  { key: "fuel_cost", estKey: "est_fuel_cost", label: "Fuel", unit: "$" },
+];
 
 function generateToken() {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)))
@@ -21,7 +32,7 @@ function generateToken() {
     .join("");
 }
 
-export default function JobShopLogTab({ timeEntries, job }) {
+export default function JobShopLogTab({ timeEntries, job, purchaseOrders = [] }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [qrOpen, setQrOpen] = useState(false);
@@ -30,34 +41,45 @@ export default function JobShopLogTab({ timeEntries, job }) {
 
   const canEdit = ["owner", "admin", "estimator"].includes((user?.role || "").toLowerCase());
 
-  // Fetch shop log entries for this job
   const { data: shopLogEntries = [] } = useQuery({
     queryKey: ["shopLogEntries", job.id],
     queryFn: () => base44.entities.ShopLogEntry.filter({ job_id: job.id }),
     enabled: !!job?.id
   });
 
-  // Group time entries by work center (existing functionality, preserved)
-  const byCenter = {};
-  WORK_CENTERS.forEach(wc => { byCenter[wc] = []; });
-  timeEntries.forEach(te => {
-    if (byCenter[te.work_center]) byCenter[te.work_center].push(te);
+  // Per-category totals from shop log entries
+  const catTotals = {};
+  [...HOUR_CATEGORIES, ...COST_CATEGORIES].forEach(c => {
+    catTotals[c.key] = shopLogEntries.reduce((s, e) => s + (e[c.key] || 0), 0);
   });
+
+  // Time clock hours (separate from shop log entries)
   const timeEntryHours = timeEntries.reduce((s, te) => s + (te.duration_hours || 0), 0);
 
-  // Shop log totals
-  const shopHours = shopLogEntries.reduce(
-    (s, e) => s + (e.shop_labor_hours || 0) + (e.install_labor_hours || 0) + (e.draw_measure_hours || 0),
-    0
-  );
-  const estHours = EST_FIELDS.reduce((s, k) => s + (job[k] || 0), 0);
-  const totalLogged = shopHours + timeEntryHours;
-  const remaining = Math.max(0, estHours - totalLogged);
+  // Grand totals
+  const totalLoggedHours = HOUR_CATEGORIES.reduce((s, c) => s + catTotals[c.key], 0) + timeEntryHours;
+  const totalEstimatedHours = HOUR_CATEGORIES.reduce((s, c) => s + (job[c.estKey] || 0), 0);
+  const totalLoggedCosts = COST_CATEGORIES.reduce((s, c) => s + catTotals[c.key], 0);
+  const totalEstimatedCosts = COST_CATEGORIES.reduce((s, c) => s + (job[c.estKey] || 0), 0);
+
+  // Costing tab data (merged)
+  const estimateTotal = job.estimate_total || 0;
+  const actualCost = job.actual_cost || 0;
+  const poTotal = purchaseOrders.reduce((s, po) => s + (po.total || 0), 0);
+  const margin = estimateTotal > 0 ? ((estimateTotal - actualCost) / estimateTotal * 100) : 0;
+  const costPercent = estimateTotal > 0 ? (actualCost / estimateTotal * 100) : 0;
 
   // Sort entries newest first
   const sortedEntries = [...shopLogEntries].sort((a, b) =>
     (b.entry_date || "").localeCompare(a.entry_date || "")
   );
+
+  // Group time entries by work center
+  const byCenter = {};
+  WORK_CENTERS.forEach(wc => { byCenter[wc] = []; });
+  timeEntries.forEach(te => {
+    if (byCenter[te.work_center]) byCenter[te.work_center].push(te);
+  });
 
   const handleGenerateToken = async () => {
     const token = generateToken();
@@ -90,15 +112,110 @@ export default function JobShopLogTab({ timeEntries, job }) {
     qc.invalidateQueries({ queryKey: ["job", job.id] });
   };
 
+  const fmtHrs = (v) => `${(v || 0).toFixed(1)}h`;
+  const fmtUSD = (v) => `$${(v || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+
+  const renderCategoryRow = (cat, isHours) => {
+    const actual = catTotals[cat.key] || 0;
+    const estimated = job[cat.estKey] || 0;
+    const variance = actual - estimated;
+    const fmt = isHours ? fmtHrs : fmtUSD;
+    return (
+      <tr key={cat.key} className="border-b last:border-0">
+        <td className="py-2 text-sm font-medium">{cat.label}</td>
+        <td className="py-2 text-sm text-right text-muted-foreground">{fmt(estimated)}</td>
+        <td className="py-2 text-sm text-right font-semibold">{fmt(actual)}</td>
+        <td className={`py-2 text-sm text-right ${variance > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+          {variance > 0 ? "+" : ""}{fmt(variance)}
+        </td>
+      </tr>
+    );
+  };
+
   return (
     <div className="space-y-4">
-      {/* Summary */}
+      {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <SummaryCard label="Total Logged" value={`${totalLogged.toFixed(1)}h`} />
-        <SummaryCard label="Estimated" value={`${estHours.toFixed(1)}h`} />
-        <SummaryCard label="Remaining" value={`${remaining.toFixed(1)}h`} />
-        <SummaryCard label="Entries" value={shopLogEntries.length} />
+        <SummaryCard label="Total Logged Hours" value={fmtHrs(totalLoggedHours)} />
+        <SummaryCard label="Estimated Hours" value={fmtHrs(totalEstimatedHours)} />
+        <SummaryCard label="Total Logged Costs" value={fmtUSD(totalLoggedCosts)} />
+        <SummaryCard label="Estimated Costs" value={fmtUSD(totalEstimatedCosts)} />
       </div>
+
+      {/* Category breakdown table */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-semibold">Category Breakdown</CardTitle>
+            {canEdit && (
+              <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={() => setEstOpen(true)}>
+                <Pencil className="w-3 h-3" /> Edit Estimates
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b text-left">
+                <th className="pb-1.5 text-xs text-muted-foreground font-medium">Category</th>
+                <th className="pb-1.5 text-xs text-muted-foreground font-medium text-right">Estimated</th>
+                <th className="pb-1.5 text-xs text-muted-foreground font-medium text-right">Actual Logged</th>
+                <th className="pb-1.5 text-xs text-muted-foreground font-medium text-right">Variance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {HOUR_CATEGORIES.map(c => renderCategoryRow(c, true))}
+              <tr className="bg-muted/40 border-y">
+                <td className="py-1.5 text-xs font-bold">Total Hours</td>
+                <td className="py-1.5 text-xs text-right font-bold text-muted-foreground">{fmtHrs(totalEstimatedHours)}</td>
+                <td className="py-1.5 text-xs text-right font-bold">{fmtHrs(totalLoggedHours)}</td>
+                <td className="py-1.5 text-xs text-right font-bold text-muted-foreground">{fmtHrs(totalLoggedHours - totalEstimatedHours)}</td>
+              </tr>
+              {COST_CATEGORIES.map(c => renderCategoryRow(c, false))}
+              <tr className="bg-muted/40 border-y">
+                <td className="py-1.5 text-xs font-bold">Total Costs</td>
+                <td className="py-1.5 text-xs text-right font-bold text-muted-foreground">{fmtUSD(totalEstimatedCosts)}</td>
+                <td className="py-1.5 text-xs text-right font-bold">{fmtUSD(totalLoggedCosts)}</td>
+                <td className="py-1.5 text-xs text-right font-bold text-muted-foreground">{fmtUSD(totalLoggedCosts - totalEstimatedCosts)}</td>
+              </tr>
+            </tbody>
+          </table>
+          {timeEntryHours > 0 && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Includes {timeEntryHours.toFixed(1)}h from clock-in entries (see breakdown below).
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Budget utilization (merged from Costing) */}
+      {estimateTotal > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              Budget Utilization
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1 mb-2">
+              <div className="flex justify-between text-sm">
+                <span>Actual vs Estimate</span>
+                <span className="font-semibold">{costPercent.toFixed(0)}%</span>
+              </div>
+              <Progress
+                value={Math.min(costPercent, 100)}
+                className={`h-3 ${costPercent >= 80 ? '[&>div]:bg-red-500' : '[&>div]:bg-emerald-500'}`}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {fmtUSD(actualCost)} spent of {fmtUSD(estimateTotal)} estimated
+              {margin < 20 ? <span className="text-amber-600 ml-1">(margin {margin.toFixed(0)}%)</span> : null}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Action buttons */}
       {canEdit && (
@@ -107,7 +224,7 @@ export default function JobShopLogTab({ timeEntries, job }) {
             <Plus className="w-3.5 h-3.5" /> Log Entry
           </Button>
           <Button size="sm" variant="outline" onClick={() => setEstOpen(true)} className="gap-1.5">
-            <Pencil className="w-3.5 h-3.5" /> Edit Estimate
+            <Pencil className="w-3.5 h-3.5" /> Edit Estimates
           </Button>
           <Button size="sm" variant="outline" onClick={() => setQrOpen(true)} className="gap-1.5">
             <QrCode className="w-3.5 h-3.5" /> Show QR Code
@@ -115,7 +232,7 @@ export default function JobShopLogTab({ timeEntries, job }) {
         </div>
       )}
 
-      {/* Shop Log Entries */}
+      {/* Manual shop log entries */}
       {shopLogEntries.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
@@ -167,7 +284,32 @@ export default function JobShopLogTab({ timeEntries, job }) {
         </Card>
       )}
 
-      {/* Time Clock Entries by work center (existing) */}
+      {/* Purchase orders (merged from Costing) */}
+      {purchaseOrders.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">Purchase Orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {purchaseOrders.map(po => (
+                <div key={po.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <div>
+                    <span className="text-sm font-medium">{po.po_number}</span>
+                    <span className="text-xs text-muted-foreground ml-2">{po.vendor_name}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-semibold">${(po.total || 0).toLocaleString()}</span>
+                    <span className="text-xs text-muted-foreground ml-2">{po.status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Time clock entries by work center (existing) */}
       {WORK_CENTERS.map(wc => {
         const entries = byCenter[wc];
         if (entries.length === 0) return null;
