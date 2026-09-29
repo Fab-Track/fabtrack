@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, QrCode } from "lucide-react";
+import { Download, QrCode, Loader2 } from "lucide-react";
+import QRCode from "qrcode";
 
 export default function ShopLogQrModal({ open, onClose, job, onGenerateToken }) {
   const [token, setToken] = useState(null);
   const [generating, setGenerating] = useState(false);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     if (!open || !job) return;
@@ -13,7 +15,6 @@ export default function ShopLogQrModal({ open, onClose, job, onGenerateToken }) 
       setToken(job.shop_log_share_token);
       return;
     }
-    // Generate token on first open
     setGenerating(true);
     (async () => {
       await onGenerateToken();
@@ -26,9 +27,24 @@ export default function ShopLogQrModal({ open, onClose, job, onGenerateToken }) 
   }, [job?.shop_log_share_token]);
 
   const publicUrl = token ? `${window.location.origin}/shop-log/${token}` : "";
-  const qrImageUrl = publicUrl
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=2&data=${encodeURIComponent(publicUrl)}`
-    : "";
+
+  // Render QR to canvas (fully offline, no external API)
+  useEffect(() => {
+    if (!publicUrl || !canvasRef.current) return;
+    QRCode.toCanvas(canvasRef.current, publicUrl, {
+      width: 300,
+      margin: 2,
+      color: { dark: "#111827", light: "#ffffff" }
+    }, () => {});
+  }, [publicUrl]);
+
+  const handleDownloadPng = () => {
+    if (!canvasRef.current) return;
+    const link = document.createElement("a");
+    link.download = `shop-log-${job?.job_number || "qr"}.png`;
+    link.href = canvasRef.current.toDataURL("image/png");
+    link.click();
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -44,9 +60,15 @@ export default function ShopLogQrModal({ open, onClose, job, onGenerateToken }) 
 
         <div className="flex flex-col items-center gap-4 py-4">
           {generating ? (
-            <div className="w-[300px] h-[300px] flex items-center justify-center bg-muted rounded-lg animate-pulse" />
-          ) : qrImageUrl ? (
-            <img src={qrImageUrl} alt="Shop Log QR Code" className="w-[300px] h-[300px] rounded-lg border" />
+            <div className="w-[300px] h-[300px] flex items-center justify-center bg-muted rounded-lg animate-pulse">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : publicUrl ? (
+            <div className="p-3 bg-white rounded-lg border">
+              <canvas ref={canvasRef} />
+              <p className="text-center text-xs font-medium text-gray-700 mt-2">{job?.job_name}</p>
+              <p className="text-center text-xs text-gray-500 font-mono">{job?.job_number}</p>
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground">Unable to generate QR code.</p>
           )}
@@ -54,11 +76,9 @@ export default function ShopLogQrModal({ open, onClose, job, onGenerateToken }) 
           {publicUrl && (
             <div className="w-full space-y-2">
               <p className="text-xs text-muted-foreground text-center break-all">{publicUrl}</p>
-              <a href={qrImageUrl} download={`shop-log-${job?.job_number || "qr"}.png`} className="block">
-                <Button variant="outline" className="w-full gap-2">
-                  <Download className="w-4 h-4" /> Download PNG
-                </Button>
-              </a>
+              <Button variant="outline" className="w-full gap-2" onClick={handleDownloadPng}>
+                <Download className="w-4 h-4" /> Download PNG
+              </Button>
             </div>
           )}
         </div>
