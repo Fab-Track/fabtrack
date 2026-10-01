@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/lib/AuthContext";
 import { useWriteOrgId } from "@/lib/orgContext";
+import { useRepCandidates } from "@/hooks/useRepCandidates";
 
 export default function NewJob() {
   const { user } = useAuth();
@@ -33,14 +34,8 @@ export default function NewJob() {
     queryFn: () => base44.entities.Customer.list("-created_date", 100),
   });
 
-  // Employees for rep assignment — estimators, admins, owners
-  const { data: employees = [] } = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => base44.entities.Employee.list("-created_date", 200),
-  });
-  const repCandidates = employees.filter(e =>
-    ["estimator", "admin", "owner"].includes((e.role || "").toLowerCase())
-  );
+  // Rep candidates — pulled from User entity via shared hook for consistency
+  const repCandidates = useRepCandidates();
 
   // Find the pre-filled customer record to get site_address
   const prefilledCustomer = useMemo(() =>
@@ -282,12 +277,13 @@ export default function NewJob() {
             <div>
               <Label className="text-xs">Assigned Rep (Sales Owner)</Label>
               <Select
-                value={form.assigned_rep_id || ""}
+                value={form.assigned_rep_id || "none"}
                 onValueChange={val => {
-                  const emp = repCandidates.find(e => e.id === val);
+                  const repId = val === "none" ? "" : val;
+                  const emp = repCandidates.find(e => e.id === repId);
                   setForm(prev => ({
                     ...prev,
-                    assigned_rep_id: val || "",
+                    assigned_rep_id: repId,
                     assigned_rep_name: emp?.name || "",
                   }));
                 }}
@@ -296,9 +292,9 @@ export default function NewJob() {
                   <SelectValue placeholder="Select rep…" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={null}>None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {repCandidates.map(e => (
-                    <SelectItem key={e.id} value={e.id}>{e.name} ({e.role})</SelectItem>
+                    <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
