@@ -11,6 +11,7 @@ import { UserPlus, Pencil, Trash2, Eye, Table2, Clock, ChevronRight, Ban, CheckC
 import { useAuth } from "@/lib/AuthContext";
 import { isOwnerLevel } from "@/lib/roleHelpers";
 import { useUserCapCheck } from "@/hooks/useUserCapCheck";
+import { useOrgUsers } from "@/hooks/useOrgUsers";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import PermissionsMatrix from "./permissions/PermissionsMatrix";
@@ -66,10 +67,8 @@ export default function UsersRolesSection() {
 
   const orgId = currentUser?.organization_id;
 
-  const { data: users = [] } = useQuery({
-    queryKey: ["users", orgId],
-    queryFn: () => orgId ? base44.entities.User.filter({ organization_id: orgId }) : [],
-  });
+  const { users: orgUsers = [] } = useOrgUsers();
+  const users = orgUsers.filter(u => u.organization_id === orgId);
 
   const { data: pendingInvites = [] } = useQuery({
     queryKey: ["pendingInvites", orgId],
@@ -324,7 +323,7 @@ export default function UsersRolesSection() {
                   const isLocked = status === "locked";
                   return (
                     <tr key={u.id} className={`${isDeactivated ? "opacity-50" : ""}`}>
-                      <td className="px-4 py-3 font-medium">{u.full_name || "—"}</td>
+                      <td className="px-4 py-3 font-medium">{u.displayName || u.full_name || "—"}</td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">{u.email}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1 flex-wrap">

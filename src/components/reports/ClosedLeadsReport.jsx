@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { OUTCOME_REASONS } from "@/components/jobs/CloseLeadModal";
 import { useOrgFilter } from "@/lib/orgContext";
+import { useOrgUsers } from "@/hooks/useOrgUsers";
 import { Link } from "react-router-dom";
 
 function inRange(dateStr, range) {
@@ -40,10 +41,7 @@ export default function ClosedLeadsReport() {
     queryFn: () => base44.entities.Job.filter(orgFilter, "-created_date", 500),
     refetchInterval: 5 * 60 * 1000,
   });
-  const { data: users = [] } = useQuery({
-    queryKey: ["users", orgFilter],
-    queryFn: () => base44.entities.User.filter(orgFilter, "full_name", 200),
-  });
+  const { users: orgUsers = [] } = useOrgUsers();
 
   const closedJobs = useMemo(() => {
     return jobs.filter(j => j.is_lead_closed && j.lead_closed_at && inRange(j.lead_closed_at, range));
@@ -52,10 +50,10 @@ export default function ClosedLeadsReport() {
   // Build rep list from data
   const repMap = useMemo(() => {
     const map = {};
-    users.forEach(u => {
+    orgUsers.forEach(u => {
       const role = (u.role || "").toLowerCase();
       if (["estimator", "owner", "admin"].includes(role)) {
-        map[u.id] = u.full_name;
+        map[u.id] = u.displayName;
       }
     });
     // Also pull from jobs
@@ -65,7 +63,7 @@ export default function ClosedLeadsReport() {
       }
     });
     return map;
-  }, [users, closedJobs]);
+  }, [orgUsers, closedJobs]);
 
   // Filter by rep
   const visible = useMemo(() => {

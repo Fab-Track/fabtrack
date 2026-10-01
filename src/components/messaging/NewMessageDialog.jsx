@@ -254,7 +254,7 @@ export default function NewMessageDialog({ onClose, onCreated, currentUser }) {
                   <div className="flex flex-wrap gap-1 mt-1 mb-2">
                     {selectedMembers.map(m => (
                       <span key={m.id || m._id} className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
-                        {m.full_name}
+                        {m.displayName}
                         <button onClick={() => toggleMember(m)} className="hover:text-destructive">
                           <X className="w-3 h-3" />
                         </button>
@@ -282,10 +282,10 @@ export default function NewMessageDialog({ onClose, onCreated, currentUser }) {
                       className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-muted text-left transition-colors"
                     >
                       <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-semibold text-primary shrink-0">
-                        {u.full_name?.charAt(0)?.toUpperCase() || "?"}
+                        {u.displayName?.charAt(0)?.toUpperCase() || "?"}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{u.full_name}</p>
+                        <p className="text-sm font-medium truncate">{u.displayName}</p>
                         <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                       </div>
                       <Check className="w-4 h-4 text-transparent shrink-0" />
