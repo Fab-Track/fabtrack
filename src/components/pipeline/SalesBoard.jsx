@@ -13,6 +13,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Clock, DollarSign, AlertTriangle, MoreHorizontal, X } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import StageTransitionDialog from "./StageTransitionDialog";
+import { useOrgUsers } from "@/hooks/useOrgUsers";
 import CloseLeadModal from "@/components/jobs/CloseLeadModal";
 import DeleteJobModal from "@/components/jobs/DeleteJobModal";
 import { useAuth } from "@/lib/AuthContext";
@@ -169,16 +170,13 @@ export default function SalesBoard({ jobs = [] }) {
     enabled: jobIds.length > 0,
   });
   // Fetch users with estimator or owner roles for rep credit selector
-  const { data: allUsers = [] } = useQuery({
-    queryKey: ["users"],
-    queryFn: () => base44.entities.User.list("full_name", 200),
-  });
+  const { users: allUsers = [] } = useOrgUsers();
   const estimatorReps = allUsers
     .filter(u => {
       const role = (u.role || "").toLowerCase();
       return role === "estimator" || role === "owner" || role === "admin";
     })
-    .map(u => ({ id: u.id, name: u.full_name }))
+    .map(u => ({ id: u.id, name: u.displayName }))
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
   // Fetch invoices to check for paid deposits

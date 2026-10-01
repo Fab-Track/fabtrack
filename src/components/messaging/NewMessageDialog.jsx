@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Search, MessageCircle, Hash, Lock, Globe, Check, X } from "lucide-react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useOrgUsers } from "@/hooks/useOrgUsers";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -20,30 +21,15 @@ export default function NewMessageDialog({ onClose, onCreated, currentUser }) {
   const [saving, setSaving] = useState(false);
   const qc = useQueryClient();
 
-  const { data: users = [] } = useQuery({
-    queryKey: ["all-users-dm"],
-    queryFn: async () => {
-      try {
-        const userList = await base44.entities.User.list();
-        if (userList.length > 1) return userList;
-      } catch {}
-      const employees = await base44.entities.Employee.list("-created_date", 200);
-      return employees.map(e => ({
-        id: e.id,
-        full_name: e.name,
-        email: e.email || "",
-        role: e.role || "team_member",
-        organization_id: e.organization_id,
-      }));
-    },
-    enabled: tab === "dm" || (tab === "channel" && channelVisibility === "private"),
-  });
+  const { users: orgUsers = [] } = useOrgUsers();
+  const showUsers = tab === "dm" || (tab === "channel" && channelVisibility === "private");
+  const users = showUsers ? orgUsers : [];
 
   const otherUsers = users.filter(u => {
     const uid = u.id || u._id;
     if (uid === currentUser?.id) return false;
     const search = dmSearch.toLowerCase();
-    return (u.full_name?.toLowerCase().includes(search) ||
+    return (u.displayName?.toLowerCase().includes(search) ||
      u.email?.toLowerCase().includes(search));
   });
 
@@ -54,7 +40,7 @@ export default function NewMessageDialog({ onClose, onCreated, currentUser }) {
     if (isSelected) return false;
     const search = memberSearch.toLowerCase();
     if (!search) return true;
-    return u.full_name?.toLowerCase().includes(search) || u.email?.toLowerCase().includes(search);
+    return u.displayName?.toLowerCase().includes(search) || u.email?.toLowerCase().includes(search);
   });
 
   const toggleMember = (user) => {
@@ -78,7 +64,7 @@ export default function NewMessageDialog({ onClose, onCreated, currentUser }) {
       } else {
         channel = await base44.entities.MessageChannel.create({
           name: dmName,
-          display_name: `${currentUser.full_name} & ${otherUser.full_name || otherUser.email}`,
+          display_name: `${currentUser.full_name || currentUser.email} & ${otherUser.displayName}`,
           channel_type: "dm",
           organization_id: currentUser.organization_id,
           member_ids: [currentUser.id, otherUser.id],
@@ -115,7 +101,7 @@ export default function NewMessageDialog({ onClose, onCreated, currentUser }) {
       });
       if (channelVisibility === "private") {
         const allMembers = [
-          { id: currentUser.id, full_name: currentUser.full_name, email: currentUser.email, role: currentUser.role },
+          { id: currentUser.id, displayName: currentUser.full_name || currentUser.email, email: currentUser.email, role: currentUser.role },
           ...selectedMembers,
         ];
         await base44.entities.ChannelMembership.bulkCreate(
@@ -124,7 +110,7 @@ export default function NewMessageDialog({ onClose, onCreated, currentUser }) {
             channel_id: channel.id,
             user_id: u.id || u._id,
             user_email: u.email || "",
-            user_name: u.full_name || u.email || "",
+            user_name: u.displayName || u.email || "",
             user_role: u.role || "",
           }))
         );
@@ -196,10 +182,10 @@ export default function NewMessageDialog({ onClose, onCreated, currentUser }) {
                   className="w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-muted text-left transition-colors disabled:opacity-50"
                 >
                   <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary shrink-0">
-                    {u.full_name?.charAt(0)?.toUpperCase() || "?"}
+                    {u.displayName?.charAt(0)?.toUpperCase() || "?"}
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{u.full_name}</p>
+                    <p className="text-sm font-medium">{u.displayName}</p>
                     <p className="text-xs text-muted-foreground capitalize">{u.role?.replace(/_/g, " ")}</p>
                   </div>
                 </button>

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useOrgUsers } from "@/hooks/useOrgUsers";
 import {
   Select,
   SelectContent,
@@ -13,17 +14,14 @@ export default function AssignedRepSelector({ job }) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
 
-  const { data: allUsers = [] } = useQuery({
-    queryKey: ["users"],
-    queryFn: () => base44.entities.User.list("full_name", 200),
-  });
+  const { users: allUsers = [] } = useOrgUsers();
 
   const reps = allUsers
     .filter(u => {
       const role = (u.role || "").toLowerCase();
       return role === "estimator" || role === "owner" || role === "admin" || role === "sales";
     })
-    .map(u => ({ id: u.id, name: u.full_name || u.email }))
+    .map(u => ({ id: u.id, name: u.displayName }))
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
   const mutation = useMutation({

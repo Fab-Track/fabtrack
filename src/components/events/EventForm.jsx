@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useOrgUsers } from "@/hooks/useOrgUsers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,11 +49,8 @@ export default function EventForm({ open, onClose, job, event, onSaved }) {
     }
   }, [event, job, open]);
 
-  const { data: users = [] } = useQuery({
-    queryKey: ["users-for-events"],
-    queryFn: () => base44.entities.User.list("-created_date", 200),
-    enabled: open,
-  });
+  const { users: orgUsers = [] } = useOrgUsers();
+  const users = open ? orgUsers : [];
 
   function update(key, value) {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -67,8 +65,8 @@ export default function EventForm({ open, onClose, job, event, onSaved }) {
           ? prev.assigned_user_ids.filter(id => id !== user.id)
           : [...prev.assigned_user_ids, user.id],
         assigned_user_names: has
-          ? prev.assigned_user_names.filter(n => n !== (user.full_name || user.email))
-          : [...prev.assigned_user_names, user.full_name || user.email],
+          ? prev.assigned_user_names.filter(n => n !== user.displayName)
+          : [...prev.assigned_user_names, user.displayName],
       };
     });
   }
@@ -179,7 +177,7 @@ export default function EventForm({ open, onClose, job, event, onSaved }) {
                     checked={form.assigned_user_ids.includes(u.id)}
                     onChange={() => toggleUser(u)}
                   />
-                  {u.full_name || u.email}
+                  {u.displayName}
                 </label>
               ))}
             </div>
