@@ -496,21 +496,55 @@ export default function UsersRolesSection() {
   );
 }
 
-function EditUserSheet({ user, onClose }) {
-  const roleList = (user.roles && user.roles.length > 0) ? user.roles : (user.role ? [user.role] : []);
+function EditUserSheet({ user: initialUser, onClose }) {
+  const qc = useQueryClient();
+  const { user: currentUser } = useAuth();
+  const roleList = (initialUser.roles && initialUser.roles.length > 0) ? initialUser.roles : (initialUser.role ? [initialUser.role] : []);
+  const isAdminOrOwner = ["admin", "owner"].includes((currentUser?.role || "").toLowerCase());
+
+  const [name, setName] = useState(initialUser.full_name || "");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSaveName() {
+    const trimmed = name.trim();
+    if (!trimmed) { toast.error("Name cannot be empty"); return; }
+    if (trimmed === (initialUser.full_name || "")) { toast.info("No changes"); return; }
+    setSaving(true);
+    try {
+      await base44.functions.invoke("updateEmployeeName", { target_user_id: initialUser.id, full_name: trimmed });
+      toast.success("Name updated");
+      qc.invalidateQueries({ queryKey: ["users"] });
+      onClose();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || err?.message || "Failed to update name");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <Sheet open onOpenChange={onClose}>
       <SheetContent>
-        <SheetHeader><SheetTitle>User Details — {user.full_name}</SheetTitle></SheetHeader>
+        <SheetHeader><SheetTitle>User Details — {initialUser.full_name}</SheetTitle></SheetHeader>
         <div className="space-y-4 mt-4">
           <div>
+            <Label className="text-xs">Full Name</Label>
+            <div className="flex gap-2 mt-1">
+              <Input className="h-8" value={name} onChange={e => setName(e.target.value)} disabled={!isAdminOrOwner} />
+              {isAdminOrOwner && (
+                <Button size="sm" className="h-8 shrink-0" onClick={handleSaveName} disabled={saving || name.trim() === (initialUser.full_name || "")}>
+                  {saving ? "Saving…" : "Save"}
+                </Button>
+              )}
+            </div>
+          </div>
+          <div>
             <Label className="text-xs">Email</Label>
-            <Input className="h-8" value={user.email} disabled />
+            <Input className="h-8" value={initialUser.email} disabled />
           </div>
           <div>
             <Label className="text-xs">Organization</Label>
-            <Input className="h-8 bg-muted/50" value={user.organization_name || "—"} disabled />
+            <Input className="h-8 bg-muted/50" value={initialUser.organization_name || "—"} disabled />
           </div>
           <div>
             <Label className="text-xs">Roles</Label>
@@ -521,6 +555,14 @@ function EditUserSheet({ user, onClose }) {
                 <Badge key={r} variant="outline" className="text-[11px] capitalize py-0.5 px-2">{r.replace(/_/g, " ")}</Badge>
               ))}
             </div>
+          </div>
+          <div>
+            <Label className="text-xs">Last Login</Label>
+            <p className="text-sm text-muted-foreground mt-1">
+              {initialUser.last_login_at
+                ? format(new Date(initialUser.last_login_at), "MMM d, yyyy h:mm a")
+                : "Never"}
+            </p>
           </div>
           <p className="text-xs text-muted-foreground bg-muted/40 rounded-md p-2">
             Role and organization changes are managed in the Super Admin area.

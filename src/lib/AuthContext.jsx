@@ -117,6 +117,11 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
       setAuthChecked(true);
+
+      // Track last login timestamp (fire-and-forget — non-blocking)
+      try {
+        await base44.auth.updateMe({ last_login_at: new Date().toISOString() });
+      } catch {}
     } catch (error) {
       console.error('User auth check failed:', error);
       setIsLoadingAuth(false);

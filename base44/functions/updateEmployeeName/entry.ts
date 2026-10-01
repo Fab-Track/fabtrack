@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { employee_id, full_name } = await req.json();
+    const { employee_id, target_user_id, full_name } = await req.json();
     const name = (full_name || '').trim();
     if (!name) return Response.json({ error: 'Name is required' }, { status: 400 });
 
@@ -32,10 +32,25 @@ Deno.serve(async (req) => {
       .map(r => (r || '').toLowerCase());
     const isAdmin = callerRoles.includes('owner') || callerRoles.includes('admin') || callerRoles.includes('super_admin');
     if (!isAdmin) {
-      return Response.json({ error: 'Only owners/admins can edit employee names' }, { status: 403 });
+      return Response.json({ error: 'Only owners/admins can edit names' }, { status: 403 });
     }
     if (!user.organization_id) {
       return Response.json({ error: 'No organization on your account' }, { status: 400 });
+    }
+
+    // --- Admin updating a User directly (from Users & Roles page) ---
+    if (target_user_id && !employee_id) {
+      const targetUser = await base44.asServiceRole.entities.User.get(target_user_id).catch(() => null);
+      if (!targetUser || targetUser.organization_id !== user.organization_id) {
+        return Response.json({ error: 'User not found in your organization' }, { status: 404 });
+      }
+      await base44.asServiceRole.entities.User.update(target_user_id, { full_name: name });
+      // Sync linked Employee record if one exists
+      const linkedEmployees = await base44.asServiceRole.entities.Employee.filter({ user_id: target_user_id });
+      if (linkedEmployees.length > 0 && linkedEmployees[0].name !== name) {
+        await base44.asServiceRole.entities.Employee.update(linkedEmployees[0].id, { name });
+      }
+      return Response.json({ success: true, full_name: name });
     }
 
     // Get the employee and verify org match

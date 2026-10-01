@@ -36,6 +36,7 @@ Deno.serve(async (req) => {
       roles: roleList,
       role: roleList[0],
       account_status: 'active',
+      last_login_at: new Date().toISOString(),
     });
 
     // Link any existing Employee record with the same email (reuses existing logic, no duplicates)
