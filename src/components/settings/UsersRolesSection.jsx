@@ -501,13 +501,13 @@ function EditUserSheet({ user: initialUser, onClose }) {
   const roleList = (initialUser.roles && initialUser.roles.length > 0) ? initialUser.roles : (initialUser.role ? [initialUser.role] : []);
   const isAdminOrOwner = ["admin", "owner"].includes((currentUser?.role || "").toLowerCase());
 
-  const [name, setName] = useState(initialUser.full_name || "");
+  const [name, setName] = useState(initialUser.displayName || initialUser.full_name || "");
   const [saving, setSaving] = useState(false);
 
   async function handleSaveName() {
     const trimmed = name.trim();
     if (!trimmed) { toast.error("Name cannot be empty"); return; }
-    if (trimmed === (initialUser.full_name || "")) { toast.info("No changes"); return; }
+    if (trimmed === (initialUser.displayName || initialUser.full_name || "")) { toast.info("No changes"); return; }
     setSaving(true);
     try {
       await base44.functions.invoke("updateEmployeeName", { target_user_id: initialUser.id, full_name: trimmed });
@@ -524,14 +524,14 @@ function EditUserSheet({ user: initialUser, onClose }) {
   return (
     <Sheet open onOpenChange={onClose}>
       <SheetContent>
-        <SheetHeader><SheetTitle>User Details — {initialUser.full_name}</SheetTitle></SheetHeader>
+        <SheetHeader><SheetTitle>User Details — {initialUser.displayName || initialUser.full_name}</SheetTitle></SheetHeader>
         <div className="space-y-4 mt-4">
           <div>
             <Label className="text-xs">Full Name</Label>
             <div className="flex gap-2 mt-1">
               <Input className="h-8" value={name} onChange={e => setName(e.target.value)} disabled={!isAdminOrOwner} />
               {isAdminOrOwner && (
-                <Button size="sm" className="h-8 shrink-0" onClick={handleSaveName} disabled={saving || name.trim() === (initialUser.full_name || "")}>
+                <Button size="sm" className="h-8 shrink-0" onClick={handleSaveName} disabled={saving || name.trim() === (initialUser.displayName || initialUser.full_name || "")}>
                   {saving ? "Saving…" : "Save"}
                 </Button>
               )}

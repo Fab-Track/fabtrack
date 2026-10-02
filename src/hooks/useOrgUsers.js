@@ -25,7 +25,7 @@ export function useOrgUsers() {
 
   const enriched = users.map(u => ({
     ...u,
-    displayName: u.full_name || empByUserId[u.id] || u.email,
+    displayName: empByUserId[u.id] || u.full_name || u.email,
   }));
 
   return { users: enriched, employees };
