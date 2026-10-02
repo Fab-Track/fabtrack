@@ -4,19 +4,16 @@
   "properties": {
     "outcome_category": {
       "type": "string",
-      "enum": [
-        "Won",
-        "Lost",
-        "Unqualified",
-        "On Hold",
-        "Testing",
-        "Other"
-      ],
-      "description": "The outcome category this reason belongs to"
+      "description": "The outcome category this reason belongs to, or the custom outcome name when is_custom_outcome is true"
     },
     "reason_label": {
       "type": "string",
-      "description": "Display label for this reason"
+      "description": "Display label for this reason (same as outcome_category when is_custom_outcome is true)"
+    },
+    "is_custom_outcome": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, this record represents a custom outcome category rather than a reason within a standard category"
     },
     "created_by_id": {
       "type": "string",

@@ -55,6 +55,9 @@ export default function CloseLeadModal({ open, onClose, job }) {
   const [showAddReason, setShowAddReason] = useState(false);
   const [newReasonText, setNewReasonText] = useState("");
   const [reasonPopoverOpen, setReasonPopoverOpen] = useState(false);
+  const [outcomePopoverOpen, setOutcomePopoverOpen] = useState(false);
+  const [showAddOutcome, setShowAddOutcome] = useState(false);
+  const [newOutcomeText, setNewOutcomeText] = useState("");
   const qc = useQueryClient();
 
   // Fetch platform-wide custom reasons
@@ -63,12 +66,20 @@ export default function CloseLeadModal({ open, onClose, job }) {
     queryFn: () => base44.entities.LeadCloseReason.list("-created_date", 200),
   });
 
+  // Merge built-in + custom outcome categories
+  const allOutcomes = useMemo(() => {
+    const customOutcomes = customReasons
+      .filter(r => r.is_custom_outcome)
+      .map(r => ({ id: `custom_outcome_${r.id}`, label: r.outcome_category, isCustom: true }));
+    return [...OUTCOME_CATEGORIES.map(c => ({ id: c, label: c })), ...customOutcomes];
+  }, [customReasons]);
+
   // Merge built-in + custom reasons for the selected outcome category
   const reasons = useMemo(() => {
     if (!outcomeCategory) return [];
     const builtIn = OUTCOME_REASONS[outcomeCategory] || [];
     const custom = customReasons
-      .filter(r => r.outcome_category === outcomeCategory)
+      .filter(r => !r.is_custom_outcome && r.outcome_category === outcomeCategory)
       .map(r => ({ id: `custom_${r.id}`, label: r.reason_label, isCustom: true }));
     return [...builtIn, ...custom];
   }, [outcomeCategory, customReasons]);
@@ -81,9 +92,40 @@ export default function CloseLeadModal({ open, onClose, job }) {
     mutationFn: (data) => base44.entities.LeadCloseReason.create(data),
     onSuccess: (newReason) => {
       qc.invalidateQueries({ queryKey: ["lead-close-reasons"] });
-      setReasonId(`custom_${newReason.id}`);
-      setShowAddReason(false);
-      setNewReasonText("");
+      if (newReason.is_custom_outcome) {
+        setOutcomeCategory(newReason.outcome_category);
+        setReasonId("");
+        setShowAddOutcome(false);
+        setNewOutcomeText("");
+        setOutcomePopoverOpen(false);
+      } else {
+        setReasonId(`custom_${newReason.id}`);
+        setShowAddReason(false);
+        setNewReasonText("");
+      }
+    },
+  });
+
+  const addOutcomeMutation = useMutation({
+    mutationFn: (label) => base44.entities.LeadCloseReason.create({
+      outcome_category: label,
+      reason_label: label,
+      is_custom_outcome: true,
+    }),
+    onSuccess: (newReason) => {
+      qc.invalidateQueries({ queryKey: ["lead-close-reasons"] });
+      setOutcomeCategory(newReason.outcome_category);
+      setReasonId("");
+      setShowAddOutcome(false);
+      setNewOutcomeText("");
+      setOutcomePopoverOpen(false);
+    },
+  });
+
+  const deleteOutcomeMutation = useMutation({
+    mutationFn: (id) => base44.entities.LeadCloseReason.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["lead-close-reasons"] });
     },
   });
 
@@ -140,6 +182,9 @@ export default function CloseLeadModal({ open, onClose, job }) {
     setShowAddReason(false);
     setNewReasonText("");
     setReasonPopoverOpen(false);
+    setOutcomePopoverOpen(false);
+    setShowAddOutcome(false);
+    setNewOutcomeText("");
     onClose();
   }
 
@@ -156,6 +201,11 @@ export default function CloseLeadModal({ open, onClose, job }) {
       outcome_category: outcomeCategory,
       reason_label: newReasonText.trim(),
     });
+  }
+
+  function handleAddOutcome() {
+    if (!newOutcomeText.trim()) return;
+    addOutcomeMutation.mutate(newOutcomeText.trim());
   }
 
   return (
@@ -175,19 +225,68 @@ export default function CloseLeadModal({ open, onClose, job }) {
           {/* Step 1: Outcome Category */}
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">Outcome</Label>
-            <Select
-              value={outcomeCategory}
-              onValueChange={(v) => { setOutcomeCategory(v); setReasonId(""); setFollowUpDate(null); setShowAddReason(false); }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select outcome…" />
-              </SelectTrigger>
-              <SelectContent>
-                {OUTCOME_CATEGORIES.map(cat => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={outcomePopoverOpen} onOpenChange={(o) => { setOutcomePopoverOpen(o); if (!o) setShowAddOutcome(false); }}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" className="w-full justify-between font-normal text-sm">
+                  {outcomeCategory || "Select outcome…"}
+                  <ChevronDown className="h-4 w-4 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0" align="start" style={{ width: "var(--radix-popover-trigger-width)" }}>
+                <div className="max-h-60 overflow-y-auto p-1">
+                  {allOutcomes.map(o => (
+                    <div key={o.id} className="flex items-center group rounded-sm hover:bg-accent">
+                      <button
+                        type="button"
+                        onClick={() => { setOutcomeCategory(o.label); setReasonId(""); setFollowUpDate(null); setShowAddReason(false); setOutcomePopoverOpen(false); }}
+                        className="flex-1 flex items-center px-2 py-1.5 text-sm text-left"
+                      >
+                        <Check className={cn("mr-2 h-4 w-4 shrink-0", outcomeCategory === o.label ? "opacity-100" : "opacity-0")} />
+                        {o.label}
+                      </button>
+                      {o.isCustom && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            deleteOutcomeMutation.mutate(o.id.replace("custom_outcome_", ""));
+                            if (outcomeCategory === o.label) { setOutcomeCategory(""); setReasonId(""); }
+                          }}
+                          className="p-1.5 mr-1 text-muted-foreground hover:text-destructive"
+                          title="Delete outcome"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t p-2">
+                  {showAddOutcome ? (
+                    <div className="flex gap-2">
+                      <Input
+                        value={newOutcomeText}
+                        onChange={e => setNewOutcomeText(e.target.value)}
+                        placeholder="Enter new outcome…"
+                        className="h-8 text-sm"
+                        autoFocus
+                        onKeyDown={e => { if (e.key === "Enter" && newOutcomeText.trim()) handleAddOutcome(); }}
+                      />
+                      <Button size="sm" onClick={handleAddOutcome} disabled={!newOutcomeText.trim() || addOutcomeMutation.isPending}>
+                        {addOutcomeMutation.isPending ? "Saving…" : "Add"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowAddOutcome(true)}
+                      className="flex items-center gap-1 text-xs text-primary hover:underline w-full"
+                    >
+                      <Plus className="h-3 w-3" /> Add new outcome
+                    </button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Step 2: Specific Reason — free-text for "Other", dropdown otherwise */}

@@ -353,14 +353,7 @@
     },
     "lead_outcome_category": {
       "type": "string",
-      "enum": [
-        "Won",
-        "Lost",
-        "Unqualified",
-        "On Hold",
-        "Testing",
-        "Other"
-      ]
+      "description": "Outcome category \u2014 built-in (Won, Lost, Unqualified, On Hold, Testing, Other) or custom"
     },
     "lead_close_reason": {
       "type": "string"
