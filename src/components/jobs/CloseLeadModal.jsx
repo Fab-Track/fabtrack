@@ -10,7 +10,8 @@ import { base44 } from "@/api/base44Client";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, addDays } from "date-fns";
-import { Calendar as CalendarIcon, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, Plus, Trash2, Check, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const OUTCOME_REASONS = {
   Won: [
@@ -53,6 +54,7 @@ export default function CloseLeadModal({ open, onClose, job }) {
   const [leadTimeWeeks, setLeadTimeWeeks] = useState("");
   const [showAddReason, setShowAddReason] = useState(false);
   const [newReasonText, setNewReasonText] = useState("");
+  const [reasonPopoverOpen, setReasonPopoverOpen] = useState(false);
   const qc = useQueryClient();
 
   // Fetch platform-wide custom reasons
@@ -82,6 +84,13 @@ export default function CloseLeadModal({ open, onClose, job }) {
       setReasonId(`custom_${newReason.id}`);
       setShowAddReason(false);
       setNewReasonText("");
+    },
+  });
+
+  const deleteReasonMutation = useMutation({
+    mutationFn: (id) => base44.entities.LeadCloseReason.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["lead-close-reasons"] });
     },
   });
 
@@ -130,6 +139,7 @@ export default function CloseLeadModal({ open, onClose, job }) {
     setLeadTimeWeeks("");
     setShowAddReason(false);
     setNewReasonText("");
+    setReasonPopoverOpen(false);
     onClose();
   }
 
@@ -194,41 +204,68 @@ export default function CloseLeadModal({ open, onClose, job }) {
           ) : reasons.length > 0 && (
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Reason</Label>
-              <Select value={reasonId} onValueChange={(v) => { setReasonId(v); if (v !== "hold_follow_up") setFollowUpDate(null); if (v !== "lost_lead_time") setLeadTimeWeeks(""); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select reason…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {reasons.map(r => (
-                    <SelectItem key={r.id} value={r.id}>{r.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {/* Add custom reason */}
-              {showAddReason ? (
-                <div className="flex gap-2">
-                  <Input
-                    value={newReasonText}
-                    onChange={e => setNewReasonText(e.target.value)}
-                    placeholder="Enter new reason…"
-                    className="text-sm"
-                    autoFocus
-                    onKeyDown={e => { if (e.key === "Enter" && newReasonText.trim()) handleAddReason(); }}
-                  />
-                  <Button size="sm" onClick={handleAddReason} disabled={!newReasonText.trim() || addReasonMutation.isPending}>
-                    {addReasonMutation.isPending ? "Saving…" : "Add"}
+              <Popover open={reasonPopoverOpen} onOpenChange={(o) => { setReasonPopoverOpen(o); if (!o) setShowAddReason(false); }}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="w-full justify-between font-normal text-sm">
+                    {reasonId ? reasons.find(r => r.id === reasonId)?.label : "Select reason…"}
+                    <ChevronDown className="h-4 w-4 opacity-50" />
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => { setShowAddReason(false); setNewReasonText(""); }}>Cancel</Button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setShowAddReason(true)}
-                  className="flex items-center gap-1 text-xs text-primary hover:underline"
-                >
-                  <Plus className="h-3 w-3" /> Add new reason
-                </button>
-              )}
+                </PopoverTrigger>
+                <PopoverContent className="p-0" align="start" style={{ width: "var(--radix-popover-trigger-width)" }}>
+                  <div className="max-h-60 overflow-y-auto p-1">
+                    {reasons.map(r => (
+                      <div key={r.id} className="flex items-center group rounded-sm hover:bg-accent">
+                        <button
+                          type="button"
+                          onClick={() => { setReasonId(r.id); if (r.id !== "hold_follow_up") setFollowUpDate(null); if (r.id !== "lost_lead_time") setLeadTimeWeeks(""); setReasonPopoverOpen(false); }}
+                          className="flex-1 flex items-center px-2 py-1.5 text-sm text-left"
+                        >
+                          <Check className={cn("mr-2 h-4 w-4 shrink-0", reasonId === r.id ? "opacity-100" : "opacity-0")} />
+                          {r.label}
+                        </button>
+                        {r.isCustom && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              deleteReasonMutation.mutate(r.id.replace("custom_", ""));
+                              if (reasonId === r.id) setReasonId("");
+                            }}
+                            className="p-1.5 mr-1 text-muted-foreground hover:text-destructive"
+                            title="Delete reason"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t p-2">
+                    {showAddReason ? (
+                      <div className="flex gap-2">
+                        <Input
+                          value={newReasonText}
+                          onChange={e => setNewReasonText(e.target.value)}
+                          placeholder="Enter new reason…"
+                          className="h-8 text-sm"
+                          autoFocus
+                          onKeyDown={e => { if (e.key === "Enter" && newReasonText.trim()) handleAddReason(); }}
+                        />
+                        <Button size="sm" onClick={handleAddReason} disabled={!newReasonText.trim() || addReasonMutation.isPending}>
+                          {addReasonMutation.isPending ? "Saving…" : "Add"}
+                        </Button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setShowAddReason(true)}
+                        className="flex items-center gap-1 text-xs text-primary hover:underline w-full"
+                      >
+                        <Plus className="h-3 w-3" /> Add new reason
+                      </button>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           )}
 
