@@ -9,8 +9,8 @@ import { CONDITIONAL_PRODUCT_KEYS as C } from "@/lib/jobDetailDefaults";
 
 // ─── Installation location options ─────────────────────────────────────────
 const INSTALL_AREA_OPTIONS = ["Interior", "Exterior"];
-const INTERIOR_LOCATIONS = ["Main floor", "Basement", "Second floor", "Master"];
-const EXTERIOR_LOCATIONS = ["Front porch", "Back deck", "South side", "North side", "East side", "West side"];
+const INTERIOR_LOCATIONS = ["Main floor", "Basement", "Second floor", "Master", "other"];
+const EXTERIOR_LOCATIONS = ["Front porch", "Back deck", "South side", "North side", "East side", "West side", "other"];
 
 // ─── Custom railing component options ──────────────────────────────────────
 const TOP_RAIL_OPTIONS = ['1.5"x1.5', '2"x2"', '2"x1"', '3"x1"', '2"x.5"', "C-channel", "Molded Cap", "other"];
@@ -168,6 +168,14 @@ function ProductEntry({ entry, index, config, onChange, onRemove }) {
                 onChange={v => onChange({ ...entry, install_location: v })}
                 options={entry.install_area === "Interior" ? INTERIOR_LOCATIONS : EXTERIOR_LOCATIONS}
               />
+              {entry.install_location === "other" && (
+                <Input
+                  className="h-8 text-xs"
+                  value={entry.install_location_notes || ""}
+                  onChange={e => onChange({ ...entry, install_location_notes: e.target.value })}
+                  placeholder="Describe location..."
+                />
+              )}
             </FieldRow>
           )}
         </div>
