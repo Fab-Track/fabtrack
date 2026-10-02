@@ -196,7 +196,7 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
 }
 
 // ── Shop Board ─────────────────────────────────────────────────────────────────
-export default function ShopBoard({ jobs = [], readOnly = false }) {
+export default function ShopBoard({ jobs = [], readOnly = false, sortOrder = "newest" }) {
   const qc = useQueryClient();
   const { user } = useAuth();
   const canSeeTotals = isOwnerLevel(user);
@@ -228,7 +228,7 @@ export default function ShopBoard({ jobs = [], readOnly = false }) {
     if (columns[stage]) columns[stage].push(j);
     else columns[SHOP_STAGES?.[0] || "New Jobs Landed — Needs Approval"].push(j);
   });
-  (SHOP_STAGES || []).forEach(s => { columns[s] = sortColumnJobs(columns[s], s); });
+  (SHOP_STAGES || []).forEach(s => { columns[s] = sortColumnJobs(columns[s], s, sortOrder); });
 
   const moveMutation = useMutation({
     mutationFn: async ({ job, toBoard, toStage, note }) => {

@@ -26,7 +26,7 @@ const REASON_LABELS = Object.entries(OUTCOME_REASONS).reduce((acc, [_, reasons])
   return acc;
 }, {});
 
-export default function ClosedLeadsBoard({ jobs = [] }) {
+export default function ClosedLeadsBoard({ jobs = [], sortOrder = "newest" }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [q, setQ] = useState("");
@@ -58,7 +58,7 @@ export default function ClosedLeadsBoard({ jobs = [] }) {
     const sorted = [...jobs].sort((a, b) => {
       const da = a.lead_closed_at ? parseISO(a.lead_closed_at).getTime() : 0;
       const db = b.lead_closed_at ? parseISO(b.lead_closed_at).getTime() : 0;
-      return db - da;
+      return sortOrder === "oldest" ? da - db : db - da;
     });
     if (!query) return sorted;
     return sorted.filter(j =>

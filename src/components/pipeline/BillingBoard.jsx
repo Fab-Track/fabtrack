@@ -172,7 +172,7 @@ function BillingCard({ job, isDragging, invoice, jobInvoices = [], customer, onM
 // ── Billing Board ──────────────────────────────────────────────────────────────
 const COMPLETED_INVOICE_AGE_DAYS = 30;
 
-export default function BillingBoard({ jobs = [], readOnly = false }) {
+export default function BillingBoard({ jobs = [], readOnly = false, sortOrder = "newest" }) {
   const qc = useQueryClient();
   const [deletingJob, setDeletingJob] = useState(null);
   const [confirmingPaidJob, setConfirmingPaidJob] = useState(null);
@@ -218,7 +218,7 @@ export default function BillingBoard({ jobs = [], readOnly = false }) {
     if (columns[stage]) columns[stage].push(j);
     else columns[BILLING_STAGES?.[0] || "Needs 2nd Half Invoice Created"].push(j);
   });
-  (BILLING_STAGES || []).forEach(s => { columns[s] = sortColumnJobs(columns[s], s); });
+  (BILLING_STAGES || []).forEach(s => { columns[s] = sortColumnJobs(columns[s], s, sortOrder); });
 
   const moveMutation = useMutation({
     mutationFn: async ({ job, toStage, extra = {} }) => {

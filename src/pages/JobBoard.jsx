@@ -17,7 +17,7 @@ import ClosedLeadsBoard from "@/components/pipeline/ClosedLeadsBoard";
 import PipelineRowView from "@/components/pipeline/PipelineRowView";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Filter, TrendingUp, Wrench, DollarSign, LayoutGrid, List, Archive, RotateCcw, Search, X, XCircle } from "lucide-react";
+import { Plus, Filter, TrendingUp, Wrench, DollarSign, LayoutGrid, List, Archive, RotateCcw, Search, X, XCircle, ArrowDownWideNarrow } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +47,7 @@ export default function JobBoard() {
 
   const [searchField, setSearchField] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortOrder, setSortOrder] = useState("newest"); // "newest" | "oldest"
   const [activeBoard, setActiveBoard] = useState(null);
   // Per-board view: "kanban" | "row" — persisted so the chosen view survives navigation
   const [viewMode, setViewMode] = useState(() => {
@@ -189,6 +190,17 @@ export default function JobBoard() {
               <SelectItem value="customer">Customer</SelectItem>
             </SelectContent>
           </Select>
+          {/* Sort order */}
+          <Select value={sortOrder} onValueChange={setSortOrder}>
+            <SelectTrigger className="w-36 h-9 text-sm">
+              <ArrowDownWideNarrow className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest First</SelectItem>
+              <SelectItem value="oldest">Oldest First</SelectItem>
+            </SelectContent>
+          </Select>
           {/* View toggle */}
           {activeBoard && activeBoard !== "Closed Leads" && (
             <div className="flex items-center border rounded-md h-9 overflow-hidden">
@@ -263,21 +275,21 @@ export default function JobBoard() {
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {activeBoard === "Sales" && (
           viewMode.Sales === "row"
-            ? <PipelineRowView jobs={filtered.Sales}   stages={SALES_STAGES}   board="Sales"   />
-            : <SalesBoard   jobs={filtered.Sales}   />
+            ? <PipelineRowView jobs={filtered.Sales}   stages={SALES_STAGES}   board="Sales"   sortOrder={sortOrder} />
+            : <SalesBoard   jobs={filtered.Sales}   sortOrder={sortOrder} />
         )}
         {activeBoard === "Shop" && (
           viewMode.Shop === "row"
-            ? <PipelineRowView jobs={filtered.Shop}    stages={SHOP_STAGES}    board="Shop"    readOnly={isFabricator} />
-            : <ShopBoard    jobs={filtered.Shop}    readOnly={isFabricator} />
+            ? <PipelineRowView jobs={filtered.Shop}    stages={SHOP_STAGES}    board="Shop"    readOnly={isFabricator} sortOrder={sortOrder} />
+            : <ShopBoard    jobs={filtered.Shop}    readOnly={isFabricator} sortOrder={sortOrder} />
         )}
         {activeBoard === "Billing" && (
           viewMode.Billing === "row"
-            ? <PipelineRowView jobs={filtered.Billing} stages={BILLING_STAGES} board="Billing" />
-            : <BillingBoard jobs={filtered.Billing} readOnly={isAccountant} />
+            ? <PipelineRowView jobs={filtered.Billing} stages={BILLING_STAGES} board="Billing" sortOrder={sortOrder} />
+            : <BillingBoard jobs={filtered.Billing} readOnly={isAccountant} sortOrder={sortOrder} />
         )}
         {activeBoard === "Closed Leads" && (
-          <ClosedLeadsBoard jobs={filtered["Closed Leads"]} />
+          <ClosedLeadsBoard jobs={filtered["Closed Leads"]} sortOrder={sortOrder} />
         )}
       </div>
 

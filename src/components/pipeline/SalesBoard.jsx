@@ -139,7 +139,7 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], invoices = [], 
 }
 
 // ── Sales Board ────────────────────────────────────────────────────────────────
-export default function SalesBoard({ jobs = [] }) {
+export default function SalesBoard({ jobs = [], sortOrder = "newest" }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [promoting, setPromoting] = useState(null);
@@ -217,7 +217,7 @@ export default function SalesBoard({ jobs = [] }) {
     if (columns[stage]) columns[stage].push(j);
     else columns[SALES_STAGES?.[0] || "New Lead"].push(j);
   });
-  (SALES_STAGES || []).forEach(s => { columns[s] = sortColumnJobs(columns[s], s); });
+  (SALES_STAGES || []).forEach(s => { columns[s] = sortColumnJobs(columns[s], s, sortOrder); });
 
   const priorityMutation = useMutation({
     mutationFn: (updates) => base44.entities.Job.bulkUpdate(updates.map(u => ({ id: u.jobId, stage_priority: u.stage_priority }))),

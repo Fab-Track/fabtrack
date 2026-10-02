@@ -203,7 +203,7 @@ function PipelineJobRow({ job, index, board, readOnly = false, stage, columnJobs
  *   stages – ordered stage list (SALES_STAGES / SHOP_STAGES / BILLING_STAGES)
  *   board – "Sales" | "Shop" | "Billing"
  */
-export default function PipelineRowView({ jobs, stages, board, readOnly = false }) {
+export default function PipelineRowView({ jobs, stages, board, readOnly = false, sortOrder = "newest" }) {
   const qc = useQueryClient();
   const { user } = useAuth();
   const showAmount = hasAnyRole(user, AMOUNT_VISIBLE_ROLES);
@@ -216,7 +216,7 @@ export default function PipelineRowView({ jobs, stages, board, readOnly = false 
     const s = {};
     stages.forEach(st => { s[st] = []; });
     jobs.forEach(j => { const st = j.stage || stages[0]; if (s[st]) s[st].push(j); });
-    stages.forEach(st => { s[st] = sortColumnJobs(s[st], st); });
+    stages.forEach(st => { s[st] = sortColumnJobs(s[st], st, sortOrder); });
     return s;
   }, [jobs, stages]);
 

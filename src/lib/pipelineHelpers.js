@@ -249,7 +249,10 @@ function assignPinRanks(allJobs, orderedIds, stage) {
   return updates;
 }
 
-export function sortColumnJobs(jobs, stage) {
+// sortOrder: "newest" (default) → newest-created first in the unpinned tail;
+//            "oldest" → oldest-created first.
+export function sortColumnJobs(jobs, stage, sortOrder = "newest") {
+  const dir = sortOrder === "oldest" ? 1 : -1;
   const ranked = jobs
     .filter(j => typeof j.stage_priority?.[stage] === "number")
     .sort((a, b) => a.stage_priority[stage] - b.stage_priority[stage]);
@@ -259,7 +262,7 @@ export function sortColumnJobs(jobs, stage) {
     .sort((a, b) => {
       const ka = installSortKey(a), kb = installSortKey(b);
       if (ka !== kb) return ka - kb;
-      return createdKey(a) - createdKey(b);
+      return (createdKey(a) - createdKey(b)) * dir;
     });
 
   return [...ranked, ...tail];
