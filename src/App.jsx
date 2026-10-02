@@ -44,42 +44,62 @@ function RootRouter() {
   return <LandingPage />;
 }
 
+// Retries a lazy import once on failure (fixes stale chunk references after HMR updates)
+function lazyRetry(importFn, name) {
+  return lazy(async () => {
+    const key = `retry-${name}`;
+    const hasRetried = sessionStorage.getItem(key);
+    try {
+      const mod = await importFn();
+      sessionStorage.removeItem(key);
+      return mod;
+    } catch (err) {
+      if (!hasRetried) {
+        sessionStorage.setItem(key, '1');
+        window.location.reload();
+        return new Promise(() => {}); // never resolves — reload will replace
+      }
+      throw err;
+    }
+  });
+}
+
 // Lazy-loaded pages for better initial load performance
-const Dashboard        = lazy(() => import('@/pages/Dashboard'));
-const JobBoard         = lazy(() => import('@/pages/JobBoard'));
-const JobDetail        = lazy(() => import('@/pages/JobDetail'));
-const NewJob           = lazy(() => import('@/pages/NewJob'));
-const WorkCenters      = lazy(() => import('@/pages/WorkCenters'));
-const TimeCard         = lazy(() => import('@/pages/TimeCard'));
-const Schedule         = lazy(() => import('@/pages/Schedule'));
-const Customers        = lazy(() => import('@/pages/Customers'));
-const CraftsmanScore   = lazy(() => import('@/pages/CraftsmanScore'));
-const Employees        = lazy(() => import('@/pages/Employees'));
-const Documents        = lazy(() => import('@/pages/Documents'));
-const LeadForm         = lazy(() => import('@/pages/LeadForm'));
-const EmployeeProfilePage  = lazy(() => import('@/pages/EmployeeProfilePage'));
-const Settings         = lazy(() => import('@/pages/Settings'));
-const EstimatePage     = lazy(() => import('@/pages/EstimatePage'));
-const EstimateView     = lazy(() => import('@/pages/EstimateView'));
-const InvoiceView      = lazy(() => import('@/pages/InvoiceView'));
-const MyTimesheet      = lazy(() => import('@/pages/MyTimesheet'));
-const AdminPayroll     = lazy(() => import('@/pages/AdminPayroll'));
-const Billing          = lazy(() => import('@/pages/Billing'));
-const Reports          = lazy(() => import('@/pages/Reports'));
-const Messages         = lazy(() => import('@/pages/Messages'));
-const Conversations    = lazy(() => import('@/pages/Conversations'));
-const CalendarPage     = lazy(() => import('@/pages/Calendar'));
-const OnboardingWelcome = lazy(() => import('@/pages/OnboardingWelcome'));
-const OnboardingWizard = lazy(() => import('@/pages/OnboardingWizard'));
-const SuperAdmin       = lazy(() => import('@/pages/SuperAdmin'));
-const PrivacyPolicy    = lazy(() => import('@/pages/PrivacyPolicy'));
-const TermsOfService   = lazy(() => import('@/pages/TermsOfService'));
-const LandingPage      = lazy(() => import('@/pages/LandingPage'));
-const Login            = lazy(() => import('@/pages/Login'));
-const Register         = lazy(() => import('@/pages/Register'));
-const ForgotPassword   = lazy(() => import('@/pages/ForgotPassword'));
-const ResetPassword    = lazy(() => import('@/pages/ResetPassword'));
-const ShopLogPublicForm = lazy(() => import('@/pages/ShopLogPublicForm'));
+const Dashboard        = lazyRetry(() => import('@/pages/Dashboard'), 'Dashboard');
+const JobBoard         = lazyRetry(() => import('@/pages/JobBoard'), 'JobBoard');
+const JobDetail        = lazyRetry(() => import('@/pages/JobDetail'), 'JobDetail');
+const NewJob           = lazyRetry(() => import('@/pages/NewJob'), 'NewJob');
+const WorkCenters      = lazyRetry(() => import('@/pages/WorkCenters'), 'WorkCenters');
+const TimeCard         = lazyRetry(() => import('@/pages/TimeCard'), 'TimeCard');
+const Schedule         = lazyRetry(() => import('@/pages/Schedule'), 'Schedule');
+const Customers        = lazyRetry(() => import('@/pages/Customers'), 'Customers');
+const CraftsmanScore   = lazyRetry(() => import('@/pages/CraftsmanScore'), 'CraftsmanScore');
+const Employees        = lazyRetry(() => import('@/pages/Employees'), 'Employees');
+const Documents        = lazyRetry(() => import('@/pages/Documents'), 'Documents');
+const LeadForm         = lazyRetry(() => import('@/pages/LeadForm'), 'LeadForm');
+const EmployeeProfilePage  = lazyRetry(() => import('@/pages/EmployeeProfilePage'), 'EmployeeProfilePage');
+const Settings         = lazyRetry(() => import('@/pages/Settings'), 'Settings');
+const EstimatePage     = lazyRetry(() => import('@/pages/EstimatePage'), 'EstimatePage');
+const EstimateView     = lazyRetry(() => import('@/pages/EstimateView'), 'EstimateView');
+const InvoiceView      = lazyRetry(() => import('@/pages/InvoiceView'), 'InvoiceView');
+const MyTimesheet      = lazyRetry(() => import('@/pages/MyTimesheet'), 'MyTimesheet');
+const AdminPayroll     = lazyRetry(() => import('@/pages/AdminPayroll'), 'AdminPayroll');
+const Billing          = lazyRetry(() => import('@/pages/Billing'), 'Billing');
+const Reports          = lazyRetry(() => import('@/pages/Reports'), 'Reports');
+const Messages         = lazyRetry(() => import('@/pages/Messages'), 'Messages');
+const Conversations    = lazyRetry(() => import('@/pages/Conversations'), 'Conversations');
+const CalendarPage     = lazyRetry(() => import('@/pages/Calendar'), 'Calendar');
+const OnboardingWelcome = lazyRetry(() => import('@/pages/OnboardingWelcome'), 'OnboardingWelcome');
+const OnboardingWizard = lazyRetry(() => import('@/pages/OnboardingWizard'), 'OnboardingWizard');
+const SuperAdmin       = lazyRetry(() => import('@/pages/SuperAdmin'), 'SuperAdmin');
+const PrivacyPolicy    = lazyRetry(() => import('@/pages/PrivacyPolicy'), 'PrivacyPolicy');
+const TermsOfService   = lazyRetry(() => import('@/pages/TermsOfService'), 'TermsOfService');
+const LandingPage      = lazyRetry(() => import('@/pages/LandingPage'), 'LandingPage');
+const Login            = lazyRetry(() => import('@/pages/Login'), 'Login');
+const Register         = lazyRetry(() => import('@/pages/Register'), 'Register');
+const ForgotPassword   = lazyRetry(() => import('@/pages/ForgotPassword'), 'ForgotPassword');
+const ResetPassword    = lazyRetry(() => import('@/pages/ResetPassword'), 'ResetPassword');
+const ShopLogPublicForm = lazyRetry(() => import('@/pages/ShopLogPublicForm'), 'ShopLogPublicForm');
 
 // Minimal fallback shown while a lazy chunk loads
 function PageLoader() {
