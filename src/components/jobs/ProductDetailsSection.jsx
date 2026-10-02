@@ -7,6 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import CollapsibleSection from "@/components/jobs/CollapsibleSection";
 import { CONDITIONAL_PRODUCT_KEYS as C } from "@/lib/jobDetailDefaults";
 
+// ─── Installation location options ─────────────────────────────────────────
+const INSTALL_AREA_OPTIONS = ["Interior", "Exterior"];
+const INTERIOR_LOCATIONS = ["Main floor", "Basement", "Second floor", "Master"];
+const EXTERIOR_LOCATIONS = ["Front porch", "Back deck", "South side", "North side", "East side", "West side"];
+
 // ─── Custom railing component options ──────────────────────────────────────
 const TOP_RAIL_OPTIONS = ['1.5"x1.5', '2"x2"', '2"x1"', '3"x1"', '2"x.5"', "C-channel", "Molded Cap", "other"];
 const BOTTOM_RAIL_OPTIONS = ['1.5"x1.5', '2"x2"', '2"x1"', '3"x1"', '2"x.5"', "C-channel", "other"];
@@ -143,6 +148,29 @@ function ProductEntry({ entry, index, config, onChange, onRemove }) {
         <FieldRow label="Other Stair Tread Material Notes">
           <Input className="h-8 text-xs" value={entry.stair_tread_material_notes || ""} onChange={e => onChange({ ...entry, stair_tread_material_notes: e.target.value })} placeholder="Describe tread material..." />
         </FieldRow>
+      )}
+
+      {/* Installation location — shown for all products */}
+      {hasProduct && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <FieldRow label="Install Area">
+            <OptionSelect
+              value={entry.install_area || ""}
+              onChange={v => onChange({ ...entry, install_area: v, install_location: "" })}
+              options={INSTALL_AREA_OPTIONS}
+              placeholder="Select..."
+            />
+          </FieldRow>
+          {entry.install_area && (
+            <FieldRow label="Install Location">
+              <OptionSelect
+                value={entry.install_location || ""}
+                onChange={v => onChange({ ...entry, install_location: v })}
+                options={entry.install_area === "Interior" ? INTERIOR_LOCATIONS : EXTERIOR_LOCATIONS}
+              />
+            </FieldRow>
+          )}
+        </div>
       )}
 
       {/* Powdercoat — shown for all products */}
