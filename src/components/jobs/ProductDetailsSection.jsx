@@ -3,6 +3,7 @@ import { Plus, Trash2, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import CollapsibleSection from "@/components/jobs/CollapsibleSection";
 import { CONDITIONAL_PRODUCT_KEYS as C } from "@/lib/jobDetailDefaults";
@@ -197,6 +198,18 @@ function ProductEntry({ entry, index, config, onChange, onRemove }) {
       {powdercoatYes && entry.powdercoat_color === C.OTHER && (
         <FieldRow label="Other Powdercoat Color Notes">
           <Input className="h-8 text-xs" value={entry.powdercoat_color_notes || ""} onChange={e => onChange({ ...entry, powdercoat_color_notes: e.target.value })} placeholder="Describe color..." />
+        </FieldRow>
+      )}
+
+      {/* Special note — shown for all products */}
+      {hasProduct && (
+        <FieldRow label="Special Note">
+          <Textarea
+            className="text-xs min-h-[60px]"
+            value={entry.special_note || ""}
+            onChange={e => onChange({ ...entry, special_note: e.target.value })}
+            placeholder="Add any special notes about this product for the job..."
+          />
         </FieldRow>
       )}
     </div>
