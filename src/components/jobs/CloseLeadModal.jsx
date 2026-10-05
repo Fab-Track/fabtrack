@@ -12,18 +12,18 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format, addDays } from "date-fns";
 import { Calendar as CalendarIcon, Plus, Trash2, Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SALES_STAGES, LOST_REASONS } from "@/lib/salesPipeline";
+
+// Built-in outcome categories — Won, Lost, Nurture are the core Sales exit states
+const BUILTIN_OUTCOMES = ["Won", "Lost", "Nurture", "Unqualified", "On Hold", "Testing", "Other"];
 
 export const OUTCOME_REASONS = {
   Won: [
     { id: "won_deposit", label: "Won — Deposit Received" },
   ],
-  Lost: [
-    { id: "lost_price_expensive", label: "Price — Too Expensive" },
-    { id: "lost_price_competitor", label: "Price — Lost to Competitor" },
-    { id: "lost_dark", label: "Non-Responsive / Went Dark" },
-    { id: "lost_diy", label: "Chose to DIY / In-House" },
-    { id: "lost_cancelled", label: "Project Cancelled / Fell Through" },
-    { id: "lost_lead_time", label: "Too Short of Lead Time" },
+  Lost: LOST_REASONS.map(reason => ({ id: `lost_${reason.toLowerCase().replace(/[^a-z]/g, "_")}`, label: reason })),
+  Nurture: [
+    { id: "nurture_follow_up", label: "Revisit at Later Date" },
   ],
   Unqualified: [
     { id: "unq_area", label: "Unqualified — Out of Service Area" },
@@ -42,7 +42,6 @@ export const OUTCOME_REASONS = {
 };
 
 const IS_FREE_TEXT_OUTCOME = (cat) => cat === "Other";
-const OUTCOME_CATEGORIES = Object.keys(OUTCOME_REASONS);
 
 export default function CloseLeadModal({ open, onClose, job }) {
   const [outcomeCategory, setOutcomeCategory] = useState("");
@@ -51,7 +50,6 @@ export default function CloseLeadModal({ open, onClose, job }) {
   const [notes, setNotes] = useState("");
   const [otherReasonText, setOtherReasonText] = useState("");
   const [followUpDate, setFollowUpDate] = useState(null);
-  const [leadTimeWeeks, setLeadTimeWeeks] = useState("");
   const [showAddReason, setShowAddReason] = useState(false);
   const [newReasonText, setNewReasonText] = useState("");
   const [reasonPopoverOpen, setReasonPopoverOpen] = useState(false);
@@ -71,7 +69,7 @@ export default function CloseLeadModal({ open, onClose, job }) {
     const customOutcomes = customReasons
       .filter(r => r.is_custom_outcome)
       .map(r => ({ id: `custom_outcome_${r.id}`, label: r.outcome_category, isCustom: true }));
-    return [...OUTCOME_CATEGORIES.map(c => ({ id: c, label: c })), ...customOutcomes];
+    return [...BUILTIN_OUTCOMES.map(c => ({ id: c, label: c })), ...customOutcomes];
   }, [customReasons]);
 
   // Merge built-in + custom reasons for the selected outcome category
@@ -84,9 +82,10 @@ export default function CloseLeadModal({ open, onClose, job }) {
     return [...builtIn, ...custom];
   }, [outcomeCategory, customReasons]);
 
-  const requiresFollowUp = reasonId === "hold_follow_up";
-  const requiresLeadTime = reasonId === "lost_lead_time";
+  // Nurture requires a revisit date; Lost requires a reason
+  const requiresFollowUp = outcomeCategory === "Nurture" || reasonId === "hold_follow_up";
   const isFreeText = IS_FREE_TEXT_OUTCOME(outcomeCategory);
+  const isLost = outcomeCategory === "Lost";
 
   const addReasonMutation = useMutation({
     mutationFn: (data) => base44.entities.LeadCloseReason.create(data),
@@ -140,26 +139,27 @@ export default function CloseLeadModal({ open, onClose, job }) {
     mutationFn: () => {
       const reason = reasons.find(r => r.id === reasonId);
       const isWon = outcomeCategory === "Won";
-      const leadTimeNote = requiresLeadTime && leadTimeWeeks ? `Needed lead time: ${leadTimeWeeks} weeks` : "";
-      const combinedNotes = [leadTimeNote, notes].filter(Boolean).join("\n");
+      const isNurture = outcomeCategory === "Nurture";
       const update = {
         lead_outcome: isFreeText ? (otherReasonText || outcomeCategory) : (reason?.label || outcomeCategory),
         lead_outcome_category: outcomeCategory,
         lead_close_reason: isFreeText ? "other_custom" : reasonId,
-        lead_lost_to: ["lost_price_competitor", "lost_price_expensive"].includes(reasonId) ? (lostTo || null) : null,
+        lead_lost_to: isLost && reasonId?.includes("competitor") ? (lostTo || null) : null,
         lead_closed_at: new Date().toISOString(),
-        is_lead_closed: !isWon,
-        close_notes: combinedNotes || null,
+        is_lead_closed: !isWon, // Won stays open on Sales board; everything else closes
+        close_notes: notes || null,
       };
       if (isWon) {
-        update.stage = "Deposit Received / Sale Won";
+        // Won → auto-create Shop job (handled by SalesBoard onDragEnd)
+        // Here we just set the stage to Won
+        update.stage = "Won";
         update.pipeline_board = "Sales";
         update.stage_entered_at = new Date().toISOString();
       }
       if (requiresFollowUp && followUpDate) {
         update.follow_up_date = format(followUpDate, "yyyy-MM-dd");
         update.follow_up_notified = false;
-      } else {
+      } else if (!isNurture) {
         update.follow_up_date = null;
         update.follow_up_notified = false;
       }
@@ -178,7 +178,6 @@ export default function CloseLeadModal({ open, onClose, job }) {
     setNotes("");
     setOtherReasonText("");
     setFollowUpDate(null);
-    setLeadTimeWeeks("");
     setShowAddReason(false);
     setNewReasonText("");
     setReasonPopoverOpen(false);
@@ -188,11 +187,11 @@ export default function CloseLeadModal({ open, onClose, job }) {
     onClose();
   }
 
-  const showLostTo = reasonId && ["lost_price_competitor", "lost_price_expensive"].includes(reasonId);
+  const showLostTo = isLost && reasonId?.includes("competitor");
   const isValid = outcomeCategory && (
     isFreeText
       ? otherReasonText.trim().length > 0
-      : (reasonId && (!requiresFollowUp || (requiresFollowUp && followUpDate)) && (!requiresLeadTime || (requiresLeadTime && leadTimeWeeks)))
+      : (reasonId || isLost) && (!requiresFollowUp || (requiresFollowUp && followUpDate))
   );
 
   function handleAddReason() {
@@ -218,7 +217,9 @@ export default function CloseLeadModal({ open, onClose, job }) {
           <p className="text-xs text-muted-foreground">
             <strong>{job?.job_name}</strong> —{" "}
             {outcomeCategory === "Won"
-              ? "it will move to Deposit Received / Sale Won."
+              ? "it will move to Won and auto-create a Shop Pipeline job."
+              : outcomeCategory === "Nurture"
+              ? "it will be parked with a revisit date and resurface on that date."
               : "record why this lead is closing. It will be archived off the active board."}
           </p>
 
@@ -302,7 +303,7 @@ export default function CloseLeadModal({ open, onClose, job }) {
             </div>
           ) : reasons.length > 0 && (
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Reason</Label>
+              <Label className="text-xs font-semibold">Reason {isLost && <span className="text-destructive">*</span>}</Label>
               <Popover open={reasonPopoverOpen} onOpenChange={(o) => { setReasonPopoverOpen(o); if (!o) setShowAddReason(false); }}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" role="combobox" className="w-full justify-between font-normal text-sm">
@@ -316,7 +317,7 @@ export default function CloseLeadModal({ open, onClose, job }) {
                       <div key={r.id} className="flex items-center group rounded-sm hover:bg-accent">
                         <button
                           type="button"
-                          onClick={() => { setReasonId(r.id); if (r.id !== "hold_follow_up") setFollowUpDate(null); if (r.id !== "lost_lead_time") setLeadTimeWeeks(""); setReasonPopoverOpen(false); }}
+                          onClick={() => { setReasonId(r.id); if (r.id !== "hold_follow_up" && outcomeCategory !== "Nurture") setFollowUpDate(null); setReasonPopoverOpen(false); }}
                           className="flex-1 flex items-center px-2 py-1.5 text-sm text-left"
                         >
                           <Check className={cn("mr-2 h-4 w-4 shrink-0", reasonId === r.id ? "opacity-100" : "opacity-0")} />
@@ -381,27 +382,12 @@ export default function CloseLeadModal({ open, onClose, job }) {
             </div>
           )}
 
-          {/* Needed Lead Time (dependent on lost_lead_time reason) */}
-          {requiresLeadTime && (
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Needed Lead Time <span className="text-destructive">*</span></Label>
-              <Select value={leadTimeWeeks} onValueChange={setLeadTimeWeeks}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select lead time…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {["3 weeks", "4 weeks", "5 weeks", "6 weeks"].map(lt => (
-                    <SelectItem key={lt} value={lt.replace(" weeks", "")}>{lt}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Follow-Up Date */}
+          {/* Revisit Date (required for Nurture) */}
           {requiresFollowUp && (
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Follow-Up Date <span className="text-destructive">*</span></Label>
+              <Label className="text-xs font-semibold">
+                {outcomeCategory === "Nurture" ? "Revisit Date" : "Follow-Up Date"} <span className="text-destructive">*</span>
+              </Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={`w-full justify-start text-left font-normal text-sm ${!followUpDate ? "text-muted-foreground" : ""}`}>
@@ -419,7 +405,11 @@ export default function CloseLeadModal({ open, onClose, job }) {
                   />
                 </PopoverContent>
               </Popover>
-              <p className="text-[10px] text-muted-foreground">A reminder notification will be sent on this date so you can follow up with the client.</p>
+              <p className="text-[10px] text-muted-foreground">
+                {outcomeCategory === "Nurture"
+                  ? "The card will resurface on the Sales board on this date."
+                  : "A reminder notification will be sent on this date so you can follow up with the client."}
+              </p>
             </div>
           )}
 

@@ -3,16 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useOrgFilter } from "@/lib/orgContext";
 import React from "react";
+import { SALES_STAGES as NEW_SALES_STAGES, SALES_COLORS as NEW_SALES_COLORS } from "@/lib/salesPipeline";
 
 // ── Sales Board ────────────────────────────────────────────────────────────────
-export const SALES_STAGES = [
-  "New Lead",
-  "Estimate in Progress",
-  "Estimate Sent",
-  "Negotiation / In Review",
-  "Awaiting Deposit",
-  "Deposit Received / Sale Won",
-];
+export const SALES_STAGES = NEW_SALES_STAGES;
 
 // ── Shop Board ─────────────────────────────────────────────────────────────────
 export const SHOP_STAGES = [
@@ -70,14 +64,7 @@ export function getDefaultBoard(role) {
 }
 
 // ── Column colors ──────────────────────────────────────────────────────────────
-export const SALES_COLORS = {
-  "New Lead":                      "border-t-slate-400",
-  "Estimate in Progress":          "border-t-blue-400",
-  "Estimate Sent":                 "border-t-blue-600",
-  "Negotiation / In Review":       "border-t-amber-500",
-  "Awaiting Deposit":              "border-t-orange-500",
-  "Deposit Received / Sale Won":   "border-t-emerald-500",
-};
+export const SALES_COLORS = NEW_SALES_COLORS;
 
 export const SHOP_COLORS = {
   "New Jobs Landed — Needs Approval":        "border-t-slate-400",
@@ -164,19 +151,21 @@ function stageToStatus(toBoard, toStage) {
   }
   // Sales board
   const salesMap = {
-    "New Lead": "Estimate",
-    "Estimate in Progress": "Estimate",
-    "Estimate In Progress": "Estimate",
+    "New Inquiry": "Estimate",
+    "Qualifying": "Estimate",
+    "Estimating": "Estimate",
+    "Pricing Review": "Estimate",
     "Estimate Sent": "Estimate",
-    "Negotiation / In Review": "Estimate",
+    "Negotiating": "Estimate",
     "Awaiting Deposit": "Approved",
-    "Deposit Received / Sale Won": "Approved",
+    "Won": "Approved",
   };
   return salesMap[toStage] || "Estimate";
 }
 
 // ── Move job to a new stage (returns update payload) ──────────────────────────
-export function buildStageTransition(job, toBoard, toStage, note = "") {
+// Now includes the acting user in the stage history entry.
+export function buildStageTransition(job, toBoard, toStage, note = "", user = null) {
   const now = new Date().toISOString();
   const historyEntry = {
     from_board: job.pipeline_board || "Sales",
@@ -184,6 +173,8 @@ export function buildStageTransition(job, toBoard, toStage, note = "") {
     from_stage: job.stage || "",
     to_stage: toStage,
     timestamp: now,
+    user_id: user?.id || "",
+    user_name: user?.full_name || user?.displayName || "",
     note,
   };
   return {
@@ -399,7 +390,7 @@ function seedStages(board) {
   return stages.map((name, i) => ({
     id: `default-${board}-${i}`,
     name,
-    color: borderClassToHex(colors[name]),
+    color: typeof colors[name] === "string" && colors[name].startsWith("#") ? colors[name] : borderClassToHex(colors[name]),
   }));
 }
 

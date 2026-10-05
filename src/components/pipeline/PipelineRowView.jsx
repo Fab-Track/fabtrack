@@ -21,12 +21,14 @@ const AMOUNT_VISIBLE_ROLES = ["owner", "admin", "accountant"];
 // Muted left-border colors per stage (derived from top-border colors on kanban)
 const STAGE_BORDER = {
   // Sales
-  "New Lead":                      "border-l-slate-400",
-  "Estimate in Progress":          "border-l-blue-400",
+  "New Inquiry":                   "border-l-slate-400",
+  "Qualifying":                    "border-l-blue-400",
+  "Estimating":                    "border-l-blue-500",
+  "Pricing Review":                "border-l-violet-400",
   "Estimate Sent":                 "border-l-blue-600",
-  "Negotiation / In Review":       "border-l-amber-500",
+  "Negotiating":                   "border-l-amber-500",
   "Awaiting Deposit":              "border-l-orange-500",
-  "Deposit Received / Sale Won":   "border-l-emerald-500",
+  "Won":                           "border-l-emerald-500",
   // Shop
   "New Jobs Landed — Needs Approval":          "border-l-slate-400",
   "On Deck for Measure":                       "border-l-sky-400",

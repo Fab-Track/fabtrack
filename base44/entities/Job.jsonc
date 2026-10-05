@@ -25,9 +25,11 @@
     "job_type": {
       "type": "string",
       "enum": [
-        "Fence",
-        "Gate",
         "Railing",
+        "Stairs",
+        "Planters",
+        "Gate",
+        "Fence",
         "Staircase",
         "Custom Structure",
         "Other"
@@ -47,7 +49,7 @@
     "stage": {
       "type": "string",
       "description": "Current stage within the pipeline board",
-      "default": "New Lead"
+      "default": "New Inquiry"
     },
     "stage_entered_at": {
       "type": "string",
@@ -75,6 +77,14 @@
           "timestamp": {
             "type": "string",
             "format": "date-time"
+          },
+          "user_id": {
+            "type": "string",
+            "description": "ID of the user who made the transition"
+          },
+          "user_name": {
+            "type": "string",
+            "description": "Display name of the user who made the transition"
           },
           "note": {
             "type": "string"
@@ -327,13 +337,93 @@
     "lead_source": {
       "type": "string",
       "enum": [
+        "Website",
+        "Phone",
+        "Referral",
+        "Contractor Repeat",
+        "Walk-in",
         "Manual",
         "Website Form",
-        "Referral",
-        "Phone",
         "Other"
       ],
-      "default": "Manual"
+      "default": "Manual",
+      "description": "Original lead source \u2014 preserved through stage migration"
+    },
+    "lead_customer_type": {
+      "type": "string",
+      "enum": [
+        "Contractor",
+        "Homeowner"
+      ],
+      "description": "Customer type for the lead (Contractor or Homeowner)"
+    },
+    "lead_intent": {
+      "type": "string",
+      "enum": [
+        "Ready to Buy",
+        "Price Shopping",
+        "Budgetary Only"
+      ],
+      "description": "Buyer intent level"
+    },
+    "lead_blockers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Missing Info",
+          "Waiting on Customer",
+          "Waiting on Budget",
+          "Waiting on GC"
+        ]
+      },
+      "default": [],
+      "description": "Active blockers on this lead. Auto-applied at intake when gate fields are missing."
+    },
+    "next_action": {
+      "type": "string",
+      "description": "Next action description for the lead owner"
+    },
+    "next_action_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Due date for the next action"
+    },
+    "bid_due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Bid submission due date (for contractor leads)"
+    },
+    "size_band": {
+      "type": "string",
+      "enum": [
+        "Under $5K",
+        "$5K\u2013$10K",
+        "$10K\u2013$25K",
+        "$25K\u2013$50K",
+        "$50K+"
+      ],
+      "description": "Auto-derived from estimate amount"
+    },
+    "estimate_versions": {
+      "type": "array",
+      "description": "Track estimate versions with amount and sent date",
+      "items": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "description": "Version number (1, 2, 3...)"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "sent_date": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      }
     },
     "lead_customer_phone": {
       "type": "string"
@@ -353,7 +443,7 @@
     },
     "lead_outcome_category": {
       "type": "string",
-      "description": "Outcome category \u2014 built-in (Won, Lost, Unqualified, On Hold, Testing, Other) or custom"
+      "description": "Outcome category \u2014 built-in (Won, Lost, Nurture, Unqualified, On Hold, Testing, Other) or custom"
     },
     "lead_close_reason": {
       "type": "string"
@@ -374,7 +464,8 @@
     },
     "follow_up_date": {
       "type": "string",
-      "format": "date"
+      "format": "date",
+      "description": "Revisit date for Nurture leads \u2014 card resurfaces on this date"
     },
     "follow_up_notified": {
       "type": "boolean",

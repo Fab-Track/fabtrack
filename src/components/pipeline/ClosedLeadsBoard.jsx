@@ -39,7 +39,7 @@ export default function ClosedLeadsBoard({ jobs = [], sortOrder = "newest" }) {
       const update = {
         is_lead_closed: false,
         pipeline_board: "Sales",
-        stage: keepStage ? job.stage : "New Lead",
+        stage: keepStage ? job.stage : "New Inquiry",
         stage_entered_at: now,
         last_activity_date: now,
         lead_closed_at: null,

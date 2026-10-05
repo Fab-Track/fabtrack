@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/lib/AuthContext";
 import { useWriteOrgId } from "@/lib/orgContext";
 import { useRepCandidates } from "@/hooks/useRepCandidates";
+import { LEAD_SOURCES, LEAD_INTENTS, LEAD_CUSTOMER_TYPES, LEAD_BLOCKERS, autoApplyMissingInfoBlocker, deriveSizeBand } from "@/lib/salesPipeline";
 
 export default function NewJob() {
   const { user } = useAuth();
@@ -60,6 +61,15 @@ export default function NewJob() {
     assigned_rep_id: user?.id || "",
     assigned_rep_name: user?.full_name || "",
     notes_text: "",
+    lead_source: "Manual",
+    lead_customer_type: "",
+    lead_intent: "",
+    lead_blockers: [],
+    next_action: "",
+    next_action_date: "",
+    bid_due_date: "",
+    stage: "New Inquiry",
+    pipeline_board: "Sales",
   });
 
   const selectedCustomer = useMemo(() =>
@@ -142,7 +152,19 @@ export default function NewJob() {
           is_completed: false,
         }]
       : [];
-    createMutation.mutate({ ...rest, notes, organization_id: writeOrgId });
+
+    // Auto-apply Missing Info blocker if gate fields are missing at intake
+    const blockers = autoApplyMissingInfoBlocker(rest, "New Inquiry");
+    const payload = { ...rest, notes, organization_id: writeOrgId };
+    if (blockers) payload.lead_blockers = blockers;
+
+    // Auto-derive size band from estimate_total if present
+    if (payload.estimate_total) {
+      const band = deriveSizeBand(payload.estimate_total);
+      if (band) payload.size_band = band;
+    }
+
+    createMutation.mutate(payload);
   };
 
   return (
@@ -299,6 +321,107 @@ export default function NewJob() {
                 </SelectContent>
               </Select>
               <p className="text-[10px] text-muted-foreground mt-0.5">This rep gets credit for all estimates and revenue on this job.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs">Lead Source</Label>
+                <Select
+                  value={form.lead_source}
+                  onValueChange={val => updateField("lead_source", val)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select source…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LEAD_SOURCES.map(s => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Customer Type</Label>
+                <Select
+                  value={form.lead_customer_type || "none"}
+                  onValueChange={val => updateField("lead_customer_type", val === "none" ? "" : val)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {LEAD_CUSTOMER_TYPES.map(t => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs">Job Type</Label>
+                <Select
+                  value={form.job_type || "none"}
+                  onValueChange={val => updateField("job_type", val === "none" ? "" : val)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {["Railing", "Stairs", "Planters", "Gate", "Fence", "Staircase", "Custom Structure", "Other"].map(t => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Buyer Intent</Label>
+                <Select
+                  value={form.lead_intent || "none"}
+                  onValueChange={val => updateField("lead_intent", val === "none" ? "" : val)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select intent…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {LEAD_INTENTS.map(i => (
+                      <SelectItem key={i} value={i}>{i}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs">Next Action</Label>
+                <Input
+                  value={form.next_action}
+                  onChange={e => updateField("next_action", e.target.value)}
+                  placeholder="e.g., Call to follow up"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Next Action Date</Label>
+                <Input
+                  type="date"
+                  value={form.next_action_date}
+                  onChange={e => updateField("next_action_date", e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs">Bid Due Date</Label>
+              <Input
+                type="date"
+                value={form.bid_due_date}
+                onChange={e => updateField("bid_due_date", e.target.value)}
+              />
             </div>
 
             <div>

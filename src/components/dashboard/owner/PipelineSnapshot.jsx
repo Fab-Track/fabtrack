@@ -2,8 +2,8 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 
 const STAGES = [
-  "New Lead", "Estimate In Progress", "Estimate Sent",
-  "Awaiting Deposit", "Deposit Received",
+  "New Inquiry", "Qualifying", "Estimating", "Estimate Sent",
+  "Negotiating", "Awaiting Deposit", "Won",
   "In Fabrication", "Powder Coat", "Install Scheduled",
 ];
 
@@ -13,8 +13,8 @@ export default function PipelineSnapshot({ jobs }) {
   const stageData = STAGES.map(stage => {
     const stageJobs = (jobs || []).filter(j =>
       j.stage === stage ||
-      (stage === "In Fabrication" && (j.stage === "Fab Queue" || j.status === "In Fabrication")) ||
-      (stage === "Powder Coat" && j.status === "Powder Coat")
+      (stage === "In Fabrication" && (j.stage === "Fabricate" || j.stage === "On Deck for Fabrication" || j.status === "In Fabrication")) ||
+      (stage === "Powder Coat" && (j.stage === "At Powder Coat" || j.status === "Powder Coat"))
     );
     const value = stageJobs.reduce((s, j) => s + (j.estimate_total || 0), 0);
     return { stage, count: stageJobs.length, value };

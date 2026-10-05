@@ -20,6 +20,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 import { differenceInDays, parseISO } from "date-fns";
 import { toast } from "sonner";
+import { shouldSkipPricingReview, deriveSizeBand, autoApplyMissingInfoBlocker } from "@/lib/salesPipeline";
 
 const EST_PILL = {
   Draft:    "bg-muted text-muted-foreground",
@@ -33,7 +34,7 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], invoices = [], 
   const navigate = useNavigate();
   const days = daysInStage(job);
   const paymentStatus = job.manual_payment_status || "not_invoiced";
-  const isStale = days > 7 && job.stage !== "Deposit Received / Sale Won";
+  const isStale = days > 7 && job.stage !== "Won";
 
   // Most recent estimate for this job
   const latestEst = estimates.length > 0
@@ -42,7 +43,7 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], invoices = [], 
 
   // Idle estimate warning: in "Estimate In Progress" stage, estimate is Draft and >7 days old
   const showIdleWarning = latestEst?.status === "Draft"
-    && job.stage === "Estimate In Progress"
+    && job.stage === "Estimating"
     && latestEst.created_date
     && differenceInDays(new Date(), parseISO(latestEst.created_date)) > 7;
 
@@ -125,7 +126,7 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], invoices = [], 
         </div>
       )}
 
-      {job.stage === "Deposit Received / Sale Won" && (
+      {job.stage === "Won" && (
         <Button
           size="sm"
           className="w-full mt-2 h-7 text-xs bg-emerald-600 hover:bg-emerald-700"
@@ -158,7 +159,7 @@ export default function SalesBoard({ jobs = [], sortOrder = "newest" }) {
   }, [SALES_STAGES]);
   function canDeleteJob(job) {
     if (isOwner) return true;
-    if (isEstimator && job?.stage && ["New Lead", "Estimate In Progress"].includes(job?.stage)) return true;
+    if (isEstimator && job?.stage && ["New Inquiry", "Qualifying", "Estimating"].includes(job?.stage)) return true;
     return false;
   }
 
@@ -226,7 +227,24 @@ export default function SalesBoard({ jobs = [], sortOrder = "newest" }) {
 
   const moveMutation = useMutation({
     mutationFn: async ({ job, toBoard, toStage, note, repId }) => {
-      const update = buildStageTransition(job, toBoard, toStage, note);
+      const update = buildStageTransition(job, toBoard, toStage, note, user);
+
+      // Pricing Review skip: if moving to "Estimate Sent" and amount < $6000,
+      // and the job was in "Estimating" or "Qualifying", skip "Pricing Review"
+      if (toStage === "Estimate Sent" && job.estimate_total && shouldSkipPricingReview(job.estimate_total)) {
+        // Already past pricing review — no-op, just proceed
+      }
+
+      // Auto-derive size band when entering Estimate Sent or later
+      if (job.estimate_total && !update.size_band) {
+        const band = deriveSizeBand(job.estimate_total);
+        if (band) update.size_band = band;
+      }
+
+      // Auto-apply Missing Info blocker if gate fields are missing
+      const newBlockers = autoApplyMissingInfoBlocker({ ...job, ...update }, toStage);
+      if (newBlockers) update.lead_blockers = newBlockers;
+
       if (repId) {
         const rep = estimatorReps.find(r => r.id === repId);
         update.assigned_rep_id = repId;
@@ -275,15 +293,70 @@ export default function SalesBoard({ jobs = [], sortOrder = "newest" }) {
     setPromoting(job);
   }
 
-  function handlePromoteConfirm(note) {
+  async function handlePromoteConfirm(note) {
     if (!promoting) return;
-    moveMutation.mutate({
-      job: promoting,
-      toBoard: "Shop",
-      toStage: "New Jobs Landed — Needs Approval",
-      note,
-      repId: promoteRepId || null,
-    });
+    const job = promoting;
+
+    // Create the Shop Pipeline job carrying over customer, scope, amount, install target
+    try {
+      const shopJobData = {
+        organization_id: job.organization_id,
+        job_number: job.job_number,
+        customer_id: job.customer_id || "",
+        customer_name: job.customer_name || "",
+        job_name: job.job_name || "",
+        job_type: job.job_type || "",
+        pipeline_board: "Shop",
+        stage: "New Jobs Landed — Needs Approval",
+        stage_entered_at: new Date().toISOString(),
+        last_activity_date: new Date().toISOString(),
+        status: "Approved",
+        site_address: job.site_address || "",
+        onsite_contact_name: job.onsite_contact_name || "",
+        onsite_contact_phone: job.onsite_contact_phone || "",
+        expected_install_date: job.expected_install_date || "",
+        promised_install_date: job.promised_install_date || "",
+        design_details: job.design_details || "",
+        powder_coat_color: job.powder_coat_color || "",
+        powder_coat_code: job.powder_coat_code || "",
+        assigned_rep_id: job.assigned_rep_id || promoteRepId || "",
+        assigned_rep_name: job.assigned_rep_name || estimatorReps.find(r => r.id === promoteRepId)?.name || "",
+        assigned_estimator: job.assigned_estimator || promoteRepId || "",
+        assigned_estimator_name: job.assigned_estimator_name || estimatorReps.find(r => r.id === promoteRepId)?.name || "",
+        estimate_total: job.estimate_total || 0,
+        customer_approval_status: "approved",
+        notes: [],
+        stage_history: [{
+          from_board: "Sales",
+          to_board: "Shop",
+          from_stage: "Won",
+          to_stage: "New Jobs Landed — Needs Approval",
+          timestamp: new Date().toISOString(),
+          user_id: user?.id || "",
+          user_name: user?.full_name || user?.displayName || "",
+          note: note || "Won → auto-created Shop job",
+        }],
+      };
+
+      await base44.entities.Job.create(shopJobData);
+
+      // Mark the original Sales lead as closed (Won)
+      await base44.entities.Job.update(job.id, {
+        is_lead_closed: true,
+        lead_closed_at: new Date().toISOString(),
+        lead_outcome: "Won — Deposit Received",
+        lead_outcome_category: "Won",
+        last_activity_date: new Date().toISOString(),
+      });
+
+      toast.success(`Shop job created for "${job.job_name}"`);
+      qc.invalidateQueries({ queryKey: ["jobs"] });
+      qc.invalidateQueries({ queryKey: ["salesBoardEstimates"] });
+      setPromoting(null);
+      setPromoteRepId(null);
+    } catch (err) {
+      toast.error("Failed to create Shop job: " + (err.message || "Unknown error"));
+    }
   }
 
   return (
@@ -356,16 +429,16 @@ export default function SalesBoard({ jobs = [], sortOrder = "newest" }) {
       <StageTransitionDialog
         open={!!promoting}
         onClose={() => { setPromoting(null); setPromoteRepId(null); }}
-        title="Move to Shop Flow?"
+        title="Create Shop Job?"
         message={
           (invoicesByJob[promoting?.id] || []).length === 0
-            ? `Are you sure you want to move "${promoting?.job_name}" to Shop Flow? An invoice still does not exist for this job.`
-            : `"${promoting?.job_name}" has a deposit. Move it to the Shop Board under "New Jobs Landed — Needs Approval"?`
+            ? `Are you sure you want to create a Shop job for "${promoting?.job_name}"? No deposit invoice exists yet.`
+            : `"${promoting?.job_name}" has a deposit. Create a Shop job under "New Jobs Landed — Needs Approval"?`
         }
-        fromStage="Deposit Received / Sale Won"
+        fromStage="Won"
         toStage="New Jobs Landed — Needs Approval"
         toBoard="Shop"
-        confirmLabel="Yes, Move to Shop"
+        confirmLabel="Yes, Create Shop Job"
         onConfirm={handlePromoteConfirm}
         isPending={moveMutation.isPending}
         repSelector={{

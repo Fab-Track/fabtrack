@@ -7,10 +7,11 @@ export default function EstimatorFollowUpsWidget({ jobs = [] }) {
   const today = new Date();
 
   const followUps = jobs.filter(j => {
-    if (!j.is_lead_closed || !j.follow_up_date || j.follow_up_notified) return false;
+    if (!j.follow_up_date || j.follow_up_notified) return false;
+    // Show both Nurture leads (closed) and open leads with follow-up dates
     try {
-      const fDate = parseISO(j.follow_up_date);
-      return true; // show all pending follow-ups
+      parseISO(j.follow_up_date);
+      return true;
     } catch { return false; }
   }).sort((a, b) => {
     try { return new Date(a.follow_up_date) - new Date(b.follow_up_date); } catch { return 0; }
