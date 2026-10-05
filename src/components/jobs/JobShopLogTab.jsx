@@ -284,19 +284,19 @@ export default function JobShopLogTab({ timeEntries, job, purchaseOrders = [] })
       )}
 
       {/* Action buttons */}
-      {canEdit && (
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" onClick={() => setEntryOpen(true)} className="gap-1.5">
-            <Plus className="w-3.5 h-3.5" /> Log Entry
-          </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" onClick={() => setEntryOpen(true)} className="gap-1.5">
+          <Plus className="w-3.5 h-3.5" /> Log Entry
+        </Button>
+        {canEdit && (
           <Button size="sm" variant="secondary" onClick={() => setEstOpen(true)} className="gap-1.5">
             <Pencil className="w-3.5 h-3.5" /> Edit All Estimates
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setQrOpen(true)} className="gap-1.5">
-            <QrCode className="w-3.5 h-3.5" /> Show QR Code
-          </Button>
-        </div>
-      )}
+        )}
+        <Button size="sm" variant="outline" onClick={() => setQrOpen(true)} className="gap-1.5">
+          <QrCode className="w-3.5 h-3.5" /> Show QR Code
+        </Button>
+      </div>
 
       {/* Manual shop log entries */}
       {shopLogEntries.length > 0 && (
