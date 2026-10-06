@@ -93,10 +93,14 @@ export default function JobBoard() {
     if (searchField === "job_number") return (j.job_number || "").toLowerCase().includes(q);
     if (searchField === "job_name") return (j.job_name || "").toLowerCase().includes(q);
     if (searchField === "customer") return (j.customer_name || "").toLowerCase().includes(q);
+    if (searchField === "phone") return (j.lead_customer_phone || "").toLowerCase().includes(q);
+    if (searchField === "email") return (j.lead_customer_email || "").toLowerCase().includes(q);
     return (
       (j.job_number || "").toLowerCase().includes(q) ||
       (j.customer_name || "").toLowerCase().includes(q) ||
-      (j.job_name || "").toLowerCase().includes(q)
+      (j.job_name || "").toLowerCase().includes(q) ||
+      (j.lead_customer_phone || "").toLowerCase().includes(q) ||
+      (j.lead_customer_email || "").toLowerCase().includes(q)
     );
   };
 
@@ -188,6 +192,8 @@ export default function JobBoard() {
               <SelectItem value="job_number">Job Number</SelectItem>
               <SelectItem value="job_name">Job Name</SelectItem>
               <SelectItem value="customer">Customer</SelectItem>
+              <SelectItem value="phone">Phone Number</SelectItem>
+              <SelectItem value="email">Email</SelectItem>
             </SelectContent>
           </Select>
           {/* Sort order */}
