@@ -131,10 +131,14 @@ export default function CustomerCombobox({ customers = [], value, onChange }) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const filtered = customers.filter(c =>
-    !query || c.name?.toLowerCase().includes(query.toLowerCase()) ||
-    c.company?.toLowerCase().includes(query.toLowerCase())
-  );
+  const filtered = customers.filter(c => {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    const name = (c.name || "").toLowerCase();
+    const company = (c.company || "").toLowerCase();
+    const combined = company ? `${name} - ${company}` : name;
+    return name.includes(q) || company.includes(q) || combined.includes(q);
+  });
 
   function handleSelect(customer) {
     onChange(customer);
