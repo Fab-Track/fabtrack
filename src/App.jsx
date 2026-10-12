@@ -101,6 +101,7 @@ const Register         = lazyRetry(() => import('@/pages/Register'), 'Register')
 const ForgotPassword   = lazyRetry(() => import('@/pages/ForgotPassword'), 'ForgotPassword');
 const ResetPassword    = lazyRetry(() => import('@/pages/ResetPassword'), 'ResetPassword');
 const ShopLogPublicForm = lazyRetry(() => import('@/pages/ShopLogPublicForm'), 'ShopLogPublicForm');
+const OAuthConsent      = lazyRetry(() => import('@/pages/OAuthConsent'), 'OAuthConsent');
 
 // Minimal fallback shown while a lazy chunk loads
 function PageLoader() {
@@ -280,6 +281,7 @@ const AuthenticatedApp = () => {
         <Route path="/estimate-view/:token" element={<EstimateView />} />
         <Route path="/invoice-view/:token" element={<InvoiceView />} />
         <Route path="/shop-log/:token" element={<ShopLogPublicForm />} />
+        <Route path="/oauth/consent" element={<OAuthConsent />} />
         
         {/* Main app with sidebar layout */}
         <Route element={<AppLayout />}>
