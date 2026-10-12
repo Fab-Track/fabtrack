@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Users, Paintbrush, MoreHorizontal, Archive, Trash2, ArrowRightLeft, UserCircle } from "lucide-react";
+import { CalendarDays, Users, Paintbrush, MoreHorizontal, Archive, Trash2, ArrowRightLeft, UserCircle, Copy } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { getJobHealth, getHealthBorder } from "@/lib/jobHelpers";
 import { SALES_STAGES, SHOP_STAGES, BILLING_STAGES, buildStageTransition } from "@/lib/pipelineHelpers";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import DeleteJobModal from "@/components/jobs/DeleteJobModal";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
@@ -51,6 +51,7 @@ export default function JobCard({ job, isDragging }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const { user } = useAuth();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const effectiveRole = useEffectiveRole(user?.role || "admin");
   const role = effectiveRole.toLowerCase();
   const canManage = role === "owner" || role === "admin";
@@ -136,6 +137,13 @@ export default function JobCard({ job, isDragging }) {
                   onClick={e => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }}
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Delete
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-sm gap-2"
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); navigate(`/jobs/new?customer_id=${job.customer_id}&customer_name=${encodeURIComponent(job.customer_name || "")}`); }}
+                >
+                  <Copy className="w-3.5 h-3.5" /> Duplicate Job
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
