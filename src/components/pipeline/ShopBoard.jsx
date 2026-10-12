@@ -10,7 +10,7 @@ import JobCardCustomerInfo from "./JobCardCustomerInfo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { Clock, CalendarDays, Paintbrush, Users, MoreHorizontal, Archive, Trash2, ArrowRightLeft } from "lucide-react";
+import { Clock, CalendarDays, Paintbrush, Users, MoreHorizontal, Archive, Trash2, ArrowRightLeft, Copy } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import StageTransitionDialog from "./StageTransitionDialog";
 import ScopeReviewDialog from "./ScopeReviewDialog";
@@ -127,6 +127,12 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
                     onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); setDeleteOpen(true); }}
                   >
                     <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-sm gap-2"
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); navigate(`/jobs/new?customer_id=${job.customer_id}&customer_name=${encodeURIComponent(job.customer_name || "")}`); }}
+                  >
+                    <Copy className="w-3.5 h-3.5" /> Duplicate Job
                   </DropdownMenuItem>
                 </>
               )}

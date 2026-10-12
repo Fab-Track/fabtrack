@@ -10,7 +10,7 @@ import JobCardCustomerInfo from "./JobCardCustomerInfo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { Clock, DollarSign, AlertTriangle, MoreHorizontal, X } from "lucide-react";
+import { Clock, DollarSign, AlertTriangle, MoreHorizontal, X, Copy } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import StageTransitionDialog from "./StageTransitionDialog";
 import { useOrgUsers } from "@/hooks/useOrgUsers";
@@ -80,6 +80,11 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], invoices = [], 
                   Delete Job
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem
+                onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); navigate(`/jobs/new?customer_id=${job.customer_id}&customer_name=${encodeURIComponent(job.customer_name || "")}`); }}
+              >
+                <Copy className="w-3.5 h-3.5 mr-2" /> Duplicate Job
+              </DropdownMenuItem>
               <PriorityMenuItems job={job} stage={stage} columnJobs={columnJobs} onApply={onPriorityChange} closeMenu={() => setMenuOpen(false)} />
             </DropdownMenuContent>
           </DropdownMenu>

@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, isValid, differenceInDays } from "date-fns";
 import {
   ChevronDown, ChevronRight, GripVertical, MoreHorizontal,
-  CalendarDays, Users, Paintbrush, Clock, DollarSign,
+  CalendarDays, Users, Paintbrush, Clock, DollarSign, Copy,
 } from "lucide-react";
 import { daysInStage, buildStageTransition, sortColumnJobs, reorderColumnPriority } from "@/lib/pipelineHelpers";
 import PriorityBadge from "./PriorityBadge";
@@ -187,6 +187,11 @@ function PipelineJobRow({ job, index, board, readOnly = false, stage, columnJobs
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuItem
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); navigate(`/jobs/new?customer_id=${job.customer_id}&customer_name=${encodeURIComponent(job.customer_name || "")}`); }}
+                  >
+                    <Copy className="w-3.5 h-3.5 mr-2" /> Duplicate Job
+                  </DropdownMenuItem>
                   <PriorityMenuItems job={job} stage={stage} columnJobs={columnJobs} onApply={onPriorityChange} closeMenu={() => setMenuOpen(false)} />
                 </DropdownMenuContent>
               </DropdownMenu>

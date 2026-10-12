@@ -123,6 +123,11 @@ function BillingCard({ job, isDragging, invoice, jobInvoices = [], customer, onM
                   Delete Job
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem
+                onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); navigate(`/jobs/new?customer_id=${job.customer_id}&customer_name=${encodeURIComponent(job.customer_name || "")}`); }}
+              >
+                Duplicate Job
+              </DropdownMenuItem>
               <PriorityMenuItems job={job} stage={stage} columnJobs={columnJobs} onApply={onPriorityChange} closeMenu={() => setMenuOpen(false)} />
             </DropdownMenuContent>
           </DropdownMenu>
