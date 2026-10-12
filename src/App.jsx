@@ -68,6 +68,7 @@ function lazyRetry(importFn, name) {
 const Dashboard        = lazyRetry(() => import('@/pages/Dashboard'), 'Dashboard');
 const JobBoard         = lazyRetry(() => import('@/pages/JobBoard'), 'JobBoard');
 const JobDetail        = lazyRetry(() => import('@/pages/JobDetail'), 'JobDetail');
+const EditJob          = lazyRetry(() => import('@/pages/EditJob'), 'EditJob');
 const NewJob           = lazyRetry(() => import('@/pages/NewJob'), 'NewJob');
 const WorkCenters      = lazyRetry(() => import('@/pages/WorkCenters'), 'WorkCenters');
 const TimeCard         = lazyRetry(() => import('@/pages/TimeCard'), 'TimeCard');
@@ -285,6 +286,7 @@ const AuthenticatedApp = () => {
           <Route path="/jobs" element={<JobBoard />} />
           <Route path="/jobs/new" element={<NewJob />} />
           <Route path="/jobs/:id" element={<JobDetail />} />
+          <Route path="/jobs/:id/edit" element={<EditJob />} />
           <Route path="/jobs/:jobId/estimates/:estimateId" element={<EstimatePage />} />
           <Route path="/work-centers" element={<WorkCenters />} />
           <Route path="/reports" element={<Reports />} />

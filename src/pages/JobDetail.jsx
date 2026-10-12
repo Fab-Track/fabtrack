@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { STATUS_COLORS, getJobHealth, getHealthDot } from "@/lib/jobHelpers";
 import { getBoardForJob } from "@/lib/pipelineHelpers";
-import { ArrowLeft, Send, MoreHorizontal, Trash2 } from "lucide-react";
+import { ArrowLeft, Send, MoreHorizontal, Trash2, Pencil } from "lucide-react";
 import JobCustomerPanel from "@/components/jobs/JobCustomerPanel";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import DeleteJobModal from "@/components/jobs/DeleteJobModal";
@@ -142,6 +142,11 @@ export default function JobDetail() {
             <JobCustomerPanel job={job} onJobUpdated={refetchJob} />
           </div>
           <div className="flex items-center gap-2">
+            {!isFabricator && !isAccountant && (
+              <Button size="sm" variant="outline" onClick={() => navigate(`/jobs/${jobId}/edit`)} className="gap-1.5 shrink-0">
+                <Pencil className="w-3.5 h-3.5" /> Edit Details
+              </Button>
+            )}
             {!isFabricator && !isAccountant && (
               <Button size="sm" onClick={() => setComposerOpen(true)} className="gap-1.5 shrink-0">
                 <Send className="w-3.5 h-3.5" /> Send Message
