@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Plus, Search, Phone, Mail, MapPin, Building2,
   DollarSign, Briefcase, TrendingUp, ArrowLeft,
-  ChevronRight, ArrowUpDown, Send, Pencil, Trash2, Edit2
+  ChevronRight, ArrowUpDown, Send, Pencil, Trash2, Edit2, Hammer
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -83,6 +83,7 @@ function TypeBadge({ type }) {
 // ── Customer Detail Panel ──────────────────────────────────────────────────────
 function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [editingType, setEditingType] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [composerOpen, setComposerOpen] = useState(false);
@@ -209,6 +210,14 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
           <div className="flex items-center gap-2 shrink-0">
             <Button size="sm" onClick={() => setComposerOpen(true)} className="gap-1.5">
               <Send className="w-3.5 h-3.5" /> Send Message
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => navigate(`/jobs/new?customer_id=${customer.id}&customer_name=${encodeURIComponent(customer.name)}`)}
+            >
+              <Hammer className="w-3.5 h-3.5" /> New Job
             </Button>
             <Button
               size="sm"
