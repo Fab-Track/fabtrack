@@ -34,7 +34,7 @@ export default function EditJob() {
 
   const { data: customers = [] } = useQuery({
     queryKey: ["customers"],
-    queryFn: () => base44.entities.Customer.list("-created_date", 100),
+    queryFn: () => base44.entities.Customer.list("-created_date", 500),
   });
 
   const repCandidates = useRepCandidates();

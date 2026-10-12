@@ -32,7 +32,7 @@ export default function NewJob() {
 
   const { data: customers = [] } = useQuery({
     queryKey: ["customers"],
-    queryFn: () => base44.entities.Customer.list("-created_date", 100),
+    queryFn: () => base44.entities.Customer.list("-created_date", 500),
   });
 
   // Rep candidates — pulled from User entity via shared hook for consistency
