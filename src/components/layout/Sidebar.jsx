@@ -5,7 +5,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Kanban, Wrench, Clock,
   FileText, CalendarDays, Calendar, Users, 
-  Trophy, ChevronLeft, ChevronRight,
+  Trophy, ChevronLeft, ChevronRight, ChevronDown,
   FileSpreadsheet, BookOpen, Building2, Settings, Menu, X, BarChart2, MessageCircle, MessagesSquare, LogOut, Bug, Shield, CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -234,6 +234,7 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const userRoles = getUserRoles(user);
   const effectiveRole = useEffectiveRole(userRoles[0] || "user");
@@ -362,37 +363,67 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Super Admin — pinned link for platform owners only */}
-      {isSuperAdmin && (
-        <div className="px-2 pb-2 border-t border-sidebar-border/50 pt-2">
-          <NavLink
-            item={ALL_ITEMS["superAdmin"]}
-            collapsed={collapsed}
-            onClick={() => setMobileOpen(false)}
-          />
-        </div>
-      )}
-
-      {/* Preview Role + Collapse + Logout — desktop only */}
+      {/* Super Admin, Notifications, Report Problem, Preview Role, Log Out — collapsible "More" */}
       <div className="hidden md:block px-2 py-3 border-t border-sidebar-border space-y-1">
-        <NotificationBell collapsed={collapsed} />
-        <button
-          onClick={() => setShowReportModal(true)}
-          title={collapsed ? "Report a Problem" : undefined}
-          className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-md text-sm text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
-        >
-          <Bug className={cn("w-4 h-4 shrink-0", collapsed && "mx-auto")} />
-          {!collapsed && <span>Report a Problem</span>}
-        </button>
-        {userCanImpersonate && <PreviewRoleSelector collapsed={collapsed} />}
-        <button
-          onClick={() => base44.auth.logout("/login")}
-          title={collapsed ? "Log Out" : undefined}
-          className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-md text-sm text-sidebar-foreground/50 hover:text-red-400 hover:bg-sidebar-accent w-full transition-colors"
-        >
-          <LogOut className={cn("w-4 h-4 shrink-0", collapsed && "mx-auto")} />
-          {!collapsed && <span>Log Out</span>}
-        </button>
+        {collapsed ? (
+          <>
+            {isSuperAdmin && (
+              <NavLink item={ALL_ITEMS["superAdmin"]} collapsed={collapsed} onClick={() => setMobileOpen(false)} />
+            )}
+            <NotificationBell collapsed={collapsed} />
+            <button
+              onClick={() => setShowReportModal(true)}
+              title="Report a Problem"
+              className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-md text-sm text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
+            >
+              <Bug className="w-4 h-4 shrink-0 mx-auto" />
+            </button>
+            {userCanImpersonate && <PreviewRoleSelector collapsed={collapsed} />}
+            <button
+              onClick={() => base44.auth.logout("/login")}
+              title="Log Out"
+              className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-md text-sm text-sidebar-foreground/50 hover:text-red-400 hover:bg-sidebar-accent w-full transition-colors"
+            >
+              <LogOut className="w-4 h-4 shrink-0 mx-auto" />
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => setMoreOpen(!moreOpen)}
+              className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-md text-sm text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
+            >
+              {moreOpen
+                ? <ChevronDown className="w-4 h-4 shrink-0" />
+                : <ChevronRight className="w-4 h-4 shrink-0" />
+              }
+              <span className="flex-1 text-left">More</span>
+            </button>
+            {moreOpen && (
+              <div className="space-y-0.5 pb-1">
+                {isSuperAdmin && (
+                  <NavLink item={ALL_ITEMS["superAdmin"]} collapsed={collapsed} onClick={() => setMobileOpen(false)} />
+                )}
+                <NotificationBell collapsed={collapsed} />
+                <button
+                  onClick={() => setShowReportModal(true)}
+                  className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-md text-sm text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
+                >
+                  <Bug className="w-4 h-4 shrink-0" />
+                  <span>Report a Problem</span>
+                </button>
+                {userCanImpersonate && <PreviewRoleSelector collapsed={collapsed} />}
+                <button
+                  onClick={() => base44.auth.logout("/login")}
+                  className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-md text-sm text-sidebar-foreground/50 hover:text-red-400 hover:bg-sidebar-accent w-full transition-colors"
+                >
+                  <LogOut className="w-4 h-4 shrink-0" />
+                  <span>Log Out</span>
+                </button>
+              </div>
+            )}
+          </>
+        )}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-md text-sm text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
