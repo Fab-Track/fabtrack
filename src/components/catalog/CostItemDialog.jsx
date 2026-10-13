@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ChipMultiSelect from "./ChipMultiSelect";
 import CostMethodBox from "./CostMethodBox";
 import { COST_TYPES, USED_AS_OPTIONS, calcCostPerFoot } from "@/lib/costItems";
+import { toast } from "sonner";
 
 const s = (v) => (v == null ? "" : String(v));
 
@@ -65,6 +66,8 @@ export default function CostItemDialog({ open, onOpenChange, item, shapes, costC
     if (!form.cost_type) return setError("Cost type is required.");
     if (form.cost_code_ids.length === 0) return setError("Pick at least one cost code.");
     setBusy(true);
+    setError("");
+    try {
     const method = form.cost_method;
     const data = {
       name: form.name.trim(),
@@ -99,8 +102,13 @@ export default function CostItemDialog({ open, onOpenChange, item, shapes, costC
     if (item) await base44.entities.MaterialPriceList.update(item.id, data);
     else await base44.entities.MaterialPriceList.create({ ...data, organization_id: orgId, active: true });
     setBusy(false);
+    toast.success(item ? "Cost item updated" : "Cost item created");
     onSaved();
     onOpenChange(false);
+    } catch (e) {
+      setBusy(false);
+      setError(e?.message || "Failed to save. Please try again.");
+    }
   }
 
   return (
