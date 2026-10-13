@@ -14,7 +14,7 @@ import MyAccountSection from "@/components/settings/MyAccountSection";
 import ServiceCatalogSection from "@/components/settings/ServiceCatalogSection";
 import AdminActivityLogSection from "@/components/settings/AdminActivityLogSection";
 import JobCostingSection from "@/components/settings/JobCostingSection";
-import { Calculator, BookOpen, Activity, DollarSign, Image, Timer, Paperclip, ListChecks, Globe } from "lucide-react";
+import { Calculator, BookOpen, Activity, DollarSign, Timer, Paperclip, ListChecks, Globe } from "lucide-react";
 import AttachmentCategoriesSection from "@/components/settings/AttachmentCategoriesSection";
 import StripeSettingsSection from "@/components/settings/StripeSettingsSection";
 import JobDetailOptionsSection from "@/components/settings/JobDetailOptionsSection";
@@ -46,7 +46,6 @@ const ALL_SECTIONS = [
 ];
 
 // Style & Materials sub-sections (kept from old settings page)
-import StyleLibrarySection from "@/components/settings/StyleLibrarySection";
 import EstimateContractSection from "@/components/settings/EstimateContractSection";
 import SecuritySection from "@/components/settings/SecuritySection";
 import PayrollSettingsSection from "@/components/settings/PayrollSettingsSection";
