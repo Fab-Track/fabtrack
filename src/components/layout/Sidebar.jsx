@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Kanban, Wrench, Clock,
   FileText, CalendarDays, Calendar, Users, 
   Trophy, ChevronLeft, ChevronRight,
-  Building2, Settings, Menu, X, BarChart2, MessageCircle, MessagesSquare, LogOut, Bug, Shield, CreditCard
+  FileSpreadsheet, BookOpen, Building2, Settings, Menu, X, BarChart2, MessageCircle, MessagesSquare, LogOut, Bug, Shield, CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -24,6 +24,8 @@ const ALL_ITEMS = {
   messages:       { label: "Messages",         icon: MessageCircle,   path: "/messages" },
   jobBoard:       { label: "Job Board",        icon: Kanban,          path: "/jobs" },
   customers:      { label: "Customers",        icon: Users,           path: "/customers" },
+  estimates:      { label: "Estimates",        icon: FileSpreadsheet, path: "/estimates" },
+  catalog:        { label: "Catalog",          icon: BookOpen,        path: "/catalog" },
   conversations:  { label: "Conversations",    icon: MessagesSquare,  path: "/conversations" },
   documents:      { label: "Documents",        icon: FileText,        path: "/documents" },
   reports:        { label: "Reports",          icon: BarChart2,       path: "/reports" },
@@ -44,7 +46,7 @@ const ALL_ITEMS = {
 const ROLE_NAV = {
   admin: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
-    { group: "SALES",       items: ["jobBoard", "customers", "conversations", "documents"] },
+    { group: "SALES",       items: ["jobBoard", "customers", "estimates", "catalog", "conversations", "documents"] },
     { group: "OPERATIONS",  items: ["calendar", "reports", "schedule", "workCenters"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "PAYROLL",     items: ["payroll"] },
@@ -52,7 +54,7 @@ const ROLE_NAV = {
   ],
   owner: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
-    { group: "SALES",       items: ["jobBoard", "customers", "conversations", "documents"] },
+    { group: "SALES",       items: ["jobBoard", "customers", "estimates", "catalog", "conversations", "documents"] },
     { group: "OPERATIONS",  items: ["calendar", "reports", "schedule", "workCenters"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "PAYROLL",     items: ["payroll"] },
@@ -69,7 +71,7 @@ const ROLE_NAV = {
   ],
   estimator: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
-    { group: "SALES",       items: ["jobBoard", "customers", "conversations", "documents"] },
+    { group: "SALES",       items: ["jobBoard", "customers", "estimates", "catalog", "conversations", "documents"] },
     { group: "OPERATIONS",  items: ["calendar", "reports"] },
     { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
@@ -125,7 +127,7 @@ const ROLE_NAV = {
   // fallback for any unrecognized role — same as admin
   user: [
     { group: "OVERVIEW",    items: ["dashboard", "messages"] },
-    { group: "SALES",       items: ["jobBoard", "customers", "conversations", "documents"] },
+    { group: "SALES",       items: ["jobBoard", "customers", "estimates", "catalog", "conversations", "documents"] },
     { group: "OPERATIONS",  items: ["calendar", "reports", "schedule", "workCenters"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
     { group: "PAYROLL",     items: ["payroll"] },

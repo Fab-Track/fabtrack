@@ -35,7 +35,6 @@ const ALL_SECTIONS = [
   { id: "catalog",    label: "Service Catalog",      icon: BookOpen,        ownerOnly: true },
   { id: "contracts",  label: "Estimate Contracts",   icon: ClipboardList,   ownerOnly: true },
   { id: "styles",     label: "Style Library",        icon: Image,           ownerOnly: true },
-  { id: "materials",  label: "Materials",            icon: DollarSign,      ownerOnly: true },
   { id: "payroll_settings", label: "Payroll",        icon: Timer,           ownerOnly: true },
   { id: "security",   label: "Security",             icon: Shield,          ownerOnly: true },
   { id: "stripe",     label: "Stripe Payments",      icon: CreditCard,      ownerOnly: true },
@@ -49,7 +48,6 @@ const ALL_SECTIONS = [
 
 // Style & Materials sub-sections (kept from old settings page)
 import StyleLibrarySection from "@/components/settings/StyleLibrarySection";
-import MaterialsPriceSection from "@/components/settings/MaterialsPriceSection";
 import EstimateContractSection from "@/components/settings/EstimateContractSection";
 import SecuritySection from "@/components/settings/SecuritySection";
 import PayrollSettingsSection from "@/components/settings/PayrollSettingsSection";
@@ -82,7 +80,6 @@ export default function Settings() {
       case "catalog":      return <ServiceCatalogSection />;
       case "contracts":    return <EstimateContractSection />;
       case "styles":       return <StyleLibrarySection />;
-      case "materials":    return <MaterialsPriceSection />;
       case "stripe":       return <StripeSettingsSection />;
       case "quickbooks":   return <QuickBooksSection />;
       case "billing":      return <BillingSection />;
