@@ -74,9 +74,6 @@ export default function MaterialsPriceSection() {
   const [deleteId, setDeleteId] = useState(null);
 
   // Org-level steel price per pound (lives on a dedicated AppSettings row).
-  const [steelPrice, setSteelPrice] = useState("");
-  const [steelDirty, setSteelDirty] = useState(false);
-  const [savingSteel, setSavingSteel] = useState(false);
 
   useEffect(() => {
     base44.auth.me().then(u => setOrgId(u?.organization_id || null)).catch(() => {});
@@ -95,21 +92,14 @@ export default function MaterialsPriceSection() {
   });
   const orgSteelPrice = steelSettingsArr[0]?.steel_price_per_lb ?? 0;
 
-  useEffect(() => {
-    if (steelSettingsArr.length > 0 && steelSettingsArr[0].steel_price_per_lb !== undefined) {
-      setSteelPrice(String(steelSettingsArr[0].steel_price_per_lb ?? ""));
-      setSteelDirty(false);
-    }
-  }, [steelSettingsArr]);
-
   // Org-level railing dimension standards (residential / commercial)
   const [railingStd, setRailingStd] = useState({ res_post_height_in: "", res_picket_length_in: "", comm_post_height_in: "", comm_picket_length_in: "" });
   const [railingStdDirty, setRailingStdDirty] = useState(false);
   const [savingRailingStd, setSavingRailingStd] = useState(false);
 
   const { data: railingStdArr = [] } = useQuery({
-    queryKey: ["appSettings", "railing_standards", orgId],
-    queryFn: () => orgId ? base44.entities.AppSettings.filter({ setting_key: "railing_standards", organization_id: orgId }, undefined, 1) : [],
+    queryKey: ["appSettings", "main", orgId],
+    queryFn: () => orgId ? base44.entities.AppSettings.filter({ setting_key: "main", organization_id: orgId }, undefined, 1) : [],
     enabled: !!orgId,
   });
 
@@ -138,9 +128,9 @@ export default function MaterialsPriceSection() {
       if (existing) {
         await base44.entities.AppSettings.update(existing.id, val);
       } else {
-        await base44.entities.AppSettings.create({ organization_id: orgId, setting_key: "railing_standards", ...val });
+        await base44.entities.AppSettings.create({ organization_id: orgId, setting_key: "main", ...val });
       }
-      qc.invalidateQueries({ queryKey: ["appSettings", "railing_standards"] });
+      qc.invalidateQueries({ queryKey: ["appSettings"] });
       setRailingStdDirty(false);
       toast.success("Railing standards saved");
     } catch {
@@ -216,30 +206,6 @@ export default function MaterialsPriceSection() {
     setSavingId(null);
   }
 
-  async function saveSteelPrice() {
-    if (!orgId) return;
-    setSavingSteel(true);
-    try {
-      const val = parseFloat(steelPrice) || 0;
-      const existing = steelSettingsArr[0];
-      if (existing) {
-        await base44.entities.AppSettings.update(existing.id, { steel_price_per_lb: val });
-      } else {
-        await base44.entities.AppSettings.create({
-          organization_id: orgId,
-          setting_key: "steel_price_per_lb",
-          steel_price_per_lb: val,
-        });
-      }
-      qc.invalidateQueries({ queryKey: ["appSettings", "steel_price_per_lb"] });
-      setSteelDirty(false);
-      toast.success("Steel price saved");
-    } catch {
-      toast.error("Failed to save steel price");
-    }
-    setSavingSteel(false);
-  }
-
   async function handleDelete(mat) {
     try {
       await base44.entities.MaterialPriceList.delete(mat.id);
@@ -278,32 +244,6 @@ export default function MaterialsPriceSection() {
         </div>
         <Button size="sm" className="gap-1.5 shrink-0" onClick={() => setAddOpen(true)}>
           <Plus className="w-4 h-4" /> Add Material
-        </Button>
-      </div>
-
-      {/* Org-level steel price per pound (fallback for per-material $/lb overrides) */}
-      <div className="border rounded-lg p-3 bg-muted/20 flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-[200px]">
-          <Label className="text-xs">Steel price per pound ($/lb)</Label>
-          <p className="text-[11px] text-muted-foreground mb-1.5">
-            Org-level default. Materials use this unless they set their own $/lb override.
-          </p>
-          <Input
-            type="number"
-            step="0.01"
-            className="h-9 text-sm max-w-[160px]"
-            value={steelPrice}
-            onChange={e => { setSteelPrice(e.target.value); setSteelDirty(true); }}
-            placeholder="0.00"
-          />
-        </div>
-        <Button
-          size="sm"
-          className="gap-1.5"
-          disabled={!steelDirty || savingSteel}
-          onClick={saveSteelPrice}
-        >
-          <Save className="w-3.5 h-3.5" /> {savingSteel ? "Saving…" : "Save"}
         </Button>
       </div>
 

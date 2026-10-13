@@ -103,6 +103,44 @@
       "default": 36.5,
       "description": "Org-level railing standard: commercial picket length in inches."
     },
+    "default_target_margin_pct": {
+      "type": "number",
+      "default": 33.3,
+      "description": "Default target margin % that pre-fills every new estimate"
+    },
+    "fuel_price_per_gal": {
+      "type": "number",
+      "description": "Fuel price in $/gal"
+    },
+    "truck_mpg": {
+      "type": "number",
+      "description": "Truck fuel economy in miles per gallon"
+    },
+    "fuel_margin_default": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether margin is applied to fuel by default on new estimates"
+    },
+    "install_hours_per_day": {
+      "type": "number",
+      "default": 8,
+      "description": "Hours per install day"
+    },
+    "job_minimum": {
+      "type": "number",
+      "default": 2000,
+      "description": "Minimum job amount; estimates under this warn"
+    },
+    "deposit_pct": {
+      "type": "number",
+      "default": 50,
+      "description": "Deposit % required to schedule"
+    },
+    "estimate_valid_days": {
+      "type": "number",
+      "default": 30,
+      "description": "Days an estimate stays valid"
+    },
     "qbo_last_poll_at": {
       "type": "string",
       "format": "date-time",

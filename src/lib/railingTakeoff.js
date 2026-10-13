@@ -34,25 +34,23 @@ export function resolveWeightPerFt(material) {
 }
 
 /**
- * Merge multiple AppSettings records into a single settings object.
- * For each field, takes the first record where the value is > 0.
+ * Build the settings object from AppSettings records.
+ * Labor rates and railing standards come from the "main" row only.
  */
 export function resolveSettings(records) {
   if (!records || records.length === 0) return null;
-  const findVal = (field) => {
-    for (const r of records) {
-      if (r[field] != null && r[field] > 0) return r[field];
-    }
-    return 0;
-  };
+  const main = records.find(r => r.setting_key === "main");
+  const mainVal = (field) => (main && main[field] != null && main[field] > 0 ? main[field] : 0);
+  // Steel price stays on its own legacy row (field kept in the database); everything else reads "main" only.
+  const steel = records.find(r => r.steel_price_per_lb > 0)?.steel_price_per_lb || 0;
   return {
-    steel_price_per_lb: findVal("steel_price_per_lb"),
-    res_post_height_in: findVal("res_post_height_in"),
-    res_picket_length_in: findVal("res_picket_length_in"),
-    comm_post_height_in: findVal("comm_post_height_in"),
-    comm_picket_length_in: findVal("comm_picket_length_in"),
-    labor_fab_rate: findVal("labor_fab_rate"),
-    labor_install_rate: findVal("labor_install_rate"),
+    steel_price_per_lb: steel,
+    res_post_height_in: mainVal("res_post_height_in"),
+    res_picket_length_in: mainVal("res_picket_length_in"),
+    comm_post_height_in: mainVal("comm_post_height_in"),
+    comm_picket_length_in: mainVal("comm_picket_length_in"),
+    labor_fab_rate: mainVal("labor_fab_rate"),
+    labor_install_rate: mainVal("labor_install_rate"),
   };
 }
 

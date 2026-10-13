@@ -1,0 +1,45 @@
+{
+  "name": "CostCode",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
+    "code_number": {
+      "type": "string",
+      "description": "Accounting code, e.g. 1000"
+    },
+    "name": {
+      "type": "string",
+      "description": "Cost code name; unique per organization"
+    },
+    "qbo_item_name": {
+      "type": "string",
+      "description": "Linked QuickBooks item name"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "False when archived"
+    }
+  },
+  "required": [
+    "organization_id",
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
+    "read": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
+    "update": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
+    "delete": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    }
+  }
+}

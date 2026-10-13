@@ -13,7 +13,8 @@ import BillingSection from "@/components/settings/BillingSection";
 import MyAccountSection from "@/components/settings/MyAccountSection";
 import ServiceCatalogSection from "@/components/settings/ServiceCatalogSection";
 import AdminActivityLogSection from "@/components/settings/AdminActivityLogSection";
-import { BookOpen, Activity, DollarSign, Image, Timer, Paperclip, ListChecks, Globe } from "lucide-react";
+import JobCostingSection from "@/components/settings/JobCostingSection";
+import { Calculator, BookOpen, Activity, DollarSign, Image, Timer, Paperclip, ListChecks, Globe } from "lucide-react";
 import AttachmentCategoriesSection from "@/components/settings/AttachmentCategoriesSection";
 import StripeSettingsSection from "@/components/settings/StripeSettingsSection";
 import JobDetailOptionsSection from "@/components/settings/JobDetailOptionsSection";
@@ -24,6 +25,7 @@ import QuickBooksSection from "@/components/settings/QuickBooksSection";
 const ALL_SECTIONS = [
   { id: "company",    label: "Company",             icon: Building2,       ownerOnly: true },
   { id: "users",      label: "Users & Roles",        icon: Users,           ownerOnly: true },
+  { id: "job_costing", label: "Job Costing",         icon: Calculator,      ownerOnly: true },
   { id: "employees",  label: "Employees",             icon: UserPlus,        ownerOnly: true },
   { id: "notifications", label: "Notifications",    icon: Bell,            roles: ["owner","admin","shop_manager","estimator","fabricator","accountant"] },
   { id: "templates",  label: "Message Templates",    icon: MessageSquare,   roles: ["owner","admin","estimator"] },
@@ -70,6 +72,7 @@ export default function Settings() {
     switch (active) {
       case "company":      return <CompanySection />;
       case "users":        return <UsersRolesSection />;
+      case "job_costing":  return <JobCostingSection />;
       case "employees":    return <EmployeeInviteSection />;
       case "notifications":return <NotificationsSection isOwner={isOwner} userRole={userRoles[0] || "user"} />;
       case "templates":    return <MessageTemplatesSection />;
