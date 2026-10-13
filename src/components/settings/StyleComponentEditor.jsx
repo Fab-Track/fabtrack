@@ -1,110 +1,72 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import MaterialCombobox from "./MaterialCombobox";
 import AddMaterialDialog from "./AddMaterialDialog";
+import ComponentRow from "./ComponentRow";
+import { computeLayout, costComponent, componentWarnings, resolveSettings } from "@/lib/railingTakeoff";
 
-const COMPONENT_LABELS = ["Top Rail", "Bottom Rail", "Post", "Picket", "Cap", "Other"];
+const money = (n) => `$${(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export default function StyleComponentEditor({ open, onOpenChange, serviceCatalogId, orgId, styleName, displayName }) {
+export default function StyleComponentEditor({ open, onOpenChange, serviceCatalogId, orgId, displayName }) {
   const qc = useQueryClient();
   const [rows, setRows] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [length, setLength] = useState("10");
+  const [isResidential, setIsResidential] = useState(true);
   const [addMatOpen, setAddMatOpen] = useState(false);
   const [addMatRowIdx, setAddMatRowIdx] = useState(null);
+  const enabled = !!orgId && !!serviceCatalogId && open;
 
+  const { data: item } = useQuery({
+    queryKey: ["serviceCatalogItem", serviceCatalogId],
+    queryFn: () => base44.entities.ServiceCatalog.get(serviceCatalogId),
+    enabled,
+  });
   const { data: materials = [] } = useQuery({
     queryKey: ["materialPriceList", orgId],
-    queryFn: () => orgId ? base44.entities.MaterialPriceList.filter({ organization_id: orgId }) : [],
-    enabled: !!orgId && open,
+    queryFn: () => base44.entities.MaterialPriceList.filter({ organization_id: orgId }),
+    enabled,
+  });
+  const { data: settingsRecords = [] } = useQuery({
+    queryKey: ["appSettings", orgId],
+    queryFn: () => base44.entities.AppSettings.filter({ organization_id: orgId }),
+    enabled,
+  });
+  const { data: categories = [] } = useQuery({
+    queryKey: ["catalogCategories", orgId],
+    queryFn: () => base44.entities.CatalogCategory.filter({ organization_id: orgId }, { limit: 500 }),
+    enabled,
   });
 
-  // Resolve the existing component map record. When opened from the Service
-  // Catalog (serviceCatalogId provided), look up by service_catalog_id first;
-  // fall back to style_name so old style-library-keyed records are carried over.
-  // When opened from the Style Library page (only styleName), use the legacy
-  // style_name lookup.
-  const { data: existing } = useQuery({
-    queryKey: ["styleComponentMap", orgId, serviceCatalogId, styleName],
-    queryFn: async () => {
-      if (!orgId) return null;
-      if (serviceCatalogId) {
-        const byCatalog = await base44.entities.StyleComponentMap.filter({ organization_id: orgId, service_catalog_id: serviceCatalogId });
-        if (byCatalog[0]) return byCatalog[0];
-      }
-      if (styleName) {
-        const byStyle = await base44.entities.StyleComponentMap.filter({ organization_id: orgId, style_name: styleName });
-        if (byStyle[0]) return byStyle[0];
-      }
-      return null;
-    },
-    enabled: !!orgId && open && (!!serviceCatalogId || !!styleName),
-  });
+  useEffect(() => { setRows(item?.components || []); }, [item]);
 
-  useEffect(() => {
-    if (existing) {
-      setRows(existing.components || []);
-    } else {
-      setRows([]);
-    }
-  }, [existing]);
+  const isRailing = !!item?.is_railing;
+  const len = parseFloat(length) || 0;
+  const category = categories.find(c => c.id === item?.category_id);
+  const layout = useMemo(
+    () => isRailing ? computeLayout({ catalogItem: item, settings: resolveSettings(settingsRecords), length: len, isResidential, category }) : null,
+    [item, isRailing, settingsRecords, len, isResidential, category]
+  );
+  const results = rows.map(r => costComponent(r, materials.find(m => m.id === r.material_id), layout, len));
+  const total = results.reduce((s, r) => s + (r?.cost || 0), 0);
+  const warnings = isRailing ? componentWarnings(rows, layout) : [];
 
-  function addRow() {
-    setRows(prev => [...prev, { component_label: "Top Rail", material_id: "", material_name: "" }]);
-  }
-
-  function updateRow(idx, field, value) {
-    setRows(prev => prev.map((r, i) => {
-      if (i !== idx) return r;
-      if (field === "material") {
-        return { ...r, material_id: value.id, material_name: value.name };
-      }
-      return { ...r, [field]: value };
-    }));
-  }
-
-  function removeRow(idx) {
-    setRows(prev => prev.filter((_, i) => i !== idx));
-  }
-
-  function moveRow(idx, dir) {
-    setRows(prev => {
-      const next = [...prev];
-      const target = idx + dir;
-      if (target < 0 || target >= next.length) return prev;
-      [next[idx], next[target]] = [next[target], next[idx]];
-      return next;
-    });
-  }
+  const changeRow = (idx, field, value) => setRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: value } : r));
+  const setMaterial = (idx, m) => setRows(prev => prev.map((r, i) => i === idx ? { ...r, material_id: m.id, material_name: m.name } : r));
+  const removeRow = (idx) => setRows(prev => prev.filter((_, i) => i !== idx));
+  const addRow = () => setRows(prev => [...prev, { slot: "Other", label: "", material_id: "", material_name: "", qty_per_unit: 0, fixed_qty: 0, waste_pct: 0 }]);
 
   async function handleSave() {
     setSaving(true);
     try {
-      const payload = {
-        organization_id: orgId,
-        components: rows.filter(r => r.material_id),
-      };
-      if (serviceCatalogId) payload.service_catalog_id = serviceCatalogId;
-      // Preserve style_name from an old record, or set it when saving from the
-      // Style Library page (which passes styleName but no serviceCatalogId).
-      if (existing?.style_name) {
-        payload.style_name = existing.style_name;
-      } else if (!serviceCatalogId && styleName) {
-        payload.style_name = styleName;
-      }
-      if (existing) {
-        await base44.entities.StyleComponentMap.update(existing.id, payload);
-      } else {
-        await base44.entities.StyleComponentMap.create(payload);
-      }
-      qc.invalidateQueries({ queryKey: ["styleComponentMap"] });
-
+      await base44.entities.ServiceCatalog.update(serviceCatalogId, { components: rows.filter(r => r.material_id) });
+      qc.invalidateQueries({ queryKey: ["serviceCatalogItem"] });
+      qc.invalidateQueries({ queryKey: ["serviceCatalog"] });
       onOpenChange(false);
       toast.success("Saved");
     } catch {
@@ -115,83 +77,87 @@ export default function StyleComponentEditor({ open, onOpenChange, serviceCatalo
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+      <SheetContent side="right" className="w-full sm:max-w-4xl overflow-y-auto">
         <SheetHeader className="mb-4">
-          <SheetTitle className="text-base">Components — {displayName || styleName}</SheetTitle>
-          <p className="text-xs text-muted-foreground">Define which materials make up this railing style.</p>
+          <SheetTitle className="text-base">Components — {displayName}</SheetTitle>
+          <p className="text-xs text-muted-foreground">
+            {isRailing ? "Railing slots follow the railing takeoff. Add “Other” lines for plates, anchors, caps." : "Add “Other” lines for the materials in this item."}
+          </p>
         </SheetHeader>
 
-        <div className="space-y-3 pb-8">
-          {rows.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-6">No components yet. Add one below.</p>
-          )}
-          {rows.map((row, idx) => (
-            <div key={idx} className="flex items-start gap-1.5 border rounded-lg p-2.5">
-              <div className="flex flex-col pt-7">
-                <button
-                  onClick={() => moveRow(idx, -1)}
-                  disabled={idx === 0}
-                  className="text-muted-foreground hover:text-foreground disabled:opacity-30"
-                >
-                  <ChevronUp className="w-3.5 h-3.5" />
+        <div className="flex flex-wrap items-center gap-3 mb-3 text-xs">
+          <span className="font-semibold uppercase tracking-wide text-muted-foreground">Test {isRailing ? "length (LF)" : "quantity"}</span>
+          <Input type="number" className="h-8 w-24" value={length} onChange={e => setLength(e.target.value)} />
+          {isRailing && (
+            <div className="flex border rounded-md overflow-hidden">
+              {[true, false].map(v => (
+                <button key={String(v)} type="button" onClick={() => setIsResidential(v)} className={`px-3 py-1.5 font-semibold ${isResidential === v ? "bg-foreground text-background" : ""}`}>
+                  {v ? "Residential" : "Commercial"}
                 </button>
-                <button
-                  onClick={() => moveRow(idx, 1)}
-                  disabled={idx === rows.length - 1}
-                  className="text-muted-foreground hover:text-foreground disabled:opacity-30"
-                >
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <div className="flex-1 space-y-2">
-                <div>
-                  <Label className="text-[10px]">Component Label</Label>
-                  <Select
-                    value={row.component_label}
-                    onValueChange={v => updateRow(idx, "component_label", v)}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="Select label…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {COMPONENT_LABELS.map(c => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-[10px]">Material</Label>
-                  <MaterialCombobox
-                    materials={materials}
-                    value={row.material_id}
-                    onChange={(m) => updateRow(idx, "material", m)}
-                    onAddNew={() => { setAddMatRowIdx(idx); setAddMatOpen(true); }}
-                    componentLabel={row.component_label}
-                  />
-                </div>
-              </div>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 mt-6 text-muted-foreground hover:text-destructive shrink-0"
-                onClick={() => removeRow(idx)}
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
+              ))}
             </div>
-          ))}
+          )}
+        </div>
 
-          <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={addRow}>
-            <Plus className="w-4 h-4" /> Add Component
-          </Button>
-
-          <div className="flex gap-2 pt-2 sticky bottom-0 bg-background py-3 border-t">
-            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button className="flex-1" onClick={handleSave} disabled={saving}>
-              {saving ? "Saving…" : "Save Components"}
-            </Button>
+        {warnings.length > 0 && (
+          <div className="mb-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 space-y-1">
+            {warnings.map(w => <p key={w} className="flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5 shrink-0" />{w}</p>)}
           </div>
+        )}
+
+        <div className="border rounded-lg overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-muted/40 text-[10px] uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2">Slot</th>
+                <th className="px-3 py-2">Cost item</th>
+                <th className="px-3 py-2">How it's counted</th>
+                <th className="px-3 py-2 text-right">Feet / Qty</th>
+                <th className="px-3 py-2 text-right">Cost / ft or /unit</th>
+                <th className="px-3 py-2 text-right">Cost</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 && (
+                <tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-muted-foreground">No components yet.</td></tr>
+              )}
+              {rows.map((row, idx) => (
+                <ComponentRow
+                  key={idx}
+                  row={row}
+                  idx={idx}
+                  isRailing={isRailing}
+                  materials={materials}
+                  layout={layout}
+                  length={len}
+                  result={results[idx]}
+                  onChange={changeRow}
+                  onMaterial={setMaterial}
+                  onRemove={removeRow}
+                  onAddNew={(i) => { setAddMatRowIdx(i); setAddMatOpen(true); }}
+                />
+              ))}
+            </tbody>
+            {rows.length > 0 && (
+              <tfoot>
+                <tr className="border-t bg-muted/20">
+                  <td colSpan={5} className="px-3 py-2 text-right text-xs font-semibold">Materials</td>
+                  <td className="px-3 py-2 text-right font-mono font-bold text-sm">{money(total)}</td>
+                  <td />
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+
+        <Button variant="outline" size="sm" className="mt-3 gap-1.5" onClick={addRow}>
+          <Plus className="w-4 h-4" /> Add component (plates, anchors, caps…)
+        </Button>
+
+        <div className="flex gap-2 pt-4 mt-4 sticky bottom-0 bg-background py-3 border-t">
+          <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button className="flex-1" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save Components"}</Button>
         </div>
 
         <AddMaterialDialog
@@ -200,10 +166,7 @@ export default function StyleComponentEditor({ open, onOpenChange, serviceCatalo
           orgId={orgId}
           onCreated={(mat) => {
             qc.invalidateQueries({ queryKey: ["materialPriceList"] });
-            if (addMatRowIdx !== null) {
-              updateRow(addMatRowIdx, "material", mat);
-              setAddMatRowIdx(null);
-            }
+            if (addMatRowIdx !== null) { setMaterial(addMatRowIdx, mat); setAddMatRowIdx(null); }
           }}
         />
       </SheetContent>

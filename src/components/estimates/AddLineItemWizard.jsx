@@ -117,14 +117,6 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
     enabled: !!orgId,
   });
 
-  // Style → components mapping — auto-fills components when a railing style is chosen.
-  // Keyed by style_name (StyleComponentMap has no style_id field); style_name is unique per org.
-  const { data: styleMapResults = [] } = useQuery({
-    queryKey: ["styleComponentMap", orgId, railingStyle],
-    queryFn: () => base44.entities.StyleComponentMap.filter({ organization_id: orgId, style_name: railingStyle }),
-    enabled: !!orgId && !!selectedItem?.is_railing && !!railingStyle && railingStyle !== "Custom",
-  });
-
   useEffect(() => {
     if (!selectedItem?.is_railing) return;
     // Seed the style name from the catalog item name (e.g. "Columbia Railing" → "Columbia")
@@ -143,10 +135,9 @@ export default function AddLineItemWizard({ open, onClose, onAdd }) {
       setComponents([]);
       return;
     }
-    const map = styleMapResults[0];
-    setComponents((map?.components || []).map(c => ({ component_type: c.component_label, name: c.material_name, material_id: c.material_id })));
+    setComponents((selectedItem.components || []).filter(c => c.slot !== "Other").map(c => ({ component_type: c.slot, name: c.material_name, material_id: c.material_id })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [railingStyle, styleMapResults]);
+  }, [railingStyle, selectedItem]);
 
   // Unique categories sorted by sort_order
   const categories = [...new Set(

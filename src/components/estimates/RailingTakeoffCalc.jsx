@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { computeRailingTakeoff, resolveSettings, findComponentMap } from "@/lib/railingTakeoff";
+import { computeRailingTakeoff, resolveSettings } from "@/lib/railingTakeoff";
 
 export default function RailingTakeoffCalc({ line, orgId, onPriceChange }) {
   // Initialize inputs from saved takeoff data (or line quantity if lnft)
@@ -27,12 +27,6 @@ export default function RailingTakeoffCalc({ line, orgId, onPriceChange }) {
     enabled: !!orgId,
   });
 
-  const { data: maps = [], isLoading: mapLoading } = useQuery({
-    queryKey: ["styleComponentMap", orgId],
-    queryFn: () => orgId ? base44.entities.StyleComponentMap.filter({ organization_id: orgId }) : [],
-    enabled: !!orgId,
-  });
-
   const { data: materials = [], isLoading: matLoading } = useQuery({
     queryKey: ["materialPriceList", orgId],
     queryFn: () => orgId ? base44.entities.MaterialPriceList.filter({ organization_id: orgId }, undefined, 500) : [],
@@ -51,7 +45,6 @@ export default function RailingTakeoffCalc({ line, orgId, onPriceChange }) {
     [catalog, line.service_name]
   );
   const resolvedSettings = useMemo(() => resolveSettings(settingsRecords), [settingsRecords]);
-  const componentMap = useMemo(() => catalogItem ? findComponentMap(maps, catalogItem) : null, [maps, catalogItem]);
   const category = useMemo(
     () => catalogItem?.category_id ? categories.find(c => c.id === catalogItem.category_id) : null,
     [categories, catalogItem]
@@ -60,9 +53,9 @@ export default function RailingTakeoffCalc({ line, orgId, onPriceChange }) {
   // Compute takeoff
   const takeoff = useMemo(() => {
     const len = parseFloat(linearFeet);
-    if (!len || !catalogItem || !componentMap || !resolvedSettings) return null;
-    return computeRailingTakeoff({ catalogItem, componentMap, materials, settings: resolvedSettings, length: len, isResidential, category });
-  }, [linearFeet, isResidential, catalogItem, componentMap, materials, resolvedSettings, category]);
+    if (!len || !catalogItem?.components?.length || !resolvedSettings) return null;
+    return computeRailingTakeoff({ catalogItem, materials, settings: resolvedSettings, length: len, isResidential, category });
+  }, [linearFeet, isResidential, catalogItem, materials, resolvedSettings, category]);
 
   // Call onPriceChange when takeoff changes (use ref to avoid stale closure / infinite loops)
   const onPriceChangeRef = useRef(onPriceChange);
@@ -73,18 +66,18 @@ export default function RailingTakeoffCalc({ line, orgId, onPriceChange }) {
     }
   }, [takeoff]);
 
-  const isLoading = catLoading || setLoading || mapLoading || matLoading;
+  const isLoading = catLoading || setLoading || matLoading;
   if (isLoading) {
     return <div className="text-xs text-muted-foreground py-2">Loading takeoff data…</div>;
   }
 
   // Data missing — fallback to manual pricing
-  if (!catalogItem || !componentMap || !resolvedSettings) {
+  if (!catalogItem || !catalogItem.components?.length || !resolvedSettings) {
     return (
       <div className="border rounded-lg p-3 bg-muted/20 text-xs text-muted-foreground">
         Takeoff data incomplete — using manual pricing.
         {!catalogItem && " Catalog item not found."}
-        {!componentMap && " No component map."}
+        {!catalogItem?.components?.length && " No components."}
         {!resolvedSettings && " Settings not configured."}
         {" Set up materials in Settings → Materials to enable takeoff pricing."}
       </div>

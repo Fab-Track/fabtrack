@@ -80,6 +80,49 @@
       "type": "number",
       "description": "Railing takeoff override: number of horizontal rail runs (top + bottom rails). Null = use category default."
     },
+    "components": {
+      "type": "array",
+      "description": "Ordered component lines for this item. Railing slots (Top Rail, Bottom Rail, Post, Picket) use the railing takeoff; 'Other' lines are counted from qty_per_unit, fixed_qty and waste_pct.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "slot": {
+            "type": "string",
+            "enum": [
+              "Top Rail",
+              "Bottom Rail",
+              "Post",
+              "Picket",
+              "Other"
+            ]
+          },
+          "material_id": {
+            "type": "string",
+            "description": "MaterialPriceList id"
+          },
+          "material_name": {
+            "type": "string",
+            "description": "Denormalized material name"
+          },
+          "label": {
+            "type": "string",
+            "description": "Other only: line label, e.g. Base plate"
+          },
+          "qty_per_unit": {
+            "type": "number",
+            "description": "Other only: quantity per job unit"
+          },
+          "fixed_qty": {
+            "type": "number",
+            "description": "Other only: fixed quantity added once"
+          },
+          "waste_pct": {
+            "type": "number",
+            "description": "Other only: waste as a fraction (0.1 = 10%)"
+          }
+        }
+      }
+    },
     "cost_primary_unit": {
       "type": "string",
       "description": "Display label for the primary pricing unit (e.g. 'Linear Foot', 'Riser', 'sqft')"

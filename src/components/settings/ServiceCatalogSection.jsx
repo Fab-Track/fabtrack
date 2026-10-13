@@ -264,13 +264,6 @@ function CatalogItemForm({ initial = {}, categories, onSave, onCancel, fabRate =
   const [showCostModel, setShowCostModel] = useState(false);
   const [compEditorOpen, setCompEditorOpen] = useState(false);
 
-  // Derive the bare style name (e.g. "Columbia") from the catalog item name
-  // (e.g. "Columbia Railing") for backward-compat lookup in StyleComponentEditor.
-  // Old StyleComponentMap records were keyed by style_name, not service_catalog_id.
-  const styleNameForCompat = initial.name
-    ? initial.name.replace(/\s+railing$/i, "").trim() || null
-    : null;
-
   // Initialize cost model ref from the item
   useEffect(() => {
     costModelRef.current = {
@@ -384,13 +377,13 @@ function CatalogItemForm({ initial = {}, categories, onSave, onCancel, fabRate =
         )}
       </div>
 
-      {/* Components — railing items only, needs a saved catalog item id */}
-      {isRailing && initial.id && (
+      {/* Components — needs a saved catalog item id */}
+      {initial.id && (
         <div className="border rounded-lg p-3 bg-muted/20">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-semibold">Components</p>
-              <p className="text-[11px] text-muted-foreground">Define which materials make up this railing style.</p>
+              <p className="text-[11px] text-muted-foreground">Define which materials make up this item.</p>
             </div>
             <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => setCompEditorOpen(true)}>
               <Settings2 className="w-3 h-3" /> Edit Components
@@ -401,7 +394,6 @@ function CatalogItemForm({ initial = {}, categories, onSave, onCancel, fabRate =
             onOpenChange={setCompEditorOpen}
             serviceCatalogId={initial.id}
             orgId={orgId}
-            styleName={styleNameForCompat}
             displayName={name}
           />
         </div>

@@ -1,8 +1,10 @@
 /**
  * Railing takeoff calculation utilities.
- * Reads from Service Catalog item parameters, StyleComponentMap, MaterialPriceList,
+ * Reads from Service Catalog item parameters and components, MaterialPriceList,
  * and org-level AppSettings to compute hard cost and final price.
  */
+
+export const RAILING_SLOTS = ["Top Rail", "Bottom Rail", "Post", "Picket"];
 
 /**
  * Build the settings object from AppSettings records.
@@ -23,18 +25,6 @@ export function resolveSettings(records) {
 }
 
 /**
- * Find the StyleComponentMap for a catalog item.
- * Tries service_catalog_id first, falls back to derived style_name.
- */
-export function findComponentMap(maps, catalogItem) {
-  if (!maps || !catalogItem) return null;
-  const byCatalogId = maps.find(m => m.service_catalog_id === catalogItem.id);
-  if (byCatalogId) return byCatalogId;
-  const derivedStyleName = catalogItem.name?.replace(/\s+railing$/i, "").trim();
-  return maps.find(m => m.style_name === derivedStyleName) || null;
-}
-
-/**
  * Resolve railing takeoff parameters: style override if not null, else category default.
  */
 export function resolveRailingParams(catalogItem, category) {
@@ -50,11 +40,10 @@ export function resolveRailingParams(catalogItem, category) {
 }
 
 /**
- * Compute railing takeoff from catalog item, component map, materials, settings, and category.
- * Returns a detailed breakdown object, or null if required data is missing.
+ * Railing layout (posts, sections, pickets) for a given length. Returns null if inputs are missing.
  */
-export function computeRailingTakeoff({ catalogItem, componentMap, materials, settings, length, isResidential, category }) {
-  if (!catalogItem || !componentMap || !materials || !settings || !length || length <= 0) return null;
+export function computeLayout({ catalogItem, settings, length, isResidential, category }) {
+  if (!catalogItem || !settings || !length || length <= 0) return null;
 
   const { post_spacing_in, post_width_in, picket_clear_gap_in, picket_width_in, rail_runs } = resolveRailingParams(catalogItem, category);
   if (!post_spacing_in || !post_width_in || !picket_clear_gap_in || !picket_width_in || !rail_runs) return null;
@@ -77,48 +66,78 @@ export function computeRailingTakeoff({ catalogItem, componentMap, materials, se
   const picketsPerSection = Math.ceil((sectionLength * 12 - picket_width_in) / (picket_clear_gap_in + picket_width_in));
   const totalPickets = picketsPerSection * posts;
 
-  // Step 5-6: Feet needed per component type
-  // Top rail = 1 run; bottom rail footage = run length × (rail_runs − 1)
-  const railFeetPerComponent = length; // each rail component gets one rail run = length
-  const postFeet = posts * (postHeight / 12);
-  const picketFeet = totalPickets * (picketLength / 12);
+  return {
+    params: { post_spacing_in, post_width_in, picket_clear_gap_in, picket_width_in, rail_runs },
+    steps: { postsForNet, netLength, posts, sectionLength, picketsPerSection, totalPickets, postHeight, picketLength },
+    // Step 5-6: Feet needed per component type
+    // Each rail component gets one rail run = length
+    railFeet: length,
+    postFeet: posts * (postHeight / 12),
+    picketFeet: totalPickets * (picketLength / 12),
+  };
+}
 
-  // Step 7: Per component cost
-  const componentResults = (componentMap.components || []).map(c => {
-    const mat = materials.find(m => m.id === c.material_id);
-    if (!mat) return null;
+/**
+ * Cost one component line. `layout` may be null for non-railing items (Other lines only).
+ * Returns null if the material is missing or has no usable cost.
+ */
+export function costComponent(c, mat, layout, length) {
+  if (!mat) return null;
+  const slot = c.slot || "Other";
+  const isRail = slot === "Top Rail" || slot === "Bottom Rail";
+  const isPost = slot === "Post";
+  const isPicket = slot === "Picket";
+  const label = slot === "Other" ? (c.label || "Other") : slot;
 
-    const label = (c.component_label || "").toLowerCase();
-    const isRail = label.includes("rail");
-    const isPost = label.includes("post");
-    const isPicket = label.includes("picket");
+  let qty;
+  if (slot === "Other") {
+    // (qty per unit x job quantity + fixed qty) x (1 + waste)
+    qty = ((c.qty_per_unit || 0) * (length || 0) + (c.fixed_qty || 0)) * (1 + (c.waste_pct || 0));
+  } else if (!layout) {
+    return null;
+  }
 
-    // Unit items are costed per piece: cost_per_unit x count.
-    if (mat.cost_method === "unit") {
-      if (!(mat.cost_per_unit > 0)) return null;
-      const qty = isPost ? posts : isPicket ? totalPickets : isRail ? 1 : 0;
-      return {
-        component_label: c.component_label,
-        material_name: mat.name,
-        qty,
-        qty_unit: mat.unit || "unit",
-        unit_cost: mat.cost_per_unit,
-        cost: qty * mat.cost_per_unit,
-      };
-    }
+  // Unit items are costed per piece: cost_per_unit x count.
+  if (mat.cost_method === "unit") {
+    if (!(mat.cost_per_unit > 0)) return null;
+    if (slot !== "Other") qty = isPost ? layout.steps.posts : isPicket ? layout.steps.totalPickets : 1;
+    return { component_label: label, slot, material_name: mat.name, qty, qty_unit: mat.unit || "unit", unit_cost: mat.cost_per_unit, cost: qty * mat.cost_per_unit };
+  }
 
-    // Linear-foot and weight items are both costed from the calculated cost_per_foot.
-    if (!(mat.cost_per_foot > 0)) return null;
-    const feet = isRail ? railFeetPerComponent : isPost ? postFeet : isPicket ? picketFeet : 0;
-    return {
-      component_label: c.component_label,
-      material_name: mat.name,
-      qty: feet,
-      qty_unit: "ft",
-      unit_cost: mat.cost_per_foot,
-      cost: feet * mat.cost_per_foot,
-    };
+  // Linear-foot and weight items are both costed from the calculated cost_per_foot.
+  if (!(mat.cost_per_foot > 0)) return null;
+  if (slot !== "Other") qty = isRail ? layout.railFeet : isPost ? layout.postFeet : layout.picketFeet;
+  return { component_label: label, slot, material_name: mat.name, qty, qty_unit: "ft", unit_cost: mat.cost_per_foot, cost: qty * mat.cost_per_foot };
+}
+
+/**
+ * Warnings for a railing style's component list (display only, never auto-fixed).
+ */
+export function componentWarnings(components, layout) {
+  const list = components || [];
+  const warnings = [];
+  RAILING_SLOTS.forEach(slot => {
+    if (list.filter(c => c.slot === slot).length > 1) warnings.push(`More than one line in the ${slot} slot.`);
   });
+  const hasPosts = layout ? layout.steps.posts > 0 : true;
+  const hasPickets = layout ? layout.steps.totalPickets > 0 : true;
+  if (hasPosts && !list.some(c => c.slot === "Post")) warnings.push("This style has posts but no Post line.");
+  if (hasPickets && !list.some(c => c.slot === "Picket")) warnings.push("This style has pickets but no Picket line.");
+  return warnings;
+}
+
+/**
+ * Compute railing takeoff from catalog item (its components), materials, settings, and category.
+ * Returns a detailed breakdown object, or null if required data is missing.
+ */
+export function computeRailingTakeoff({ catalogItem, materials, settings, length, isResidential, category }) {
+  if (!catalogItem || !materials || !settings) return null;
+  const layout = computeLayout({ catalogItem, settings, length, isResidential, category });
+  if (!layout) return null;
+
+  const componentResults = (catalogItem.components || []).map(c =>
+    costComponent(c, materials.find(m => m.id === c.material_id), layout, length)
+  );
 
   // If any component failed to resolve, return null (fallback to manual)
   if (componentResults.some(c => c === null)) return null;
@@ -135,8 +154,8 @@ export function computeRailingTakeoff({ catalogItem, componentMap, materials, se
 
   return {
     inputs: { length, isResidential },
-    params: { post_spacing_in, post_width_in, picket_clear_gap_in, picket_width_in, rail_runs },
-    steps: { postsForNet, netLength, posts, sectionLength, picketsPerSection, totalPickets, postHeight, picketLength },
+    params: layout.params,
+    steps: layout.steps,
     components: componentResults,
     materialCost,
     fabCost,
