@@ -1,342 +1,81 @@
 import jsPDF from "jspdf";
 import { format, parseISO } from "date-fns";
+import { money } from "@/lib/costGroups";
 
-// Generates a formatted, paginated PDF of an estimate — mirrors the
-// EstimateCustomerView layout. Used so users can download a copy to email/text
-// to the customer manually.
-export async function generateEstimatePDF({ estimate, job, customer, businessInfo }) {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
-  const pageW = 215.9;
-  const pageH = 279.4;
-  const margin = 18;
-  const contentW = pageW - margin * 2;
-  const BOTTOM_MARGIN = 20;
-  const usableBottom = pageH - BOTTOM_MARGIN;
-  const LINE_H = 5.5;
+// PDF of the customer estimate. Takes the allow-listed customer doc
+// (see buildCustomerDoc) so it can never contain internal costing.
+export function generateEstimatePDF(d) {
+  const doc = new jsPDF({ unit: "mm", format: "letter" });
+  const W = 215.9, M = 18, bottom = 262;
+  const colX = { loc: 98, qty: 150, amt: W - M };
+  let y = 24;
 
-  const estNum = estimate?.estimate_number || "EST-DRAFT";
-  const status = estimate?.status || "Draft";
-  const lines = estimate?.line_items || [];
-  const viewMode = estimate?.view_mode || "summary";
+  const brk = (need) => { if (y + need > bottom) { doc.addPage(); y = 24; } };
+  const txt = (t, x, o) => doc.text(String(t), x, y, o);
 
-  const subtotal = lines.reduce((s, l) => s + (l.total || 0), 0);
-  const discountPct = estimate?.discount_percent || 0;
-  const discountAmt = subtotal * (discountPct / 100);
-  const afterDiscount = subtotal - discountAmt;
-  const markupPct = estimate?.markup_percent || 0;
-  const markupAmt = afterDiscount * (markupPct / 100);
-  const afterMarkup = afterDiscount + markupAmt;
-  const overheadPct = estimate?.overhead_percent || 0;
-  const overheadAmt = afterMarkup * (overheadPct / 100);
-  const afterOverhead = afterMarkup + overheadAmt;
-  const taxPct = estimate?.tax_percent || 0;
-  const taxAmt = afterOverhead * (taxPct / 100);
-  const total = afterOverhead + taxAmt;
-  const companyTitle = businessInfo?.name || "High Country Metal Works";
-
-  // Load org logo (if any) for embedding in the PDF header
-  let logoDataUrl = null;
-  let logoProps = null;
-  if (businessInfo?.logo_url) {
-    try {
-      const res = await fetch(businessInfo.logo_url, { mode: "cors" });
-      if (res.ok) {
-        const blob = await res.blob();
-        logoDataUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-        logoProps = doc.getImageProperties(logoDataUrl);
-      }
-    } catch {
-      logoDataUrl = null;
-      logoProps = null;
-    }
-  }
-
-  function drawContinuationHeader() {
-    doc.setFillColor(34, 47, 62);
-    doc.rect(0, 0, pageW, 14, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.text(companyTitle, margin, 9);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
-    doc.setTextColor(200, 210, 220);
-    doc.text(`${estNum}  ·  ESTIMATE — continued`, pageW - margin, 9, { align: "right" });
-  }
-
-  function checkBreak(neededSpace = LINE_H) {
-    if (y + neededSpace > usableBottom) {
-      doc.addPage();
-      drawContinuationHeader();
-      y = 22;
-    }
-  }
-
-  let y = 0;
-
-  // Page 1 header
-  doc.setFillColor(34, 47, 62);
-  doc.rect(0, 0, pageW, 38, "F");
-
-  let textX = margin;
-  if (logoDataUrl && logoProps) {
-    const maxH = 20;
-    const maxW = 42;
-    const ratio = logoProps.width / logoProps.height;
-    let lh = maxH;
-    let lw = lh * ratio;
-    if (lw > maxW) { lw = maxW; lh = lw / ratio; }
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(margin, 9, lw + 4, lh + 4, 1.5, 1.5, "F");
-    doc.addImage(logoDataUrl, logoProps.fileType || "PNG", margin + 2, 11, lw, lh);
-    textX = margin + lw + 8;
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(13);
-    doc.setFont("helvetica", "bold");
-    doc.text(companyTitle, textX, 17);
-    let detailY = 23;
-    if (businessInfo?.address) {
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(200, 210, 220);
-      doc.text(doc.splitTextToSize(businessInfo.address, 70), textX, detailY);
-      detailY += 5;
-    }
-    if (businessInfo?.phone) {
-      doc.text(businessInfo.phone, textX, detailY);
-    }
-  } else {
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text(companyTitle, margin, 16);
-    if (businessInfo?.address) {
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(200, 210, 220);
-      doc.text(businessInfo.address, margin, 22);
-    }
-    if (businessInfo?.phone) {
-      doc.text(businessInfo.phone, margin, 27);
-    }
-  }
-
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(200, 210, 220);
-  doc.text("ESTIMATE", pageW - margin, 11, { align: "right" });
-  doc.setFontSize(13);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(255, 255, 255);
-  doc.text(estNum, pageW - margin, 19, { align: "right" });
-  doc.setFontSize(8);
-  doc.setTextColor(240, 240, 240);
-  doc.text(status, pageW - margin, 26, { align: "right" });
-
-  y = 50;
-
-  // Bill To + Dates
-  doc.setTextColor(100, 110, 120);
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "bold");
-  doc.text("BILL TO", margin, y);
-  const rightColX = margin + contentW * 0.55;
-  doc.text("JOB DETAILS", rightColX, y);
-
+  doc.setFont("helvetica", "bold"); doc.setFontSize(16);
+  txt(d.business.name, M);
+  doc.setFont("courier", "normal"); doc.setFontSize(10);
+  txt(d.estimate_number, W - M, { align: "right" });
   y += 5;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9.5);
-  doc.setTextColor(30, 40, 50);
-  const billStartY = y;
-  doc.text(customer?.name || job?.customer_name || "—", margin, y);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  doc.setTextColor(80, 90, 100);
-  if (customer?.email) { y += 5; doc.text(customer.email, margin, y); }
-  if (customer?.phone) { y += 4.5; doc.text(customer.phone, margin, y); }
-  if (customer?.address) { y += 4.5; doc.text(customer.address, margin, y); }
-
-  let ry = billStartY;
-  doc.setFontSize(8.5);
-  doc.setTextColor(80, 90, 100);
-  if (job?.job_name) { doc.text(`Job: ${job.job_name}`, rightColX, ry); ry += 5; }
-  if (estimate?.estimate_date) { doc.text(`Date: ${format(parseISO(estimate.estimate_date), "MMM d, yyyy")}`, rightColX, ry); ry += 5; }
-  if (estimate?.expiration_date) { doc.text(`Expires: ${format(parseISO(estimate.expiration_date), "MMM d, yyyy")}`, rightColX, ry); ry += 5; }
-
-  y = Math.max(y, ry) + 10;
-
-  // Divider
-  doc.setDrawColor(220, 225, 230);
-  doc.setLineWidth(0.3);
-  doc.line(margin, y, pageW - margin, y);
-  y += 7;
-
-  // Preload line-item reference photos (only those flagged to show on the estimate)
-  const linePhotos = {};
-  await Promise.all(lines.map(async (line, idx) => {
-    if (!line.photo_url || line.show_photo === false) return;
-    try {
-      const res = await fetch(line.photo_url, { mode: "cors" });
-      if (!res.ok) return;
-      const blob = await res.blob();
-      const dataUrl = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-      linePhotos[idx] = { dataUrl, props: doc.getImageProperties(dataUrl) };
-    } catch {
-      // skip photos that fail to load
-    }
-  }));
-
-  // Line items header
-  doc.setFillColor(245, 247, 249);
-  doc.rect(margin, y - 3, contentW, 8, "F");
-  doc.setFontSize(7.5);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(100, 110, 120);
-
-  if (viewMode === "summary") {
-    doc.text("DESCRIPTION", margin + 2, y + 2);
-    doc.text("QTY", margin + contentW * 0.72, y + 2, { align: "right" });
-    doc.text("AMOUNT", pageW - margin - 2, y + 2, { align: "right" });
-  } else {
-    doc.text("DESCRIPTION", margin + 2, y + 2);
-    doc.text("QTY", margin + contentW * 0.55, y + 2, { align: "right" });
-    doc.text("UNIT COST", margin + contentW * 0.72, y + 2, { align: "right" });
-    doc.text("AMOUNT", pageW - margin - 2, y + 2, { align: "right" });
-  }
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(100);
+  txt(d.business.address || "", M);
+  txt(`Valid ${d.valid_days} days`, W - M, { align: "right" });
+  doc.setTextColor(0);
   y += 10;
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
+  doc.setFillColor(244, 242, 238); doc.rect(M, y - 4.5, W - M * 2, 7, "F");
+  doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(100);
+  txt("DESCRIPTION", M + 2); txt("INSTALL LOCATION", colX.loc); txt("QTY", colX.qty, { align: "right" }); txt("AMOUNT", colX.amt, { align: "right" });
+  doc.setTextColor(0);
+  y += 8;
 
-  lines.forEach((line, idx) => {
-    const desc = line.description || "—";
-    const descLines = doc.splitTextToSize(desc, contentW * 0.55);
-    const rowH = descLines.length > 1 ? descLines.length * LINE_H + 2 : 7;
-    checkBreak(rowH);
-
-    if (idx % 2 === 1) {
-      doc.setFillColor(249, 250, 251);
-      doc.rect(margin, y - 3, contentW, rowH, "F");
-    }
-    doc.setTextColor(30, 40, 50);
-    doc.text(descLines, margin + 2, y);
-
-    if (viewMode === "summary") {
-      doc.setTextColor(80, 90, 100);
-      doc.text(String(line.quantity || 0), margin + contentW * 0.72, y, { align: "right" });
-      doc.setTextColor(30, 40, 50);
-      doc.text(`$${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`, pageW - margin - 2, y, { align: "right" });
-    } else {
-      doc.setTextColor(80, 90, 100);
-      doc.text(`${line.quantity || 0} ${line.unit || ""}`.trim(), margin + contentW * 0.55, y, { align: "right" });
-      doc.text(`$${(line.unit_cost || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`, margin + contentW * 0.72, y, { align: "right" });
-      doc.setTextColor(30, 40, 50);
-      doc.text(`$${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`, pageW - margin - 2, y, { align: "right" });
-    }
-    y += rowH;
-
-    // Reference photo (optional — shown to customer on the estimate)
-    if (linePhotos[idx]) {
-      const { dataUrl, props } = linePhotos[idx];
-      const maxImgW = contentW * 0.45;
-      const maxImgH = 28;
-      const ratio = props.width / props.height;
-      let ih = maxImgH;
-      let iw = ih * ratio;
-      if (iw > maxImgW) { iw = maxImgW; ih = iw / ratio; }
-      checkBreak(ih + 8);
-      doc.setDrawColor(220, 225, 230);
-      doc.setLineWidth(0.3);
-      doc.roundedRect(margin + 1, y, iw + 4, ih + 4, 1, 1, "S");
-      try {
-        doc.addImage(dataUrl, props.fileType || "PNG", margin + 3, y + 2, iw, ih);
-      } catch {
-        // skip unrenderable images
-      }
-      y += ih + 8;
-    }
+  d.lines.forEach((l) => {
+    const desc = doc.splitTextToSize(l.description || "", 76);
+    brk(8 + desc.length * 4);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(9.5);
+    txt(`${l.name}${l.color ? " — " + l.color : ""}`, M + 2);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    txt(l.location || "—", colX.loc);
+    txt(`${l.qty} ${l.unit}`.trim(), colX.qty, { align: "right" });
+    doc.setFont("helvetica", "bold"); txt(money(l.amount), colX.amt, { align: "right" });
+    doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(90);
+    desc.forEach((ln) => { y += 4; txt(ln, M + 2); });
+    doc.setTextColor(0);
+    y += 3;
+    doc.setDrawColor(225); doc.line(M, y, W - M, y);
+    y += 6;
   });
 
-  checkBreak(10);
-  doc.setDrawColor(220, 225, 230);
-  doc.setLineWidth(0.3);
-  doc.line(margin, y, pageW - margin, y);
-  y += 6;
+  brk(60);
+  const row = (label, val, bold, size = 10) => {
+    doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(size);
+    txt(label, 120); txt(val, colX.amt, { align: "right" }); y += size > 10 ? 8 : 6;
+  };
+  y += 2;
+  row("Subtotal", money(d.subtotal));
+  row("Total", money(d.total), true, 13);
+  row(`${d.deposit_pct}% deposit to schedule`, money(d.deposit));
+  row(`Balance on completion · ${d.terms}`, money(d.balance));
 
-  // Totals
-  const totalsX = margin + contentW * 0.58;
-  const totalsValX = pageW - margin - 2;
-
-  function totalsRow(label, value, bold = false, color = null) {
-    checkBreak(7);
-    if (color) doc.setTextColor(...color);
-    else doc.setTextColor(80, 90, 100);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", bold ? "bold" : "normal");
-    doc.text(label, totalsX, y);
-    doc.text(value, totalsValX, y, { align: "right" });
-    y += 6;
-  }
-
-  totalsRow("Subtotal", `$${subtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`);
-  if (discountPct > 0) totalsRow(`Discount (${discountPct}%)`, `−$${discountAmt.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, false, [180, 50, 50]);
-  if (markupPct > 0) totalsRow(`Markup (${markupPct}%)`, `+$${markupAmt.toLocaleString("en-US", { minimumFractionDigits: 2 })}`);
-  if (overheadPct > 0) totalsRow(`Overhead (${overheadPct}%)`, `+$${overheadAmt.toLocaleString("en-US", { minimumFractionDigits: 2 })}`);
-  if (taxPct > 0) totalsRow(`Tax (${taxPct}%)`, `+$${taxAmt.toLocaleString("en-US", { minimumFractionDigits: 2 })}`);
-
-  checkBreak(10);
-  doc.setDrawColor(180, 185, 195);
-  doc.line(totalsX, y, totalsValX, y);
+  y += 6; brk(40);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); txt("Project Agreement", M); y += 5;
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+  doc.splitTextToSize(`By signing, you accept this estimate and the ${d.business.name} Project Agreement, including the ${d.deposit_pct}% deposit required to schedule your project.`, W - M * 2)
+    .forEach((ln) => { txt(ln, M); y += 4.5; });
   y += 4;
-  totalsRow("Total", `$${total.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, true, [30, 40, 50]);
-
-  y += 8;
-
-  // Notes
-  if (estimate?.notes) {
-    const noteLines = doc.splitTextToSize(estimate.notes, contentW - 8);
-    const noteH = noteLines.length * LINE_H + 14;
-    checkBreak(noteH);
-    doc.setFillColor(248, 249, 250);
-    doc.rect(margin, y, contentW, noteH, "F");
-    doc.setFontSize(7.5);
+  if (d.signed) {
+    const drawn = d.signed.signature?.startsWith("svg:");
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(100, 110, 120);
-    doc.text("NOTES", margin + 4, y + 6);
+    txt(`Signed by ${d.signed.printed_name}${drawn ? "" : ` (${d.signed.signature})`}`, M); y += 5;
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
-    doc.setTextColor(40, 50, 60);
-    doc.text(noteLines, margin + 4, y + 12);
-    y += noteH + 8;
+    txt(`Signed ${format(parseISO(d.signed.approved_at), "MMMM d, yyyy")}`, M);
+  } else {
+    doc.setDrawColor(150);
+    doc.line(M, y + 8, M + 80, y + 8); doc.line(M + 100, y + 8, W - M, y + 8);
+    doc.setFontSize(8); doc.setTextColor(100);
+    y += 12; txt("Printed name", M); txt("Signature", M + 100);
   }
 
-  // Signature block
-  checkBreak(24);
-  doc.setFontSize(7.5);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(100, 110, 120);
-  doc.text("SIGNATURE & AUTHORIZATION", margin, y);
-  y += 8;
-  doc.setDrawColor(120, 125, 135);
-  doc.setLineWidth(0.3);
-  const sigW = (contentW - 10) / 2;
-  doc.line(margin, y + 12, margin + sigW, y + 12);
-  doc.line(margin + sigW + 10, y + 12, margin + contentW, y + 12);
-  doc.setFontSize(7);
-  doc.setTextColor(100, 110, 120);
-  doc.text("Customer Signature", margin, y + 16);
-  doc.text("Printed Name", margin + sigW + 10, y + 16);
-
-  const filename = `${estNum}_${job?.job_name?.replace(/\s+/g, "_") || "Estimate"}.pdf`;
-  doc.save(filename);
+  doc.save(`${d.estimate_number || "estimate"}.pdf`);
 }

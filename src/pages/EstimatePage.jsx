@@ -12,7 +12,8 @@ import { useBackwardMoveGuard } from "@/lib/useBackwardMoveGuard.jsx";
 import { useAuth } from "@/lib/AuthContext";
 import { useWriteOrgId } from "@/lib/orgContext";
 import { useJobDetailConfig } from "@/hooks/useJobDetailConfig";
-import EstimateCustomerView from "@/components/estimates/EstimateCustomerView";
+import CustomerEstimateDoc from "@/components/estimates/customer/CustomerEstimateDoc";
+import { buildCustomerDoc } from "@/lib/customerEstimate";
 import SendEstimatePanel from "@/components/estimates/SendEstimatePanel";
 import { generateEstimatePDF } from "@/lib/estimatePdf";
 import useCostGroupData from "@/components/catalog/costgroups/useCostGroupData";
@@ -105,6 +106,11 @@ export default function EstimatePage() {
     queryFn: () => base44.entities.Organization.get(user.organization_id),
     enabled: !!user?.organization_id,
   });
+  const { data: contractSettings } = useQuery({
+    queryKey: ["appSettings", "estimate_settings", user?.organization_id],
+    queryFn: () => base44.entities.AppSettings.filter({ setting_key: "estimate_settings", organization_id: user.organization_id }).then((r) => r[0] || null),
+    enabled: !!user?.organization_id,
+  });
   const businessInfo = org
     ? { name: org.name, logo_url: org.logo_url || null, address: org.address || null, phone: org.phone || null }
     : { name: "High Country Metal Works", logo_url: null, address: null, phone: null };
@@ -184,6 +190,7 @@ export default function EstimatePage() {
         line_items: outLines(priced), subtotal, discount_percent: discount, markup_percent: markup, overhead_percent: overhead, tax_percent: tax, total,
         target_margin_pct: estMargin, miles_one_way: num(miles), extra_trips: num(extra), fuel_margin: fuelMargin,
         fuel_price_per_gal_snapshot: fuelPrice, truck_mpg_snapshot: mpg, fuel_cost: fuel.cost, fuel_price: fuel.price, total_hard_cost: r2(hardTotal),
+        ...(existingEstimate?.share_token ? {} : { share_token: crypto.randomUUID().replace(/-/g, "") }),
         notes, internal_notes: internalNotes, customer_signature: signature, view_mode: viewMode,
         ...(finalStatus === "Approved" ? { approved_date: approvedDate || new Date().toISOString().split("T")[0] } : {}),
       };
@@ -253,9 +260,14 @@ export default function EstimatePage() {
   }));
   const estimateForView = {
     ...(existingEstimate || {}), status, line_items: publicLines(priced),
-    discount_percent: discount, markup_percent: markup, overhead_percent: overhead, tax_percent: tax, total,
+    discount_percent: discount, markup_percent: markup, overhead_percent: overhead, tax_percent: tax, subtotal, total,
     notes, view_mode: viewMode, estimate_number: estimateNumber, estimate_date: estimateDate, expiration_date: expirationDate, customer_signature: signature,
   };
+  const customerDoc = buildCustomerDoc({
+    estimate: estimateForView, settings, customer, businessInfo,
+    agreementText: existingEstimate?.agreement_text_snapshot ?? contractSettings?.estimate_contract_text,
+  });
+  const signedAt = existingEstimate?.status === "Approved" && existingEstimate?.approved_at ? existingEstimate : null;
 
   if (!job) return <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">Loading…</div>;
 
@@ -270,6 +282,11 @@ export default function EstimatePage() {
           <div>
             <p className="text-xs font-mono text-muted-foreground">{estimateNumber || "Number assigned on first save"} · auto-numbered</p>
             <h1 className="text-3xl font-bold">{job.job_name}</h1>
+            {signedAt && (
+              <p className="text-sm text-emerald-700 font-medium mt-1 flex items-center gap-1">
+                <CheckCircle2 className="w-4 h-4" />Signed by {signedAt.customer_printed_name || signedAt.customer_signature} on {format(new Date(signedAt.approved_at), "MMM d, yyyy")}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Badge className={status === "Approved" ? "bg-emerald-100 text-emerald-800" : status === "Sent" ? "bg-blue-100 text-blue-800" : "bg-muted text-muted-foreground"}>{status}</Badge>
@@ -289,12 +306,12 @@ export default function EstimatePage() {
             <button type="button" className={seg(view === "internal")} onClick={() => setView("internal")}>Internal view</button>
             <button type="button" className={seg(view === "customer")} onClick={() => setView("customer")}>Customer view</button>
           </div>
-          <div className="flex items-center gap-2">
+          {view === "customer" ? <span className="text-xs text-blue-900">This is exactly what the customer receives — no costs, no margin.</span> : <div className="flex items-center gap-2">
             <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Target margin</span>
             <Input type="number" step="any" disabled={frozen} className="w-24 h-11 text-lg text-right font-mono border-2 border-primary" value={estMargin} onChange={(e) => setTargetMargin(e.target.value === "" ? 0 : parseFloat(e.target.value))} />
             <span className="font-bold">%</span>
             <span className="text-xs text-muted-foreground">default from Settings</span>
-          </div>
+          </div>}
         </div>
 
         {view === "internal" ? (
@@ -326,11 +343,11 @@ export default function EstimatePage() {
         ) : (
           <div className="max-w-4xl mx-auto w-full">
             <div className="flex justify-end mb-3">
-              <Button size="sm" variant="outline" onClick={() => generateEstimatePDF({ estimate: estimateForView, job, customer, businessInfo })}><Download className="w-4 h-4 mr-1.5" />Download PDF</Button>
+              <Button size="sm" variant="outline" onClick={() => generateEstimatePDF(customerDoc)}><Download className="w-4 h-4 mr-1.5" />Download PDF</Button>
             </div>
-            <EstimateCustomerView estimate={estimateForView} job={job} customer={customer} businessInfo={businessInfo} />
+            <CustomerEstimateDoc doc={customerDoc} preview />
             {sendPanelOpen && (
-              <SendEstimatePanel estimate={estimateForView} job={job} customer={customer} businessInfo={businessInfo} onClose={() => setSendPanelOpen(false)}
+              <SendEstimatePanel customerDoc={customerDoc} estimate={estimateForView} job={job} customer={customer} businessInfo={businessInfo} onClose={() => setSendPanelOpen(false)}
                 onSent={(email) => {
                   setSendPanelOpen(false);
                   setLines(priced);

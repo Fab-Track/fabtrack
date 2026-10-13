@@ -87,26 +87,43 @@ Deno.serve(async (req) => {
 
     let documentPayload;
     if (type === 'estimate') {
+      // Allow-list: only these fields are ever sent to the customer.
+      let mainSettings: any = {};
+      try {
+        const m = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'main', organization_id: doc.organization_id });
+        mainSettings = m[0] || {};
+      } catch { mainSettings = {}; }
+      const lines = (doc.line_items || []).map((l: any) => ({
+        name: l.service_name || '',
+        color: l.color || '',
+        description: l._is_fuel ? '' : (l.description || ''),
+        location: l._is_fuel || !l.install_location || l.install_location === 'N/A' ? '' : l.install_location,
+        qty: l._is_fuel ? 1 : l.quantity,
+        unit: l._is_fuel ? '' : (l.unit || ''),
+        amount: l.total || 0,
+        is_fuel: !!l._is_fuel,
+      }));
+      const total = doc.total || 0;
+      const depositPct = mainSettings.deposit_pct ?? 50;
+      const deposit = Math.round(total * depositPct) / 100;
       documentPayload = {
-        id: doc.id,
         share_token: doc.share_token || null,
-        estimate_number: doc.estimate_number || null,
-        estimate_date: doc.estimate_date || null,
-        expiration_date: doc.expiration_date || null,
+        business: { name: businessInfo?.name || 'High Country Metal Works', address: businessInfo?.address || '' },
+        estimate_number: doc.estimate_number || '',
+        valid_days: mainSettings.estimate_valid_days ?? 30,
         status: doc.status || 'Draft',
-        line_items: publicLines,
-        view_mode: doc.view_mode || 'summary',
-        discount_percent: doc.discount_percent || 0,
-        markup_percent: doc.markup_percent || 0,
-        overhead_percent: doc.overhead_percent || 0,
-        tax_percent: doc.tax_percent || 0,
-        total: doc.total || 0,
-        notes: doc.notes || '',
-        customer_signature: doc.customer_signature || null,
-        customer_printed_name: doc.customer_printed_name || null,
-        approved_date: doc.approved_date || null,
-        approved_at: doc.approved_at || null,
-        approval_method: doc.approval_method || null,
+        lines,
+        subtotal: doc.subtotal ?? lines.reduce((s: number, l: any) => s + l.amount, 0),
+        total,
+        deposit_pct: depositPct,
+        deposit,
+        balance: Math.round((total - deposit) * 100) / 100,
+        terms: customer?.payment_terms === 'Custom' ? `Net ${customer.payment_terms_custom_days || 0}` : (customer?.payment_terms || 'Net 15'),
+        // After signing, show the exact text that was signed
+        agreement_text: doc.status === 'Approved' && doc.agreement_text_snapshot != null ? doc.agreement_text_snapshot : (contractText || ''),
+        signed: doc.status === 'Approved' && doc.approved_at
+          ? { printed_name: doc.customer_printed_name || doc.customer_signature || '', signature: doc.customer_signature || '', approved_at: doc.approved_at }
+          : null,
       };
     } else {
       documentPayload = {

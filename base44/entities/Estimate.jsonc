@@ -316,7 +316,7 @@
     },
     "customer_signature": {
       "type": "string",
-      "description": "Customer typed full name (digital signature)"
+      "description": "Customer signature: typed name, or 'svg:<path data>' for a drawn signature"
     },
     "customer_printed_name": {
       "type": "string",
@@ -327,9 +327,14 @@
       "enum": [
         "Customer Signed",
         "Verbal Approval",
-        "Email Approval"
+        "Email Approval",
+        "e-sign"
       ],
-      "description": "How the estimate was approved (internal override)"
+      "description": "How the estimate was approved; e-sign = signed on the customer link"
+    },
+    "agreement_text_snapshot": {
+      "type": "string",
+      "description": "Exact Project Agreement text the customer saw when signing"
     },
     "approved_by_name": {
       "type": "string",

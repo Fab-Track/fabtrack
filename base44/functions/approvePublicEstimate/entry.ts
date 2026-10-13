@@ -116,7 +116,7 @@ async function autoMoveSalesStage(base44, job, toStage, triggerNote, actorName) 
 // then fires an in-app bell Notification + an email alert to each when an estimate
 // is signed via the public customer link. Failures are swallowed so the approval
 // itself never breaks.
-async function notifyEstimateSigned(base44, job, estimate, customerName) {
+async function notifyEstimateSigned(base44, job, estimate, customerName, emailEnabled) {
   const orgId = estimate.organization_id;
   if (!orgId || !job) return;
 
@@ -176,7 +176,8 @@ async function notifyEstimateSigned(base44, job, estimate, customerName) {
       });
     } catch { /* non-fatal */ }
 
-    // 2) Email alert (via org's Resend config)
+    // 2) Email alert (via org's Resend config) — only when enabled in Settings
+    if (!emailEnabled) continue;
     try {
       const html = `<p>Hi ${recipient.full_name || 'there'},</p>
 <p><strong>${customerName}</strong> just signed the estimate for <strong>${jobLabel}</strong>.</p>
@@ -196,10 +197,17 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json();
-    const { token, customerName } = body;
+    const { token, signature, agreed } = body;
+    const customerName = String(body.printedName || '').trim().slice(0, 200);
 
     if (!token || !customerName) {
-      return Response.json({ error: 'token and customerName are required' }, { status: 400 });
+      return Response.json({ error: 'Printed name is required' }, { status: 400 });
+    }
+    if (!signature || typeof signature !== 'string' || signature.length > 20000) {
+      return Response.json({ error: 'A signature is required' }, { status: 400 });
+    }
+    if (agreed !== true) {
+      return Response.json({ error: 'You must agree to the Project Agreement' }, { status: 400 });
     }
 
     let estimate = null;
@@ -218,14 +226,26 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'This estimate has already been approved' }, { status: 400 });
     }
 
+    // Agreement text is read server-side so the snapshot is exactly what the page showed
+    let agreementText = '';
+    let emailEnabled = false;
+    try {
+      const s = await base44.asServiceRole.entities.AppSettings.filter({
+        setting_key: 'estimate_settings', organization_id: estimate.organization_id,
+      });
+      agreementText = s[0]?.estimate_contract_text || '';
+      emailEnabled = s[0]?.estimate_approval_email_enabled === true;
+    } catch { /* non-fatal */ }
+
     const now = new Date().toISOString();
     const estimateUpdate = {
       status: 'Approved',
-      customer_signature: customerName,
+      customer_signature: signature,
       customer_printed_name: customerName,
       approved_date: now.split('T')[0],
       approved_at: now,
-      approval_method: 'Customer Signed',
+      approval_method: 'e-sign',
+      agreement_text_snapshot: agreementText,
     };
     await base44.asServiceRole.entities.Estimate.update(estimateId, estimateUpdate);
 
@@ -247,11 +267,11 @@ Deno.serve(async (req) => {
         );
 
         // ── Notify assigned estimator/rep + org owners/admins ──
-        await notifyEstimateSigned(base44, job, estimate, customerName);
+        await notifyEstimateSigned(base44, job, estimate, customerName, emailEnabled);
       }
     }
 
-    return Response.json({ success: true, ...estimateUpdate });
+    return Response.json({ success: true, approved_at: now });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
