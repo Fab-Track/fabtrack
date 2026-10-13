@@ -1,33 +1,34 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, Trash2, Send, AlignJustify, LayoutList, CheckCircle2, Save } from "lucide-react";
+import { Download, Plus, Send, Save, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { format, addDays, parseISO } from "date-fns";
+import { format, addDays } from "date-fns";
 import { useBackwardMoveGuard } from "@/lib/useBackwardMoveGuard.jsx";
 import { useAuth } from "@/lib/AuthContext";
 import { useWriteOrgId } from "@/lib/orgContext";
-import ProductServiceDropdown from "@/components/estimates/ProductServiceDropdown";
 import { useJobDetailConfig } from "@/hooks/useJobDetailConfig";
-import { formatPhoneDisplay } from "@/lib/phoneFormat";
-import RailingTakeoffCalc from "@/components/estimates/RailingTakeoffCalc";
-import StaircaseInlineCalc from "@/components/estimates/StaircaseInlineCalc";
 import EstimateCustomerView from "@/components/estimates/EstimateCustomerView";
 import SendEstimatePanel from "@/components/estimates/SendEstimatePanel";
 import { generateEstimatePDF } from "@/lib/estimatePdf";
-import LineItemPhotoUpload from "@/components/estimates/LineItemPhotoUpload";
-import { Download } from "lucide-react";
+import useCostGroupData from "@/components/catalog/costgroups/useCostGroupData";
+import CatalogPicker from "@/components/estimates/v2/CatalogPicker";
+import LineRow from "@/components/estimates/v2/LineRow";
+import FuelRow from "@/components/estimates/v2/FuelRow";
+import TakeoffDialog from "@/components/estimates/v2/TakeoffDialog";
+import ProfitCard from "@/components/estimates/v2/ProfitCard";
+import TotalsCard from "@/components/estimates/v2/TotalsCard";
+import EstimateExtras from "@/components/estimates/v2/EstimateExtras";
+import { unitLabel, money } from "@/lib/costGroups";
+import { nextEstimateNumber } from "@/lib/estimateNumber";
+import { calcFuel, fuelLine, hasMargin, lineKind, num, priceLine, r2 } from "@/lib/estimateCalc";
 
-const CATEGORIES = ["Labor", "Material", "Equipment", "Sub-contractor", "Other"];
+const COLS = "1.9fr 1.2fr 0.9fr 1.1fr 0.8fr 0.8fr 1fr 28px";
+const HEADERS = ["Cost group", "Install location", "Color", "Qty", "Hard cost", "Margin", "Price", ""];
 const INSTALL_LOCATIONS = [
   "Interior — Main Staircase", "Interior — Secondary Staircase", "Interior — Loft / Mezzanine",
   "Interior — Balcony / Overlook", "Interior — Basement Staircase", "Interior — Other",
@@ -37,53 +38,40 @@ const INSTALL_LOCATIONS = [
   "Exterior — Other", "Commercial — Staircase", "Commercial — Corridor / Hallway",
   "Commercial — Parking Structure", "Commercial — External Entry", "Commercial — Other", "N/A",
 ];
+const newId = () => Math.random().toString(36).slice(2);
+const baseLine = { install_location: "N/A", category: "Labor", quantity: 1, unit: "ls", unit_cost: 0, total: 0, show_photo: true };
 
-const blankLine = () => ({
-  _id: Math.random().toString(36).slice(2),
-  service_name: "",
-  description: "",
-  install_location: "N/A",
-  category: "Labor",
-  quantity: 1,
-  unit: "ls",
-  unit_cost: 0,
-  total: 0,
-  photo_url: null,
-  show_photo: true,
-  _is_railing: false,
-  _railing_style: null,
-  _railing_takeoff: null,
-  _is_staircase: false,
-  _staircase_type: null,
-});
-
-function calcLine(line) {
-  return { ...line, total: (line.quantity || 0) * (line.unit_cost || 0) };
-}
-
-// Generate estimate number from count
-function genEstimateNumber(count) {
-  const year = new Date().getFullYear();
-  return `EST-${year}-${String((count || 0) + 1).padStart(3, "0")}`;
+// Strip UI-only keys and nulls before saving
+function cleanLine({ _id, _warn, _railing_style, _is_staircase, _staircase_type, ...rest }) {
+  if (!hasMargin(rest.margin_pct)) delete rest.margin_pct;
+  if (!rest._railing_takeoff) delete rest._railing_takeoff;
+  if (rest.photo_url == null) delete rest.photo_url;
+  return { ...rest, quantity: num(rest.quantity), unit_cost: num(rest.unit_cost) };
 }
 
 export default function EstimatePage() {
   const { jobId, estimateId } = useParams();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
   const writeOrgId = useWriteOrgId();
   const isNew = estimateId === "new";
   const { config: jobDetailConfig } = useJobDetailConfig();
+  const cat = useCostGroupData();
+  const settings = cat.settings;
 
-  const [activeTab, setActiveTab] = useState("edit");
+  const [view, setView] = useState("internal");
   const [sendPanelOpen, setSendPanelOpen] = useState(false);
   const [sentBanner, setSentBanner] = useState(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [takeoffLine, setTakeoffLine] = useState(null);
 
-  // Form state
   const [status, setStatus] = useState("Draft");
-  const [lines, setLines] = useState([blankLine()]);
+  const [lines, setLines] = useState([]);
+  const [targetMargin, setTargetMargin] = useState(null);
+  const [miles, setMiles] = useState("");
+  const [extra, setExtra] = useState(1);
+  const [fuelMarginState, setFuelMargin] = useState(null);
   const [markup, setMarkup] = useState(0);
   const [overhead, setOverhead] = useState(0);
   const [tax, setTax] = useState(0);
@@ -97,25 +85,21 @@ export default function EstimatePage() {
   const [expirationDate, setExpirationDate] = useState(format(addDays(new Date(), 30), "yyyy-MM-dd"));
   const [estimateNumber, setEstimateNumber] = useState("");
 
-  // Data fetches
   const { data: job } = useQuery({
     queryKey: ["job", jobId],
-    queryFn: () => base44.entities.Job.list().then(jobs => jobs.find(j => j.id === jobId)),
+    queryFn: () => base44.entities.Job.list().then((jobs) => jobs.find((j) => j.id === jobId)),
     enabled: !!jobId,
   });
-
   const { data: existingEstimate } = useQuery({
     queryKey: ["estimate", estimateId],
-    queryFn: () => base44.entities.Estimate.list().then(ests => ests.find(e => e.id === estimateId)),
+    queryFn: () => base44.entities.Estimate.list().then((ests) => ests.find((e) => e.id === estimateId)),
     enabled: !isNew && !!estimateId,
   });
-
   const { data: customer } = useQuery({
     queryKey: ["customer", job?.customer_id],
-    queryFn: () => base44.entities.Customer.list().then(cs => cs.find(c => c.id === job.customer_id)),
+    queryFn: () => base44.entities.Customer.list().then((cs) => cs.find((c) => c.id === job.customer_id)),
     enabled: !!job?.customer_id,
   });
-
   const { data: org } = useQuery({
     queryKey: ["organization", user?.organization_id],
     queryFn: () => base44.entities.Organization.get(user.organization_id),
@@ -125,91 +109,90 @@ export default function EstimatePage() {
     ? { name: org.name, logo_url: org.logo_url || null, address: org.address || null, phone: org.phone || null }
     : { name: "High Country Metal Works", logo_url: null, address: null, phone: null };
 
-  const { data: allEstimates = [] } = useQuery({
-    queryKey: ["estimates", jobId],
-    queryFn: () => base44.entities.Estimate.filter({ job_id: jobId }),
-    enabled: !!jobId,
-  });
-
-  // Populate form from existing estimate — only ONCE per estimate. React Query
-  // refetches on window focus (e.g. when the native file picker closes after
-  // selecting a line-item photo), and an unguarded effect would reset `lines`
-  // back to the saved DB state, wiping unsaved edits like a newly uploaded
-  // photo before the user clicks Save.
+  // Populate once per estimate (refetch on focus must not wipe unsaved edits)
   const populatedFor = useRef(null);
   useEffect(() => {
     if (existingEstimate && populatedFor.current !== estimateId) {
       populatedFor.current = estimateId;
-      setStatus(existingEstimate.status || "Draft");
-      setLines((existingEstimate.line_items || []).map(l => ({ ...l, _id: Math.random().toString(36).slice(2), _is_staircase: false, _staircase_type: null })));
-      setMarkup(existingEstimate.markup_percent || 0);
-      setOverhead(existingEstimate.overhead_percent || 0);
-      setDiscount(existingEstimate.discount_percent || 0);
-      setTax(existingEstimate.tax_percent || 0);
-      setNotes(existingEstimate.notes || "");
-      setInternalNotes(existingEstimate.internal_notes || "");
-      setSignature(existingEstimate.customer_signature || "");
-      setViewMode(existingEstimate.view_mode || "summary");
-      setEstimateNumber(existingEstimate.estimate_number || "");
-      if (existingEstimate.estimate_date) setEstimateDate(existingEstimate.estimate_date);
-      if (existingEstimate.expiration_date) setExpirationDate(existingEstimate.expiration_date);
+      const e = existingEstimate;
+      setStatus(e.status || "Draft");
+      setLines((e.line_items || []).filter((l) => !l._is_fuel).map((l) => ({ ...l, _id: newId() })));
+      setTargetMargin(e.target_margin_pct ?? null);
+      setMiles(e.miles_one_way ?? "");
+      setExtra(e.extra_trips ?? 1);
+      setFuelMargin(e.fuel_margin ?? null);
+      setMarkup(e.markup_percent || 0);
+      setOverhead(e.overhead_percent || 0);
+      setDiscount(e.discount_percent || 0);
+      setTax(e.tax_percent || 0);
+      setNotes(e.notes || "");
+      setInternalNotes(e.internal_notes || "");
+      setSignature(e.customer_signature || "");
+      setViewMode(e.view_mode || "summary");
+      setEstimateNumber(e.estimate_number || "");
+      if (e.estimate_date) setEstimateDate(e.estimate_date);
+      if (e.expiration_date) setExpirationDate(e.expiration_date);
     }
   }, [existingEstimate, estimateId]);
 
-  // Generate estimate number for new estimates
-  useEffect(() => {
-    if (isNew && allEstimates.length >= 0 && !estimateNumber) {
-      setEstimateNumber(genEstimateNumber(allEstimates.length));
-    }
-  }, [isNew, allEstimates.length]);
+  const frozen = status !== "Draft";
+  const estMargin = targetMargin ?? settings?.default_target_margin_pct ?? 33.3;
+  const fuelMargin = fuelMarginState ?? !!settings?.fuel_margin_default;
+  const snap = frozen && existingEstimate?.fuel_price_per_gal_snapshot != null;
+  const fuelPrice = snap ? existingEstimate.fuel_price_per_gal_snapshot : settings?.fuel_price_per_gal || 0;
+  const mpg = snap ? existingEstimate.truck_mpg_snapshot : settings?.truck_mpg || 0;
 
-  // Calculations
-  const subtotal = lines.reduce((s, l) => s + (l.total || 0), 0);
+  const priced = useMemo(
+    () => lines.map((l) => priceLine(l, { items: cat.items, categories: cat.categories, materials: cat.materials, settings }, estMargin, frozen)),
+    [lines, cat.items, cat.categories, cat.materials, settings, estMargin, frozen]
+  );
+  const fuel = calcFuel({ lines: priced, miles, extra, fuelMargin, targetMargin: estMargin, price: fuelPrice, mpg, hoursPerDay: settings?.install_hours_per_day || 8 });
+  const fLine = fuelLine(fuel, miles, extra);
+
+  const subtotal = priced.reduce((s, l) => s + (l.total || 0), 0) + fuel.price;
   const discountAmt = subtotal * (discount / 100);
   const afterDiscount = subtotal - discountAmt;
-  const afterMarkup = afterDiscount * (1 + markup / 100);
-  const afterOverhead = afterMarkup * (1 + overhead / 100);
+  const markupAmt = afterDiscount * (markup / 100);
+  const afterMarkup = afterDiscount + markupAmt;
+  const overheadAmt = afterMarkup * (overhead / 100);
+  const afterOverhead = afterMarkup + overheadAmt;
   const taxAmt = afterOverhead * (tax / 100);
   const total = afterOverhead + taxAmt;
+  const adjustments = [
+    discount > 0 && { label: `Discount (${discount}%)`, value: `−${money(discountAmt)}` },
+    markup > 0 && { label: `Markup (${markup}%)`, value: `+${money(markupAmt)}` },
+    overhead > 0 && { label: `Overhead (${overhead}%)`, value: `+${money(overheadAmt)}` },
+    tax > 0 && { label: `Tax (${tax}%)`, value: `+${money(taxAmt)}` },
+  ].filter(Boolean);
+
+  const costLines = priced.filter((l) => lineKind(l) === "cost");
+  const hardTotal = costLines.reduce((s, l) => s + num(l.hard_cost), 0) + fuel.cost;
+  const calcPrice = costLines.reduce((s, l) => s + (l.total || 0), 0) + fuel.price;
 
   const actorName = user?.full_name || user?.email || "Team Member";
   const backwardGuard = useBackwardMoveGuard(actorName);
+  const outLines = (list) => [...list.map(cleanLine), ...(fLine ? [fLine] : [])];
 
   const save = useMutation({
-    mutationFn: (nextStatus) => {
+    mutationFn: async (nextStatus) => {
       const finalStatus = nextStatus || status;
+      const orgId = writeOrgId || user?.organization_id;
+      const number = isNew && !estimateNumber ? await nextEstimateNumber(orgId) : estimateNumber;
       const payload = {
-        organization_id: writeOrgId,
-        job_id: jobId,
-        job_number: job?.job_number,
-        status: finalStatus,
-        estimate_number: estimateNumber,
-        estimate_date: estimateDate,
-        expiration_date: expirationDate,
-        line_items: lines.map(({ _id, _railing_style, _is_staircase, _staircase_type, ...rest }) => rest),
-        subtotal,
-        discount_percent: discount,
-        markup_percent: markup,
-        overhead_percent: overhead,
-        tax_percent: tax,
-        total,
-        notes,
-        internal_notes: internalNotes,
-        customer_signature: signature,
-        view_mode: viewMode,
+        organization_id: writeOrgId, job_id: jobId, job_number: job?.job_number, status: finalStatus,
+        estimate_number: number, estimate_date: estimateDate, expiration_date: expirationDate,
+        line_items: outLines(priced), subtotal, discount_percent: discount, markup_percent: markup, overhead_percent: overhead, tax_percent: tax, total,
+        target_margin_pct: estMargin, miles_one_way: num(miles), extra_trips: num(extra), fuel_margin: fuelMargin,
+        fuel_price_per_gal_snapshot: fuelPrice, truck_mpg_snapshot: mpg, fuel_cost: fuel.cost, fuel_price: fuel.price, total_hard_cost: r2(hardTotal),
+        notes, internal_notes: internalNotes, customer_signature: signature, view_mode: viewMode,
         ...(finalStatus === "Approved" ? { approved_date: approvedDate || new Date().toISOString().split("T")[0] } : {}),
       };
-      return isNew
-        ? base44.entities.Estimate.create(payload)
-        : base44.entities.Estimate.update(estimateId, payload);
+      return isNew ? base44.entities.Estimate.create(payload) : base44.entities.Estimate.update(estimateId, payload);
     },
-    onSuccess: async (savedEstimate) => {
+    onSuccess: async (saved) => {
       const prevStatus = existingEstimate?.status || "Draft";
-      const finalStatus = savedEstimate?.status || status;
-
-      if (isNew) {
-        await backwardGuard.requestMove(job, "Estimate In Progress", "Estimate created");
-      }
+      const finalStatus = saved?.status || status;
+      if (isNew) await backwardGuard.requestMove(job, "Estimate In Progress", "Estimate created");
       if (finalStatus === "Sent" && prevStatus !== "Sent") {
         const res = await backwardGuard.requestMove(job, "Estimate Sent", "Estimate marked Sent");
         if (res?.moved) toast.success("Estimate sent — job moved to Estimate Sent");
@@ -217,637 +200,151 @@ export default function EstimatePage() {
       }
       if (finalStatus === "Approved" && prevStatus !== "Approved") {
         await base44.entities.Job.update(jobId, { estimate_total: total, customer_approval_status: "approved" });
-        const res = await backwardGuard.requestMove(
-          { ...job, estimate_total: total },
-          "Awaiting Deposit",
-          `Estimate approved by ${signature}`
-        );
+        const res = await backwardGuard.requestMove({ ...job, estimate_total: total }, "Awaiting Deposit", `Estimate approved by ${signature}`);
         if (res?.moved) toast.success("Estimate approved — job moved to Awaiting Deposit");
         else if (res?.declined) toast("Estimate approved — job stays in its current board");
       }
-
       qc.invalidateQueries(["estimates"]);
       qc.invalidateQueries(["estimates", jobId]);
       qc.invalidateQueries(["estimate", estimateId]);
       qc.invalidateQueries(["job", jobId]);
-
-      if (isNew && savedEstimate?.id) {
-        navigate(`/jobs/${jobId}/estimates/${savedEstimate.id}`, { replace: true });
-      } else {
-        toast.success("Estimate saved");
-      }
+      if (isNew && saved?.id) navigate(`/jobs/${jobId}/estimates/${saved.id}`, { replace: true });
+      else toast.success("Estimate saved");
     },
   });
 
-  function addLine() {
-    setLines(prev => [...prev, blankLine()]);
-  }
-
-  function updateLine(idx, field, value) {
-    setLines(prev => {
-      const next = [...prev];
-      next[idx] = calcLine({ ...next[idx], [field]: ["quantity", "unit_cost"].includes(field) ? parseFloat(value) || 0 : value });
+  function changeLine(idx, patch) {
+    setLines((prev) => prev.map((l, i) => {
+      if (i !== idx) return l;
+      const next = { ...l, ...patch };
+      if (lineKind(next) === "legacy" && ("quantity" in patch || "unit_cost" in patch)) next.total = r2(num(next.quantity) * num(next.unit_cost));
       return next;
-    });
+    }));
   }
 
-  function removeLine(idx) {
-    setLines(prev => prev.filter((_, i) => i !== idx));
+  function addFromCatalog(item, category) {
+    const fixed = !!category?.is_fixed_price;
+    setLines((p) => [...p, {
+      ...baseLine, _id: newId(), service_catalog_id: item.id, service_name: item.name, description: item.default_description || item.name,
+      is_fixed_price: fixed, unit: fixed ? item.unit || "ls" : unitLabel(category), unit_cost: fixed ? item.default_unit_price || 0 : 0,
+      ...(fixed ? {} : { building_type: "Residential", margin_pct: null }),
+    }]);
+    setPickerOpen(false);
+  }
+  function addCustom() {
+    setLines((p) => [...p, { ...baseLine, _id: newId(), is_fixed_price: true, service_name: "", description: "" }]);
+    setPickerOpen(false);
   }
 
-  const STAIRCASE_CALC_ITEMS = [
-    "Mono Stringer Staircase",
-    "Double Stringer Staircase — Steel Treads",
-    "Double Stringer Staircase — Concrete Treads",
-    "Spiral Staircase",
-  ];
-
-  function getStaircaseType(name) {
-    if (name.includes("Spiral")) return "spiral";
-    return "mono"; // covers mono and both double stringer types
-  }
-
-  function handleProductSelect(idx, item) {
-    if (item.isCustom) {
-      setLines(prev => {
-        const next = [...prev];
-        next[idx] = calcLine({
-          ...next[idx],
-          service_name: "",
-          description: "",
-          _is_railing: false,
-          _is_staircase: false,
-          _staircase_type: null,
-        });
-        return next;
-      });
-      return;
+  function startSend() {
+    const real = priced;
+    if (real.length === 0) return toast.error("Add at least one line item before sending.");
+    for (let i = 0; i < real.length; i++) {
+      const l = real[i];
+      if (!(l.service_name || "").trim()) return toast.error(`Line ${i + 1} has no service name.`);
+      if (!(l.description || "").trim()) return toast.error(`Line ${i + 1}${l.service_name ? ` (${l.service_name})` : ""} has no description.`);
     }
-    const isStaircaseCalc = STAIRCASE_CALC_ITEMS.some(n => item.name.includes(n.split("—")[0].trim()) || item.name === n);
-    setLines(prev => {
-      const next = [...prev];
-      next[idx] = calcLine({
-        ...next[idx],
-        service_name: item.name,
-        description: item.default_description || item.name,
-        category: item.category || "Labor",
-        unit: item.unit || "ls",
-        unit_cost: item.default_unit_cost || 0,
-        _is_railing: !!item.is_railing,
-        _is_staircase: isStaircaseCalc,
-        _staircase_type: isStaircaseCalc ? getStaircaseType(item.name) : null,
-      });
-      return next;
-    });
+    setView("customer");
+    setSendPanelOpen(true);
   }
 
-  function handleRailingPrice(idx, totalPrice, lnft, takeoffData) {
-    setLines(prev => {
-      const next = [...prev];
-      next[idx] = calcLine({ ...next[idx], quantity: lnft, unit: "lnft", unit_cost: totalPrice / (lnft || 1), _railing_takeoff: takeoffData });
-      return next;
-    });
-  }
-
-  function handleStaircasePrice(idx, totalPrice, inputQty) {
-    setLines(prev => {
-      const next = [...prev];
-      next[idx] = calcLine({ ...next[idx], quantity: inputQty, unit_cost: totalPrice / (inputQty || 1) });
-      return next;
-    });
-  }
-
+  const publicLines = (list) => outLines(list).map(({ _is_railing, _railing_takeoff, hard_cost, cost_breakdown, install_hours, margin_pct, ...r }) => ({
+    ...r, components: (r.components || []).map((c) => ({ component_type: c.component_type, name: c.name })),
+  }));
   const estimateForView = {
-    ...(existingEstimate || {}),
-    status,     line_items: lines.map(({ _id, _is_railing, _railing_style, _is_staircase, _staircase_type, _railing_takeoff, ...r }) => r),
+    ...(existingEstimate || {}), status, line_items: publicLines(priced),
     discount_percent: discount, markup_percent: markup, overhead_percent: overhead, tax_percent: tax, total,
-    notes, view_mode: viewMode, estimate_number: estimateNumber,
-    estimate_date: estimateDate, expiration_date: expirationDate,
-    customer_signature: signature,
+    notes, view_mode: viewMode, estimate_number: estimateNumber, estimate_date: estimateDate, expiration_date: expirationDate, customer_signature: signature,
   };
 
-  if (!job) {
-    return (
-      <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">Loading…</div>
-    );
-  }
+  if (!job) return <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">Loading…</div>;
+
+  const terms = customer?.payment_terms === "Custom" ? `Net ${customer.payment_terms_custom_days || 0}` : customer?.payment_terms || "Net 15";
+  const seg = (on) => `px-5 py-2.5 text-sm font-semibold ${on ? "bg-foreground text-background" : "bg-card"}`;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Top Bar */}
-      <div className="sticky top-0 z-20 bg-background border-b px-4 py-2.5 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <button
-            onClick={() => navigate(`/jobs/${jobId}`)}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Back to {job.job_name}</span>
-            <span className="sm:hidden">Back</span>
-          </button>
-          <Separator orientation="vertical" className="h-5" />
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground font-mono truncate">{estimateNumber || "Draft"}</p>
-            <p className="text-sm font-semibold truncate">{job.job_name}</p>
+    <div className="min-h-screen bg-muted/30">
+      <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 space-y-5">
+        <p className="text-sm"><Link to={`/jobs/${jobId}`} className="text-primary underline">{job.job_name}</Link> <span className="text-muted-foreground">/ Estimates</span></p>
+        <div className="flex items-end justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-xs font-mono text-muted-foreground">{estimateNumber || "Number assigned on first save"} · auto-numbered</p>
+            <h1 className="text-3xl font-bold">{job.job_name}</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge className={status === "Approved" ? "bg-emerald-100 text-emerald-800" : status === "Sent" ? "bg-blue-100 text-blue-800" : "bg-muted text-muted-foreground"}>{status}</Badge>
+            <Button variant="outline" onClick={() => save.mutate()} disabled={save.isPending || cat.loading}><Save className="w-4 h-4 mr-1.5" />{save.isPending ? "Saving…" : "Save"}</Button>
+            <Button onClick={startSend}><Send className="w-4 h-4 mr-1.5" />Send for signature</Button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <Badge className={status === "Approved" ? "bg-emerald-100 text-emerald-800" : status === "Sent" ? "bg-blue-100 text-blue-800" : "bg-muted text-muted-foreground"}>
-            {status}
-          </Badge>
-          <Button size="sm" variant="outline" className="gap-1 h-8" onClick={() => save.mutate()} disabled={save.isPending}>
-            <Save className="w-3.5 h-3.5" />
-            {save.isPending ? "Saving…" : "Save"}
-          </Button>
-          <Button size="sm" className="gap-1.5 h-8 touch-target" onClick={() => { setActiveTab("customer"); setSendPanelOpen(true); }}>
-            <Send className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Review & Send</span>
-            <span className="sm:hidden">Send</span>
-          </Button>
-        </div>
-      </div>
-
-      {sentBanner && (
-        <div className="bg-emerald-50 border-b border-emerald-200 px-6 py-2 text-sm text-emerald-800 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4" />
-          Estimate sent to {sentBanner.email} on {sentBanner.date}
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div className="flex-1">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="border-b px-6">
-            <TabsList className="h-10 bg-transparent gap-1 -mb-px">
-              <TabsTrigger value="edit" className="h-9 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent">Edit</TabsTrigger>
-              <TabsTrigger value="customer" className="h-9 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent">Customer View</TabsTrigger>
-            </TabsList>
+        {sentBanner && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2 text-sm text-emerald-800 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" />Estimate sent to {sentBanner.email} on {sentBanner.date}
           </div>
+        )}
 
-          {/* ── EDIT TAB ─────────────────────────────── */}
-          <TabsContent value="edit" className="mt-0">
-            <div className="max-w-5xl mx-auto px-4 md:px-8 py-6 space-y-8">
+        <div className="bg-card border rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex border rounded-md overflow-hidden">
+            <button type="button" className={seg(view === "internal")} onClick={() => setView("internal")}>Internal view</button>
+            <button type="button" className={seg(view === "customer")} onClick={() => setView("customer")}>Customer view</button>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Target margin</span>
+            <Input type="number" step="any" disabled={frozen} className="w-24 h-11 text-lg text-right font-mono border-2 border-primary" value={estMargin} onChange={(e) => setTargetMargin(e.target.value === "" ? 0 : parseFloat(e.target.value))} />
+            <span className="font-bold">%</span>
+            <span className="text-xs text-muted-foreground">default from Settings</span>
+          </div>
+        </div>
 
-              {/* Header Info */}
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Customer Info */}
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-sm border-b pb-1">Customer</h3>
-                  <div className="space-y-2">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Name</Label>
-                      <p className="text-sm font-medium mt-0.5">{customer?.name || job.customer_name || "—"}</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="min-w-0">
-                        <Label className="text-xs text-muted-foreground">Email</Label>
-                        <p className="text-sm mt-0.5 break-all">{customer?.email || "—"}</p>
-                      </div>
-                      <div className="min-w-0">
-                        <Label className="text-xs text-muted-foreground">Phone</Label>
-                        <p className="text-sm mt-0.5 break-all">{customer?.phone ? formatPhoneDisplay(customer.phone) : "—"}</p>
-                      </div>
-                    </div>
-                    {customer?.address && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Address</Label>
-                        <p className="text-sm mt-0.5">{customer.address}</p>
-                      </div>
-                    )}
-                  </div>
+        {view === "internal" ? (
+          <>
+            <div className="bg-card border rounded-xl overflow-x-auto">
+              <div style={{ minWidth: 900 }}>
+                <div className="flex items-center justify-between p-4">
+                  <h2 className="text-lg font-bold">Line items</h2>
+                  <Button variant="outline" onClick={() => setPickerOpen(true)}><Plus className="w-4 h-4 mr-1" />Add from catalog</Button>
                 </div>
-
-                {/* Estimate Meta */}
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-sm border-b pb-1">Estimate Details</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Job</Label>
-                      <p className="text-sm font-medium mt-0.5">{job.job_name}</p>
-                      <p className="text-xs text-muted-foreground font-mono">{job.job_number}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Estimate #</Label>
-                      <p className="text-sm font-medium mt-0.5 font-mono">{estimateNumber}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Date</Label>
-                      <Input type="date" className="h-8 text-xs mt-0.5" value={estimateDate} onChange={e => setEstimateDate(e.target.value)} />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Expiration</Label>
-                      <Input type="date" className="h-8 text-xs mt-0.5" value={expirationDate} onChange={e => setExpirationDate(e.target.value)} />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Status</Label>
-                      <Select value={status} onValueChange={setStatus}>
-                        <SelectTrigger className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {["Draft", "Sent", "Approved", "Rejected"].map(s => (
-                            <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                <div className="grid gap-2 px-4 py-2 bg-muted/40 border-t text-[11px] font-bold uppercase tracking-wider text-muted-foreground" style={{ gridTemplateColumns: COLS }}>
+                  {HEADERS.map((h, i) => <span key={i} className={i >= 3 && i <= 6 ? "text-right" : ""}>{h}</span>)}
                 </div>
+                {priced.map((l, idx) => (
+                  <LineRow key={l._id} line={l} idx={idx} cols={COLS} estMargin={estMargin} frozen={frozen} colors={jobDetailConfig.powdercoat_colors}
+                    locations={INSTALL_LOCATIONS} onChange={changeLine} onRemove={(i) => setLines((p) => p.filter((_, k) => k !== i))} onTakeoff={setTakeoffLine} />
+                ))}
+                {priced.length === 0 && <p className="text-sm text-muted-foreground text-center py-8 border-t">No line items yet. Click "Add from catalog".</p>}
+                <FuelRow fuel={fuel} miles={miles} setMiles={setMiles} extra={extra} setExtra={setExtra} fuelMargin={fuelMargin} setFuelMargin={setFuelMargin}
+                  price={fuelPrice} mpg={mpg} frozen={frozen} cols={COLS} />
               </div>
-
-              <Separator />
-
-              {/* Line Items */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold">Line Items</h3>
-                  <div className="flex items-center gap-2">
-                    {/* View mode toggle */}
-                    <div className="flex items-center border rounded-md overflow-hidden h-7">
-                      <button
-                        type="button"
-                        className={`px-2.5 h-full text-xs flex items-center gap-1 transition-colors ${viewMode === "summary" ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"}`}
-                        onClick={() => setViewMode("summary")}
-                      >
-                        <AlignJustify className="w-3 h-3" /> Summary
-                      </button>
-                      <button
-                        type="button"
-                        className={`px-2.5 h-full text-xs flex items-center gap-1 transition-colors ${viewMode === "detail" ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"}`}
-                        onClick={() => setViewMode("detail")}
-                      >
-                        <LayoutList className="w-3 h-3" /> Detail
-                      </button>
-                    </div>
-                    <Button size="sm" variant="outline" className="gap-1 h-7 text-xs" onClick={addLine}>
-                      <Plus className="w-3.5 h-3.5" /> Add Line Item
-                    </Button>
-                  </div>
-                </div>
-
-                {viewMode === "summary" && (
-                  <div className="mb-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
-                    <strong>Summary View</strong> — Customer sees description, install location, and total only.
-                  </div>
-                )}
-
-                {/* Desktop: grid layout */}
-                <div className="hidden md:block overflow-x-auto -mx-2 px-2">
-                  <div style={{ minWidth: 620 }}>
-                    {/* Column headers */}
-                    <div className="grid gap-1.5 text-xs text-muted-foreground font-medium mb-2 px-1"
-                      style={{ gridTemplateColumns: "1.3fr 1.7fr 1.1fr 1fr 0.5fr 0.9fr 0.9fr auto" }}>
-                      <span>Service Item</span>
-                      <span>Description</span>
-                      <span>Install Location</span>
-                      <span>Color</span>
-                      <span>Qty</span>
-                      <span>Unit Cost</span>
-                      <span>Amount</span>
-                      <span></span>
-                    </div>
-
-                    <div className="space-y-1">
-                      {lines.map((line, idx) => (
-                        <div key={line._id}>
-                          <div className="grid gap-1.5 items-center"
-                            style={{ gridTemplateColumns: "1.3fr 1.7fr 1.1fr 1fr 0.5fr 0.9fr 0.9fr auto" }}>
-                            <ProductServiceDropdown
-                              value={line.service_name}
-                              onChange={v => updateLine(idx, "service_name", v)}
-                              onSelect={item => handleProductSelect(idx, item)}
-                            />
-                            <Input
-                              className="h-8 text-xs"
-                              placeholder="Description"
-                              value={line.description}
-                              onChange={e => updateLine(idx, "description", e.target.value)}
-                            />
-                            <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)}>
-                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                              <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
-                            </Select>
-                            <Select value={line.color || "none"} onValueChange={v => updateLine(idx, "color", v === "none" ? "" : v)}>
-                              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Color" /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none" className="text-xs">None</SelectItem>
-                                {jobDetailConfig.powdercoat_colors.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                            <Input className="h-8 text-xs" type="number" value={line.quantity} onChange={e => updateLine(idx, "quantity", e.target.value)} />
-                            <Input className="h-8 text-xs" type="number" placeholder="0.00" value={line.unit_cost} onChange={e => updateLine(idx, "unit_cost", e.target.value)} />
-                            <span className="text-sm font-semibold text-right pr-1">
-                              ${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeLine(idx)}>
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
-
-                          {/* Reference photo — shown to customer on the estimate */}
-                          <div className="ml-1 mr-8 mb-1">
-                            <LineItemPhotoUpload
-                              photoUrl={line.photo_url}
-                              showPhoto={line.show_photo}
-                              onChange={(url) => updateLine(idx, "photo_url", url)}
-                              onToggleShow={() => updateLine(idx, "show_photo", line.show_photo === false)}
-                            />
-                          </div>
-
-                          {/* Inline Railing Calculator */}
-                          {line._is_railing && (
-                            <div className="ml-1 mr-8">
-                              <RailingTakeoffCalc
-                                line={line}
-                                orgId={user?.organization_id}
-                                onPriceChange={(total, lnft, takeoffData) => handleRailingPrice(idx, total, lnft, takeoffData)}
-                              />
-                            </div>
-                          )}
-
-                          {/* Inline Staircase Calculator */}
-                          {line._is_staircase && (
-                            <div className="ml-1 mr-8">
-                              <StaircaseInlineCalc
-                                staircaseType={line._staircase_type}
-                                onPriceChange={(total, qty) => handleStaircasePrice(idx, total, qty)}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mobile: card layout */}
-                <div className="md:hidden space-y-3">
-                  {lines.map((line, idx) => (
-                    <div key={line._id} className="bg-card rounded-xl border p-3 space-y-2.5">
-                      {/* Service Item */}
-                      <div>
-                        <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Service Item</Label>
-                        <ProductServiceDropdown
-                          value={line.service_name}
-                          onChange={v => updateLine(idx, "service_name", v)}
-                          onSelect={item => handleProductSelect(idx, item)}
-                        />
-                      </div>
-
-                      {/* Description */}
-                      <div>
-                        <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Description</Label>
-                        <Input
-                          className="h-9 text-sm mt-0.5"
-                          placeholder="Description"
-                          value={line.description}
-                          onChange={e => updateLine(idx, "description", e.target.value)}
-                        />
-                      </div>
-
-                      {/* Install Location */}
-                      <div>
-                        <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Install Location</Label>
-                        <Select value={line.install_location || "N/A"} onValueChange={v => updateLine(idx, "install_location", v)}>
-                          <SelectTrigger className="h-9 text-sm w-full mt-0.5"><SelectValue /></SelectTrigger>
-                          <SelectContent>{INSTALL_LOCATIONS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Color */}
-                      <div>
-                        <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Color</Label>
-                        <Select value={line.color || "none"} onValueChange={v => updateLine(idx, "color", v === "none" ? "" : v)}>
-                          <SelectTrigger className="h-9 text-sm w-full mt-0.5"><SelectValue placeholder="Color" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
-                            {jobDetailConfig.powdercoat_colors.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Qty + Unit Cost row */}
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Qty</Label>
-                          <Input className="h-9 text-sm mt-0.5" type="number" value={line.quantity} onChange={e => updateLine(idx, "quantity", e.target.value)} />
-                        </div>
-                        <div>
-                          <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Unit Cost</Label>
-                          <Input className="h-9 text-sm mt-0.5" type="number" placeholder="0.00" value={line.unit_cost} onChange={e => updateLine(idx, "unit_cost", e.target.value)} />
-                        </div>
-                      </div>
-
-                      {/* Total + Delete */}
-                      <div className="flex items-center justify-between pt-1 border-t">
-                        <div>
-                          <Label className="text-[10px] uppercase text-muted-foreground tracking-wider">Amount</Label>
-                          <p className="text-base font-bold mt-0.5">
-                            ${(line.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-10 w-10 text-muted-foreground hover:text-destructive touch-target"
-                          onClick={() => removeLine(idx)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-
-                      {/* Reference photo — shown to customer on the estimate */}
-                      <LineItemPhotoUpload
-                        photoUrl={line.photo_url}
-                        showPhoto={line.show_photo}
-                        onChange={(url) => updateLine(idx, "photo_url", url)}
-                        onToggleShow={() => updateLine(idx, "show_photo", line.show_photo === false)}
-                      />
-
-                      {/* Inline calculators */}
-                      {line._is_railing && (
-                        <RailingTakeoffCalc
-                          line={line}
-                          orgId={user?.organization_id}
-                          onPriceChange={(total, lnft, takeoffData) => handleRailingPrice(idx, total, lnft, takeoffData)}
-                        />
-                      )}
-                      {line._is_staircase && (
-                        <StaircaseInlineCalc
-                          staircaseType={line._staircase_type}
-                          onPriceChange={(total, qty) => handleStaircasePrice(idx, total, qty)}
-                        />
-                      )}
-                    </div>
-                  ))}
-                  {lines.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-8">No line items yet. Click "Add Line Item" to start.</p>
-                  )}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Adjustments + Summary */}
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-sm">Adjustments</h3>
-                  <div className="space-y-2">
-                    {[
-                      { label: "Discount %", val: discount, set: setDiscount },
-                      { label: "Markup %", val: markup, set: setMarkup },
-                      { label: "Overhead %", val: overhead, set: setOverhead },
-                      { label: "Tax %", val: tax, set: setTax },
-                    ].map(({ label, val, set }) => (
-                      <div key={label} className="flex items-center gap-3">
-                        <Label className="w-28 text-xs shrink-0">{label}</Label>
-                        <Input type="number" className="h-8 w-20 text-xs" value={val} onChange={e => set(parseFloat(e.target.value) || 0)} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <h3 className="font-semibold text-sm mb-3">Summary</h3>
-                  <div className="space-y-1.5 text-sm">
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Subtotal</span>
-                      <span>${subtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    {discount > 0 && (
-                      <div className="flex justify-between text-red-600">
-                        <span>Discount ({discount}%)</span>
-                        <span>−${discountAmt.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    )}
-                    {markup > 0 && (
-                      <div className="flex justify-between text-muted-foreground">
-                        <span>Markup ({markup}%)</span>
-                        <span>+${(afterDiscount * markup / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    )}
-                    {overhead > 0 && (
-                      <div className="flex justify-between text-muted-foreground">
-                        <span>Overhead ({overhead}%)</span>
-                        <span>+${(afterMarkup * overhead / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    )}
-                    {tax > 0 && (
-                      <div className="flex justify-between text-muted-foreground">
-                        <span>Tax ({tax}%)</span>
-                        <span>+${taxAmt.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    )}
-                    <Separator className="my-1" />
-                    <div className="flex justify-between font-bold text-xl pt-1">
-                      <span>Total</span>
-                      <span>${total.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Notes */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="font-semibold">Notes <span className="text-xs font-normal text-muted-foreground">(visible to customer)</span></Label>
-                  <Textarea rows={4} className="text-sm resize-none" value={notes} onChange={e => setNotes(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-semibold">Internal Notes <span className="text-xs font-normal text-muted-foreground">(team only)</span></Label>
-                  <Textarea rows={4} className="text-sm resize-none" placeholder="Not visible to customer…" value={internalNotes} onChange={e => setInternalNotes(e.target.value)} />
-                </div>
-              </div>
-
-              {/* Customer Approval — only visible after Sent */}
-              {(status === "Sent" || status === "Approved") && (
-                <>
-                  <Separator />
-                  <div className="space-y-3">
-                    <h3 className="font-semibold">Customer Approval</h3>
-                    {status === "Approved" && signature ? (
-                      <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
-                        <CheckCircle2 className="w-4 h-4 shrink-0" />
-                        <span className="text-sm font-medium">Approved by {signature}{approvedDate ? ` on ${format(parseISO(approvedDate), "MMM d, yyyy")}` : ""}</span>
-                      </div>
-                    ) : (
-                      <>
-                        <p className="text-sm text-muted-foreground">Enter customer name/initials to record manual approval (phone, in-person, etc.).</p>
-                        <div className="grid md:grid-cols-2 gap-4 max-w-lg">
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">Accepted By</Label>
-                            <Input
-                              placeholder="Customer name or initials"
-                              value={signature}
-                              onChange={e => { setSignature(e.target.value); if (e.target.value) setStatus("Approved"); }}
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">Accepted Date</Label>
-                            <Input
-                              type="date"
-                              value={approvedDate}
-                              onChange={e => setApprovedDate(e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </>
-              )}
-
-              <div className="h-16" />
             </div>
-          </TabsContent>
-
-          {/* ── CUSTOMER VIEW TAB ─────────────────────── */}
-          <TabsContent value="customer" className="mt-0">
-            <div className="relative">
-              <div className="max-w-4xl mx-auto px-4 py-8">
-                <div className="flex justify-end mb-3">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-1.5"
-                    onClick={() => generateEstimatePDF({
-                      estimate: estimateForView,
-                      job,
-                      customer,
-                      businessInfo,
-                    })}
-                  >
-                    <Download className="w-4 h-4" /> Download PDF
-                  </Button>
-                </div>
-                <EstimateCustomerView
-                  estimate={estimateForView}
-                  job={job}
-                  customer={customer}
-                  businessInfo={businessInfo}
-                />
-              </div>
-              {sendPanelOpen && (
-                <SendEstimatePanel
-                  estimate={estimateForView}
-                  job={job}
-                  customer={customer}
-                  businessInfo={businessInfo}
-                  onClose={() => setSendPanelOpen(false)}
-                  onSent={(email) => {
-                    setSendPanelOpen(false);
-                    setStatus("Sent");
-                    setActiveTab("edit");
-                    setSentBanner({ email, date: format(new Date(), "MMM d, yyyy") });
-                    save.mutate("Sent");
-                  }}
-                />
-              )}
+            <div className="grid md:grid-cols-2 gap-4">
+              <ProfitCard hard={hardTotal} price={calcPrice} />
+              <TotalsCard subtotal={subtotal} adjustments={adjustments} total={total} depositPct={settings?.deposit_pct ?? 50} terms={terms} jobMin={settings?.job_minimum || 0} />
             </div>
-          </TabsContent>
-        </Tabs>
+            <EstimateExtras s={{ estimateDate, setEstimateDate, expirationDate, setExpirationDate, status, setStatus, notes, setNotes, internalNotes, setInternalNotes, signature, setSignature, approvedDate, setApprovedDate }} />
+          </>
+        ) : (
+          <div className="max-w-4xl mx-auto w-full">
+            <div className="flex justify-end mb-3">
+              <Button size="sm" variant="outline" onClick={() => generateEstimatePDF({ estimate: estimateForView, job, customer, businessInfo })}><Download className="w-4 h-4 mr-1.5" />Download PDF</Button>
+            </div>
+            <EstimateCustomerView estimate={estimateForView} job={job} customer={customer} businessInfo={businessInfo} />
+            {sendPanelOpen && (
+              <SendEstimatePanel estimate={estimateForView} job={job} customer={customer} businessInfo={businessInfo} onClose={() => setSendPanelOpen(false)}
+                onSent={(email) => {
+                  setSendPanelOpen(false);
+                  setLines(priced);
+                  setStatus("Sent");
+                  setView("internal");
+                  setSentBanner({ email, date: format(new Date(), "MMM d, yyyy") });
+                  save.mutate("Sent");
+                }} />
+            )}
+          </div>
+        )}
       </div>
+      <CatalogPicker open={pickerOpen} onOpenChange={setPickerOpen} categories={cat.categories} items={cat.items} onPick={addFromCatalog} onCustom={addCustom} />
+      <TakeoffDialog line={takeoffLine} onClose={() => setTakeoffLine(null)} />
       {backwardGuard.dialog}
     </div>
   );

@@ -67,6 +67,12 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Internal costing must never reach customers
+    const publicLines = (doc.line_items || []).map((l: any) => {
+      const { hard_cost, cost_breakdown, install_hours, margin_pct, _hard_cost_per_unit, _cost_components, _markup_multiplier, _railing_takeoff, mgr_approval, ...rest } = l;
+      return { ...rest, components: (l.components || []).map((c: any) => ({ component_type: c.component_type, name: c.name })) };
+    });
+
     const jobSubset = job ? {
       job_number: job.job_number || null,
       job_name: job.job_name || null,
@@ -88,7 +94,7 @@ Deno.serve(async (req) => {
         estimate_date: doc.estimate_date || null,
         expiration_date: doc.expiration_date || null,
         status: doc.status || 'Draft',
-        line_items: doc.line_items || [],
+        line_items: publicLines,
         view_mode: doc.view_mode || 'summary',
         discount_percent: doc.discount_percent || 0,
         markup_percent: doc.markup_percent || 0,
@@ -109,7 +115,7 @@ Deno.serve(async (req) => {
         invoice_number: doc.invoice_number || null,
         invoice_label: doc.invoice_label || null,
         status: doc.status || 'Unpaid',
-        line_items: doc.line_items || [],
+        line_items: publicLines,
         view_mode: doc.view_mode || 'detail',
         subtotal: doc.subtotal || 0,
         discount_percent: doc.discount_percent || 0,
