@@ -35,13 +35,28 @@ export function findComponentMap(maps, catalogItem) {
 }
 
 /**
- * Compute railing takeoff from catalog item, component map, materials, and settings.
+ * Resolve railing takeoff parameters: style override if not null, else category default.
+ */
+export function resolveRailingParams(catalogItem, category) {
+  const cat = category || {};
+  const pick = (f) => (catalogItem?.[f] != null ? catalogItem[f] : cat[f] ?? null);
+  return {
+    post_spacing_in: pick("post_spacing_in"),
+    post_width_in: pick("post_width_in"),
+    picket_clear_gap_in: pick("picket_clear_gap_in"),
+    picket_width_in: pick("picket_width_in"),
+    rail_runs: pick("rail_runs"),
+  };
+}
+
+/**
+ * Compute railing takeoff from catalog item, component map, materials, settings, and category.
  * Returns a detailed breakdown object, or null if required data is missing.
  */
-export function computeRailingTakeoff({ catalogItem, componentMap, materials, settings, length, isResidential }) {
+export function computeRailingTakeoff({ catalogItem, componentMap, materials, settings, length, isResidential, category }) {
   if (!catalogItem || !componentMap || !materials || !settings || !length || length <= 0) return null;
 
-  const { post_spacing_in, post_width_in, picket_clear_gap_in, picket_width_in, rail_runs } = catalogItem;
+  const { post_spacing_in, post_width_in, picket_clear_gap_in, picket_width_in, rail_runs } = resolveRailingParams(catalogItem, category);
   if (!post_spacing_in || !post_width_in || !picket_clear_gap_in || !picket_width_in || !rail_runs) return null;
 
   const postHeight = isResidential ? settings.res_post_height_in : settings.comm_post_height_in;
@@ -63,6 +78,7 @@ export function computeRailingTakeoff({ catalogItem, componentMap, materials, se
   const totalPickets = picketsPerSection * posts;
 
   // Step 5-6: Feet needed per component type
+  // Top rail = 1 run; bottom rail footage = run length × (rail_runs − 1)
   const railFeetPerComponent = length; // each rail component gets one rail run = length
   const postFeet = posts * (postHeight / 12);
   const picketFeet = totalPickets * (picketLength / 12);
@@ -119,6 +135,7 @@ export function computeRailingTakeoff({ catalogItem, componentMap, materials, se
 
   return {
     inputs: { length, isResidential },
+    params: { post_spacing_in, post_width_in, picket_clear_gap_in, picket_width_in, rail_runs },
     steps: { postsForNet, netLength, posts, sectionLength, picketsPerSection, totalPickets, postHeight, picketLength },
     components: componentResults,
     materialCost,

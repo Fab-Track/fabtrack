@@ -34,7 +34,6 @@ const ALL_SECTIONS = [
   { id: "jobboard",   label: "Job Board",            icon: LayoutDashboard, roles: ["owner","admin","shop_manager"] },
   { id: "catalog",    label: "Service Catalog",      icon: BookOpen,        ownerOnly: true },
   { id: "contracts",  label: "Estimate Contracts",   icon: ClipboardList,   ownerOnly: true },
-  { id: "styles",     label: "Style Library",        icon: Image,           ownerOnly: true },
   { id: "payroll_settings", label: "Payroll",        icon: Timer,           ownerOnly: true },
   { id: "security",   label: "Security",             icon: Shield,          ownerOnly: true },
   { id: "stripe",     label: "Stripe Payments",      icon: CreditCard,      ownerOnly: true },
@@ -79,7 +78,6 @@ export default function Settings() {
       case "jobboard":     return <JobBoardSettingsSection />;
       case "catalog":      return <ServiceCatalogSection />;
       case "contracts":    return <EstimateContractSection />;
-      case "styles":       return <StyleLibrarySection />;
       case "stripe":       return <StripeSettingsSection />;
       case "quickbooks":   return <QuickBooksSection />;
       case "billing":      return <BillingSection />;

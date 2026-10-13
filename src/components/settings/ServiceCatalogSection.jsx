@@ -253,11 +253,11 @@ function CatalogItemForm({ initial = {}, categories, onSave, onCancel, fabRate =
   const [description, setDescription] = useState(initial.default_description || "");
   const [photoUrl, setPhotoUrl] = useState(initial.photo_url || "");
   const [isRailing, setIsRailing] = useState(initial.is_railing === true);
-  const [postSpacing, setPostSpacing] = useState(initial.post_spacing_in ?? 72);
-  const [postWidth, setPostWidth] = useState(initial.post_width_in ?? 1.5);
-  const [picketGap, setPicketGap] = useState(initial.picket_clear_gap_in ?? 4);
-  const [picketWidth, setPicketWidth] = useState(initial.picket_width_in ?? 0.5);
-  const [railRuns, setRailRuns] = useState(initial.rail_runs ?? 2);
+  const [postSpacing, setPostSpacing] = useState(initial.post_spacing_in ?? "");
+  const [postWidth, setPostWidth] = useState(initial.post_width_in ?? "");
+  const [picketGap, setPicketGap] = useState(initial.picket_clear_gap_in ?? "");
+  const [picketWidth, setPicketWidth] = useState(initial.picket_width_in ?? "");
+  const [railRuns, setRailRuns] = useState(initial.rail_runs ?? "");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
   const costModelRef = useRef({});
@@ -355,7 +355,7 @@ function CatalogItemForm({ initial = {}, categories, onSave, onCancel, fabRate =
             <div>
               <p className="text-sm font-semibold">Railing Parameters</p>
               <p className="text-[11px] text-muted-foreground">
-                Post height and picket length come from org standards at estimate time.
+                Leave blank to use the category default. Post height and picket length come from org standards at estimate time.
               </p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -438,11 +438,11 @@ function CatalogItemForm({ initial = {}, categories, onSave, onCancel, fabRate =
             default_description: description,
             photo_url: photoUrl || null,
             is_railing: isRailing,
-            post_spacing_in: isRailing ? (parseFloat(postSpacing) || 0) : undefined,
-            post_width_in: isRailing ? (parseFloat(postWidth) || 0) : undefined,
-            picket_clear_gap_in: isRailing ? (parseFloat(picketGap) || 0) : undefined,
-            picket_width_in: isRailing ? (parseFloat(picketWidth) || 0) : undefined,
-            rail_runs: isRailing ? (parseInt(railRuns) || 0) : undefined,
+            post_spacing_in: isRailing ? (postSpacing === "" ? null : parseFloat(postSpacing) || null) : null,
+            post_width_in: isRailing ? (postWidth === "" ? null : parseFloat(postWidth) || null) : null,
+            picket_clear_gap_in: isRailing ? (picketGap === "" ? null : parseFloat(picketGap) || null) : null,
+            picket_width_in: isRailing ? (picketWidth === "" ? null : parseFloat(picketWidth) || null) : null,
+            rail_runs: isRailing ? (railRuns === "" ? null : parseInt(railRuns) || null) : null,
             ...costModelRef.current,
           })}
           disabled={!name.trim()}

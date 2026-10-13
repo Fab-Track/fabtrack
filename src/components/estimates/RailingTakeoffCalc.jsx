@@ -39,6 +39,12 @@ export default function RailingTakeoffCalc({ line, orgId, onPriceChange }) {
     enabled: !!orgId,
   });
 
+  const { data: categories = [] } = useQuery({
+    queryKey: ["catalogCategories", orgId],
+    queryFn: () => orgId ? base44.entities.CatalogCategory.filter({ organization_id: orgId }, { sort: "sort_order", limit: 500 }) : [],
+    enabled: !!orgId,
+  });
+
   // Derived data
   const catalogItem = useMemo(
     () => catalog.find(c => c.name === line.service_name),
@@ -46,13 +52,17 @@ export default function RailingTakeoffCalc({ line, orgId, onPriceChange }) {
   );
   const resolvedSettings = useMemo(() => resolveSettings(settingsRecords), [settingsRecords]);
   const componentMap = useMemo(() => catalogItem ? findComponentMap(maps, catalogItem) : null, [maps, catalogItem]);
+  const category = useMemo(
+    () => catalogItem?.category_id ? categories.find(c => c.id === catalogItem.category_id) : null,
+    [categories, catalogItem]
+  );
 
   // Compute takeoff
   const takeoff = useMemo(() => {
     const len = parseFloat(linearFeet);
     if (!len || !catalogItem || !componentMap || !resolvedSettings) return null;
-    return computeRailingTakeoff({ catalogItem, componentMap, materials, settings: resolvedSettings, length: len, isResidential });
-  }, [linearFeet, isResidential, catalogItem, componentMap, materials, resolvedSettings]);
+    return computeRailingTakeoff({ catalogItem, componentMap, materials, settings: resolvedSettings, length: len, isResidential, category });
+  }, [linearFeet, isResidential, catalogItem, componentMap, materials, resolvedSettings, category]);
 
   // Call onPriceChange when takeoff changes (use ref to avoid stale closure / infinite loops)
   const onPriceChangeRef = useRef(onPriceChange);

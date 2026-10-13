@@ -12,7 +12,11 @@
     },
     "category": {
       "type": "string",
-      "description": "Category \u2014 can be custom (not limited to enum)"
+      "description": "Category text (kept for backward compat; category_id is the link)"
+    },
+    "category_id": {
+      "type": "string",
+      "description": "Reference to the CatalogCategory record this item belongs to"
     },
     "unit": {
       "type": "string",
@@ -54,32 +58,27 @@
     },
     "style_id": {
       "type": "string",
-      "description": "Railing styles only (is_railing: true). Reference to the RailingStyleLibrary record this catalog item corresponds to. Drives style resolution in the estimate wizard."
+      "description": "Legacy reference to RailingStyleLibrary. Kept for backward compat but no longer read by the app."
     },
     "post_spacing_in": {
       "type": "number",
-      "default": 72,
-      "description": "Railing takeoff parameter: spacing between posts in inches."
+      "description": "Railing takeoff override: spacing between posts in inches. Null = use category default."
     },
     "post_width_in": {
       "type": "number",
-      "default": 1.5,
-      "description": "Railing takeoff parameter: post width in inches."
+      "description": "Railing takeoff override: post width in inches. Null = use category default."
     },
     "picket_clear_gap_in": {
       "type": "number",
-      "default": 4,
-      "description": "Railing takeoff parameter: clear gap between pickets in inches (code-compliant max is typically 4)."
+      "description": "Railing takeoff override: clear gap between pickets in inches. Null = use category default."
     },
     "picket_width_in": {
       "type": "number",
-      "default": 0.5,
-      "description": "Railing takeoff parameter: individual picket width in inches."
+      "description": "Railing takeoff override: individual picket width in inches. Null = use category default."
     },
     "rail_runs": {
       "type": "number",
-      "default": 2,
-      "description": "Railing takeoff parameter: number of horizontal rail runs (top + bottom rails). Integer."
+      "description": "Railing takeoff override: number of horizontal rail runs (top + bottom rails). Null = use category default."
     },
     "cost_primary_unit": {
       "type": "string",

@@ -66,12 +66,12 @@ export default function RailingCalculatorModal({ open, onClose, job, onGenerateE
   // Option 1 material rows
   const [materialRows, setMaterialRows] = useState(() => buildMaterialRows("Columbia", 20));
 
-  // Style photo from library
-  const { data: styleLibrary = [] } = useQuery({
-    queryKey: ["railingStyleLibrary"],
-    queryFn: () => base44.entities.RailingStyleLibrary.list(),
+  // Style photo from ServiceCatalog (merged from RailingStyleLibrary)
+  const { data: catalogItems = [] } = useQuery({
+    queryKey: ["serviceCatalog", "active"],
+    queryFn: () => base44.entities.ServiceCatalog.filter({ is_active: true }),
   });
-  const stylePhoto = styleLibrary.find(s => s.style_name === style)?.photo_url;
+  const stylePhoto = catalogItems.find(c => c.is_railing && c.name?.replace(/\s+railing$/i, "").trim() === style)?.photo_url;
 
   // When style changes, rebuild material rows and update labor hours
   useEffect(() => {
