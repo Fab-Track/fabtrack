@@ -5,35 +5,6 @@
  */
 
 /**
- * Resolve effective $/lb for a material.
- * Priority: 1. auto (cost_per_stick / weight_per_stick), 2. override, 3. org steel price.
- */
-export function resolveEffectivePerLb(material, orgSteelPrice) {
-  if (material.cost_per_stick > 0 && material.weight_per_stick > 0) {
-    return { value: material.cost_per_stick / material.weight_per_stick, mode: "auto" };
-  }
-  if (material.price_per_lb_override > 0) {
-    return { value: material.price_per_lb_override, mode: "override" };
-  }
-  if (orgSteelPrice > 0) {
-    return { value: orgSteelPrice, mode: "org" };
-  }
-  return { value: null, mode: null };
-}
-
-/**
- * Resolve weight_per_ft for a material.
- * Priority: 1. stored weight_per_ft, 2. derived (weight_per_stick / stock_length_ft).
- */
-export function resolveWeightPerFt(material) {
-  if (material.weight_per_ft > 0) return material.weight_per_ft;
-  if (material.weight_per_stick > 0 && material.stock_length_ft > 0) {
-    return material.weight_per_stick / material.stock_length_ft;
-  }
-  return null;
-}
-
-/**
  * Build the settings object from AppSettings records.
  * Labor rates and railing standards come from the "main" row only.
  */
@@ -41,10 +12,7 @@ export function resolveSettings(records) {
   if (!records || records.length === 0) return null;
   const main = records.find(r => r.setting_key === "main");
   const mainVal = (field) => (main && main[field] != null && main[field] > 0 ? main[field] : 0);
-  // Steel price stays on its own legacy row (field kept in the database); everything else reads "main" only.
-  const steel = records.find(r => r.steel_price_per_lb > 0)?.steel_price_per_lb || 0;
   return {
-    steel_price_per_lb: steel,
     res_post_height_in: mainVal("res_post_height_in"),
     res_picket_length_in: mainVal("res_picket_length_in"),
     comm_post_height_in: mainVal("comm_post_height_in"),
@@ -104,28 +72,35 @@ export function computeRailingTakeoff({ catalogItem, componentMap, materials, se
     const mat = materials.find(m => m.id === c.material_id);
     if (!mat) return null;
 
-    const wpf = resolveWeightPerFt(mat);
-    const effLb = resolveEffectivePerLb(mat, settings.steel_price_per_lb);
-    if (!wpf || !effLb.value) return null;
-
     const label = (c.component_label || "").toLowerCase();
-    let feet = 0;
-    if (label.includes("rail")) feet = railFeetPerComponent;
-    else if (label.includes("post")) feet = postFeet;
-    else if (label.includes("picket")) feet = picketFeet;
+    const isRail = label.includes("rail");
+    const isPost = label.includes("post");
+    const isPicket = label.includes("picket");
 
-    const pounds = feet * wpf;
-    const cost = pounds * effLb.value;
+    // Unit items are costed per piece: cost_per_unit x count.
+    if (mat.cost_method === "unit") {
+      if (!(mat.cost_per_unit > 0)) return null;
+      const qty = isPost ? posts : isPicket ? totalPickets : isRail ? 1 : 0;
+      return {
+        component_label: c.component_label,
+        material_name: mat.name,
+        qty,
+        qty_unit: mat.unit || "unit",
+        unit_cost: mat.cost_per_unit,
+        cost: qty * mat.cost_per_unit,
+      };
+    }
 
+    // Linear-foot and weight items are both costed from the calculated cost_per_foot.
+    if (!(mat.cost_per_foot > 0)) return null;
+    const feet = isRail ? railFeetPerComponent : isPost ? postFeet : isPicket ? picketFeet : 0;
     return {
       component_label: c.component_label,
       material_name: mat.name,
-      feet,
-      weight_per_ft: wpf,
-      pounds,
-      effective_per_lb: effLb.value,
-      effective_per_lb_mode: effLb.mode,
-      cost,
+      qty: feet,
+      qty_unit: "ft",
+      unit_cost: mat.cost_per_foot,
+      cost: feet * mat.cost_per_foot,
     };
   });
 

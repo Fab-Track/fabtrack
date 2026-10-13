@@ -147,9 +147,8 @@ export default function RailingTakeoffCalc({ line, orgId, onPriceChange }) {
               <thead className="bg-muted/30">
                 <tr>
                   <th className="text-left px-2 py-1 font-medium">Component</th>
-                  <th className="text-right px-2 py-1 font-medium">Feet</th>
-                  <th className="text-right px-2 py-1 font-medium">Lbs</th>
-                  <th className="text-right px-2 py-1 font-medium">$/lb</th>
+                  <th className="text-right px-2 py-1 font-medium">Qty</th>
+                  <th className="text-right px-2 py-1 font-medium">Unit cost</th>
                   <th className="text-right px-2 py-1 font-medium">Cost</th>
                 </tr>
               </thead>
@@ -157,9 +156,8 @@ export default function RailingTakeoffCalc({ line, orgId, onPriceChange }) {
                 {takeoff.components.map((c, i) => (
                   <tr key={i} className="border-t">
                     <td className="px-2 py-1">{c.component_label}</td>
-                    <td className="text-right px-2 py-1 font-mono">{c.feet.toFixed(2)}</td>
-                    <td className="text-right px-2 py-1 font-mono">{c.pounds.toFixed(2)}</td>
-                    <td className="text-right px-2 py-1 font-mono">${c.effective_per_lb.toFixed(4)}</td>
+                    <td className="text-right px-2 py-1 font-mono">{c.qty.toFixed(2)} {c.qty_unit}</td>
+                    <td className="text-right px-2 py-1 font-mono">${c.unit_cost.toFixed(4)}</td>
                     <td className="text-right px-2 py-1 font-mono">${c.cost.toFixed(2)}</td>
                   </tr>
                 ))}
