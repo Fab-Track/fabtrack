@@ -66,6 +66,56 @@
             "type": "string",
             "description": "Selected Service Catalog item name for this line"
           },
+          "service_catalog_id": {
+            "type": "string",
+            "description": "ServiceCatalog item this line was added from"
+          },
+          "building_type": {
+            "type": "string",
+            "enum": [
+              "Residential",
+              "Commercial"
+            ],
+            "description": "Railing lines: picks residential or commercial heights"
+          },
+          "is_fixed_price": {
+            "type": "boolean",
+            "description": "Fixed-price add-on: price is typed, no margin math"
+          },
+          "hard_cost": {
+            "type": "number",
+            "description": "Total hard cost for this line (internal only)"
+          },
+          "cost_breakdown": {
+            "type": "object",
+            "description": "Hard cost split (internal only)",
+            "properties": {
+              "materials": {
+                "type": "number"
+              },
+              "fabrication": {
+                "type": "number"
+              },
+              "powder_coat": {
+                "type": "number"
+              },
+              "install": {
+                "type": "number"
+              }
+            }
+          },
+          "install_hours": {
+            "type": "number",
+            "description": "Install hours on this line (before crew size); drives install days"
+          },
+          "margin_pct": {
+            "type": "number",
+            "description": "Per-line margin override; empty = estimate target margin"
+          },
+          "_is_fuel": {
+            "type": "boolean",
+            "description": "Generated Fuel & travel line"
+          },
           "description": {
             "type": "string"
           },
@@ -122,17 +172,37 @@
           },
           "components": {
             "type": "array",
-            "description": "Display-only component/material spec for this line (e.g. railing style breakdown). Not used for pricing.",
+            "description": "Component/material spec for this line. component_type + name are shown to the customer; the other fields are the internal takeoff result.",
             "items": {
               "type": "object",
               "properties": {
                 "component_type": {
                   "type": "string",
-                  "description": "Component slot/role, e.g. Top Rail, Bottom Rail, Post, Picket, Cap"
+                  "description": "Component slot/role, e.g. Top Rail, Bottom Rail, Post, Picket"
                 },
                 "name": {
                   "type": "string",
                   "description": "Material name from the master Materials list"
+                },
+                "slot": {
+                  "type": "string"
+                },
+                "material": {
+                  "type": "string"
+                },
+                "qty": {
+                  "type": "number",
+                  "description": "Feet or count"
+                },
+                "qty_unit": {
+                  "type": "string"
+                },
+                "unit_cost": {
+                  "type": "number",
+                  "description": "Cost per foot / per unit"
+                },
+                "cost": {
+                  "type": "number"
                 }
               }
             }
@@ -165,11 +235,11 @@
           },
           "_is_railing": {
             "type": "boolean",
-            "description": "Whether this line item is priced via the railing takeoff calculator."
+            "description": "Whether this line item is priced via the railing takeoff."
           },
           "_railing_takeoff": {
             "type": "object",
-            "description": "Snapshot of the railing takeoff calculation: inputs (length, isResidential), computed steps, per-component breakdown, and cost totals. Written by RailingTakeoffCalc; read on reopen to re-populate the calculator."
+            "description": "Snapshot of the railing takeoff: inputs (length, isResidential), layout steps and params."
           }
         }
       }
@@ -197,6 +267,43 @@
     "total": {
       "type": "number",
       "default": 0
+    },
+    "target_margin_pct": {
+      "type": "number",
+      "description": "Target margin % applied to every cost-group line (defaults from AppSettings)"
+    },
+    "miles_one_way": {
+      "type": "number",
+      "description": "Miles to the job, one way"
+    },
+    "extra_trips": {
+      "type": "number",
+      "default": 1,
+      "description": "Extra trips beyond install days (measure, delivery)"
+    },
+    "fuel_margin": {
+      "type": "boolean",
+      "description": "Whether the target margin is applied to fuel"
+    },
+    "fuel_price_per_gal_snapshot": {
+      "type": "number",
+      "description": "$/gal used for this estimate"
+    },
+    "truck_mpg_snapshot": {
+      "type": "number",
+      "description": "Truck mpg used for this estimate"
+    },
+    "fuel_cost": {
+      "type": "number",
+      "description": "Fuel cost (internal)"
+    },
+    "fuel_price": {
+      "type": "number",
+      "description": "Fuel price charged"
+    },
+    "total_hard_cost": {
+      "type": "number",
+      "description": "Hard cost of calculated lines + fuel (internal)"
     },
     "approved_date": {
       "type": "string",
