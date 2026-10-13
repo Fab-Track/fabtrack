@@ -28,7 +28,7 @@ export default function Catalog() {
           </button>
         ))}
       </div>
-      {tab === "items" ? <CostItemsTab actionsSlot={slot} /> : <CostGroupsTab />}
+      {tab === "items" ? <CostItemsTab actionsSlot={slot} /> : <CostGroupsTab actionsSlot={slot} />}
     </div>
   );
 }

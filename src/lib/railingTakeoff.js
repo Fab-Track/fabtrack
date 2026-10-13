@@ -52,26 +52,21 @@ export function computeLayout({ catalogItem, settings, length, isResidential, ca
   const picketLength = isResidential ? settings.res_picket_length_in : settings.comm_picket_length_in;
   if (!postHeight || !picketLength) return null;
 
-  // Step 1: Net length (subtract post widths)
-  const postsForNet = Math.ceil(length * 12 / post_spacing_in);
-  const netLength = length - (postsForNet * post_width_in / 12);
-
-  // Step 2: Posts
-  const posts = Math.ceil(netLength / (post_spacing_in / 12));
-
-  // Step 3: Section length
-  const sectionLength = netLength / posts;
-
-  // Step 4: Pickets
-  const picketsPerSection = Math.ceil((sectionLength * 12 - picket_width_in) / (picket_clear_gap_in + picket_width_in));
+  // inches = LF x 12; posts = max(1, ceil(inches / spacing)); net = inches - posts x post width
+  const inches = length * 12;
+  const posts = Math.max(1, Math.ceil(inches / post_spacing_in));
+  const netIn = inches - posts * post_width_in;
+  const sectionIn = netIn / posts;
+  const picketsPerSection = Math.max(0, Math.ceil(sectionIn / (picket_width_in + picket_clear_gap_in)));
   const totalPickets = picketsPerSection * posts;
 
   return {
     params: { post_spacing_in, post_width_in, picket_clear_gap_in, picket_width_in, rail_runs },
-    steps: { postsForNet, netLength, posts, sectionLength, picketsPerSection, totalPickets, postHeight, picketLength },
-    // Step 5-6: Feet needed per component type
-    // Each rail component gets one rail run = length
+    steps: { postsForNet: posts, netLength: netIn / 12, posts, sectionLength: sectionIn / 12, picketsPerSection, totalPickets, postHeight, picketLength },
+    // top rail = LF; bottom rail = LF x (rail runs - 1)
     railFeet: length,
+    topRailFeet: length,
+    bottomRailFeet: length * Math.max(0, rail_runs - 1),
     postFeet: posts * (postHeight / 12),
     picketFeet: totalPickets * (picketLength / 12),
   };
@@ -106,7 +101,7 @@ export function costComponent(c, mat, layout, length) {
 
   // Linear-foot and weight items are both costed from the calculated cost_per_foot.
   if (!(mat.cost_per_foot > 0)) return null;
-  if (slot !== "Other") qty = isRail ? layout.railFeet : isPost ? layout.postFeet : layout.picketFeet;
+  if (slot !== "Other") qty = isRail ? (slot === "Top Rail" ? layout.topRailFeet : layout.bottomRailFeet) : isPost ? layout.postFeet : layout.picketFeet;
   return { component_label: label, slot, material_name: mat.name, qty, qty_unit: "ft", unit_cost: mat.cost_per_foot, cost: qty * mat.cost_per_foot };
 }
 

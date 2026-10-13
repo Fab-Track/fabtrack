@@ -19,7 +19,8 @@ function countedText(row, layout, mat) {
   const unit = mat?.cost_method === "unit";
   if (row.slot === "Post") return unit ? `${s.posts} posts` : `${s.posts} posts × ${s.postHeight}"`;
   if (row.slot === "Picket") return unit ? `${s.totalPickets} pickets` : `${s.totalPickets} pickets × ${s.picketLength}"`;
-  return unit ? "1 per rail" : "Run length";
+  if (unit) return "1 per rail";
+  return row.slot === "Bottom Rail" ? "Run length × (rail runs − 1)" : "Run length";
 }
 
 export default function ComponentRow({ row, idx, isRailing, materials, layout, length, result, onChange, onMaterial, onRemove, onAddNew }) {
