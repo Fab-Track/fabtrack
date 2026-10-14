@@ -135,7 +135,7 @@
     "cost_fab_hours_per_unit": {
       "type": "number",
       "default": 0,
-      "description": "Fabrication hours per primary unit"
+      "description": "Fabrication hours for one person per 10 primary units (e.g. per 10 LF). Divided by 10 in calculations."
     },
     "cost_powder_coat_per_unit": {
       "type": "number",
@@ -150,12 +150,12 @@
     "cost_install_hours_per_unit": {
       "type": "number",
       "default": 0,
-      "description": "Install hours per primary unit (per crew member)"
+      "description": "Install elapsed hours per 10 primary units (e.g. per 10 LF). Multiplied by crew size and divided by 10 in calculations."
     },
     "cost_markup_multiplier": {
       "type": "number",
       "default": 1.5,
-      "description": "Markup multiplier applied to hard cost (e.g. 1.5 = 50% markup)"
+      "description": "Whole-job markup multiplier applied to total hard cost (e.g. 1.5 = 50% markup). Set per estimate line."
     }
   },
   "required": [

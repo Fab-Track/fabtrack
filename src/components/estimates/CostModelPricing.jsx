@@ -31,9 +31,9 @@ export default function CostModelPricing({ catalogItem, fabRate = 0, installRate
   const qty = parseFloat(quantity) || 0;
 
   const materialsCost = round2(m);
-  const fabCost = round2(fh * fabRate);
+  const fabCost = round2(fh / 10 * fabRate);
   const powderCoatCost = round2(pc);
-  const installCost = round2(cs * ih * installRate);
+  const installCost = round2(cs * ih / 10 * installRate);
   const hardCost = round2(materialsCost + fabCost + powderCoatCost + installCost);
   const pricePerUnit = round2(hardCost * mk);
   const total = round2(qty * pricePerUnit);
@@ -91,13 +91,13 @@ export default function CostModelPricing({ catalogItem, fabRate = 0, installRate
             <span>Materials</span><span>${materialsCost.toFixed(2)}/unit</span>
           </div>
           <div className="flex justify-between text-muted-foreground">
-            <span>Fab ({fh}h × ${fabRate.toFixed(2)}/h)</span><span>${fabCost.toFixed(2)}/unit</span>
+            <span>Fab ({fh}h/10 × ${fabRate.toFixed(2)}/h)</span><span>${fabCost.toFixed(2)}/unit</span>
           </div>
           <div className="flex justify-between text-muted-foreground">
             <span>Powder coat</span><span>${powderCoatCost.toFixed(2)}/unit</span>
           </div>
           <div className="flex justify-between text-muted-foreground">
-            <span>Install ({cs}×{ih}h × ${installRate.toFixed(2)}/h)</span><span>${installCost.toFixed(2)}/unit</span>
+            <span>Install ({cs} crew × {ih}h/10 × ${installRate.toFixed(2)}/h)</span><span>${installCost.toFixed(2)}/unit</span>
           </div>
           <div className="border-t my-0.5" />
           <div className="flex justify-between font-semibold">

@@ -27,7 +27,7 @@ export default function LaborCard({ rules, setRule, commit, calc, unit, rates, h
           <tbody>
             <tr className="border-t">
               <td className={`${td} font-bold`}>Fabrication</td>
-              <td className={td}><Rule field="fab" value={rules.fab} {...rp} suffix={`hr / ${unit}`} /></td>
+              <td className={td}><Rule field="fab" value={rules.fab} {...rp} suffix={`hr / 10 ${unit}`} /></td>
               <td className={`${td} text-muted-foreground`}>{n1(calc.fabHrs)} hrs × {money(rates.fab, 0)}/hr</td>
               <td className={`${td} text-right font-bold font-mono`}>{money(calc.fab)}</td>
             </tr>
@@ -41,7 +41,7 @@ export default function LaborCard({ rules, setRule, commit, calc, unit, rates, h
               <td className={`${td} font-bold`}>Install</td>
               <td className={td}>
                 <div className="space-y-1">
-                  <Rule field="inst" value={rules.inst} {...rp} suffix={`hr / ${unit}`} />
+                  <Rule field="inst" value={rules.inst} {...rp} suffix={`hr / 10 ${unit}`} />
                   <Rule field="crew" value={rules.crew} {...rp} prefix="crew of " />
                 </div>
               </td>

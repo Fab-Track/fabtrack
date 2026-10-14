@@ -41,8 +41,8 @@ export default function CostModelEditor({ initial = {}, fabRate = 0, installRate
   const mk = num(markup) || 1;
   const sq = num(sampleQty);
 
-  const fabCost = round2(fh * fabRate);
-  const installCost = round2(cs * ih * installRate);
+  const fabCost = round2(fh / 10 * fabRate);
+  const installCost = round2(cs * ih / 10 * installRate);
   const hardCost = round2(m + fabCost + pc + installCost);
   const pricePerUnit = round2(hardCost * mk);
 
@@ -98,7 +98,7 @@ export default function CostModelEditor({ initial = {}, fabRate = 0, installRate
           <Input type="number" step="0.01" className="h-8 text-sm" placeholder="0.00" value={materials} onChange={e => setMaterials(e.target.value)} />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">Fab hrs/unit</Label>
+          <Label className="text-xs">Fab hrs / 10 units</Label>
           <Input type="number" step="0.01" className="h-8 text-sm" placeholder="0.00" value={fabHours} onChange={e => setFabHours(e.target.value)} />
         </div>
         <div className="space-y-1">
@@ -110,7 +110,7 @@ export default function CostModelEditor({ initial = {}, fabRate = 0, installRate
           <Input type="number" step="1" className="h-8 text-sm" placeholder="0" value={crewSize} onChange={e => setCrewSize(e.target.value)} />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">Install hrs/unit</Label>
+          <Label className="text-xs">Install hrs / 10 units</Label>
           <Input type="number" step="0.01" className="h-8 text-sm" placeholder="0.00" value={installHours} onChange={e => setInstallHours(e.target.value)} />
         </div>
         <div className="space-y-1">
@@ -126,7 +126,7 @@ export default function CostModelEditor({ initial = {}, fabRate = 0, installRate
           <span>${m.toFixed(2)}</span>
         </div>
         <div className="flex justify-between text-muted-foreground">
-          <span>Fab cost/unit <span className="text-[10px] opacity-70">({fh} hrs × ${fabRate.toFixed(2)}/hr)</span></span>
+          <span>Fab cost/unit <span className="text-[10px] opacity-70">({fh} hrs/10 × ${fabRate.toFixed(2)}/hr)</span></span>
           <span>${fabCost.toFixed(2)}</span>
         </div>
         <div className="flex justify-between text-muted-foreground">
@@ -134,7 +134,7 @@ export default function CostModelEditor({ initial = {}, fabRate = 0, installRate
           <span>${pc.toFixed(2)}</span>
         </div>
         <div className="flex justify-between text-muted-foreground">
-          <span>Install cost/unit <span className="text-[10px] opacity-70">({cs} crew × {ih} hrs × ${installRate.toFixed(2)}/hr)</span></span>
+          <span>Install cost/unit <span className="text-[10px] opacity-70">({cs} crew × {ih} hrs/10 × ${installRate.toFixed(2)}/hr)</span></span>
           <span>${installCost.toFixed(2)}</span>
         </div>
         <div className="border-t my-1" />

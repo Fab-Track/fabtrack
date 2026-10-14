@@ -40,8 +40,8 @@ export default function StyleDetail({ item, category, settings, materials, orgId
   const results = rows.map((r) => costComponent(r, materials.find((m) => m.id === r.material_id), layout, qty));
   const rates = { fab: s.labor_fab_rate || 0, install: s.labor_install_rate || 0 };
   const hoursPerDay = s.install_hours_per_day || 8;
-  const fabHrs = num(rules.fab) * qty;
-  const instHrs = num(rules.inst) * qty;
+  const fabHrs = num(rules.fab) / 10 * qty;
+  const instHrs = num(rules.inst) / 10 * qty;
   const calc = {
     qty, fabHrs, instHrs,
     fab: fabHrs * rates.fab,

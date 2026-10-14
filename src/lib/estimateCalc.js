@@ -29,10 +29,10 @@ function computeCost(line, ctx) {
   const layout = railing ? computeLayout({ catalogItem: item, settings: resolveSettings([s]), length: qty, isResidential, category }) : null;
   const comps = (item.components || []).map((c) => costComponent(c, ctx.materials.find((m) => m.id === c.material_id), layout, qty)).filter(Boolean);
   const materials = comps.reduce((a, c) => a + c.cost, 0);
-  const instHrs = num(item.cost_install_hours_per_unit) * qty;
+  const instHrs = num(item.cost_install_hours_per_unit) / 10 * qty;
   const breakdown = {
     materials: r2(materials),
-    fabrication: r2(num(item.cost_fab_hours_per_unit) * qty * num(s.labor_fab_rate)),
+    fabrication: r2(num(item.cost_fab_hours_per_unit) / 10 * qty * num(s.labor_fab_rate)),
     powder_coat: r2(num(item.cost_powder_coat_per_unit) * qty),
     install: r2(instHrs * num(item.cost_install_crew_size) * num(s.labor_install_rate)),
   };

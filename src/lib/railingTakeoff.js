@@ -139,10 +139,10 @@ export function computeRailingTakeoff({ catalogItem, materials, settings, length
 
   const materialCost = componentResults.reduce((s, c) => s + c.cost, 0);
 
-  // Step 8: Labor costs (per linear foot — cost fields are hours/$ per ft)
-  const fabCost = (catalogItem.cost_fab_hours_per_unit || 0) * (settings.labor_fab_rate || 0) * length;
+  // Step 8: Labor costs (cost fields are hours per 10 LF — divide by 10 to get per-LF)
+  const fabCost = (catalogItem.cost_fab_hours_per_unit || 0) / 10 * (settings.labor_fab_rate || 0) * length;
   const powderCost = (catalogItem.cost_powder_coat_per_unit || 0) * length;
-  const installCost = (catalogItem.cost_install_crew_size || 0) * (catalogItem.cost_install_hours_per_unit || 0) * (settings.labor_install_rate || 0) * length;
+  const installCost = (catalogItem.cost_install_crew_size || 0) * (catalogItem.cost_install_hours_per_unit || 0) / 10 * (settings.labor_install_rate || 0) * length;
 
   const hardCost = materialCost + fabCost + powderCost + installCost;
   const totalPrice = hardCost * (catalogItem.cost_markup_multiplier || 1);
