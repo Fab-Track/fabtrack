@@ -39,7 +39,7 @@ export default function StyleComponentEditor({ open, onOpenChange, serviceCatalo
   });
   const { data: categories = [] } = useQuery({
     queryKey: ["catalogCategories", orgId],
-    queryFn: () => base44.entities.CatalogCategory.filter({ organization_id: orgId }, { limit: 500 }),
+    queryFn: () => base44.entities.CatalogCategory.filter({ organization_id: orgId }),
     enabled,
   });
 
