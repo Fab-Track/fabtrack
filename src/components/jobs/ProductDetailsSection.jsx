@@ -1,10 +1,15 @@
 import React, { useState } from "react";
-import { Plus, Trash2, Package } from "lucide-react";
+import { Plus, Trash2, Package, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import CollapsibleSection from "@/components/jobs/CollapsibleSection";
 import LocationPhotoUpload from "@/components/jobs/LocationPhotoUpload";
 import { CONDITIONAL_PRODUCT_KEYS as C } from "@/lib/jobDetailDefaults";
@@ -69,7 +74,8 @@ function CustomDetailField({ label, value, onChange, options, linkTriggerValue, 
 }
 
 // ─── Single product entry card ─────────────────────────────────────────────
-function ProductEntry({ entry, index, config, onChange, onRemove, onSurfaceSync }) {
+function ProductEntry({ entry, index, config, onChange, onRemove, onSurfaceSync, onFileUploaded }) {
+  const [open, setOpen] = useState(!entry.product);
   const isRailing = entry.product === C.RAILING;
   const isStaircase = entry.product === C.STAIRCASE;
   const isOther = entry.product === C.OTHER;
@@ -81,15 +87,33 @@ function ProductEntry({ entry, index, config, onChange, onRemove, onSurfaceSync 
     if (v && onSurfaceSync) onSurfaceSync(v);
   };
 
+  // Summary chips for the collapsed header
+  const summaryParts = [
+    entry.product && entry.product !== C.OTHER ? entry.product : entry.product === C.OTHER ? (entry.other_notes || "Other") : null,
+    entry.install_area,
+    entry.surface_type,
+  ].filter(Boolean);
+
   return (
-    <div className="rounded-lg border bg-muted/10 p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="font-semibold text-sm">Product {index + 1}</span>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={onRemove} title="Remove">
+    <Collapsible open={open} onOpenChange={setOpen} className="rounded-lg border bg-muted/10">
+      <div className="flex items-center justify-between p-3">
+        <CollapsibleTrigger asChild>
+          <button className="flex items-center gap-2 text-left flex-1 min-w-0">
+            {open ? <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />}
+            <span className="font-semibold text-sm shrink-0">Product {index + 1}</span>
+            {summaryParts.length > 0 && (
+              <span className="text-xs text-muted-foreground truncate">
+                {summaryParts.join(" · ")}
+              </span>
+            )}
+          </button>
+        </CollapsibleTrigger>
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive shrink-0" onClick={onRemove} title="Remove">
           <Trash2 className="w-3.5 h-3.5" />
         </Button>
       </div>
-
+      <CollapsibleContent>
+      <div className="px-4 pb-4 space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <FieldRow label="Product">
           <OptionSelect value={entry.product} onChange={v => onChange({ ...entry, product: v })} options={config.products} />
@@ -238,15 +262,18 @@ function ProductEntry({ entry, index, config, onChange, onRemove, onSurfaceSync 
           <LocationPhotoUpload
             files={entry.location_photos || []}
             onChange={v => onChange({ ...entry, location_photos: v })}
+            onFileUploaded={onFileUploaded}
           />
         </FieldRow>
       )}
-    </div>
+      </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
 // ─── Main section ───────────────────────────────────────────────────────────
-export default function ProductDetailsSection({ entries = [], config, onChange, onSurfaceSync }) {
+export default function ProductDetailsSection({ entries = [], config, onChange, onSurfaceSync, onFileUploaded }) {
   const addProduct = () => {
     onChange([...entries, { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, product: "", powdercoat: "" }]);
   };
@@ -287,6 +314,7 @@ export default function ProductDetailsSection({ entries = [], config, onChange, 
               onChange={(updated) => updateEntry(i, updated)}
               onRemove={() => removeEntry(i)}
               onSurfaceSync={onSurfaceSync}
+              onFileUploaded={onFileUploaded}
             />
           ))}
         </div>

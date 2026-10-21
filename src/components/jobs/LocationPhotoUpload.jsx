@@ -5,8 +5,10 @@ import { ImagePlus, X, Loader2, FileText } from "lucide-react";
 /**
  * Uploads location photos/files for a product entry.
  * Files are stored privately via UploadPrivateFile.
+ * onFileUploaded(fileUri, fileName, fileType) is called after each successful upload
+ * so the parent can also create a JobAttachment record for the gallery.
  */
-export default function LocationPhotoUpload({ files = [], onChange }) {
+export default function LocationPhotoUpload({ files = [], onChange, onFileUploaded }) {
   const inputRef = useRef();
   const [uploading, setUploading] = useState(false);
 
@@ -16,6 +18,7 @@ export default function LocationPhotoUpload({ files = [], onChange }) {
     for (const file of Array.from(fileList)) {
       const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
       uploaded.push({ url: file_uri, name: file.name, type: file.type });
+      if (onFileUploaded) onFileUploaded(file_uri, file.name, file.type || "application/octet-stream");
     }
     onChange([...files, ...uploaded]);
     setUploading(false);

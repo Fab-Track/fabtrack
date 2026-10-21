@@ -51,6 +51,26 @@ export default function ProjectDetailsTab({ job }) {
     setDirty(true);
   }, []);
 
+  // When a photo/file is uploaded on a product, also create a JobAttachment
+  // record so it appears in the Attachments gallery for this job.
+  const handleProductFileUploaded = useCallback(async (fileUri, fileName, fileType) => {
+    try {
+      await base44.entities.JobAttachment.create({
+        job_id: job.id,
+        job_number: job.job_number,
+        organization_id: job.organization_id,
+        category: "Product Photos",
+        file_url: fileUri,
+        file_name: fileName,
+        file_type: fileType,
+        uploaded_by: "me",
+      });
+      qc.invalidateQueries({ queryKey: ["attachments", job.id] });
+    } catch (err) {
+      // Silently fail — the file is still saved on the product entry
+    }
+  }, [job, qc]);
+
   useEffect(() => {
     if (!dirty) return;
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
@@ -101,6 +121,7 @@ export default function ProjectDetailsTab({ job }) {
         config={config}
         onChange={(val) => updateSection("product_details", val)}
         onSurfaceSync={syncSurfaceToInstallDetails}
+        onFileUploaded={handleProductFileUploaded}
       />
       <InstallDetailsSection
         data={data.install_details || {}}
