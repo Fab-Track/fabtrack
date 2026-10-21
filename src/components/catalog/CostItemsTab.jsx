@@ -12,6 +12,7 @@ import { exportCostItems, importCostItems } from "@/lib/costItemsCsv";
 import CostItemsToolbar from "./CostItemsToolbar";
 import CostItemsTable from "./CostItemsTable";
 import CostItemDialog from "./CostItemDialog";
+import { useJobDetailConfig } from "@/hooks/useJobDetailConfig";
 
 const PAGE = 100;
 const escapeRegex = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -29,6 +30,8 @@ export default function CostItemsTab({ actionsSlot }) {
   const [limit, setLimit] = useState(PAGE);
   const [dialog, setDialog] = useState({ open: false, item: null });
   const [seeded, setSeeded] = useState(false);
+  const { config: detailConfig } = useJobDetailConfig();
+  const productTypes = detailConfig.products;
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search.trim()), 300);
@@ -113,6 +116,7 @@ export default function CostItemsTab({ actionsSlot }) {
       <CostItemsToolbar
         search={search} setSearch={setSearch} shape={shape} setShape={setShape}
         used={used} setUsed={setUsed} quick={quick} setQuick={setQuick} shapes={shapes} counts={counts}
+        productTypes={productTypes}
       />
       <CostItemsTable
         items={items} costCodes={costCodes} total={total} loading={isLoading}
@@ -122,6 +126,7 @@ export default function CostItemsTab({ actionsSlot }) {
       <CostItemDialog
         open={dialog.open} onOpenChange={(o) => setDialog((d) => ({ ...d, open: o }))}
         item={dialog.item} shapes={shapes} costCodes={costCodes} orgId={orgId} onSaved={refresh}
+        productTypes={productTypes}
       />
     </div>
   );

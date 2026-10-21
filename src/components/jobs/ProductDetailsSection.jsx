@@ -64,7 +64,7 @@ function SubSection({ label, children }) {
 }
 
 // ─── Single product entry card ─────────────────────────────────────────────
-function ProductEntry({ entry, index, config, materialOptions, onChange, onRemove, onSurfaceSync, onFileUploaded, jobId }) {
+function ProductEntry({ entry, index, config, materials, onChange, onRemove, onSurfaceSync, onFileUploaded, jobId }) {
   const [open, setOpen] = useState(!entry.product);
   const isRailing = entry.product === C.RAILING;
   const isStaircase = entry.product === C.STAIRCASE;
@@ -76,6 +76,11 @@ function ProductEntry({ entry, index, config, materialOptions, onChange, onRemov
     onChange({ ...entry, surface_type: v });
     if (v && onSurfaceSync) onSurfaceSync(v);
   };
+
+  // Materials tagged with this product type (component_type includes entry.product)
+  const productMaterialNames = (materials || [])
+    .filter(m => Array.isArray(m.component_type) && entry.product && m.component_type.includes(entry.product))
+    .map(m => m.name);
 
   // Summary chips for the collapsed header
   const summaryParts = [
@@ -212,11 +217,11 @@ function ProductEntry({ entry, index, config, materialOptions, onChange, onRemov
       {isRailing && (
         <SubSection label="Materials">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <CustomDetailField label="Top Rail" value={entry.custom_top_rail} onChange={v => onChange({ ...entry, custom_top_rail: v })} options={[...(materialOptions["Top Rail"] || []), "other"]} linkTriggerValue="Molded Cap" linkValue={entry.custom_top_rail_link} onLinkChange={v => onChange({ ...entry, custom_top_rail_link: v })} otherNotes={entry.custom_top_rail_notes} onOtherNotesChange={v => onChange({ ...entry, custom_top_rail_notes: v })} otherPlaceholder="Describe top rail..." />
-            <CustomDetailField label="Bottom Rail" value={entry.custom_bottom_rail} onChange={v => onChange({ ...entry, custom_bottom_rail: v })} options={[...(materialOptions["Bottom Rail"] || []), "other"]} otherNotes={entry.custom_bottom_rail_notes} onOtherNotesChange={v => onChange({ ...entry, custom_bottom_rail_notes: v })} otherPlaceholder="Describe bottom rail..." />
-            <CustomDetailField label="Post" value={entry.custom_post} onChange={v => onChange({ ...entry, custom_post: v })} options={[...(materialOptions["Post"] || []), "other"]} otherNotes={entry.custom_post_notes} onOtherNotesChange={v => onChange({ ...entry, custom_post_notes: v })} otherPlaceholder="Describe post..." />
-            <CustomDetailField label="Pickets" value={entry.custom_pickets} onChange={v => onChange({ ...entry, custom_pickets: v })} options={[...(materialOptions["Picket"] || []), "other"]} linkTriggerValue="custom picket" linkValue={entry.custom_pickets_link} onLinkChange={v => onChange({ ...entry, custom_pickets_link: v })} otherNotes={entry.custom_pickets_notes} onOtherNotesChange={v => onChange({ ...entry, custom_pickets_notes: v })} otherPlaceholder="Describe pickets..." />
-            <CustomDetailField label="Base Plate Size" value={entry.custom_base_plate} onChange={v => onChange({ ...entry, custom_base_plate: v })} options={[...(materialOptions["Base Plate"] || []), "other"]} otherNotes={entry.custom_base_plate_notes} onOtherNotesChange={v => onChange({ ...entry, custom_base_plate_notes: v })} otherPlaceholder="Describe base plate..." />
+            <CustomDetailField label="Top Rail" value={entry.custom_top_rail} onChange={v => onChange({ ...entry, custom_top_rail: v })} options={[...productMaterialNames, "other"]} linkTriggerValue="Molded Cap" linkValue={entry.custom_top_rail_link} onLinkChange={v => onChange({ ...entry, custom_top_rail_link: v })} otherNotes={entry.custom_top_rail_notes} onOtherNotesChange={v => onChange({ ...entry, custom_top_rail_notes: v })} otherPlaceholder="Describe top rail..." />
+            <CustomDetailField label="Bottom Rail" value={entry.custom_bottom_rail} onChange={v => onChange({ ...entry, custom_bottom_rail: v })} options={[...productMaterialNames, "other"]} otherNotes={entry.custom_bottom_rail_notes} onOtherNotesChange={v => onChange({ ...entry, custom_bottom_rail_notes: v })} otherPlaceholder="Describe bottom rail..." />
+            <CustomDetailField label="Post" value={entry.custom_post} onChange={v => onChange({ ...entry, custom_post: v })} options={[...productMaterialNames, "other"]} otherNotes={entry.custom_post_notes} onOtherNotesChange={v => onChange({ ...entry, custom_post_notes: v })} otherPlaceholder="Describe post..." />
+            <CustomDetailField label="Pickets" value={entry.custom_pickets} onChange={v => onChange({ ...entry, custom_pickets: v })} options={[...productMaterialNames, "other"]} linkTriggerValue="custom picket" linkValue={entry.custom_pickets_link} onLinkChange={v => onChange({ ...entry, custom_pickets_link: v })} otherNotes={entry.custom_pickets_notes} onOtherNotesChange={v => onChange({ ...entry, custom_pickets_notes: v })} otherPlaceholder="Describe pickets..." />
+            <CustomDetailField label="Base Plate Size" value={entry.custom_base_plate} onChange={v => onChange({ ...entry, custom_base_plate: v })} options={[...productMaterialNames, "other"]} otherNotes={entry.custom_base_plate_notes} onOtherNotesChange={v => onChange({ ...entry, custom_base_plate_notes: v })} otherPlaceholder="Describe base plate..." />
             <CustomDetailField label="Picket Direction" value={entry.custom_picket_direction} onChange={v => onChange({ ...entry, custom_picket_direction: v })} options={PICKET_DIRECTION_OPTIONS} otherTriggerValue="Custom" otherNotes={entry.custom_picket_direction_notes} onOtherNotesChange={v => onChange({ ...entry, custom_picket_direction_notes: v })} otherPlaceholder="Describe picket direction..." />
           </div>
         </SubSection>
@@ -280,7 +285,7 @@ function ProductEntry({ entry, index, config, materialOptions, onChange, onRemov
 
 // ─── Main section ───────────────────────────────────────────────────────────
 export default function ProductDetailsSection({ entries = [], config, onChange, onSurfaceSync, onFileUploaded, jobId }) {
-  const { optionsBySlot: materialOptions } = useMaterialOptions();
+  const { materials } = useMaterialOptions();
 
   const addProduct = () => {
     onChange([...entries, { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, product: "", powdercoat: "" }]);
@@ -319,7 +324,7 @@ export default function ProductDetailsSection({ entries = [], config, onChange, 
               entry={entry}
               index={i}
               config={config}
-              materialOptions={materialOptions}
+              materials={materials}
               onChange={(updated) => updateEntry(i, updated)}
               onRemove={() => removeEntry(i)}
               onSurfaceSync={onSurfaceSync}
