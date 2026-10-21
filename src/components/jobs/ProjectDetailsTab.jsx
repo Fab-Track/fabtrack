@@ -122,6 +122,7 @@ export default function ProjectDetailsTab({ job }) {
         onChange={(val) => updateSection("product_details", val)}
         onSurfaceSync={syncSurfaceToInstallDetails}
         onFileUploaded={handleProductFileUploaded}
+        jobId={job.id}
       />
       <InstallDetailsSection
         data={data.install_details || {}}

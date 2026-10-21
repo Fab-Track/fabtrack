@@ -74,7 +74,7 @@ function CustomDetailField({ label, value, onChange, options, linkTriggerValue, 
 }
 
 // ─── Single product entry card ─────────────────────────────────────────────
-function ProductEntry({ entry, index, config, onChange, onRemove, onSurfaceSync, onFileUploaded }) {
+function ProductEntry({ entry, index, config, onChange, onRemove, onSurfaceSync, onFileUploaded, jobId }) {
   const [open, setOpen] = useState(!entry.product);
   const isRailing = entry.product === C.RAILING;
   const isStaircase = entry.product === C.STAIRCASE;
@@ -263,6 +263,7 @@ function ProductEntry({ entry, index, config, onChange, onRemove, onSurfaceSync,
             files={entry.location_photos || []}
             onChange={v => onChange({ ...entry, location_photos: v })}
             onFileUploaded={onFileUploaded}
+            jobId={jobId}
           />
         </FieldRow>
       )}
@@ -273,7 +274,7 @@ function ProductEntry({ entry, index, config, onChange, onRemove, onSurfaceSync,
 }
 
 // ─── Main section ───────────────────────────────────────────────────────────
-export default function ProductDetailsSection({ entries = [], config, onChange, onSurfaceSync, onFileUploaded }) {
+export default function ProductDetailsSection({ entries = [], config, onChange, onSurfaceSync, onFileUploaded, jobId }) {
   const addProduct = () => {
     onChange([...entries, { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, product: "", powdercoat: "" }]);
   };
@@ -315,6 +316,7 @@ export default function ProductDetailsSection({ entries = [], config, onChange, 
               onRemove={() => removeEntry(i)}
               onSurfaceSync={onSurfaceSync}
               onFileUploaded={onFileUploaded}
+              jobId={jobId}
             />
           ))}
         </div>
