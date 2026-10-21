@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { JOB_DETAIL_DEFAULTS } from "@/lib/jobDetailDefaults";
@@ -23,7 +24,7 @@ export function useJobDetailConfig() {
     enabled: !!orgId,
   });
 
-  const config = {
+  const config = useMemo(() => ({
     products: rawConfig?.products?.length ? rawConfig.products : JOB_DETAIL_DEFAULTS.products,
     railing_styles: rawConfig?.railing_styles?.length ? rawConfig.railing_styles : JOB_DETAIL_DEFAULTS.railing_styles,
     powdercoat_colors: rawConfig?.powdercoat_colors?.length ? rawConfig.powdercoat_colors : JOB_DETAIL_DEFAULTS.powdercoat_colors,
@@ -31,7 +32,7 @@ export function useJobDetailConfig() {
     stair_materials: rawConfig?.stair_materials?.length ? rawConfig.stair_materials : JOB_DETAIL_DEFAULTS.stair_materials,
     stair_tread_materials: rawConfig?.stair_tread_materials?.length ? rawConfig.stair_tread_materials : JOB_DETAIL_DEFAULTS.stair_tread_materials,
     surfaces: rawConfig?.surfaces?.length ? rawConfig.surfaces : JOB_DETAIL_DEFAULTS.surfaces,
-  };
+  }), [rawConfig]);
 
   return { config, configId: rawConfig?.id || null, isLoading, qc };
 }
