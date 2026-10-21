@@ -54,6 +54,27 @@
         "type": "string"
       },
       "description": "Surface type options for install details"
+    },
+    "install_areas": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Install area options (e.g. Interior, Exterior)"
+    },
+    "install_locations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Install location options (e.g. Main floor, Basement, Front porch)"
+    },
+    "mounting_types": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Mounting type options (e.g. Top Mounted, Side Mounted)"
     }
   },
   "required": [

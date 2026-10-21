@@ -32,6 +32,9 @@ export function useJobDetailConfig() {
     stair_materials: rawConfig?.stair_materials?.length ? rawConfig.stair_materials : JOB_DETAIL_DEFAULTS.stair_materials,
     stair_tread_materials: rawConfig?.stair_tread_materials?.length ? rawConfig.stair_tread_materials : JOB_DETAIL_DEFAULTS.stair_tread_materials,
     surfaces: rawConfig?.surfaces?.length ? rawConfig.surfaces : JOB_DETAIL_DEFAULTS.surfaces,
+    install_areas: rawConfig?.install_areas?.length ? rawConfig.install_areas : JOB_DETAIL_DEFAULTS.install_areas,
+    install_locations: rawConfig?.install_locations?.length ? rawConfig.install_locations : JOB_DETAIL_DEFAULTS.install_locations,
+    mounting_types: rawConfig?.mounting_types?.length ? rawConfig.mounting_types : JOB_DETAIL_DEFAULTS.mounting_types,
   }), [rawConfig]);
 
   return { config, configId: rawConfig?.id || null, isLoading, qc };

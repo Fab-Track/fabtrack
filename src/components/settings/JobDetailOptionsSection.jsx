@@ -19,6 +19,9 @@ const LIST_META = [
   { key: "stair_materials", label: "Stair Material", defaults: JOB_DETAIL_DEFAULTS.stair_materials },
   { key: "stair_tread_materials", label: "Stair Tread Material", defaults: JOB_DETAIL_DEFAULTS.stair_tread_materials },
   { key: "surfaces", label: "Surface", defaults: JOB_DETAIL_DEFAULTS.surfaces },
+  { key: "install_areas", label: "Install Area", defaults: JOB_DETAIL_DEFAULTS.install_areas },
+  { key: "install_locations", label: "Install Location", defaults: JOB_DETAIL_DEFAULTS.install_locations },
+  { key: "mounting_types", label: "Mounting Type", defaults: JOB_DETAIL_DEFAULTS.mounting_types },
 ];
 
 function OptionListEditor({ label, items, onChange }) {
@@ -105,6 +108,9 @@ export default function JobDetailOptionsSection() {
         stair_materials: [...config.stair_materials],
         stair_tread_materials: [...config.stair_tread_materials],
         surfaces: [...config.surfaces],
+        install_areas: [...config.install_areas],
+        install_locations: [...config.install_locations],
+        mounting_types: [...config.mounting_types],
       });
     }
   }, [isLoading, config]);

@@ -39,6 +39,17 @@ export const JOB_DETAIL_DEFAULTS = {
     "Wood Floors", "Trex", "Waterproofed Deck", "Tile Floor",
     "Bricks", "Concrete", "Steel", "Asphalt", "Metal Siding", "Other",
   ],
+  install_areas: [
+    "Interior", "Exterior",
+  ],
+  install_locations: [
+    "Main floor", "Basement", "Second floor", "Master",
+    "Front porch", "Back deck", "South side", "North side",
+    "East side", "West side", "other",
+  ],
+  mounting_types: [
+    "Top Mounted", "Side Mounted",
+  ],
 };
 
 /** Keys that drive conditional field logic — matched by exact string. */

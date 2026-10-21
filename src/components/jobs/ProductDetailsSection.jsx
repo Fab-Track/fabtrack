@@ -12,25 +12,9 @@ import {
 } from "@/components/ui/collapsible";
 import CollapsibleSection from "@/components/jobs/CollapsibleSection";
 import LocationPhotoUpload from "@/components/jobs/LocationPhotoUpload";
+import { useMaterialOptions } from "@/hooks/useMaterialOptions";
 import { CONDITIONAL_PRODUCT_KEYS as C } from "@/lib/jobDetailDefaults";
 
-const MOUNTING_TYPE_OPTIONS = ["Top Mounted", "Side Mounted"];
-
-// ─── Installation location options ─────────────────────────────────────────
-const INSTALL_AREA_OPTIONS = ["Interior", "Exterior"];
-const INTERIOR_LOCATIONS = ["Main floor", "Basement", "Second floor", "Master", "other"];
-const EXTERIOR_LOCATIONS = ["Front porch", "Back deck", "South side", "North side", "East side", "West side", "other"];
-
-// ─── Custom railing component options ──────────────────────────────────────
-const TOP_RAIL_OPTIONS = ['1.5"x1.5', '2"x2"', '2"x1"', '3"x1"', '2"x.5"', "C-channel", "Molded Cap", "other"];
-const BOTTOM_RAIL_OPTIONS = ['1.5"x1.5', '2"x2"', '2"x1"', '3"x1"', '2"x.5"', "C-channel", "other"];
-const POST_OPTIONS = ['1.5"x1.5', '2"x2"', '2"x1"', '3"x1"', '2"x.5"', "C-channel", "other"];
-const PICKET_OPTIONS = [
-  '.5"x.5', '3/4"x 3/4"', '1"x1', '2"x.5"', '1.5"x.5"',
-  '2"x 1/4" flat bar', '1.5"x1/4" flat bar', ".5\" round rod",
-  '1" round rod', "cable raw", "cable powder coated", "custom picket", "other",
-];
-const BASE_PLATE_OPTIONS = ['4"x4" square', '4" round'];
 const PICKET_DIRECTION_OPTIONS = ["Vertical", "Horizontal", "Custom"];
 
 // ─── Small field helpers ───────────────────────────────────────────────────
@@ -54,9 +38,6 @@ function OptionSelect({ value, onChange, options, placeholder = "Select..." }) {
   );
 }
 
-// Custom railing detail field — supports an "other" free-text option and an
-// optional link/attachment input that appears when a specific value is chosen
-// (e.g. "Molded Cap" for top rail, "custom picket" for pickets).
 function CustomDetailField({ label, value, onChange, options, linkTriggerValue, linkValue, onLinkChange, otherNotes, onOtherNotesChange, otherPlaceholder = "Describe...", otherTriggerValue = "other" }) {
   const isOther = value === otherTriggerValue;
   const showLink = linkTriggerValue && value === linkTriggerValue;
@@ -73,8 +54,17 @@ function CustomDetailField({ label, value, onChange, options, linkTriggerValue, 
   );
 }
 
+function SubSection({ label, children }) {
+  return (
+    <div className="space-y-2">
+      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">{label}</div>
+      {children}
+    </div>
+  );
+}
+
 // ─── Single product entry card ─────────────────────────────────────────────
-function ProductEntry({ entry, index, config, onChange, onRemove, onSurfaceSync, onFileUploaded, jobId }) {
+function ProductEntry({ entry, index, config, materialOptions, onChange, onRemove, onSurfaceSync, onFileUploaded, jobId }) {
   const [open, setOpen] = useState(!entry.product);
   const isRailing = entry.product === C.RAILING;
   const isStaircase = entry.product === C.STAIRCASE;
@@ -113,62 +103,49 @@ function ProductEntry({ entry, index, config, onChange, onRemove, onSurfaceSync,
         </Button>
       </div>
       <CollapsibleContent>
-      <div className="px-4 pb-4 space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <FieldRow label="Product">
-          <OptionSelect value={entry.product} onChange={v => onChange({ ...entry, product: v })} options={config.products} />
-        </FieldRow>
-      </div>
+      <div className="px-4 pb-4 space-y-4">
 
-      {/* Other product notes */}
+      {/* ─── Product Type ─── */}
+      <SubSection label="Product Type">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <FieldRow label="Product">
+            <OptionSelect value={entry.product} onChange={v => onChange({ ...entry, product: v })} options={config.products} />
+          </FieldRow>
+          {isRailing && (
+            <FieldRow label="Railing Style">
+              <OptionSelect value={entry.railing_style} onChange={v => onChange({ ...entry, railing_style: v })} options={config.railing_styles} />
+            </FieldRow>
+          )}
+        </div>
+      </SubSection>
+
       {isOther && (
         <FieldRow label="Other Product Notes">
           <Input className="h-8 text-xs" value={entry.other_notes || ""} onChange={e => onChange({ ...entry, other_notes: e.target.value })} placeholder="Describe the product..." />
         </FieldRow>
       )}
 
-      {/* Railing-specific fields */}
-      {isRailing && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <FieldRow label="Railing Style">
-              <OptionSelect value={entry.railing_style} onChange={v => onChange({ ...entry, railing_style: v })} options={config.railing_styles} />
-            </FieldRow>
-            <FieldRow label="Mounting Type">
-              <OptionSelect value={entry.mounting_type} onChange={v => onChange({ ...entry, mounting_type: v })} options={MOUNTING_TYPE_OPTIONS} placeholder="Select..." />
-            </FieldRow>
-          </div>
-          {entry.railing_style === C.CUSTOM && (
-            <>
-              <FieldRow label="Custom Railing Style Notes">
-                <Input className="h-8 text-xs" value={entry.railing_style_notes || ""} onChange={e => onChange({ ...entry, railing_style_notes: e.target.value })} placeholder="Describe custom style..." />
-              </FieldRow>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <CustomDetailField label="Top Rail" value={entry.custom_top_rail} onChange={v => onChange({ ...entry, custom_top_rail: v })} options={TOP_RAIL_OPTIONS} linkTriggerValue="Molded Cap" linkValue={entry.custom_top_rail_link} onLinkChange={v => onChange({ ...entry, custom_top_rail_link: v })} otherNotes={entry.custom_top_rail_notes} onOtherNotesChange={v => onChange({ ...entry, custom_top_rail_notes: v })} otherPlaceholder="Describe top rail..." />
-                <CustomDetailField label="Bottom Rail" value={entry.custom_bottom_rail} onChange={v => onChange({ ...entry, custom_bottom_rail: v })} options={BOTTOM_RAIL_OPTIONS} otherNotes={entry.custom_bottom_rail_notes} onOtherNotesChange={v => onChange({ ...entry, custom_bottom_rail_notes: v })} otherPlaceholder="Describe bottom rail..." />
-                <CustomDetailField label="Post" value={entry.custom_post} onChange={v => onChange({ ...entry, custom_post: v })} options={POST_OPTIONS} otherNotes={entry.custom_post_notes} onOtherNotesChange={v => onChange({ ...entry, custom_post_notes: v })} otherPlaceholder="Describe post..." />
-                <CustomDetailField label="Pickets" value={entry.custom_pickets} onChange={v => onChange({ ...entry, custom_pickets: v })} options={PICKET_OPTIONS} linkTriggerValue="custom picket" linkValue={entry.custom_pickets_link} onLinkChange={v => onChange({ ...entry, custom_pickets_link: v })} otherNotes={entry.custom_pickets_notes} onOtherNotesChange={v => onChange({ ...entry, custom_pickets_notes: v })} otherPlaceholder="Describe pickets..." />
-                <CustomDetailField label="Base Plate Size" value={entry.custom_base_plate} onChange={v => onChange({ ...entry, custom_base_plate: v })} options={BASE_PLATE_OPTIONS} />
-                <CustomDetailField label="Picket Direction" value={entry.custom_picket_direction} onChange={v => onChange({ ...entry, custom_picket_direction: v })} options={PICKET_DIRECTION_OPTIONS} otherTriggerValue="Custom" otherNotes={entry.custom_picket_direction_notes} onOtherNotesChange={v => onChange({ ...entry, custom_picket_direction_notes: v })} otherPlaceholder="Describe picket direction..." />
-              </div>
-            </>
-          )}
-        </>
+      {isRailing && entry.railing_style === C.CUSTOM && (
+        <FieldRow label="Custom Railing Style Notes">
+          <Input className="h-8 text-xs" value={entry.railing_style_notes || ""} onChange={e => onChange({ ...entry, railing_style_notes: e.target.value })} placeholder="Describe custom style..." />
+        </FieldRow>
       )}
 
-      {/* Staircase-specific fields */}
+      {/* ─── Staircase fields ─── */}
       {isStaircase && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          <FieldRow label="Stair Style">
-            <OptionSelect value={entry.stair_style} onChange={v => onChange({ ...entry, stair_style: v })} options={config.stair_styles} />
-          </FieldRow>
-          <FieldRow label="Stair Material">
-            <OptionSelect value={entry.stair_material} onChange={v => onChange({ ...entry, stair_material: v })} options={config.stair_materials} />
-          </FieldRow>
-          <FieldRow label="Stair Tread Material">
-            <OptionSelect value={entry.stair_tread_material} onChange={v => onChange({ ...entry, stair_tread_material: v })} options={config.stair_tread_materials} />
-          </FieldRow>
-        </div>
+        <SubSection label="Staircase Details">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <FieldRow label="Stair Style">
+              <OptionSelect value={entry.stair_style} onChange={v => onChange({ ...entry, stair_style: v })} options={config.stair_styles} />
+            </FieldRow>
+            <FieldRow label="Stair Material">
+              <OptionSelect value={entry.stair_material} onChange={v => onChange({ ...entry, stair_material: v })} options={config.stair_materials} />
+            </FieldRow>
+            <FieldRow label="Stair Tread Material">
+              <OptionSelect value={entry.stair_tread_material} onChange={v => onChange({ ...entry, stair_tread_material: v })} options={config.stair_tread_materials} />
+            </FieldRow>
+          </div>
+        </SubSection>
       )}
       {isStaircase && entry.stair_style === C.OTHER && (
         <FieldRow label="Other Stair Style Notes">
@@ -186,23 +163,23 @@ function ProductEntry({ entry, index, config, onChange, onRemove, onSurfaceSync,
         </FieldRow>
       )}
 
-      {/* Installation location — shown for all products */}
+      {/* ─── Location ─── */}
       {hasProduct && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          <FieldRow label="Install Area">
-            <OptionSelect
-              value={entry.install_area || ""}
-              onChange={v => onChange({ ...entry, install_area: v, install_location: "" })}
-              options={INSTALL_AREA_OPTIONS}
-              placeholder="Select..."
-            />
-          </FieldRow>
-          {entry.install_area && (
+        <SubSection label="Location">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <FieldRow label="Install Area">
+              <OptionSelect
+                value={entry.install_area || ""}
+                onChange={v => onChange({ ...entry, install_area: v })}
+                options={config.install_areas}
+                placeholder="Select..."
+              />
+            </FieldRow>
             <FieldRow label="Install Location">
               <OptionSelect
                 value={entry.install_location || ""}
                 onChange={v => onChange({ ...entry, install_location: v })}
-                options={entry.install_area === "Interior" ? INTERIOR_LOCATIONS : EXTERIOR_LOCATIONS}
+                options={config.install_locations}
               />
               {entry.install_location === "other" && (
                 <Input
@@ -213,60 +190,88 @@ function ProductEntry({ entry, index, config, onChange, onRemove, onSurfaceSync,
                 />
               )}
             </FieldRow>
-          )}
-          <FieldRow label="Surface Type">
-            <OptionSelect
-              value={entry.surface_type || ""}
-              onChange={handleSurfaceChange}
-              options={config.surfaces}
-              placeholder="Select surface..."
+          </div>
+        </SubSection>
+      )}
+
+      {/* ─── Notes ─── */}
+      {hasProduct && (
+        <SubSection label="Notes">
+          <FieldRow label="Special Note">
+            <Textarea
+              className="text-xs min-h-[60px]"
+              value={entry.special_note || ""}
+              onChange={e => onChange({ ...entry, special_note: e.target.value })}
+              placeholder="Add any special notes about this product for the job..."
             />
           </FieldRow>
-        </div>
+        </SubSection>
       )}
 
-      {/* Powdercoat — shown for all products */}
+      {/* ─── Materials (railing only) ─── */}
+      {isRailing && (
+        <SubSection label="Materials">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <CustomDetailField label="Top Rail" value={entry.custom_top_rail} onChange={v => onChange({ ...entry, custom_top_rail: v })} options={[...(materialOptions["Top Rail"] || []), "other"]} linkTriggerValue="Molded Cap" linkValue={entry.custom_top_rail_link} onLinkChange={v => onChange({ ...entry, custom_top_rail_link: v })} otherNotes={entry.custom_top_rail_notes} onOtherNotesChange={v => onChange({ ...entry, custom_top_rail_notes: v })} otherPlaceholder="Describe top rail..." />
+            <CustomDetailField label="Bottom Rail" value={entry.custom_bottom_rail} onChange={v => onChange({ ...entry, custom_bottom_rail: v })} options={[...(materialOptions["Bottom Rail"] || []), "other"]} otherNotes={entry.custom_bottom_rail_notes} onOtherNotesChange={v => onChange({ ...entry, custom_bottom_rail_notes: v })} otherPlaceholder="Describe bottom rail..." />
+            <CustomDetailField label="Post" value={entry.custom_post} onChange={v => onChange({ ...entry, custom_post: v })} options={[...(materialOptions["Post"] || []), "other"]} otherNotes={entry.custom_post_notes} onOtherNotesChange={v => onChange({ ...entry, custom_post_notes: v })} otherPlaceholder="Describe post..." />
+            <CustomDetailField label="Pickets" value={entry.custom_pickets} onChange={v => onChange({ ...entry, custom_pickets: v })} options={[...(materialOptions["Picket"] || []), "other"]} linkTriggerValue="custom picket" linkValue={entry.custom_pickets_link} onLinkChange={v => onChange({ ...entry, custom_pickets_link: v })} otherNotes={entry.custom_pickets_notes} onOtherNotesChange={v => onChange({ ...entry, custom_pickets_notes: v })} otherPlaceholder="Describe pickets..." />
+            <CustomDetailField label="Base Plate Size" value={entry.custom_base_plate} onChange={v => onChange({ ...entry, custom_base_plate: v })} options={[...(materialOptions["Base Plate"] || []), "other"]} otherNotes={entry.custom_base_plate_notes} onOtherNotesChange={v => onChange({ ...entry, custom_base_plate_notes: v })} otherPlaceholder="Describe base plate..." />
+            <CustomDetailField label="Picket Direction" value={entry.custom_picket_direction} onChange={v => onChange({ ...entry, custom_picket_direction: v })} options={PICKET_DIRECTION_OPTIONS} otherTriggerValue="Custom" otherNotes={entry.custom_picket_direction_notes} onOtherNotesChange={v => onChange({ ...entry, custom_picket_direction_notes: v })} otherPlaceholder="Describe picket direction..." />
+          </div>
+        </SubSection>
+      )}
+
+      {/* ─── Powder coat ─── */}
       {hasProduct && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          <FieldRow label="Powdercoat">
-            <OptionSelect value={entry.powdercoat || ""} onChange={v => onChange({ ...entry, powdercoat: v })} options={["Yes", "No"]} placeholder="Select..." />
-          </FieldRow>
-          {powdercoatYes && (
-            <FieldRow label="Powdercoat Color">
-              <OptionSelect value={entry.powdercoat_color} onChange={v => onChange({ ...entry, powdercoat_color: v })} options={config.powdercoat_colors} />
+        <SubSection label="Powder coat">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <FieldRow label="Powdercoat">
+              <OptionSelect value={entry.powdercoat || ""} onChange={v => onChange({ ...entry, powdercoat: v })} options={["Yes", "No"]} placeholder="Select..." />
             </FieldRow>
+            {powdercoatYes && (
+              <FieldRow label="Powdercoat Color">
+                <OptionSelect value={entry.powdercoat_color} onChange={v => onChange({ ...entry, powdercoat_color: v })} options={config.powdercoat_colors} />
+              </FieldRow>
+            )}
+          </div>
+          {powdercoatYes && entry.powdercoat_color === C.OTHER && (
+            <Input className="h-8 text-xs" value={entry.powdercoat_color_notes || ""} onChange={e => onChange({ ...entry, powdercoat_color_notes: e.target.value })} placeholder="Describe color..." />
           )}
-        </div>
-      )}
-      {powdercoatYes && entry.powdercoat_color === C.OTHER && (
-        <FieldRow label="Other Powdercoat Color Notes">
-          <Input className="h-8 text-xs" value={entry.powdercoat_color_notes || ""} onChange={e => onChange({ ...entry, powdercoat_color_notes: e.target.value })} placeholder="Describe color..." />
-        </FieldRow>
+        </SubSection>
       )}
 
-      {/* Special note — shown for all products */}
+      {/* ─── Install details ─── */}
       {hasProduct && (
-        <FieldRow label="Special Note">
-          <Textarea
-            className="text-xs min-h-[60px]"
-            value={entry.special_note || ""}
-            onChange={e => onChange({ ...entry, special_note: e.target.value })}
-            placeholder="Add any special notes about this product for the job..."
-          />
-        </FieldRow>
+        <SubSection label="Install details">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <FieldRow label="Mounting Type">
+              <OptionSelect value={entry.mounting_type || ""} onChange={v => onChange({ ...entry, mounting_type: v })} options={config.mounting_types} placeholder="Select..." />
+            </FieldRow>
+            <FieldRow label="Surface Type">
+              <OptionSelect
+                value={entry.surface_type || ""}
+                onChange={handleSurfaceChange}
+                options={config.surfaces}
+                placeholder="Select surface..."
+              />
+            </FieldRow>
+          </div>
+        </SubSection>
       )}
 
-      {/* Location photos/files — shown for all products */}
+      {/* ─── Location Photos / Files ─── */}
       {hasProduct && (
-        <FieldRow label="Location Photos / Files">
+        <SubSection label="Location Photos / Files">
           <LocationPhotoUpload
             files={entry.location_photos || []}
             onChange={v => onChange({ ...entry, location_photos: v })}
             onFileUploaded={onFileUploaded}
             jobId={jobId}
           />
-        </FieldRow>
+        </SubSection>
       )}
+
       </div>
       </CollapsibleContent>
     </Collapsible>
@@ -275,6 +280,8 @@ function ProductEntry({ entry, index, config, onChange, onRemove, onSurfaceSync,
 
 // ─── Main section ───────────────────────────────────────────────────────────
 export default function ProductDetailsSection({ entries = [], config, onChange, onSurfaceSync, onFileUploaded, jobId }) {
+  const { optionsBySlot: materialOptions } = useMaterialOptions();
+
   const addProduct = () => {
     onChange([...entries, { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, product: "", powdercoat: "" }]);
   };
@@ -312,6 +319,7 @@ export default function ProductDetailsSection({ entries = [], config, onChange, 
               entry={entry}
               index={i}
               config={config}
+              materialOptions={materialOptions}
               onChange={(updated) => updateEntry(i, updated)}
               onRemove={() => removeEntry(i)}
               onSurfaceSync={onSurfaceSync}
