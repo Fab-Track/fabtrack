@@ -1,9 +1,8 @@
 // Shared helpers for Catalog › Cost Items (MaterialPriceList).
-import { JOB_DETAIL_DEFAULTS } from "@/lib/jobDetailDefaults";
 
 export const COST_TYPES = ["Materials", "Labor", "Subcontractor", "Equipment", "Other"];
-export const USED_AS_OPTIONS = JOB_DETAIL_DEFAULTS.products;
-export const RAILING_SLOTS = ["Railing"];
+export const USED_AS_OPTIONS = ["Top Rail", "Bottom Rail", "Post", "Picket", "Other"];
+export const RAILING_SLOTS = ["Top Rail", "Bottom Rail", "Post", "Picket"];
 export const DEFAULT_SHAPES = ["Square Tube", "Rectangle Tube", "Flat Bar", "HR Channel", "Angle", "Round Bar", "Stair", "Sheet", "Other"];
 export const METHOD_LABELS = { linear_foot: "Linear foot", weight: "Weight", unit: "Unit" };
 

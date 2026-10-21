@@ -64,7 +64,7 @@ function SubSection({ label, children }) {
 }
 
 // ─── Single product entry card ─────────────────────────────────────────────
-function ProductEntry({ entry, index, config, materials, onChange, onRemove, onSurfaceSync, onFileUploaded, jobId }) {
+function ProductEntry({ entry, index, config, materials, costCodes, onChange, onRemove, onSurfaceSync, onFileUploaded, jobId }) {
   const [open, setOpen] = useState(!entry.product);
   const isRailing = entry.product === C.RAILING;
   const isStaircase = entry.product === C.STAIRCASE;
@@ -77,9 +77,13 @@ function ProductEntry({ entry, index, config, materials, onChange, onRemove, onS
     if (v && onSurfaceSync) onSurfaceSync(v);
   };
 
-  // Materials tagged with this product type (component_type includes entry.product)
+  // Materials whose cost_code_ids include a CostCode whose name exactly matches the product type
+  const productCostCodeIds = (costCodes || [])
+    .filter(cc => cc.name === entry.product)
+    .map(cc => cc.id);
   const productMaterialNames = (materials || [])
-    .filter(m => Array.isArray(m.component_type) && entry.product && m.component_type.includes(entry.product))
+    .filter(m => entry.product && productCostCodeIds.length > 0 &&
+      Array.isArray(m.cost_code_ids) && m.cost_code_ids.some(id => productCostCodeIds.includes(id)))
     .map(m => m.name);
 
   // Summary chips for the collapsed header
@@ -285,7 +289,7 @@ function ProductEntry({ entry, index, config, materials, onChange, onRemove, onS
 
 // ─── Main section ───────────────────────────────────────────────────────────
 export default function ProductDetailsSection({ entries = [], config, onChange, onSurfaceSync, onFileUploaded, jobId }) {
-  const { materials } = useMaterialOptions();
+  const { materials, costCodes } = useMaterialOptions();
 
   const addProduct = () => {
     onChange([...entries, { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, product: "", powdercoat: "" }]);
@@ -325,6 +329,7 @@ export default function ProductDetailsSection({ entries = [], config, onChange, 
               index={i}
               config={config}
               materials={materials}
+              costCodes={costCodes}
               onChange={(updated) => updateEntry(i, updated)}
               onRemove={() => removeEntry(i)}
               onSurfaceSync={onSurfaceSync}

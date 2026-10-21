@@ -46,7 +46,7 @@ function Row({ label, hint, children }) {
 }
 
 // Add / edit a cost item. `item` is null when adding.
-export default function CostItemDialog({ open, onOpenChange, item, shapes, costCodes, orgId, onSaved, productTypes }) {
+export default function CostItemDialog({ open, onOpenChange, item, shapes, costCodes, orgId, onSaved }) {
   const [form, setForm] = useState(toForm(null));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -58,7 +58,7 @@ export default function CostItemDialog({ open, onOpenChange, item, shapes, costC
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const num = (k) => parseFloat(form[k]) || 0;
   const shapeList = [...new Set([...shapes, form.category].filter(Boolean))];
-  const usedAsOptions = [...new Set([...(productTypes || USED_AS_OPTIONS), ...form.component_type])].map((v) => ({ value: v, label: v }));
+  const usedAsOptions = [...new Set([...USED_AS_OPTIONS, ...form.component_type])].map((v) => ({ value: v, label: v }));
   const codeOptions = costCodes.map((c) => ({ value: c.id, label: c.name }));
 
   async function save() {
@@ -133,7 +133,7 @@ export default function CostItemDialog({ open, onOpenChange, item, shapes, costC
               </Select>
             </Row>
           </div>
-          <Row label="Used as" hint="— which product types can use this item">
+          <Row label="Used as" hint="— which railing slots can pick this item">
             <ChipMultiSelect options={usedAsOptions} value={form.component_type} onChange={(v) => set("component_type", v)} />
           </Row>
           <Row label="Cost codes *">
