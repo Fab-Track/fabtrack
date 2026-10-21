@@ -6,7 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import CollapsibleSection from "@/components/jobs/CollapsibleSection";
+import LocationPhotoUpload from "@/components/jobs/LocationPhotoUpload";
 import { CONDITIONAL_PRODUCT_KEYS as C } from "@/lib/jobDetailDefaults";
+
+const MOUNTING_TYPE_OPTIONS = ["Top Mounted", "Side Mounted"];
 
 // ─── Installation location options ─────────────────────────────────────────
 const INSTALL_AREA_OPTIONS = ["Interior", "Exterior"];
@@ -66,12 +69,17 @@ function CustomDetailField({ label, value, onChange, options, linkTriggerValue, 
 }
 
 // ─── Single product entry card ─────────────────────────────────────────────
-function ProductEntry({ entry, index, config, onChange, onRemove }) {
+function ProductEntry({ entry, index, config, onChange, onRemove, onSurfaceSync }) {
   const isRailing = entry.product === C.RAILING;
   const isStaircase = entry.product === C.STAIRCASE;
   const isOther = entry.product === C.OTHER;
   const hasProduct = !!entry.product;
   const powdercoatYes = entry.powdercoat === "Yes";
+
+  const handleSurfaceChange = (v) => {
+    onChange({ ...entry, surface_type: v });
+    if (v && onSurfaceSync) onSurfaceSync(v);
+  };
 
   return (
     <div className="rounded-lg border bg-muted/10 p-4 space-y-3">
@@ -101,6 +109,9 @@ function ProductEntry({ entry, index, config, onChange, onRemove }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <FieldRow label="Railing Style">
               <OptionSelect value={entry.railing_style} onChange={v => onChange({ ...entry, railing_style: v })} options={config.railing_styles} />
+            </FieldRow>
+            <FieldRow label="Mounting Type">
+              <OptionSelect value={entry.mounting_type} onChange={v => onChange({ ...entry, mounting_type: v })} options={MOUNTING_TYPE_OPTIONS} placeholder="Select..." />
             </FieldRow>
           </div>
           {entry.railing_style === C.CUSTOM && (
@@ -179,6 +190,14 @@ function ProductEntry({ entry, index, config, onChange, onRemove }) {
               )}
             </FieldRow>
           )}
+          <FieldRow label="Surface Type">
+            <OptionSelect
+              value={entry.surface_type || ""}
+              onChange={handleSurfaceChange}
+              options={config.surfaces}
+              placeholder="Select surface..."
+            />
+          </FieldRow>
         </div>
       )}
 
@@ -212,12 +231,22 @@ function ProductEntry({ entry, index, config, onChange, onRemove }) {
           />
         </FieldRow>
       )}
+
+      {/* Location photos/files — shown for all products */}
+      {hasProduct && (
+        <FieldRow label="Location Photos / Files">
+          <LocationPhotoUpload
+            files={entry.location_photos || []}
+            onChange={v => onChange({ ...entry, location_photos: v })}
+          />
+        </FieldRow>
+      )}
     </div>
   );
 }
 
 // ─── Main section ───────────────────────────────────────────────────────────
-export default function ProductDetailsSection({ entries = [], config, onChange }) {
+export default function ProductDetailsSection({ entries = [], config, onChange, onSurfaceSync }) {
   const addProduct = () => {
     onChange([...entries, { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, product: "", powdercoat: "" }]);
   };
@@ -257,6 +286,7 @@ export default function ProductDetailsSection({ entries = [], config, onChange }
               config={config}
               onChange={(updated) => updateEntry(i, updated)}
               onRemove={() => removeEntry(i)}
+              onSurfaceSync={onSurfaceSync}
             />
           ))}
         </div>

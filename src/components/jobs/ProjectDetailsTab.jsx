@@ -35,6 +35,22 @@ export default function ProjectDetailsTab({ job }) {
     setDirty(true);
   }, []);
 
+  // When a surface type is selected on a product, add it to install_details.surfaces
+  // without duplicating existing entries.
+  const syncSurfaceToInstallDetails = useCallback((surface) => {
+    if (!surface) return;
+    setData(prev => {
+      const installDetails = prev.install_details || {};
+      const currentSurfaces = installDetails.surfaces || [];
+      if (currentSurfaces.includes(surface)) return prev;
+      return {
+        ...prev,
+        install_details: { ...installDetails, surfaces: [...currentSurfaces, surface] },
+      };
+    });
+    setDirty(true);
+  }, []);
+
   useEffect(() => {
     if (!dirty) return;
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
@@ -84,6 +100,7 @@ export default function ProjectDetailsTab({ job }) {
         entries={data.product_details || []}
         config={config}
         onChange={(val) => updateSection("product_details", val)}
+        onSurfaceSync={syncSurfaceToInstallDetails}
       />
       <InstallDetailsSection
         data={data.install_details || {}}
