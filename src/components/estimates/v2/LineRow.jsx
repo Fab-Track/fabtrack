@@ -44,7 +44,7 @@ export default function LineRow({ line, idx, cols, estMargin, frozen, colors, lo
           </SelectContent>
         </Select>
         <div className="flex items-center gap-1 justify-end">
-          <Input type="number" min="0" disabled={lock} className="h-8 w-20 text-right text-sm" value={line.quantity ?? ""} onChange={(e) => set({ quantity: e.target.value })} />
+          <Input type="number" min="0" className="h-8 w-20 text-right text-sm" value={line.quantity ?? ""} onChange={(e) => set({ quantity: e.target.value })} />
           <span className="text-xs text-muted-foreground w-6">{line.unit}</span>
         </div>
         <span className="text-right font-mono text-sm pt-1.5">{cost ? money(line.hard_cost || 0) : "—"}</span>
