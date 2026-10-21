@@ -348,7 +348,7 @@ function CatalogItemForm({ initial = {}, categories, onSave, onCancel, fabRate =
             <div>
               <p className="text-sm font-semibold">Railing Parameters</p>
               <p className="text-[11px] text-muted-foreground">
-                Leave blank to use the category default. Post height and picket length come from org standards at estimate time.
+                Leave blank to use the category default. Post height comes from org standards at estimate time.
               </p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">

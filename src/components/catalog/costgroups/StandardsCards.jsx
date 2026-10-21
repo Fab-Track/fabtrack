@@ -6,9 +6,7 @@ import { OVERRIDE_FIELDS } from "@/lib/costGroups";
 
 const STD_FIELDS = [
   { key: "res_post_height_in", label: "Residential post height (in)" },
-  { key: "res_picket_length_in", label: "Residential picket length (in)" },
   { key: "comm_post_height_in", label: "Commercial post height (in)" },
-  { key: "comm_picket_length_in", label: "Commercial picket length (in)" },
 ];
 const LAYOUT_UNITS = { post_spacing_in: '"', post_width_in: '"', picket_clear_gap_in: '"', picket_width_in: '"', rail_runs: "" };
 const show = (v, u = '"') => (v == null ? "—" : `${v}${u}`);
@@ -28,8 +26,8 @@ export default function StandardsCards({ category, settings, orgId, refresh }) {
   }
 
   const groups = [
-    ["Residential", s.res_post_height_in, s.res_picket_length_in],
-    ["Commercial", s.comm_post_height_in, s.comm_picket_length_in],
+    ["Residential", s.res_post_height_in],
+    ["Commercial", s.comm_post_height_in],
   ];
 
   return (
@@ -40,11 +38,10 @@ export default function StandardsCards({ category, settings, orgId, refresh }) {
           <Button size="sm" variant="outline" onClick={() => setDlg("std")}>Edit</Button>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          {groups.map(([label, h, l]) => (
+          {groups.map(([label, h]) => (
             <div key={label} className="bg-muted/40 rounded-lg p-3 text-sm">
               <p className="font-bold mb-1">{label}</p>
               <p>Post height {show(h)}</p>
-              <p>Picket length {show(l)}</p>
             </div>
           ))}
         </div>

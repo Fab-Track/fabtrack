@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import RateField from "./RateField";
 import { toast } from "sonner";
 
-const FIELDS = ["res_post_height_in", "res_picket_length_in", "comm_post_height_in", "comm_picket_length_in"];
-const DEFAULTS = { res_post_height_in: 36, res_picket_length_in: 29.5, comm_post_height_in: 43, comm_picket_length_in: 36.5 };
+const FIELDS = ["res_post_height_in", "comm_post_height_in"];
+const DEFAULTS = { res_post_height_in: 36, comm_post_height_in: 43 };
 
-// Residential / commercial post heights and picket lengths (read by the railing takeoff).
+// Residential / commercial post heights (read by the railing takeoff). Picket length is derived.
 export default function RailingStandardsCard() {
   const { user } = useAuth();
   const orgId = user?.organization_id;
@@ -48,15 +48,13 @@ export default function RailingStandardsCard() {
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
           <h3 className="font-bold text-base">Railing standards</h3>
-          <p className="text-xs text-muted-foreground">Default post heights and picket lengths applied at estimate time.</p>
+          <p className="text-xs text-muted-foreground">Default post heights applied at estimate time.</p>
         </div>
         <Button onClick={save} disabled={saving} className="shrink-0">{saving ? "Saving…" : "Save"}</Button>
       </div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 max-w-md">
         <RateField label="Residential post height" helper="Inches" suffix="in" value={form.res_post_height_in ?? ""} onChange={set("res_post_height_in")} />
-        <RateField label="Residential picket length" helper="Inches" suffix="in" value={form.res_picket_length_in ?? ""} onChange={set("res_picket_length_in")} />
         <RateField label="Commercial post height" helper="Inches" suffix="in" value={form.comm_post_height_in ?? ""} onChange={set("comm_post_height_in")} />
-        <RateField label="Commercial picket length" helper="Inches" suffix="in" value={form.comm_picket_length_in ?? ""} onChange={set("comm_picket_length_in")} />
       </div>
     </div>
   );

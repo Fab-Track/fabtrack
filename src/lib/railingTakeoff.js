@@ -6,6 +6,9 @@
 
 export const RAILING_SLOTS = ["Top Rail", "Bottom Rail", "Post", "Picket"];
 
+/** Offset (inches) subtracted from post height to derive picket length (top + bottom rail + gap). */
+const PICKET_LENGTH_OFFSET_IN = 6.5;
+
 /**
  * Build the settings object from AppSettings records.
  * Labor rates and railing standards come from the "main" row only.
@@ -16,9 +19,7 @@ export function resolveSettings(records) {
   const mainVal = (field) => (main && main[field] != null && main[field] > 0 ? main[field] : 0);
   return {
     res_post_height_in: mainVal("res_post_height_in"),
-    res_picket_length_in: mainVal("res_picket_length_in"),
     comm_post_height_in: mainVal("comm_post_height_in"),
-    comm_picket_length_in: mainVal("comm_picket_length_in"),
     labor_fab_rate: mainVal("labor_fab_rate"),
     labor_install_rate: mainVal("labor_install_rate"),
   };
@@ -49,8 +50,8 @@ export function computeLayout({ catalogItem, settings, length, isResidential, ca
   if (!post_spacing_in || !post_width_in || !picket_clear_gap_in || !picket_width_in || !rail_runs) return null;
 
   const postHeight = isResidential ? settings.res_post_height_in : settings.comm_post_height_in;
-  const picketLength = isResidential ? settings.res_picket_length_in : settings.comm_picket_length_in;
-  if (!postHeight || !picketLength) return null;
+  if (!postHeight) return null;
+  const picketLength = Math.max(0, postHeight - PICKET_LENGTH_OFFSET_IN);
 
   // inches = LF x 12; posts = max(1, ceil(inches / spacing)); net = inches - posts x post width
   const inches = length * 12;
