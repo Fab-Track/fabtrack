@@ -77,12 +77,14 @@ function ProductEntry({ entry, index, config, materials, costCodes, onChange, on
     if (v && onSurfaceSync) onSurfaceSync(v);
   };
 
-  // Materials whose cost_code_ids include a CostCode whose name exactly matches the product type
+  // Materials whose cost_code_ids include a CostCode whose name contains the product type
+  // e.g. product type "Railing" matches cost code "Railing Materials"
+  const productLower = entry.product ? entry.product.toLowerCase() : "";
   const productCostCodeIds = (costCodes || [])
-    .filter(cc => cc.name === entry.product)
+    .filter(cc => productLower && cc.name && cc.name.toLowerCase().includes(productLower))
     .map(cc => cc.id);
   const productMaterialNames = (materials || [])
-    .filter(m => entry.product && productCostCodeIds.length > 0 &&
+    .filter(m => productLower && productCostCodeIds.length > 0 &&
       Array.isArray(m.cost_code_ids) && m.cost_code_ids.some(id => productCostCodeIds.includes(id)))
     .map(m => m.name);
 
