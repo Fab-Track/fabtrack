@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import Crumbs from "./Crumbs";
 import Pill from "./Pill";
-import TestBar from "./TestBar";
 import LayoutCard from "./LayoutCard";
 import ComponentsCard from "./ComponentsCard";
 import LaborCard from "./LaborCard";
@@ -18,8 +17,6 @@ const num = (v) => parseFloat(v) || 0;
 const toRules = (it) => ({ fab: it.cost_fab_hours_per_unit ?? 0, pc: it.cost_powder_coat_per_unit ?? 0, crew: it.cost_install_crew_size ?? 0, inst: it.cost_install_hours_per_unit ?? 0 });
 
 export default function StyleDetail({ item, category, settings, materials, orgId, refresh, onBack, onBackToCategory, onOpenItem }) {
-  const [length, setLength] = useState("20");
-  const [isResidential, setResidential] = useState(true);
   const [rows, setRows] = useState(item.components || []);
   const [rules, setRules] = useState(toRules(item));
   const [margin, setMargin] = useState(String(settings?.default_target_margin_pct ?? 33.3));
@@ -31,7 +28,8 @@ export default function StyleDetail({ item, category, settings, materials, orgId
 
   const railing = !!(category?.is_railing || item.is_railing);
   const unit = unitLabel(category);
-  const qty = num(length);
+  const qty = 20;
+  const isResidential = true;
   const s = settings || {};
   const layout = useMemo(
     () => (railing ? computeLayout({ catalogItem: item, settings: resolveSettings(settings ? [settings] : []), length: qty, isResidential, category }) : null),
@@ -69,6 +67,10 @@ export default function StyleDetail({ item, category, settings, materials, orgId
     await base44.entities.ServiceCatalog.update(item.id, { [FIELD[field]]: v });
     refresh();
   }
+  async function saveOverride(field, val) {
+    await base44.entities.ServiceCatalog.update(item.id, { [field]: val });
+    refresh();
+  }
   async function duplicate() {
     const { id, created_date, updated_date, created_by_id, created_by, ...rest } = item;
     const rec = await base44.entities.ServiceCatalog.create({ ...rest, name: `${item.name} (copy)`, qbo_item_id: "", qbo_item_name: "" });
@@ -95,10 +97,9 @@ export default function StyleDetail({ item, category, settings, materials, orgId
           <Button variant="outline" onClick={() => setEditOpen(true)}>Edit style</Button>
         </div>
       </div>
-      <TestBar length={length} setLength={setLength} unit={unit} railing={railing} isResidential={isResidential} setResidential={setResidential} />
       <div className="grid gap-4 lg:grid-cols-[1fr_300px] items-start">
         <div className="space-y-4 min-w-0">
-          {railing && <LayoutCard layout={layout} />}
+          {railing && <LayoutCard layout={layout} item={item} category={category} onSaveOverride={saveOverride} />}
           <ComponentsCard rows={rows} setRows={setRows} results={results} materials={materials} layout={layout} length={qty} railing={railing}
             dirty={dirty} saving={saving} onSave={saveComponents} orgId={orgId} refresh={refresh} />
           <LaborCard rules={rules} setRule={(f, v) => setRules((p) => ({ ...p, [f]: v }))} commit={commitRule} calc={calc} unit={unit} rates={rates} hoursPerDay={hoursPerDay} />
