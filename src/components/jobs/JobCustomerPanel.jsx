@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Mail, Phone, MapPin, UserSearch, User, Wrench } from "lucide-react";
+import { Mail, Phone, MapPin, UserSearch, User, Wrench, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
@@ -143,14 +143,18 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
           <InfoCell label="Site Address" icon={MapPin} wrap value={
             job.site_address ? (
-              <a
-                href={`https://maps.apple.com/?q=${encodeURIComponent(job.site_address)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-accent hover:underline"
-              >
-                {job.site_address}
-              </a>
+              <div className="flex items-start gap-1">
+                <span className="text-accent select-text whitespace-pre-line">{job.site_address}</span>
+                <a
+                  href={`https://maps.apple.com/?q=${encodeURIComponent(job.site_address)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-accent shrink-0 mt-0.5"
+                  title="Open in Maps"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
             ) : null
           } />
           <InfoCell label="On-Site Contact" icon={User} value={job.onsite_contact_name} />
