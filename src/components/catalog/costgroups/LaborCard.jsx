@@ -20,7 +20,18 @@ export default function LaborCard({ rules, setRule, commit, calc, unit, rates, h
   const rp = { onChange: setRule, onCommit: commit };
   return (
     <div className="bg-card border rounded-xl overflow-hidden">
-      <h3 className="text-lg font-bold p-5">Labor &amp; finish</h3>
+      <div className="p-5">
+        <h3 className="text-lg font-bold">Labor &amp; finish</h3>
+        <p className="text-xs text-muted-foreground mt-1">
+          Time and cost are calculated per {unit} of railing. The "10 {unit}" basis is an example measurement — every value you enter is converted to a per-unit rate automatically.
+        </p>
+      </div>
+      <div className="px-5 pb-4 space-y-2 text-xs text-muted-foreground border-b">
+        <p><span className="font-semibold text-foreground">Fabrication:</span> hours ÷ 10 × total {unit} × fab labor rate. Enter the hours it takes one person to fabricate 10 {unit} of this style.</p>
+        <p><span className="font-semibold text-foreground">Powder coat:</span> $/{unit} × total {unit}. Enter the powder coat cost per {unit}.</p>
+        <p><span className="font-semibold text-foreground">Install:</span> hours ÷ 10 × crew size × install labor rate × total {unit}. Enter the elapsed install hours per 10 {unit} and the crew size.</p>
+        <p><span className="font-semibold text-foreground">Install days:</span> install hours ÷ hours per day (from Settings). Used to calculate fuel trips on the estimate.</p>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/40"><tr><th className={th}>Cost</th><th className={th}>Rule for this style</th><th className={th}>Calculation</th><th className={`${th} text-right`}>Cost</th></tr></thead>
