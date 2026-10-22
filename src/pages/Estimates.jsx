@@ -11,7 +11,7 @@ import {
 import {
   Dialog, DialogContent,
 } from "@/components/ui/dialog";
-import { FileText, Plus, ChevronRight } from "lucide-react";
+import { FileText, Plus, ChevronRight, CalendarClock } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import EstimateEditor from "@/components/estimates/EstimateEditor";
 
@@ -25,6 +25,7 @@ const STATUS_STYLES = {
 export default function Estimates() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [showFollowUps, setShowFollowUps] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [activeEstimate, setActiveEstimate] = useState(null);
   const [activeJob, setActiveJob] = useState(null);
@@ -54,7 +55,11 @@ export default function Estimates() {
   const filteredEstimates = estimates.filter(e => {
     const matchStatus = statusFilter === "All" || e.status === statusFilter;
     const matchSearch = !search || e.job_number?.toLowerCase().includes(search.toLowerCase());
-    return matchStatus && matchSearch;
+    const matchFollowUp = !showFollowUps || (() => {
+      const job = jobs.find(j => j.id === e.job_id);
+      return job?.follow_up_date;
+    })();
+    return matchStatus && matchSearch && matchFollowUp;
   });
 
   const filteredJobs = jobs.filter(j =>
@@ -73,7 +78,7 @@ export default function Estimates() {
         <Button onClick={openNew} className="gap-2"><Plus className="w-4 h-4" /> New Estimate</Button>
       </div>
 
-      <div className="flex gap-3 mb-4">
+      <div className="flex gap-3 mb-4 items-center">
         <Input placeholder="Search by job #…" value={search} onChange={e => setSearch(e.target.value)} className="max-w-xs" />
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
@@ -83,6 +88,13 @@ export default function Estimates() {
             ))}
           </SelectContent>
         </Select>
+        <button
+          onClick={() => setShowFollowUps(v => !v)}
+          className={`flex items-center gap-1.5 px-3 h-9 rounded-md border text-sm transition-colors ${showFollowUps ? "bg-amber-50 border-amber-300 text-amber-700 font-medium" : "border-input text-muted-foreground hover:text-foreground"}`}
+        >
+          <CalendarClock className="w-3.5 h-3.5" />
+          Has Follow-Up
+        </button>
       </div>
 
       {isLoading ? (

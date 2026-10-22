@@ -17,7 +17,7 @@ import ClosedLeadsBoard from "@/components/pipeline/ClosedLeadsBoard";
 import PipelineRowView from "@/components/pipeline/PipelineRowView";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Filter, TrendingUp, Wrench, DollarSign, LayoutGrid, List, Archive, RotateCcw, Search, X, XCircle, ArrowDownWideNarrow } from "lucide-react";
+import { Plus, Filter, TrendingUp, Wrench, DollarSign, LayoutGrid, List, Archive, RotateCcw, Search, X, XCircle, ArrowDownWideNarrow, CalendarClock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +81,7 @@ export default function JobBoard() {
   }, [effectiveRole]);
 
   const [showArchived, setShowArchived] = useState(false);
+  const [showFollowUps, setShowFollowUps] = useState(false);
 
   const { data: allJobs = [], isLoading, refetch: refetchJobs } = useQuery({
     queryKey: ["jobs", orgFilter],
@@ -132,9 +133,12 @@ export default function JobBoard() {
     "Closed Leads": jobs.filter(j => j.is_lead_closed),
   };
 
+  const followUpCount = allJobs.filter(j => j.follow_up_date && !j.is_archived).length;
+
   const filtered = {};
   Object.keys(boardJobs).forEach(board => {
     let list = boardJobs[board];
+    if (showFollowUps) list = list.filter(j => j.follow_up_date);
     if (q) list = list.filter(matchesSearch);
     filtered[board] = list;
   });
@@ -226,6 +230,18 @@ export default function JobBoard() {
               </button>
             </div>
           )}
+          <Button
+            size="sm"
+            variant={showFollowUps ? "default" : "outline"}
+            className="h-9 gap-1.5"
+            onClick={() => setShowFollowUps(v => !v)}
+          >
+            <CalendarClock className="w-4 h-4" />
+            Follow-Ups
+            {followUpCount > 0 && (
+              <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${showFollowUps ? "bg-primary-foreground/20" : "bg-muted"}`}>{followUpCount}</span>
+            )}
+          </Button>
           <Button
             size="sm"
             variant="outline"

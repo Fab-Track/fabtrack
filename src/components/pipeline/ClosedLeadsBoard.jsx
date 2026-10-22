@@ -116,6 +116,7 @@ export default function ClosedLeadsBoard({ jobs = [], sortOrder = "newest" }) {
             <span className="col-span-2">Customer</span>
             <span className="col-span-2">Outcome</span>
             <span className="col-span-1">Reason</span>
+            <span className="col-span-1">Follow-Up</span>
             <span className="col-span-2">Closed</span>
             <span className="col-span-1"></span>
           </div>
@@ -142,6 +143,11 @@ export default function ClosedLeadsBoard({ jobs = [], sortOrder = "newest" }) {
                 </span>
                 <span className="col-span-1 text-xs text-muted-foreground truncate" title={reasonLabel}>
                   {reasonLabel}
+                </span>
+                <span className="col-span-1 text-xs">
+                  {job.follow_up_date && isValid(parseISO(job.follow_up_date))
+                    ? <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">{format(parseISO(job.follow_up_date), "MMM d")}</Badge>
+                    : <span className="text-muted-foreground">—</span>}
                 </span>
                 <span className="col-span-2 text-xs text-muted-foreground">{closedDate}</span>
                 <span className="col-span-1 flex justify-end">

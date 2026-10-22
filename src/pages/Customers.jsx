@@ -25,6 +25,7 @@ import { format, parseISO, isValid } from "date-fns";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { STATUS_COLORS } from "@/lib/jobHelpers";
 import OutstandingAgingCard from "@/components/customers/OutstandingAgingCard";
+import CustomerFollowUpsCard from "@/components/customers/CustomerFollowUpsCard";
 import PaymentBehaviorCard from "@/components/customers/PaymentBehaviorCard";
 import QuickActionsBar from "@/components/customers/QuickActionsBar";
 import CustomerARSummaryBar from "@/components/customers/CustomerARSummaryBar";
@@ -339,6 +340,9 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
         </div>
       )}
 
+      {/* Follow-Ups */}
+      <CustomerFollowUpsCard jobs={customerJobs} />
+
       {/* Quick Actions */}
       <QuickActionsBar
         customer={customer}
@@ -441,9 +445,11 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
                         <Badge className={`text-[10px] ${STATUS_COLORS[job.status] || ""}`}>{job.status}</Badge>
                       </div>
                       <p className="text-sm font-medium truncate">{job.job_name}</p>
-                      {job.expected_install_date && isValid(parseISO(job.expected_install_date)) && (
+                      {job.follow_up_date && isValid(parseISO(job.follow_up_date)) ? (
+                        <p className="text-xs text-amber-600 font-medium">Follow-up: {format(parseISO(job.follow_up_date), "MMM d, yyyy")}</p>
+                      ) : job.expected_install_date && isValid(parseISO(job.expected_install_date)) ? (
                         <p className="text-xs text-muted-foreground">{format(parseISO(job.expected_install_date), "MMM d, yyyy")}</p>
-                      )}
+                      ) : null}
                     </div>
                     {job.estimate_total > 0 && (
                       <div className="text-right shrink-0">
