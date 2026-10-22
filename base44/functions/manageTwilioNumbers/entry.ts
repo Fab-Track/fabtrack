@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { getOrgTwilioConfig, resolveTwilioCredentials } from '../../shared/twilio.js';
 
 // Helper: list phone numbers from Twilio account
 async function fetchTwilioNumbers(accountSid, authToken) {
@@ -32,8 +33,11 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-    const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+    // Resolve org-scoped Twilio credentials (falls back to platform env vars during migration)
+    const twilioConfig = await getOrgTwilioConfig(base44, user.organization_id);
+    const creds = resolveTwilioCredentials(twilioConfig);
+    const accountSid = creds?.accountSid || null;
+    const authToken = creds?.authToken || null;
 
     if (action === 'listTwilioNumbers') {
       // List numbers from Twilio (for validation / add flow)

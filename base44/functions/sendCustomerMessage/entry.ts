@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { getOrgTwilioConfig, resolveTwilioCredentials, sendTwilioSms } from '../../shared/twilio.js';
 
 Deno.serve(async (req) => {
   try {
@@ -16,32 +17,18 @@ Deno.serve(async (req) => {
     let sendResult = { success: false, sid: null, error: null };
 
     if (channel === 'SMS') {
-      const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-      const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+      const twilioConfig = await getOrgTwilioConfig(base44, user.organization_id);
+      const creds = resolveTwilioCredentials(twilioConfig);
 
-      if (!accountSid || !authToken) {
+      if (!creds) {
         // Twilio not configured — mark as simulated
         sendResult = { success: true, sid: 'SIMULATED_' + Date.now(), simulated: true };
       } else {
-        const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-        const formData = new URLSearchParams({
-          To: to_phone,
-          From: from_phone || Deno.env.get('TWILIO_FROM_NUMBER') || '',
-          Body: message_body,
-        });
-        const resp = await fetch(twilioUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Basic ' + btoa(`${accountSid}:${authToken}`),
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: formData.toString(),
-        });
-        const data = await resp.json();
-        if (resp.ok) {
-          sendResult = { success: true, sid: data.sid };
+        const smsResult = await sendTwilioSms(creds, to_phone, message_body, from_phone);
+        if (smsResult.ok) {
+          sendResult = { success: true, sid: smsResult.sid };
         } else {
-          sendResult = { success: false, error: data.message || 'Twilio error' };
+          sendResult = { success: false, error: smsResult.error };
         }
       }
     } else if (channel === 'Email') {

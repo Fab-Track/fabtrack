@@ -208,6 +208,33 @@
       "type": "string",
       "format": "date-time",
       "description": "When the org's email provider was last successfully connected"
+    },
+    "twilio_account_sid": {
+      "type": "string",
+      "description": "Per-org Twilio Account SID"
+    },
+    "twilio_auth_token": {
+      "type": "string",
+      "description": "Per-org Twilio Auth Token"
+    },
+    "twilio_from_number": {
+      "type": "string",
+      "description": "Per-org primary Twilio SMS number (E.164)"
+    },
+    "twilio_status": {
+      "type": "string",
+      "enum": [
+        "connected",
+        "disconnected",
+        "error"
+      ],
+      "default": "disconnected",
+      "description": "Connection status of the org's Twilio account"
+    },
+    "twilio_connected_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the org's Twilio account was last successfully connected"
     }
   },
   "required": [

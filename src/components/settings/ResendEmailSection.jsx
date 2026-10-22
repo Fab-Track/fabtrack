@@ -13,7 +13,7 @@ function StatusDot({ status }) {
   return <Badge variant="outline" className="gap-1 text-muted-foreground"><Circle className="w-3 h-3" />Not Connected</Badge>;
 }
 
-export default function ResendEmailSection() {
+export default function ResendEmailSection({ onStatusChange }) {
   const [apiKey, setApiKey] = useState("");
   const [fromEmail, setFromEmail] = useState("");
   const [fromName, setFromName] = useState("");
@@ -35,6 +35,7 @@ export default function ResendEmailSection() {
           setFromEmail(config.resend_from_email || "");
           setFromName(config.resend_from_name || "");
           setStatus(config.email_status || "disconnected");
+        onStatusChange?.(config.email_status === "connected" ? "connected" : "not_connected");
         }
       } catch {
         /* non-fatal */
@@ -60,6 +61,7 @@ export default function ResendEmailSection() {
       });
       if (resp.data?.ok) {
         setStatus(resp.data.email_status || "connected");
+        onStatusChange?.(resp.data.email_status === "connected" ? "connected" : "not_connected");
         toast.success("Email configuration saved.");
       } else {
         toast.error(resp.data?.error || "Failed to save");

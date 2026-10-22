@@ -1,129 +1,114 @@
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Phone, Mail, CheckCircle2, AlertCircle, Circle, ExternalLink, Eye, EyeOff, Send } from "lucide-react";
-import { toast } from "sonner";
-import { base44 } from "@/api/base44Client";
-import TwilioPhoneNumbersTable from "./TwilioPhoneNumbersTable";
+import { Mail, Phone, ChevronDown, Plug } from "lucide-react";
+import GmailSenderSection from "./GmailSenderSection";
 import ResendEmailSection from "./ResendEmailSection";
+import TwilioSmsSection from "./TwilioSmsSection";
+import TwilioPhoneNumbersTable from "./TwilioPhoneNumbersTable";
+import ProjectBlueSection from "./ProjectBlueSection";
 
-function StatusDot({ status }) {
-  if (status === "connected") return <Badge className="gap-1 bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="w-3 h-3" />Connected</Badge>;
-  if (status === "error") return <Badge className="gap-1 bg-red-100 text-red-700 border-red-200"><AlertCircle className="w-3 h-3" />Error</Badge>;
-  return <Badge variant="outline" className="gap-1 text-muted-foreground"><Circle className="w-3 h-3" />Not Connected</Badge>;
+const GROUPS = [
+  {
+    id: "email",
+    label: "Email",
+    icon: Mail,
+    description: "Send estimates, invoices, and notifications",
+    items: ["gmail", "resend"],
+  },
+  {
+    id: "phone_sms",
+    label: "Phone & SMS",
+    icon: Phone,
+    description: "Send and receive text messages with customers",
+    items: ["twilio", "phone_numbers", "project_blue"],
+  },
+];
+
+function GroupHeader({ group, isOpen, onToggle, connectedCount, totalCount }) {
+  const Icon = group.icon;
+  return (
+    <button
+      onClick={onToggle}
+      className="w-full flex items-center gap-3 px-1 py-2 group"
+    >
+      <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+        <Icon className="w-4 h-4 text-muted-foreground" />
+      </div>
+      <div className="flex-1 text-left">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold">{group.label}</span>
+          {connectedCount > 0 && (
+            <span className="text-[10px] font-medium text-green-600 bg-green-50 border border-green-200 rounded-full px-1.5 py-0.5">
+              {connectedCount}/{totalCount} connected
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">{group.description}</p>
+      </div>
+      <ChevronDown
+        className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? "" : "-rotate-90"}`}
+      />
+    </button>
+  );
 }
 
 export default function IntegrationsSection() {
-  const [twilioSid, setTwilioSid] = useState("");
-  const [twilioToken, setTwilioToken] = useState("");
-  const [twilioFrom, setTwilioFrom] = useState("");
-  const [showToken, setShowToken] = useState(false);
-  const [testNumber, setTestNumber] = useState("");
-  const [twilioStatus, setTwilioStatus] = useState("not_connected"); // not_connected | connected | error
-  const [testing, setTesting] = useState(false);
+  const [openGroups, setOpenGroups] = useState({ email: true, phone_sms: true });
+  const [statuses, setStatuses] = useState({});
 
-  const [sendgridKey, setSendgridKey] = useState("");
-  const [showSendgridKey, setShowSendgridKey] = useState(false);
-  const [sendgridFrom, setSendgridFrom] = useState("");
-  const [sendgridFromName, setSendgridFromName] = useState("");
-  const [sgStatus, setSgStatus] = useState("not_connected");
+  function updateStatus(itemId, status) {
+    setStatuses(prev => ({ ...prev, [itemId]: status }));
+  }
 
-  async function handleTestSMS() {
-    if (!testNumber) { toast.error("Enter a test phone number"); return; }
-    setTesting(true);
-    const resp = await base44.functions.invoke("sendCustomerMessage", {
-      channel: "SMS",
-      to_phone: testNumber,
-      from_phone: twilioFrom,
-      from_name: "FabTrack Test",
-      message_body: "✅ Test SMS from FabTrack — Twilio is connected!",
-    });
-    setTesting(false);
-    if (resp.data?.ok) {
-      if (resp.data?.simulated) {
-        toast.info("Simulated send (Twilio credentials not saved yet). Save them via Settings → Environment Variables first.");
-      } else {
-        setTwilioStatus("connected");
-        toast.success("Test SMS sent!");
-      }
-    } else {
-      setTwilioStatus("error");
-      toast.error("Test failed: " + (resp.data?.error || "Check credentials"));
+  function toggleGroup(groupId) {
+    setOpenGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  }
+
+  function renderItem(itemId) {
+    switch (itemId) {
+      case "gmail":        return <GmailSenderSection onStatusChange={s => updateStatus("gmail", s)} />;
+      case "resend":       return <ResendEmailSection onStatusChange={s => updateStatus("resend", s)} />;
+      case "twilio":       return <TwilioSmsSection onStatusChange={s => updateStatus("twilio", s)} />;
+      case "phone_numbers": return <TwilioPhoneNumbersTable />;
+      case "project_blue": return <ProjectBlueSection />;
+      default: return null;
     }
   }
 
   return (
-    <div className="space-y-8">
-      {/* Twilio SMS */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center">
-              <Phone className="w-5 h-5 text-red-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-sm">Twilio SMS</h3>
-              <p className="text-xs text-muted-foreground">Send SMS messages to customers</p>
-            </div>
-          </div>
-          <StatusDot status={twilioStatus} />
-        </div>
-
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-800">
-          <strong>Setup instructions:</strong> Add your Twilio credentials as environment variables in your Base44 dashboard: <code className="font-mono bg-blue-100 px-1 rounded">TWILIO_ACCOUNT_SID</code>, <code className="font-mono bg-blue-100 px-1 rounded">TWILIO_AUTH_TOKEN</code>, and <code className="font-mono bg-blue-100 px-1 rounded">TWILIO_FROM_NUMBER</code>.
-          <a href="https://console.twilio.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 ml-1 underline hover:text-blue-600">Twilio Console <ExternalLink className="w-3 h-3" /></a>
-        </div>
-
-        <div className="grid gap-3">
-          <div>
-            <Label className="text-xs">Account SID</Label>
-            <Input className="h-8 text-sm font-mono" value={twilioSid} onChange={e => setTwilioSid(e.target.value)} placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
-          </div>
-          <div>
-            <Label className="text-xs">Auth Token</Label>
-            <div className="relative">
-              <Input
-                className="h-8 text-sm font-mono pr-8"
-                type={showToken ? "text" : "password"}
-                value={twilioToken}
-                onChange={e => setTwilioToken(e.target.value)}
-                placeholder="••••••••••••••••••••••••••••••••"
-              />
-              <button onClick={() => setShowToken(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
-                {showToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-          </div>
-          <div>
-            <Label className="text-xs">Primary SMS Number (E.164 format)</Label>
-            <Input className="h-8 text-sm" value={twilioFrom} onChange={e => setTwilioFrom(e.target.value)} placeholder="+18012109103" />
-          </div>
-        </div>
-
-        <div className="flex gap-2 items-center">
-          <Input className="h-8 text-sm flex-1" value={testNumber} onChange={e => setTestNumber(e.target.value)} placeholder="Test number: +1..." />
-          <Button size="sm" variant="outline" onClick={handleTestSMS} disabled={testing} className="gap-1.5 shrink-0">
-            <Send className="w-3.5 h-3.5" />{testing ? "Sending…" : "Test SMS"}
-          </Button>
-        </div>
-
-        <p className="text-xs text-muted-foreground">
-          <a href="#" className="underline">Need help? View SMS setup guide →</a>
+    <div className="space-y-6">
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Plug className="w-4 h-4" />
+        <p className="text-xs">
+          Connect your organization's own email and phone accounts. Credentials are stored securely per shop and never shared across organizations.
         </p>
       </div>
 
-      <Separator />
-
-      {/* Phone Numbers Table */}
-      <TwilioPhoneNumbersTable />
-
-      <Separator />
-
-      {/* Resend Email (per-org) */}
-      <ResendEmailSection />
+      {GROUPS.map(group => {
+        const isOpen = openGroups[group.id];
+        const connectedCount = group.items.filter(i => statuses[i] === "connected").length;
+        return (
+          <div key={group.id} className="border rounded-xl overflow-hidden">
+            <div className="px-4">
+              <GroupHeader
+                group={group}
+                isOpen={isOpen}
+                onToggle={() => toggleGroup(group.id)}
+                connectedCount={connectedCount}
+                totalCount={group.items.length}
+              />
+            </div>
+            {isOpen && (
+              <div className="border-t divide-y">
+                {group.items.map(itemId => (
+                  <div key={itemId} className="px-4 py-4">
+                    {renderItem(itemId)}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
