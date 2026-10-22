@@ -16,13 +16,17 @@ export async function getOrgEmailConfig(base44, orgId) {
 }
 
 // Returns true if the org has a usable Resend configuration.
+// Rejects stale test/placeholder keys so they can't silently swallow sends.
 export function isEmailConfigured(config) {
-  return !!(
-    config &&
-    config.email_status === 'connected' &&
-    config.resend_api_key &&
-    config.resend_from_email
-  );
+  if (!config || config.email_status !== 'connected' || !config.resend_api_key || !config.resend_from_email) {
+    return false;
+  }
+  // Reject known stale test data
+  const key = config.resend_api_key;
+  const from = config.resend_from_email;
+  if (key === 're_test_key' || /^re_test_/i.test(key)) return false;
+  if (from === 'billing@testcompany.com' || /testcompany\.com$/i.test(from)) return false;
+  return true;
 }
 
 // Sends an email through the org's Resend account.

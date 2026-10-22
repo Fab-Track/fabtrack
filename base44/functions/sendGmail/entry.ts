@@ -170,6 +170,7 @@ Deno.serve(async (req) => {
     return Response.json({
       ok: true,
       message_id: sendData.id,
+      thread_id: sendData.threadId || null,
       from: tokenData.from,
       used_fallback: usingFallback,
       fallback_message: usingFallback

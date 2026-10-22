@@ -87,6 +87,22 @@ export default async function(req) {
 
     return Response.json({ ok: true, gmail_message_id: sendResult.id, thread_id: sendResult.threadId });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    // Mark the CommMessage as failed so it's not stuck on a pre-set 'sent' status
+    if (message_id) {
+      try {
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+        if (user) {
+          const existing = await base44.asServiceRole.entities.CommMessage.get(message_id).catch(() => null);
+          if (existing && existing.organization_id === user.organization_id) {
+            await base44.asServiceRole.entities.CommMessage.update(message_id, {
+              status: 'failed',
+              error_message: error.message,
+            });
+          }
+        }
+      } catch { /* best-effort */ }
+    }
+    return Response.json({ ok: false, error: error.message }, { status: 500 });
   }
 }

@@ -8,7 +8,7 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { message_id, channel, to_phone, to_email, from_phone, from_email, from_name, subject, message_body, attachments = [] } = body;
+    const { message_id, channel, to_phone, to_email, from_phone, from_email, from_name, subject, message_body, sender_employee_id, attachments = [] } = body;
 
     if (!channel || !message_body) {
       return Response.json({ error: 'channel and message_body required' }, { status: 400 });
@@ -32,14 +32,26 @@ Deno.serve(async (req) => {
         }
       }
     } else if (channel === 'Email') {
-      // Route through Resend — org-branded from + reply-to derived server-side
-      const resp = await base44.functions.invoke('sendResendEmail', {
+      // Route through Gmail (system sender or user's connected Gmail) instead of Resend.
+      // sendGmail with routing_type="user_message" tries the sender's Gmail first,
+      // then falls back to the org's system sender — no stale Resend config involved.
+      const htmlBody = `<div style="font-family:sans-serif;white-space:pre-wrap;">${message_body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
+      const resp = await base44.functions.invoke('sendGmail', {
         to: to_email,
         subject: subject || '(no subject)',
-        body: message_body,
+        html_body: htmlBody,
+        text_body: message_body,
+        routing_type: 'user_message',
+        sender_employee_id: sender_employee_id || null,
       });
       if (resp.data?.ok) {
-        sendResult = { success: true, sid: resp.data.id || null };
+        sendResult = {
+          success: true,
+          sid: resp.data.message_id || null,
+          gmail_message_id: resp.data.message_id || null,
+          gmail_thread_id: resp.data.thread_id || null,
+          from_email: resp.data.from || null,
+        };
       } else {
         sendResult = { success: false, error: resp.data?.error || 'Email send failed' };
       }
@@ -52,13 +64,22 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Message record not found' }, { status: 404 });
       }
       const updateData = sendResult.success
-        ? { status: 'sent', sent_at: new Date().toISOString(), twilio_sid: sendResult.sid || null }
+        ? {
+            status: 'sent',
+            sent_at: new Date().toISOString(),
+            twilio_sid: sendResult.sid || null,
+            gmail_message_id: sendResult.gmail_message_id || null,
+            gmail_thread_id: sendResult.gmail_thread_id || null,
+            from_email: sendResult.from_email || existing.from_email,
+          }
         : { status: 'failed', error_message: sendResult.error };
       await base44.asServiceRole.entities.CommMessage.update(message_id, updateData);
     }
 
     return Response.json({ ok: sendResult.success, ...sendResult });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    // If we have a message_id, try to mark it as failed so it's not stuck on 'sent'
+    // (the catch block in the caller won't run if base44.functions.invoke throws)
+    return Response.json({ ok: false, error: error.message }, { status: 500 });
   }
 });

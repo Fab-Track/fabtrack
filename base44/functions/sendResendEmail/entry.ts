@@ -1,5 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.48';
-import { sendOrgEmailViaResend } from '../../shared/email.js';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 // Sends a customer-facing email via the org's own Resend account.
 // Delegates to the shared email helper which reads the org's AppSettings.
