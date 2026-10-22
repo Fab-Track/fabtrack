@@ -44,7 +44,7 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
     queryFn: () => user?.organization_id
       ? base44.entities.EmailAccount.filter({ organization_id: user.organization_id, status: "connected" }, "-connected_at", 50)
       : [],
-    enabled: open,
+    enabled: open, // load when modal opens; channel check not needed here
   });
 
   // Email send-as state
