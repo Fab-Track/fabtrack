@@ -36,24 +36,28 @@ Deno.serve(async (req) => {
       // sendGmail with routing_type="user_message" tries the sender's Gmail first,
       // then falls back to the org's system sender — no stale Resend config involved.
       const htmlBody = `<div style="font-family:sans-serif;white-space:pre-wrap;">${message_body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
-      const resp = await base44.functions.invoke('sendGmail', {
-        to: to_email,
-        subject: subject || '(no subject)',
-        html_body: htmlBody,
-        text_body: message_body,
-        routing_type: 'user_message',
-        sender_employee_id: sender_employee_id || null,
-      });
-      if (resp.data?.ok) {
-        sendResult = {
-          success: true,
-          sid: resp.data.message_id || null,
-          gmail_message_id: resp.data.message_id || null,
-          gmail_thread_id: resp.data.thread_id || null,
-          from_email: resp.data.from || null,
-        };
-      } else {
-        sendResult = { success: false, error: resp.data?.error || 'Email send failed' };
+      try {
+        const resp = await base44.functions.invoke('sendGmail', {
+          to: to_email,
+          subject: subject || '(no subject)',
+          html_body: htmlBody,
+          text_body: message_body,
+          routing_type: 'user_message',
+          sender_employee_id: sender_employee_id || null,
+        });
+        if (resp.data?.ok) {
+          sendResult = {
+            success: true,
+            sid: resp.data.message_id || null,
+            gmail_message_id: resp.data.message_id || null,
+            gmail_thread_id: resp.data.thread_id || null,
+            from_email: resp.data.from || null,
+          };
+        } else {
+          sendResult = { success: false, error: resp.data?.error || 'Email send failed' };
+        }
+      } catch (invokeErr) {
+        sendResult = { success: false, error: invokeErr.message || 'Email send failed' };
       }
     }
 
@@ -78,8 +82,18 @@ Deno.serve(async (req) => {
 
     return Response.json({ ok: sendResult.success, ...sendResult });
   } catch (error) {
-    // If we have a message_id, try to mark it as failed so it's not stuck on 'sent'
-    // (the catch block in the caller won't run if base44.functions.invoke throws)
+    // Mark the CommMessage as failed so it's not stuck on 'sent'/'queued'
+    if (message_id) {
+      try {
+        const existing = await base44.asServiceRole.entities.CommMessage.get(message_id).catch(() => null);
+        if (existing && existing.organization_id === user.organization_id) {
+          await base44.asServiceRole.entities.CommMessage.update(message_id, {
+            status: 'failed',
+            error_message: error.message,
+          });
+        }
+      } catch { /* best-effort */ }
+    }
     return Response.json({ ok: false, error: error.message }, { status: 500 });
   }
 });
