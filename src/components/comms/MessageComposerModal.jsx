@@ -184,6 +184,7 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
 
     // Create CommMessage record
     const msgRecord = await base44.entities.CommMessage.create({
+      organization_id: user?.organization_id,
       job_id: job?.id || null,
       job_number: job?.job_number || null,
       job_name: job?.job_name || null,
