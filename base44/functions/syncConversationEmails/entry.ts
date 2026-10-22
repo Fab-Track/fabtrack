@@ -127,8 +127,11 @@ export default async function(req) {
             // Determine direction
             const direction = isFromOurAccount ? 'outbound' : 'inbound';
 
-            // Extract body
-            const bodyText = extractMessageBody(msg.payload) || msg.snippet || '';
+            // Extract body — truncate to avoid exceeding field size limits
+            let bodyText = extractMessageBody(msg.payload) || msg.snippet || '';
+            if (bodyText && bodyText.length > 50000) {
+              bodyText = bodyText.slice(0, 50000) + '\n\n[…message truncated]';
+            }
 
             // Determine the other party (customer side)
             const otherEmails = direction === 'outbound' ? toEmails : fromEmails;
@@ -137,26 +140,31 @@ export default async function(req) {
               ? extractDisplayName(headers.to)
               : extractDisplayName(headers.from);
 
-            await base44.asServiceRole.entities.CommMessage.create({
-              organization_id: user.organization_id,
-              customer_id: matchedCustomer?.id || null,
-              customer_name: matchedCustomer?.name || null,
-              channel: 'Email',
-              direction,
-              status: 'sent',
-              from_name: direction === 'outbound' ? account.display_name : (extractDisplayName(headers.from) || otherName),
-              from_email: fromEmails[0] || account.email,
-              to_name: direction === 'outbound' ? (extractDisplayName(headers.to) || otherName) : account.display_name,
-              to_email: toEmails[0] || otherEmail,
-              subject: headers.subject || '(no subject)',
-              body: bodyText,
-              sent_at: headers.date ? new Date(headers.date).toISOString() : new Date(parseInt(msg.internalDate)).toISOString(),
-              gmail_message_id: msg.id,
-              gmail_thread_id: msg.threadId || null,
-              email_account_id: account.id,
-            });
-            accountSynced++;
-            totalSynced++;
+            try {
+              await base44.asServiceRole.entities.CommMessage.create({
+                organization_id: user.organization_id,
+                customer_id: matchedCustomer?.id || null,
+                customer_name: matchedCustomer?.name || null,
+                channel: 'Email',
+                direction,
+                status: 'sent',
+                from_name: direction === 'outbound' ? account.display_name : (extractDisplayName(headers.from) || otherName),
+                from_email: fromEmails[0] || account.email,
+                to_name: direction === 'outbound' ? (extractDisplayName(headers.to) || otherName) : account.display_name,
+                to_email: toEmails[0] || otherEmail,
+                subject: headers.subject || '(no subject)',
+                body: bodyText,
+                sent_at: headers.date ? new Date(headers.date).toISOString() : new Date(parseInt(msg.internalDate)).toISOString(),
+                gmail_message_id: msg.id,
+                gmail_thread_id: msg.threadId || null,
+                email_account_id: account.id,
+              });
+              accountSynced++;
+              totalSynced++;
+            } catch (msgErr) {
+              // Skip individual messages that fail (e.g. oversized attachments)
+              console.error(`Failed to store message ${msg.id}: ${msgErr.message}`);
+            }
           }
         }
 
