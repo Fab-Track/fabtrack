@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
-    const { type = 'user', employee_id } = body;
+    const { type = 'user', employee_id, account_type, employee_name } = body;
 
     if (!user.organization_id) {
       return Response.json({ error: 'Your account is not linked to an organization.' }, { status: 403 });
@@ -29,8 +29,28 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Only owners can connect the system sender.' }, { status: 403 });
     }
 
-    // For per-user connections, verify the caller is allowed to connect this employee's Gmail
-    if (type !== 'system') {
+    // Conversation email accounts (shared inbox or employee)
+    if (type === 'conversation') {
+      const acctType = account_type || 'shared';
+      if (acctType === 'shared' && !isAdmin) {
+        return Response.json({ error: 'Only owners/admins can connect a shared conversation inbox.' }, { status: 403 });
+      }
+      if (acctType === 'employee') {
+        if (!employee_id) return Response.json({ error: 'employee_id required for employee accounts.' }, { status: 400 });
+        const emp = await base44.asServiceRole.entities.Employee.get(employee_id).catch(() => null);
+        if (!emp || emp.organization_id !== user.organization_id) {
+          return Response.json({ error: 'Employee not found in your organization.' }, { status: 403 });
+        }
+        const isSelf = emp.user_id === user.id ||
+          (emp.email && user.email && emp.email.toLowerCase() === user.email.toLowerCase());
+        if (!isAdmin && !isSelf) {
+          return Response.json({ error: 'You can only connect your own Gmail account.' }, { status: 403 });
+        }
+      }
+    }
+
+    // For per-user connections (legacy estimate sender), verify the caller is allowed
+    if (type === 'user') {
       if (!employee_id) return Response.json({ error: 'employee_id required.' }, { status: 400 });
       const emp = await base44.asServiceRole.entities.Employee.get(employee_id).catch(() => null);
       if (!emp || emp.organization_id !== user.organization_id) {
@@ -50,7 +70,7 @@ Deno.serve(async (req) => {
     const appId = Deno.env.get('BASE44_APP_ID');
     const redirectUri = `https://fab-track.base44.app/functions/gmailOAuthCallback`;
 
-    const state = JSON.stringify({ type, employee_id: employee_id || null, user_id: user.id, org_id: user.organization_id });
+    const state = JSON.stringify({ type, employee_id: employee_id || null, user_id: user.id, org_id: user.organization_id, account_type: account_type || null, employee_name: employee_name || null });
     const stateData = btoa(state);
     const stateB64 = `${stateData}.${await hmacHex(clientSecret, stateData)}`;
 

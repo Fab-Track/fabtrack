@@ -1,0 +1,98 @@
+{
+  "name": "EmailAccount",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
+    "account_type": {
+      "type": "string",
+      "enum": [
+        "shared",
+        "employee"
+      ],
+      "description": "shared = company inbox for conversations, employee = individual staff Gmail"
+    },
+    "email": {
+      "type": "string",
+      "description": "The connected Gmail address"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Display name for this account (e.g. company name or employee name)"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "For employee accounts, the linked Employee record"
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Denormalized employee name for display"
+    },
+    "access_token": {
+      "type": "string",
+      "description": "Gmail OAuth access token"
+    },
+    "refresh_token": {
+      "type": "string",
+      "description": "Gmail OAuth refresh token"
+    },
+    "token_expiry": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the access token expires"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "connected",
+        "disconnected",
+        "error"
+      ],
+      "default": "connected"
+    },
+    "connected_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_sync_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last time messages were synced from this account"
+    },
+    "sync_history_id": {
+      "type": "string",
+      "description": "Gmail history ID for incremental sync"
+    },
+    "sync_error": {
+      "type": "string",
+      "description": "Last sync error message, if any"
+    },
+    "created_by_id": {
+      "type": "string"
+    },
+    "created_by_name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "organization_id",
+    "account_type",
+    "email"
+  ],
+  "rls": {
+    "create": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
+    "read": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
+    "update": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
+    "delete": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    }
+  }
+}

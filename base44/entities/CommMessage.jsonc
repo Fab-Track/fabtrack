@@ -114,6 +114,18 @@
       "type": "string",
       "description": "Employee name whose number received the inbound reply"
     },
+    "gmail_message_id": {
+      "type": "string",
+      "description": "Gmail message ID for deduplication of synced messages"
+    },
+    "gmail_thread_id": {
+      "type": "string",
+      "description": "Gmail thread ID for grouping messages in the same conversation"
+    },
+    "email_account_id": {
+      "type": "string",
+      "description": "EmailAccount ID that sent or received this message"
+    },
     "attachments": {
       "type": "array",
       "items": {

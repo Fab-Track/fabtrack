@@ -134,6 +134,40 @@ Deno.serve(async (req) => {
       }
       return redirectTo(buildReturnUrl('system', 'success', `System sender connected as ${authorizedEmail}`));
 
+    } else if (state.type === 'conversation') {
+      // Conversation email account — stored in EmailAccount entity
+      if (!state.org_id) {
+        return redirectTo(buildReturnUrl('conversation', 'error', 'Missing organization scope.'));
+      }
+      const acctType = state.account_type || 'shared';
+      // Check if account already exists (same email in same org)
+      const existing = await base44.asServiceRole.entities.EmailAccount.filter({
+        organization_id: state.org_id,
+        email: authorizedEmail,
+      });
+      const accountData = {
+        organization_id: state.org_id,
+        account_type: acctType,
+        email: authorizedEmail,
+        display_name: acctType === 'shared'
+          ? 'Shared Inbox'
+          : (state.employee_name || authorizedEmail),
+        employee_id: state.employee_id || null,
+        employee_name: state.employee_name || null,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token || null,
+        token_expiry: expiresAt,
+        status: 'connected',
+        connected_at: new Date().toISOString(),
+        created_by_id: state.user_id,
+      };
+      if (existing.length > 0) {
+        await base44.asServiceRole.entities.EmailAccount.update(existing[0].id, accountData);
+      } else {
+        await base44.asServiceRole.entities.EmailAccount.create(accountData);
+      }
+      return redirectTo(buildReturnUrl('conversation', 'success', `Conversation email connected as ${authorizedEmail}`));
+
     } else {
       const empId = state.employee_id;
       if (!empId) {

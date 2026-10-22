@@ -38,6 +38,15 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
 
   const { myEmployee, myAssignedNumber, mainNumber, numbersWithEmployees, allEmployees } = useAssignedSmsNumber(user?.email, open);
 
+  // Connected conversation email accounts
+  const { data: emailAccounts = [] } = useQuery({
+    queryKey: ["emailAccounts", user?.organization_id],
+    queryFn: () => user?.organization_id
+      ? base44.entities.EmailAccount.filter({ organization_id: user.organization_id, status: "connected" }, "-connected_at", 50)
+      : [],
+    enabled: open && channel === "Email",
+  });
+
   // Email send-as state
   const [sendAsEmailId, setSendAsEmailId] = useState(null); // null = use my email
 
@@ -66,6 +75,9 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
 
   const usingEmailFallback = !myCommEmail || !myGmailConnected;
   const sendingEmailAsOtherUser = !!sendAsEmailEmployee && sendAsEmailEmployee.id !== myEmployee?.id;
+
+  // Selected conversation email account (when sending via connected Gmail)
+  const [selectedEmailAccountId, setSelectedEmailAccountId] = useState(null);
 
   // "Send As" state — defaults to current user's number; owner can change
   const [sendAsNumberId, setSendAsNumberId] = useState(null); // null = use my number
@@ -115,6 +127,7 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
     setFromPhone(appSettings?.twilio_from_number || "");
     setSendAsNumberId(null);
     setSendAsEmailId(null);
+    setSelectedEmailAccountId(null);
 
     if (prefillMessage) {
       setChannel(prefillMessage.channel || "SMS");
@@ -193,23 +206,41 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
     });
 
     if (saveAs === "sent") {
-      // Call send function
-      const resp = await base44.functions.invoke("sendCustomerMessage", {
-        message_id: msgRecord.id,
-        channel,
-        to_phone: toPhone,
-        to_email: toEmail,
-        from_phone: actualFromPhone,
-        from_email: actualFromEmail,
-        from_name: actualFromName,
-        subject,
-        message_body: body,
-      });
-
-      if (resp.data?.ok) {
-        toast.success(channel === "SMS" ? "SMS sent!" : "Email sent!");
+      // If sending email via a connected conversation account, route through Gmail
+      if (channel === "Email" && selectedEmailAccountId) {
+        const resp = await base44.functions.invoke("sendConversationEmail", {
+          message_id: msgRecord.id,
+          email_account_id: selectedEmailAccountId,
+          to_email: toEmail,
+          to_name: toName,
+          subject,
+          body: body,
+          from_name: actualFromName,
+        });
+        if (resp.data?.ok) {
+          toast.success("Email sent via Gmail!");
+        } else {
+          toast.error("Send failed: " + (resp.data?.error || "Unknown error"));
+        }
       } else {
-        toast.error("Send failed: " + (resp.data?.error || "Unknown error"));
+        // Call send function
+        const resp = await base44.functions.invoke("sendCustomerMessage", {
+          message_id: msgRecord.id,
+          channel,
+          to_phone: toPhone,
+          to_email: toEmail,
+          from_phone: actualFromPhone,
+          from_email: actualFromEmail,
+          from_name: actualFromName,
+          subject,
+          message_body: body,
+        });
+
+        if (resp.data?.ok) {
+          toast.success(channel === "SMS" ? "SMS sent!" : "Email sent!");
+        } else {
+          toast.error("Send failed: " + (resp.data?.error || "Unknown error"));
+        }
       }
     } else {
       toast.success("Saved as draft");
@@ -324,8 +355,31 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
               )}
             </div>
           ) : (
-            /* Email From — smart display, mirrors SMS */
+            /* Email From — conversation email accounts first, then legacy */
             <div className="space-y-1.5">
+              {emailAccounts.length > 0 && (
+                <div>
+                  <Label className="text-xs">Send From (Connected Gmail)</Label>
+                  <Select
+                    value={selectedEmailAccountId || "default"}
+                    onValueChange={val => setSelectedEmailAccountId(val === "default" ? null : val)}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">Default (Resend)</SelectItem>
+                      {emailAccounts.map(acct => (
+                        <SelectItem key={acct.id} value={acct.id}>
+                          {acct.email} {acct.account_type === "shared" ? "— Shared" : `— ${acct.employee_name || "Employee"}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {!selectedEmailAccountId && (
+              <div>
               {isOwner && emailEmployees.length > 1 ? (
                 <div>
                   <Label className="text-xs">Send As</Label>
@@ -373,6 +427,8 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
                 </div>
               )}
             </div>
+            )}
+          </div>
           )}
 
           <Separator />

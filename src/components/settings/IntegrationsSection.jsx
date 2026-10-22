@@ -8,6 +8,7 @@ import ResendEmailSection from "./ResendEmailSection";
 import TwilioSmsSection from "./TwilioSmsSection";
 import TwilioPhoneNumbersTable from "./TwilioPhoneNumbersTable";
 import ProjectBlueSection from "./ProjectBlueSection";
+import ConversationEmailSection from "./ConversationEmailSection";
 
 const INTEGRATIONS = [
   {
@@ -49,6 +50,16 @@ const INTEGRATIONS = [
     iconColor: "text-green-600",
     description: "Assign Twilio phone numbers to team members for outgoing SMS and track usage per employee.",
     component: TwilioPhoneNumbersTable,
+  },
+  {
+    id: "conversation_email",
+    name: "Conversation Email",
+    category: "Email",
+    icon: Mail,
+    iconBg: "bg-orange-50",
+    iconColor: "text-orange-600",
+    description: "Connect Gmail accounts to sync incoming and outgoing customer email conversations into threads. Separate from estimate sending.",
+    component: ConversationEmailSection,
   },
   {
     id: "project_blue",
