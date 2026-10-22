@@ -182,75 +182,80 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
       ? (sendingAsOtherUser ? (myEmployee?.name || user?.full_name) : null)
       : (sendingEmailAsOtherUser ? (myEmployee?.name || user?.full_name) : null);
 
-    // Create CommMessage record
-    const msgRecord = await base44.entities.CommMessage.create({
-      organization_id: user?.organization_id,
-      job_id: job?.id || null,
-      job_number: job?.job_number || null,
-      job_name: job?.job_name || null,
-      customer_id: customer?.id || null,
-      customer_name: cust?.name || null,
-      channel,
-      status: saveAs === "draft" ? "draft" : "sent",
-      to_name: toName,
-      to_phone: toPhone,
-      to_email: toEmail,
-      from_name: actualFromName,
-      from_email: actualFromEmail,
-      from_phone: actualFromPhone,
-      subject,
-      body,
-      template_id: selectedTemplateId || null,
-      template_name: templateName,
-      sent_by_name: actualSentByName,
-      queued_at: new Date().toISOString(),
-    });
+    try {
+      // Create CommMessage record
+      const msgRecord = await base44.entities.CommMessage.create({
+        organization_id: user?.organization_id,
+        job_id: job?.id || null,
+        job_number: job?.job_number || null,
+        job_name: job?.job_name || null,
+        customer_id: customer?.id || null,
+        customer_name: cust?.name || null,
+        channel,
+        status: saveAs === "draft" ? "draft" : "sent",
+        to_name: toName,
+        to_phone: toPhone,
+        to_email: toEmail,
+        from_name: actualFromName,
+        from_email: actualFromEmail,
+        from_phone: actualFromPhone,
+        subject,
+        body,
+        template_id: selectedTemplateId || null,
+        template_name: templateName,
+        sent_by_name: actualSentByName,
+        queued_at: new Date().toISOString(),
+      });
 
-    if (saveAs === "sent") {
-      // If sending email via a connected conversation account, route through Gmail
-      if (channel === "Email" && selectedEmailAccountId) {
-        const resp = await base44.functions.invoke("sendConversationEmail", {
-          message_id: msgRecord.id,
-          email_account_id: selectedEmailAccountId,
-          to_email: toEmail,
-          to_name: toName,
-          subject,
-          body: body,
-          from_name: actualFromName,
-        });
-        if (resp.data?.ok) {
-          toast.success("Email sent via Gmail!");
+      if (saveAs === "sent") {
+        // If sending email via a connected conversation account, route through Gmail
+        if (channel === "Email" && selectedEmailAccountId) {
+          const resp = await base44.functions.invoke("sendConversationEmail", {
+            message_id: msgRecord.id,
+            email_account_id: selectedEmailAccountId,
+            to_email: toEmail,
+            to_name: toName,
+            subject,
+            body: body,
+            from_name: actualFromName,
+          });
+          if (resp.data?.ok) {
+            toast.success("Email sent via Gmail!");
+          } else {
+            toast.error("Send failed: " + (resp.data?.error || "Unknown error"));
+          }
         } else {
-          toast.error("Send failed: " + (resp.data?.error || "Unknown error"));
+          // Call send function
+          const resp = await base44.functions.invoke("sendCustomerMessage", {
+            message_id: msgRecord.id,
+            channel,
+            to_phone: toPhone,
+            to_email: toEmail,
+            from_phone: actualFromPhone,
+            from_email: actualFromEmail,
+            from_name: actualFromName,
+            subject,
+            message_body: body,
+          });
+
+          if (resp.data?.ok) {
+            toast.success(channel === "SMS" ? "SMS sent!" : "Email sent!");
+          } else {
+            toast.error("Send failed: " + (resp.data?.error || "Unknown error"));
+          }
         }
       } else {
-        // Call send function
-        const resp = await base44.functions.invoke("sendCustomerMessage", {
-          message_id: msgRecord.id,
-          channel,
-          to_phone: toPhone,
-          to_email: toEmail,
-          from_phone: actualFromPhone,
-          from_email: actualFromEmail,
-          from_name: actualFromName,
-          subject,
-          message_body: body,
-        });
-
-        if (resp.data?.ok) {
-          toast.success(channel === "SMS" ? "SMS sent!" : "Email sent!");
-        } else {
-          toast.error("Send failed: " + (resp.data?.error || "Unknown error"));
-        }
+        toast.success("Saved as draft");
       }
-    } else {
-      toast.success("Saved as draft");
-    }
 
-    qc.invalidateQueries({ queryKey: ["commMessages"] });
-    setSending(false);
-    onSent?.();
-    onClose();
+      qc.invalidateQueries({ queryKey: ["commMessages"] });
+      onSent?.();
+      onClose();
+    } catch (err) {
+      toast.error("Send failed: " + (err.message || "Unknown error"));
+    } finally {
+      setSending(false);
+    }
   }
 
   const segments = smsSegmentCount(body);
