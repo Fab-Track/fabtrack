@@ -38,13 +38,20 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
 
   const { myEmployee, myAssignedNumber, mainNumber, numbersWithEmployees, allEmployees } = useAssignedSmsNumber(user?.email, open);
 
-  // Connected conversation email accounts
-  const { data: emailAccounts = [] } = useQuery({
+  // Connected conversation email accounts (all connected accounts for the org)
+  const { data: allEmailAccounts = [] } = useQuery({
     queryKey: ["emailAccounts", user?.organization_id],
     queryFn: () => user?.organization_id
       ? base44.entities.EmailAccount.filter({ organization_id: user.organization_id, status: "connected" }, "-connected_at", 50)
       : [],
-    enabled: open, // load when modal opens; channel check not needed here
+    enabled: open,
+  });
+
+  // Shared accounts are available to everyone; employee accounts require
+  // individual_email_enabled (or admin/owner) per the admin-managed policy.
+  const emailAccounts = (allEmailAccounts || []).filter(acct => {
+    if (acct.account_type === "shared") return true;
+    return isOwner || myEmployee?.individual_email_enabled;
   });
 
   // Email send-as state
@@ -189,6 +196,10 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
     if (!body.trim()) { toast.error("Message body is required"); return; }
     if (channel === "SMS" && !toPhone) { toast.error("Recipient phone is required for SMS"); return; }
     if (channel === "Email" && !toEmail) { toast.error("Recipient email is required"); return; }
+    if (channel === "Email" && emailAccounts.length === 0 && appSettings?.system_sender_status !== "connected") {
+      toast.error("No email account configured. Ask an admin to connect a shared inbox in Settings > Integrations.");
+      return;
+    }
 
     setSending(true);
     const templateName = templates.find(t => t.id === selectedTemplateId)?.name || null;
@@ -415,13 +426,13 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
               )}
             </div>
           ) : (
-            /* Email From — conversation email accounts first, then system sender */
+            /* Email From — admin-managed accounts are the primary sender */
             <div className="space-y-1.5">
-              {(emailAccounts.length > 0 || (appSettings?.system_sender_status === "connected" && appSettings?.system_sender_email)) && (
+              {emailAccounts.length > 0 ? (
                 <div>
                   <Label className="text-xs">Send From</Label>
                   <Select
-                    value={selectedEmailAccountId || "system"}
+                    value={selectedEmailAccountId || emailAccounts[0]?.id || "system"}
                     onValueChange={val => setSelectedEmailAccountId(val === "system" ? null : val)}
                   >
                     <SelectTrigger className="h-8 text-sm">
@@ -435,64 +446,25 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
                       )}
                       {emailAccounts.map(acct => (
                         <SelectItem key={acct.id} value={acct.id}>
-                          {acct.email} {acct.account_type === "shared" ? "— Shared" : `— ${acct.employee_name || "Employee"}`}
+                          {acct.email}
+                          {acct.account_type === "shared" ? " — Shared" : ` — ${acct.employee_name || "Personal"}`}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              )}
-              {!selectedEmailAccountId && (
-              <div>
-              {isOwner && emailEmployees.length > 1 ? (
-                <div>
-                  <Label className="text-xs">Send As</Label>
-                  <Select
-                    value={sendAsEmailId || "mine"}
-                    onValueChange={val => setSendAsEmailId(val === "mine" ? null : val)}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="mine">
-                        {myCommEmail
-                          ? `${effectiveFromEmailName} — ${myCommEmail}`
-                          : `${effectiveFromEmailName} — ${DEFAULT_EMAIL} (default)`}
-                      </SelectItem>
-                      {emailEmployees
-                        .filter(e => e.id !== myEmployee?.id)
-                        .map(e => (
-                          <SelectItem key={e.id} value={e.id}>
-                            {e.preferred_name || e.name} — {e.assigned_comm_email}
-                          </SelectItem>
-                        ))}
-                      <SelectItem value="default">Default — {DEFAULT_EMAIL}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {sendingEmailAsOtherUser && (
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      Will be logged as: "Sent by {myEmployee?.name || user?.full_name} as {effectiveFromEmailName}"
-                    </p>
-                  )}
-                </div>
               ) : (
-                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${usingEmailFallback ? "bg-amber-50 border border-amber-200" : "bg-muted/40"}`}>
-                  {usingEmailFallback
-                    ? <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    : <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />}
-                  <span className={usingEmailFallback ? "text-amber-800" : "text-foreground"}>
-                    Sending from: <strong>{effectiveFromEmail}</strong>
-                    {usingEmailFallback && " — Main"}
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-amber-50 border border-amber-200">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <span className="text-amber-800">
+                    No email account configured.
                   </span>
-                  {usingEmailFallback && (
-                    <a href="/settings" className="ml-auto text-xs text-amber-600 underline shrink-0">Connect email</a>
+                  {isOwner && (
+                    <a href="/settings" className="ml-auto text-xs text-amber-600 underline shrink-0">Configure in Settings</a>
                   )}
                 </div>
               )}
             </div>
-            )}
-          </div>
           )}
 
           <Separator />

@@ -33,6 +33,22 @@ export default async function(req) {
       return Response.json({ error: 'Email account is not connected' }, { status: 400 });
     }
 
+    // For employee accounts, verify the sender is authorized: admin/owner always,
+    // otherwise the sender's Employee record must have individual_email_enabled.
+    if (account.account_type === 'employee') {
+      const callerRoles = [user.role, ...(user.roles || [])].filter(Boolean).map(r => String(r).toLowerCase());
+      const isAdminCaller = callerRoles.some(r => ['admin', 'owner', 'super_admin'].includes(r));
+      if (!isAdminCaller) {
+        const senderEmp = await base44.asServiceRole.entities.Employee.filter({
+          organization_id: user.organization_id,
+          email: user.email,
+        }).then(r => r[0] || null).catch(() => null);
+        if (!senderEmp || !senderEmp.individual_email_enabled) {
+          return Response.json({ error: 'Individual email access is not enabled for your account.' }, { status: 403 });
+        }
+      }
+    }
+
     // Refresh token if needed
     const tokenInfo = await ensureValidToken(account, clientId, clientSecret);
     if (tokenInfo.access_token !== account.access_token && tokenInfo.expiry) {

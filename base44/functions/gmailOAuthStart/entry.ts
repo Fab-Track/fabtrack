@@ -36,8 +36,14 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Only owners/admins can connect a shared conversation inbox.' }, { status: 403 });
       }
       if (acctType === 'employee') {
-        if (!employee_id) return Response.json({ error: 'employee_id required for employee accounts.' }, { status: 400 });
-        const emp = await base44.asServiceRole.entities.Employee.get(employee_id).catch(() => null);
+        // Resolve the target employee: use the provided ID, or fall back to the
+        // caller's own employee record (matched by email or user_id).
+        let emp = employee_id
+          ? await base44.asServiceRole.entities.Employee.get(employee_id).catch(() => null)
+          : await base44.asServiceRole.entities.Employee.filter({
+              organization_id: user.organization_id,
+              email: user.email,
+            }).then(r => r[0] || null).catch(() => null);
         if (!emp || emp.organization_id !== user.organization_id) {
           return Response.json({ error: 'Employee not found in your organization.' }, { status: 403 });
         }
@@ -45,6 +51,12 @@ Deno.serve(async (req) => {
           (emp.email && user.email && emp.email.toLowerCase() === user.email.toLowerCase());
         if (!isAdmin && !isSelf) {
           return Response.json({ error: 'You can only connect your own Gmail account.' }, { status: 403 });
+        }
+        // Admins/owners can always connect. Non-admins need individual_email_enabled.
+        if (!isAdmin && !emp.individual_email_enabled) {
+          return Response.json({
+            error: 'Individual email access is not enabled for your account. Ask an admin to enable it in Settings > Integrations.',
+          }, { status: 403 });
         }
       }
     }
@@ -70,7 +82,20 @@ Deno.serve(async (req) => {
     const appId = Deno.env.get('BASE44_APP_ID');
     const redirectUri = `https://fab-track.base44.app/functions/gmailOAuthCallback`;
 
-    const state = JSON.stringify({ type, employee_id: employee_id || null, user_id: user.id, org_id: user.organization_id, account_type: account_type || null, employee_name: employee_name || null });
+    // For employee conversation accounts, auto-resolve the employee_id if not provided
+    let resolvedEmployeeId = employee_id || null;
+    let resolvedEmployeeName = employee_name || null;
+    if (type === 'conversation' && account_type === 'employee' && !resolvedEmployeeId) {
+      const myEmp = await base44.asServiceRole.entities.Employee.filter({
+        organization_id: user.organization_id,
+        email: user.email,
+      }).then(r => r[0] || null).catch(() => null);
+      if (myEmp) {
+        resolvedEmployeeId = myEmp.id;
+        resolvedEmployeeName = myEmp.preferred_name || myEmp.name;
+      }
+    }
+    const state = JSON.stringify({ type, employee_id: resolvedEmployeeId, user_id: user.id, org_id: user.organization_id, account_type: account_type || null, employee_name: resolvedEmployeeName });
     const stateData = btoa(state);
     const stateB64 = `${stateData}.${await hmacHex(clientSecret, stateData)}`;
 

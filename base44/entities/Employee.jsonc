@@ -204,6 +204,11 @@
       "type": "string",
       "description": "Assigned HCMW email address for outgoing email"
     },
+    "individual_email_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Admin-controlled flag. When true, this employee can connect and send from an individual Gmail account. When false (default), only admin-managed shared accounts are available for outgoing email."
+    },
     "gmail_connected": {
       "type": "boolean",
       "default": false,
