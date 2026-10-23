@@ -117,6 +117,10 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
   const usingMainFallback = !myAssignedNumber && !effectiveSendAsRecord;
   const sendingAsOtherUser = !!effectiveSendAsRecord && effectiveSendAsRecord.assigned_employee_id !== myEmployee?.id;
 
+  // Reset all fields ONLY when the modal opens or prefillMessage changes.
+  // appSettings and myEmployee are intentionally excluded from deps — they load
+  // asynchronously and would otherwise reset channel to "SMS" after the user
+  // switches to Email, silently dropping the selected email account.
   useEffect(() => {
     if (!open) return;
     setToName(cust?.name || "");
@@ -127,6 +131,8 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
     setFromPhone(appSettings?.twilio_from_number || "");
     setSendAsNumberId(null);
     setSendAsEmailId(null);
+    setSelectedEmailAccountId(null);
+    emailAccountSelectedRef.current = false;
 
     if (prefillMessage) {
       setChannel(prefillMessage.channel || "SMS");
@@ -139,9 +145,11 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
       setBody("");
       setSelectedTemplateId("");
     }
-  }, [open, prefillMessage, appSettings, myEmployee]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, prefillMessage]);
 
-  // Auto-select the first connected Gmail account when the modal first opens on Email
+  // Auto-select the first connected Gmail account when the Email tab is active.
+  // Uses a ref so we only auto-select once per modal-open (user can still change it).
   const emailAccountSelectedRef = useRef(false);
   useEffect(() => {
     if (open && channel === "Email" && emailAccounts.length > 0 && !emailAccountSelectedRef.current) {
@@ -191,15 +199,19 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
       ? (sendingAsOtherUser ? (myEmployee?.name || user?.full_name) : null)
       : (sendingEmailAsOtherUser ? (myEmployee?.name || user?.full_name) : null);
 
-    // For Email, resolve the actual sender email from the selected EmailAccount or system sender
-    const selectedEmailAccount = emailAccounts.find(a => a.id === selectedEmailAccountId);
+    // For Email, resolve the actual sender from the selected EmailAccount.
+    // If the dropdown showed an account but state wasn't set yet (race condition),
+    // fall back to the first connected account so the send always goes through Gmail.
+    const effectiveEmailAccountId = selectedEmailAccountId
+      || (channel === "Email" && emailAccounts.length > 0 ? emailAccounts[0].id : null);
+    const selectedEmailAccount = emailAccounts.find(a => a.id === effectiveEmailAccountId);
     const systemSenderEmail = appSettings?.system_sender_status === "connected" ? appSettings?.system_sender_email : null;
     const actualFromEmail = channel === "Email"
       ? (selectedEmailAccount?.email || systemSenderEmail || fromEmail)
       : fromEmail;
     const actualFromName = channel === "Email"
       ? (selectedEmailAccount?.display_name || appSettings?.resend_from_name || effectiveFromEmailName)
-      : effectiveFromName;
+      : effectiveFromEmailName;
 
     let msgRecord = null;
     try {
@@ -225,7 +237,7 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
         template_id: selectedTemplateId || null,
         template_name: templateName,
         sent_by_name: actualSentByName,
-        email_account_id: selectedEmailAccountId || null,
+        email_account_id: effectiveEmailAccountId || null,
         queued_at: new Date().toISOString(),
       });
 
@@ -241,10 +253,10 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
       let sendError = null;
 
       // If sending email via a connected conversation account, route through Gmail
-      if (channel === "Email" && selectedEmailAccountId) {
+      if (channel === "Email" && effectiveEmailAccountId) {
         const resp = await base44.functions.invoke("sendConversationEmail", {
           message_id: msgRecord.id,
-          email_account_id: selectedEmailAccountId,
+          email_account_id: effectiveEmailAccountId,
           to_email: toEmail,
           to_name: toName,
           subject,
