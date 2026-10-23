@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { to, subject, reply_to } = body;
+    const { to, subject, reply_to, purpose } = body;
     const html = body.html || body.html_body;
     const text = body.text || body.text_body;
 
@@ -33,6 +33,7 @@ Deno.serve(async (req) => {
       html,
       text,
       replyTo: reply_to || user.email || null,
+      purpose,
     });
 
     if (!result.ok) {

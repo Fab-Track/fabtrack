@@ -194,6 +194,14 @@
       "type": "string",
       "description": "Display name shown in the From header (e.g. the company name)"
     },
+    "notifications_sender_email": {
+      "type": "string",
+      "description": "Dedicated from-address for push notification email reminders (e.g. notifications@yourcompany.com). Falls back to resend_from_email if not set."
+    },
+    "estimates_sender_email": {
+      "type": "string",
+      "description": "Dedicated from-address for all invoicing and estimating messages (e.g. estimates@yourcompany.com). Falls back to resend_from_email if not set."
+    },
     "email_status": {
       "type": "string",
       "enum": [
@@ -207,7 +215,7 @@
     "email_connected_at": {
       "type": "string",
       "format": "date-time",
-      "description": "When the org's email provider was last successfully connected"
+      "description": "When the email provider was last successfully connected"
     },
     "twilio_account_sid": {
       "type": "string",

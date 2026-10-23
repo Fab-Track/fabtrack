@@ -68,7 +68,7 @@ export default function SendEstimatePanel({ estimate, job, customer, businessInf
         const body = `${message}\n\nView your estimate: ${link}\n\n---\nEstimate Total: $${(estimate?.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
         const html = body.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
         const resp = await base44.functions.invoke("sendOrgEmail", {
-          to, subject, html, text: body,
+          to, subject, html, text: body, purpose: "estimate",
         });
         if (!resp.data?.ok) {
           if (resp.data?.code === "email_not_configured") {

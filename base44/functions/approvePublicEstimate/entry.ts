@@ -188,6 +188,7 @@ ${job?.id ? `<p><a href="https://fab-track.base44.app/jobs/${job.id}">View the j
         to: recipient.email,
         subject: `Estimate Signed — ${jobLabel}`,
         html,
+        purpose: 'estimate',
       });
     } catch { /* non-fatal */ }
   }

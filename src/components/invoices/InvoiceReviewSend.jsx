@@ -375,6 +375,7 @@ export default function InvoiceReviewSend({
           subject,
           html,
           text: finalBody,
+          purpose: "invoice",
         });
         if (!resp.data?.ok) {
           if (resp.data?.code === "email_not_configured") {

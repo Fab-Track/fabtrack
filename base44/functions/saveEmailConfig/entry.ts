@@ -45,6 +45,8 @@ Deno.serve(async (req) => {
       if (body.resend_api_key !== undefined) updates.resend_api_key = body.resend_api_key;
       if (body.resend_from_email !== undefined) updates.resend_from_email = body.resend_from_email;
       if (body.resend_from_name !== undefined) updates.resend_from_name = body.resend_from_name;
+      if (body.notifications_sender_email !== undefined) updates.notifications_sender_email = body.notifications_sender_email;
+      if (body.estimates_sender_email !== undefined) updates.estimates_sender_email = body.estimates_sender_email;
 
       // If a test recipient is provided, validate by sending a real test email
       if (test_to) {

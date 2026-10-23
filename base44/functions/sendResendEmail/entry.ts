@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'No organization linked to your account' }, { status: 403 });
     }
 
-    const { to, subject, body, html, text } = await req.json();
+    const { to, subject, body, html, text, purpose } = await req.json();
     if (!to || !subject || (!body && !html && !text)) {
       return Response.json({ error: 'to, subject, and body are required' }, { status: 400 });
     }
@@ -31,6 +31,7 @@ Deno.serve(async (req) => {
       html: html || (body ? body.replace(/\n/g, '<br>') : null),
       text: text || body,
       replyTo: orgEmail || user.email || null,
+      purpose,
     });
 
     if (!result.ok) {

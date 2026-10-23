@@ -17,6 +17,8 @@ export default function ResendEmailSection({ onStatusChange }) {
   const [apiKey, setApiKey] = useState("");
   const [fromEmail, setFromEmail] = useState("");
   const [fromName, setFromName] = useState("");
+  const [notificationsEmail, setNotificationsEmail] = useState("");
+  const [estimatesEmail, setEstimatesEmail] = useState("");
   const [status, setStatus] = useState("disconnected");
   const [showKey, setShowKey] = useState(false);
   const [testTo, setTestTo] = useState("");
@@ -34,6 +36,8 @@ export default function ResendEmailSection({ onStatusChange }) {
           setApiKey(config.resend_api_key || "");
           setFromEmail(config.resend_from_email || "");
           setFromName(config.resend_from_name || "");
+          setNotificationsEmail(config.notifications_sender_email || "");
+          setEstimatesEmail(config.estimates_sender_email || "");
           setStatus(config.email_status || "disconnected");
         onStatusChange?.(config.email_status === "connected" ? "connected" : "not_connected");
         }
@@ -58,6 +62,8 @@ export default function ResendEmailSection({ onStatusChange }) {
         resend_api_key: apiKey,
         resend_from_email: fromEmail,
         resend_from_name: fromName,
+        notifications_sender_email: notificationsEmail,
+        estimates_sender_email: estimatesEmail,
       });
       if (resp.data?.ok) {
         setStatus(resp.data.email_status || "connected");
@@ -155,6 +161,18 @@ export default function ResendEmailSection({ onStatusChange }) {
           <div>
             <Label className="text-xs">From Name</Label>
             <Input className="h-8 text-sm" value={fromName} onChange={e => setFromName(e.target.value)} placeholder="Your Company" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs">Notifications From Email</Label>
+            <Input className="h-8 text-sm" value={notificationsEmail} onChange={e => setNotificationsEmail(e.target.value)} placeholder="notifications@yourcompany.com" />
+            <p className="text-[11px] text-muted-foreground mt-0.5">Used for push notification email reminders. Falls back to the main from-email if blank.</p>
+          </div>
+          <div>
+            <Label className="text-xs">Estimates & Invoices From Email</Label>
+            <Input className="h-8 text-sm" value={estimatesEmail} onChange={e => setEstimatesEmail(e.target.value)} placeholder="estimates@yourcompany.com" />
+            <p className="text-[11px] text-muted-foreground mt-0.5">Used for all invoicing and estimating messages. Falls back to the main from-email if blank.</p>
           </div>
         </div>
       </div>

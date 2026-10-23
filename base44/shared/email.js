@@ -29,10 +29,25 @@ export function isEmailConfigured(config) {
   return true;
 }
 
+// Resolves the from-address for a given purpose.
+// 'notification' → notifications_sender_email (falls back to resend_from_email)
+// 'estimate'/'invoice' → estimates_sender_email (falls back to resend_from_email)
+// default → resend_from_email
+export function resolveFromEmail(config, purpose) {
+  if (!config) return null;
+  if (purpose === 'notification' && config.notifications_sender_email) {
+    return config.notifications_sender_email;
+  }
+  if ((purpose === 'estimate' || purpose === 'invoice') && config.estimates_sender_email) {
+    return config.estimates_sender_email;
+  }
+  return config.resend_from_email || null;
+}
+
 // Sends an email through the org's Resend account.
 // Returns { ok: true, id, from } on success,
 //         { ok: false, error, code, status } on failure.
-export async function sendOrgEmailViaResend(base44, orgId, { to, subject, html, text, replyTo }) {
+export async function sendOrgEmailViaResend(base44, orgId, { to, subject, html, text, replyTo, purpose }) {
   const config = await getOrgEmailConfig(base44, orgId);
   if (!isEmailConfigured(config)) {
     return {
@@ -44,7 +59,7 @@ export async function sendOrgEmailViaResend(base44, orgId, { to, subject, html, 
   }
 
   const fromName = config.resend_from_name || 'FabTrack';
-  const fromAddress = config.resend_from_email;
+  const fromAddress = resolveFromEmail(config, purpose);
   const payload = {
     from: `${fromName} <${fromAddress}>`,
     to: Array.isArray(to) ? to : [to],
