@@ -141,12 +141,17 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
     }
   }, [open, prefillMessage, appSettings, myEmployee]);
 
-  // Auto-select the first connected Gmail account when on the Email tab
+  // Auto-select the first connected Gmail account when the modal first opens on Email
+  const emailAccountSelectedRef = useRef(false);
   useEffect(() => {
-    if (open && channel === "Email" && emailAccounts.length > 0 && !selectedEmailAccountId) {
+    if (open && channel === "Email" && emailAccounts.length > 0 && !emailAccountSelectedRef.current) {
       setSelectedEmailAccountId(emailAccounts[0].id);
+      emailAccountSelectedRef.current = true;
     }
-  }, [open, channel, emailAccounts, selectedEmailAccountId]);
+    if (!open) {
+      emailAccountSelectedRef.current = false;
+    }
+  }, [open, channel, emailAccounts]);
 
   function applyTemplate(templateId) {
     const tpl = templates.find(t => t.id === templateId);
@@ -182,16 +187,25 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
 
     // Use effective from details
     const actualFromPhone = channel === "SMS" ? effectiveFromPhone : fromPhone;
-    const actualFromName = channel === "SMS" ? effectiveFromName : effectiveFromEmailName;
-    const actualFromEmail = channel === "Email" ? effectiveFromEmail : fromEmail;
     const actualSentByName = channel === "SMS"
       ? (sendingAsOtherUser ? (myEmployee?.name || user?.full_name) : null)
       : (sendingEmailAsOtherUser ? (myEmployee?.name || user?.full_name) : null);
 
+    // For Email, resolve the actual sender email from the selected EmailAccount or system sender
+    const selectedEmailAccount = emailAccounts.find(a => a.id === selectedEmailAccountId);
+    const systemSenderEmail = appSettings?.system_sender_status === "connected" ? appSettings?.system_sender_email : null;
+    const actualFromEmail = channel === "Email"
+      ? (selectedEmailAccount?.email || systemSenderEmail || fromEmail)
+      : fromEmail;
+    const actualFromName = channel === "Email"
+      ? (selectedEmailAccount?.display_name || appSettings?.resend_from_name || effectiveFromEmailName)
+      : effectiveFromName;
+
+    let msgRecord = null;
     try {
       // Create CommMessage record as 'queued' — only updated to 'sent' after
       // the backend confirms delivery, or 'failed' if the send errors.
-      const msgRecord = await base44.entities.CommMessage.create({
+      msgRecord = await base44.entities.CommMessage.create({
         organization_id: user?.organization_id,
         job_id: job?.id || null,
         job_number: job?.job_number || null,
@@ -211,6 +225,7 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
         template_id: selectedTemplateId || null,
         template_name: templateName,
         sent_by_name: actualSentByName,
+        email_account_id: selectedEmailAccountId || null,
         queued_at: new Date().toISOString(),
       });
 
@@ -268,6 +283,17 @@ export default function MessageComposerModal({ open, onClose, job, customer, pre
         qc.invalidateQueries({ queryKey: ["commMessages"] });
       }
     } catch (err) {
+      // If the CommMessage was created but the function call threw (e.g. SDK-level
+      // error on 500), mark it as 'failed' so it doesn't sit in 'queued' forever.
+      if (msgRecord?.id) {
+        try {
+          await base44.entities.CommMessage.update(msgRecord.id, {
+            status: "failed",
+            error_message: err.message || "Unknown error",
+          });
+          qc.invalidateQueries({ queryKey: ["commMessages"] });
+        } catch { /* best-effort */ }
+      }
       toast.error("Send failed: " + (err.message || "Unknown error"));
     } finally {
       setSending(false);

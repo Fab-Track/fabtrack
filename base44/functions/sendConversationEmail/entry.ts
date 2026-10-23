@@ -4,13 +4,15 @@ import { ensureValidToken, buildRawEmail, sendGmailMessage } from '../../shared/
 // Sends an email from a connected conversation EmailAccount via Gmail API.
 // Body params: email_account_id, to_email, to_name, subject, body, from_name
 export default async function(req) {
+  let message_id: string | null = null;
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { email_account_id, to_email, to_name, subject, body: messageBody, from_name, message_id } = body;
+    message_id = body.message_id || null;
+    const { email_account_id, to_email, to_name, subject, body: messageBody, from_name } = body;
 
     if (!email_account_id) return Response.json({ error: 'email_account_id required' }, { status: 400 });
     if (!to_email) return Response.json({ error: 'Recipient email required' }, { status: 400 });
@@ -44,7 +46,7 @@ export default async function(req) {
     const rawEmail = buildRawEmail({
       fromName: from_name || account.display_name,
       fromEmail: account.email,
-      toEmail,
+      toEmail: to_email,
       subject,
       body: messageBody,
     });
