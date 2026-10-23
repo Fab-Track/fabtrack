@@ -361,7 +361,28 @@ export default function EstimatePage() {
         )}
       </div>
       <CatalogPicker open={pickerOpen} onOpenChange={setPickerOpen} categories={cat.categories} items={cat.items} onPick={addFromCatalog} onCustom={addCustom} />
-      <TakeoffDialog line={takeoffLine} onClose={() => setTakeoffLine(null)} />
+      <TakeoffDialog
+        line={takeoffLine}
+        materials={cat.materials}
+        onClose={() => setTakeoffLine(null)}
+        onApply={(result) => {
+          setLines((prev) =>
+            prev.map((l) => {
+              if (l._id !== takeoffLine?._id) return l;
+              return {
+                ...l,
+                components: result.components,
+                hard_cost: result.hard_cost,
+                cost_breakdown: result.cost_breakdown,
+                _takeoff_locked: true,
+                _railing_takeoff: l._railing_takeoff
+                  ? { ...l._railing_takeoff, aggregatedMaterials: result.aggregatedMaterials }
+                  : null,
+              };
+            })
+          );
+        }}
+      />
       {backwardGuard.dialog}
     </div>
   );
