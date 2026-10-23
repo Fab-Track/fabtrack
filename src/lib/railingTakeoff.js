@@ -97,13 +97,64 @@ export function costComponent(c, mat, layout, length) {
   if (mat.cost_method === "unit") {
     if (!(mat.cost_per_unit > 0)) return null;
     if (slot !== "Other") qty = isPost ? layout.steps.posts : isPicket ? layout.steps.totalPickets : 1;
-    return { component_label: label, slot, material_name: mat.name, qty, qty_unit: mat.unit || "unit", unit_cost: mat.cost_per_unit, cost: qty * mat.cost_per_unit };
+    return { component_label: label, slot, material_id: mat.id, material_name: mat.name, qty, qty_unit: mat.unit || "unit", unit_cost: mat.cost_per_unit, cost: qty * mat.cost_per_unit };
   }
 
   // Linear-foot and weight items are both costed from the calculated cost_per_foot.
   if (!(mat.cost_per_foot > 0)) return null;
   if (slot !== "Other") qty = isRail ? (slot === "Top Rail" ? layout.topRailFeet : layout.bottomRailFeet) : isPost ? layout.postFeet : layout.picketFeet;
-  return { component_label: label, slot, material_name: mat.name, qty, qty_unit: "ft", unit_cost: mat.cost_per_foot, cost: qty * mat.cost_per_foot };
+  return { component_label: label, slot, material_id: mat.id, material_name: mat.name, qty, qty_unit: "ft", unit_cost: mat.cost_per_foot, cost: qty * mat.cost_per_foot };
+}
+
+/**
+ * Aggregate component results by catalog material, rounding up to whole sticks.
+ * Combines footage for the same material before stick calculation so the customer
+ * pays for full sticks including leftover.
+ *
+ * Returns an array of aggregated material lines:
+ *   { material_id, material_name, total_qty, qty_unit, stock_length_ft,
+ *     cost_per_stick, cost_per_foot, cost_method, sticks, material_cost }
+ */
+export function aggregateMaterials(componentResults, materials) {
+  const groups = {};
+  for (const c of componentResults) {
+    if (!c || !c.material_id) continue;
+    const mat = materials.find((m) => m.id === c.material_id);
+    if (!mat) continue;
+    const key = c.material_id;
+    if (!groups[key]) {
+      groups[key] = {
+        material_id: key,
+        material_name: c.material_name,
+        total_qty: 0,
+        qty_unit: c.qty_unit,
+        stock_length_ft: mat.stock_length_ft || 0,
+        cost_per_stick: mat.cost_per_stick || 0,
+        cost_per_foot: mat.cost_per_foot || 0,
+        cost_method: mat.cost_method || "linear_foot",
+      };
+    }
+    groups[key].total_qty += c.qty;
+  }
+
+  return Object.values(groups).map((g) => {
+    let sticks = 0;
+    let material_cost = 0;
+
+    if (g.cost_method === "unit") {
+      // Unit items: no stick rounding, cost per piece
+      material_cost = g.total_qty * g.cost_per_foot; // cost_per_foot holds cost_per_unit for unit items
+    } else if (g.stock_length_ft > 0 && g.cost_per_stick > 0) {
+      // Stick pricing: round up to whole sticks
+      sticks = Math.ceil(g.total_qty / g.stock_length_ft);
+      material_cost = sticks * g.cost_per_stick;
+    } else {
+      // Fallback: per-foot pricing (no stick rounding)
+      material_cost = g.total_qty * g.cost_per_foot;
+    }
+
+    return { ...g, sticks, material_cost };
+  });
 }
 
 /**
@@ -138,7 +189,9 @@ export function computeRailingTakeoff({ catalogItem, materials, settings, length
   // If any component failed to resolve, return null (fallback to manual)
   if (componentResults.some(c => c === null)) return null;
 
-  const materialCost = componentResults.reduce((s, c) => s + c.cost, 0);
+  // Aggregate by material and round up to whole sticks — customer pays for full sticks
+  const aggregatedMaterials = aggregateMaterials(componentResults, materials);
+  const materialCost = aggregatedMaterials.reduce((s, m) => s + m.material_cost, 0);
 
   // Step 8: Labor costs (cost fields are hours per 10 LF — divide by 10 to get per-LF)
   const fabCost = (catalogItem.cost_fab_hours_per_unit || 0) / 10 * (settings.labor_fab_rate || 0) * length;
@@ -153,6 +206,7 @@ export function computeRailingTakeoff({ catalogItem, materials, settings, length
     params: layout.params,
     steps: layout.steps,
     components: componentResults,
+    aggregatedMaterials,
     materialCost,
     fabCost,
     powderCost,

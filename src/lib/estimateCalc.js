@@ -1,4 +1,4 @@
-import { computeLayout, costComponent, resolveSettings } from "@/lib/railingTakeoff";
+import { computeLayout, costComponent, aggregateMaterials, resolveSettings } from "@/lib/railingTakeoff";
 
 export const num = (v) => parseFloat(v) || 0;
 export const r2 = (n) => Math.round((n || 0) * 100) / 100;
@@ -28,7 +28,9 @@ function computeCost(line, ctx) {
   const s = ctx.settings;
   const layout = railing ? computeLayout({ catalogItem: item, settings: resolveSettings([s]), length: qty, isResidential, category }) : null;
   const comps = (item.components || []).map((c) => costComponent(c, ctx.materials.find((m) => m.id === c.material_id), layout, qty)).filter(Boolean);
-  const materials = comps.reduce((a, c) => a + c.cost, 0);
+  // Aggregate by material and round up to whole sticks — customer pays for full sticks
+  const aggMats = aggregateMaterials(comps, ctx.materials);
+  const materials = aggMats.reduce((a, m) => a + m.material_cost, 0);
   const instHrs = num(item.cost_install_hours_per_unit) / 10 * qty;
   const breakdown = {
     materials: r2(materials),
@@ -40,7 +42,8 @@ function computeCost(line, ctx) {
     hard: r2(breakdown.materials + breakdown.fabrication + breakdown.powder_coat + breakdown.install),
     breakdown, instHrs, railing, layout,
     warn: railing && !layout ? "Missing railing standards or layout defaults" : comps.length < (item.components || []).length ? "A component is missing its material or cost" : null,
-    components: comps.map((c) => ({ component_type: c.slot, name: c.material_name, slot: c.slot, material: c.material_name, qty: c.qty, qty_unit: c.qty_unit, unit_cost: c.unit_cost, cost: r2(c.cost) })),
+    components: comps.map((c) => ({ component_type: c.slot, name: c.material_name, slot: c.slot, material: c.material_name, material_id: c.material_id, qty: c.qty, qty_unit: c.qty_unit, unit_cost: c.unit_cost, cost: r2(c.cost) })),
+    aggregatedMaterials: aggMats,
   };
 }
 
@@ -53,12 +56,14 @@ export function priceLine(line, ctx, estMargin, frozen) {
 
   const qty = num(line.quantity);
   let next = line;
-  if (!(frozen && line.hard_cost != null)) {
+  // If takeoff overrides are locked and the quantity hasn't changed, keep stored costs
+  const takeoffLocked = line._takeoff_locked && line._railing_takeoff?.inputs?.length === qty;
+  if (!(frozen && line.hard_cost != null) && !takeoffLocked) {
     const c = computeCost(line, ctx);
     if (c) {
       next = {
         ...line, hard_cost: c.hard, cost_breakdown: c.breakdown, install_hours: r2(c.instHrs), components: c.components, _is_railing: c.railing,
-        _railing_takeoff: c.layout ? { inputs: { length: qty, isResidential: line.building_type !== "Commercial" }, steps: c.layout.steps, params: c.layout.params } : null,
+        _railing_takeoff: c.layout ? { inputs: { length: qty, isResidential: line.building_type !== "Commercial" }, steps: c.layout.steps, params: c.layout.params, aggregatedMaterials: c.aggregatedMaterials } : null,
         _warn: c.warn,
       };
     }
