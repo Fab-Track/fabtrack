@@ -14,6 +14,7 @@ import { generateJobNumber } from "@/lib/jobHelpers";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import JobTypeMultiSelect from "@/components/jobs/JobTypeMultiSelect";
 import { useAuth } from "@/lib/AuthContext";
 import { useWriteOrgId } from "@/lib/orgContext";
 import { useRepCandidates } from "@/hooks/useRepCandidates";
@@ -362,20 +363,10 @@ export default function NewJob() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-xs">Job Type</Label>
-                <Select
-                  value={form.job_type || "none"}
-                  onValueChange={val => updateField("job_type", val === "none" ? "" : val)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {["Railing", "Stairs", "Planters", "Gate", "Fence", "Staircase", "Custom Structure", "Other"].map(t => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <JobTypeMultiSelect
+                  value={form.job_type || []}
+                  onChange={val => updateField("job_type", val)}
+                />
               </div>
               <div>
                 <Label className="text-xs">Buyer Intent</Label>
