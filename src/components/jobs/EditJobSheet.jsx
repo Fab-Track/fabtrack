@@ -20,9 +20,10 @@ import { toast } from "sonner";
 import { Wrench, Hash, CalendarDays, MapPin, ClipboardList, UserCheck, Building2, Save, Loader2, Check } from "lucide-react";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
 import { Checkbox } from "@/components/ui/checkbox";
+import JobTypeMultiSelect from "@/components/jobs/JobTypeMultiSelect";
+import { getJobTypes } from "@/lib/jobType";
 import { SHOP_STAGES } from "@/lib/pipelineHelpers";
 
-const JOB_TYPES = ["Railing", "Gate", "Fence", "Staircase", "Custom Structure", "Other"];
 const BOARDS = ["Sales", "Shop", "Billing"];
 
 export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
