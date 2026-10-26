@@ -10,7 +10,7 @@ import JobCardCustomerInfo from "./JobCardCustomerInfo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { Clock, DollarSign, AlertTriangle, MoreHorizontal, X, Copy } from "lucide-react";
+import { Clock, DollarSign, AlertTriangle, MoreHorizontal, X, Copy, CalendarClock } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import StageTransitionDialog from "./StageTransitionDialog";
 import { useOrgUsers } from "@/hooks/useOrgUsers";
@@ -141,6 +141,13 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], invoices = [], 
               <span>{job.assigned_rep_name}</span>
             </>
           )}
+        </div>
+      )}
+
+      {job.estimate_deadline && (
+        <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
+          <CalendarClock className="w-3 h-3" />
+          <span>Est. due {new Date(job.estimate_deadline + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
         </div>
       )}
 

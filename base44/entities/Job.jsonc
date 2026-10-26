@@ -110,7 +110,7 @@
     "is_archived": {
       "type": "boolean",
       "default": false,
-      "description": "Soft-delete flag \u2014 hides from active board but preserves all data"
+      "description": "Soft-delete flag — hides from active board but preserves all data"
     },
     "archived_at": {
       "type": "string",
@@ -197,11 +197,11 @@
         "100_percent"
       ],
       "default": "not_invoiced",
-      "description": "Manual payment status \u2014 set by users to track invoice payment progress (Waiting for Draw, Sent - Pending Draw, 50% deposit, 100% paid). Not auto-derived from invoices."
+      "description": "Manual payment status — set by users to track invoice payment progress (Waiting for Draw, Sent - Pending Draw, 50% deposit, 100% paid). Not auto-derived from invoices."
     },
     "scope_approval": {
       "type": "object",
-      "description": "Manager sign-off of the job scope \u2014 timestamp signature recorded when a manager approves the scope",
+      "description": "Manager sign-off of the job scope — timestamp signature recorded when a manager approves the scope",
       "properties": {
         "approved_at": {
           "type": "string",
@@ -277,7 +277,7 @@
     },
     "stage_priority": {
       "type": "object",
-      "description": "Per-stage priority rank map, keyed by stage name \u2192 rank (1 = highest, max 5). Set by drag-to-reorder or the priority menu."
+      "description": "Per-stage priority rank map, keyed by stage name → rank (1 = highest, max 5). Set by drag-to-reorder or the priority menu."
     },
     "estimate_total": {
       "type": "number"
@@ -347,7 +347,7 @@
         "Other"
       ],
       "default": "Manual",
-      "description": "Original lead source \u2014 preserved through stage migration"
+      "description": "Original lead source — preserved through stage migration"
     },
     "lead_customer_type": {
       "type": "string",
@@ -406,9 +406,9 @@
       "type": "string",
       "enum": [
         "Under $5K",
-        "$5K\u2013$10K",
-        "$10K\u2013$25K",
-        "$25K\u2013$50K",
+        "$5K–$10K",
+        "$10K–$25K",
+        "$25K–$50K",
         "$50K+"
       ],
       "description": "Auto-derived from estimate amount"
@@ -451,7 +451,7 @@
     },
     "lead_outcome_category": {
       "type": "string",
-      "description": "Outcome category \u2014 built-in (Won, Lost, Nurture, Unqualified, On Hold, Testing, Other) or custom"
+      "description": "Outcome category — built-in (Won, Lost, Nurture, Unqualified, On Hold, Testing, Other) or custom"
     },
     "lead_close_reason": {
       "type": "string"
@@ -473,7 +473,7 @@
     "follow_up_date": {
       "type": "string",
       "format": "date",
-      "description": "Revisit date for Nurture leads \u2014 card resurfaces on this date"
+      "description": "Revisit date for Nurture leads — card resurfaces on this date"
     },
     "follow_up_notified": {
       "type": "boolean",
@@ -588,6 +588,11 @@
           "type": "object"
         }
       }
+    },
+    "estimate_deadline": {
+      "type": "string",
+      "format": "date",
+      "description": "Deadline to deliver the estimate to the customer"
     }
   },
   "required": [
