@@ -7,6 +7,7 @@ import KeyDatesCard from "@/components/jobs/KeyDatesCard";
 import JobNotesSection from "@/components/jobs/JobNotesSection";
 import PaymentStatusSelector from "@/components/jobs/PaymentStatusSelector";
 import AssignedRepSelector from "@/components/jobs/AssignedRepSelector";
+import FollowUpStatusSelector from "@/components/jobs/FollowUpStatusSelector";
 import { StickyNote } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
@@ -57,6 +58,7 @@ export default function JobOverviewTab({ job, highlightNoteId }) {
             </div>
           )}
           <DetailRow label="Assigned Rep" value={<AssignedRepSelector job={job} />} />
+          <DetailRow label="Follow-Up" value={<FollowUpStatusSelector job={job} />} />
           <DetailRow label="Customer Approval" value={
             <Badge variant={job.customer_approval_status === "approved" ? "default" : "outline"} className="text-xs">
               {job.customer_approval_status || "pending"}

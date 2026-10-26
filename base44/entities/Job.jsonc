@@ -380,6 +380,14 @@
       "default": [],
       "description": "Active blockers on this lead. Auto-applied at intake when gate fields are missing."
     },
+    "follow_up_status": {
+      "type": "string",
+      "enum": [
+        "Waiting on customer",
+        "Waiting on us"
+      ],
+      "description": "Manual follow-up status shown on Sales Pipeline cards so reps can see whose turn it is without opening the job."
+    },
     "next_action": {
       "type": "string",
       "description": "Next action description for the lead owner"

@@ -122,12 +122,25 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], invoices = [], 
         </div>
       </div>
 
-      {job.assigned_rep_name && (
-        <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-          <div className="w-4 h-4 rounded-full bg-accent/20 flex items-center justify-center text-[9px] font-bold text-accent">
-            {job.assigned_rep_name[0]}
-          </div>
-          <span>{job.assigned_rep_name}</span>
+      {(job.follow_up_status || job.assigned_rep_name) && (
+        <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+          {job.follow_up_status && (
+            <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+              job.follow_up_status === "Waiting on customer"
+                ? "bg-amber-100 text-amber-800"
+                : "bg-blue-100 text-blue-800"
+            }`}>
+              {job.follow_up_status}
+            </span>
+          )}
+          {job.assigned_rep_name && (
+            <>
+              <div className="w-4 h-4 rounded-full bg-accent/20 flex items-center justify-center text-[9px] font-bold text-accent">
+                {job.assigned_rep_name[0]}
+              </div>
+              <span>{job.assigned_rep_name}</span>
+            </>
+          )}
         </div>
       )}
 
