@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, Ruler, Wrench, FileClock } from "lucide-react";
+import { CalendarDays, Ruler, Wrench, FileClock, Users } from "lucide-react";
 import { format, parseISO, isAfter } from "date-fns";
 
 export default function KeyDatesCard({ job }) {
@@ -17,6 +17,14 @@ export default function KeyDatesCard({ job }) {
 
   const deadlineMutation = useMutation({
     mutationFn: (date) => base44.entities.Job.update(job.id, { estimate_deadline: date || null }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["jobs"] });
+      qc.invalidateQueries({ queryKey: ["job", job.id] });
+    },
+  });
+
+  const meetingMutation = useMutation({
+    mutationFn: (date) => base44.entities.Job.update(job.id, { next_meeting_date: date || null }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["jobs"] });
       qc.invalidateQueries({ queryKey: ["job", job.id] });
@@ -52,10 +60,19 @@ export default function KeyDatesCard({ job }) {
       <CardContent className="space-y-3">
         <DateRow icon={Ruler} label="Measure Date" date={measureDate} />
         <DateRow icon={Wrench} label="Install Date" date={installDate} />
-        <EstimateDeadlineRow
+        <EditableDateRow
+          icon={FileClock}
+          label="Est. Deadline"
           date={job.estimate_deadline}
           onSave={(date) => deadlineMutation.mutate(date)}
           saving={deadlineMutation.isPending}
+        />
+        <EditableDateRow
+          icon={Users}
+          label="Next Meeting"
+          date={job.next_meeting_date}
+          onSave={(date) => meetingMutation.mutate(date)}
+          saving={meetingMutation.isPending}
         />
       </CardContent>
     </Card>
@@ -76,7 +93,7 @@ function DateRow({ icon: Icon, label, date }) {
   );
 }
 
-function EstimateDeadlineRow({ date, onSave, saving }) {
+function EditableDateRow({ icon: Icon, label, date, onSave, saving }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(date || "");
 
@@ -95,8 +112,8 @@ function EstimateDeadlineRow({ date, onSave, saving }) {
     return (
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 shrink-0">
-          <FileClock className="w-3.5 h-3.5" />
-          Est. Deadline
+          <Icon className="w-3.5 h-3.5" />
+          {label}
         </span>
         <div className="flex items-center gap-1">
           <input
@@ -130,8 +147,8 @@ function EstimateDeadlineRow({ date, onSave, saving }) {
   return (
     <div className="flex items-center justify-between">
       <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-        <FileClock className="w-3.5 h-3.5" />
-        Est. Deadline
+        <Icon className="w-3.5 h-3.5" />
+        {label}
       </span>
       <button
         onClick={() => { setValue(date || ""); setEditing(true); }}

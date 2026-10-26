@@ -407,6 +407,11 @@
       "format": "date",
       "description": "Deadline to deliver the estimate to the customer"
     },
+    "next_meeting_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the next upcoming client meeting"
+    },
     "size_band": {
       "type": "string",
       "enum": [
