@@ -3,6 +3,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Badge } from "@/components/ui/badge";
+import { hasJobType } from "@/lib/jobType";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -65,7 +66,7 @@ function SectionHeader({ icon: Icon, title, count, onNew, newLabel, extraButton 
 
 // Detect if job has a Railing product
 function jobHasRailing(job) {
-  if (job?.job_type === "Railing") return true;
+  if (hasJobType(job, "Railing")) return true;
   if (Array.isArray(job?.product_instances)) {
     return job.product_instances.some(p => p.product_type === "Railing");
   }

@@ -30,7 +30,7 @@ export default function OnboardingWizard() {
   const [jobDetails, setJobDetails] = useState({
     job_name: '',
     customer_name: '',
-    job_type: '',
+    job_type: [],
     quick_status: '',
     estimated_due_date: '',
   });
@@ -111,7 +111,7 @@ export default function OnboardingWizard() {
   const step1Valid =
     jobDetails.job_name?.trim() &&
     jobDetails.customer_name?.trim() &&
-    jobDetails.job_type &&
+    jobDetails.job_type?.length &&
     jobDetails.quick_status;
 
   // ── Navigation handlers ──

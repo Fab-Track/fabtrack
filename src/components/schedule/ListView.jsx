@@ -3,6 +3,7 @@ import { format, parseISO, isSameDay, startOfDay, isAfter, isBefore } from "date
 import { Link } from "react-router-dom";
 import { PHASE_COLORS, PHASE_SHORT } from "@/lib/scheduleUtils";
 import { Badge } from "@/components/ui/badge";
+import { jobTypeLabel } from "@/lib/jobType";
 import { cn } from "@/lib/utils";
 import { MapPin, Users, ChevronRight } from "lucide-react";
 
@@ -85,8 +86,8 @@ function AgendaEventRow({ event }) {
           <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0", colors?.light)}>
             {PHASE_SHORT[event.phaseName] || event.phaseName}
           </Badge>
-          {event.job.job_type && (
-            <span className="text-[10px] text-muted-foreground">{event.job.job_type}</span>
+          {jobTypeLabel(event.job) && (
+            <span className="text-[10px] text-muted-foreground">{jobTypeLabel(event.job)}</span>
           )}
           {event.job.assigned_crew_names?.length > 0 && (
             <span className="flex items-center gap-1 text-[10px] text-muted-foreground">

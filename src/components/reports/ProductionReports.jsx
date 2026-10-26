@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { hasJobType } from "@/lib/jobType";
 import { isWithinInterval, parseISO, format, differenceInDays } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import ReportDateFilter from "./ReportDateFilter";
@@ -17,7 +18,7 @@ export default function ProductionReports() {
   // ── Report 1: Linear Footage per Labor Hour ──────────────────────
   const railingJobs = jobs.filter(j => {
     const est = estimates.find(e => e.job_id === j.id && e.status === "Approved");
-    return est?.service_category === "Railing" || j.job_type === "Railing";
+    return est?.service_category === "Railing" || hasJobType(j, "Railing");
   });
 
   const lnftData = railingJobs.map(j => {

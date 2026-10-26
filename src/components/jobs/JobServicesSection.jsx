@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getJobTypes, hasJobType, jobTypeLabel } from "@/lib/jobType";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Check, X, Sparkles, Info } from "lucide-react";
 import { toast } from "sonner";
@@ -187,7 +188,7 @@ export default function JobServicesSection({ job, services = [], onServicesChang
   // Compute suggested service names from job products
   const rawSuggestions = getSuggestionsForProducts(
     job?.product_instances || [],
-    job?.job_type || ""
+    jobTypeLabel(job) || ""
   );
 
   // Expand __all_railing__ placeholder
@@ -199,7 +200,7 @@ export default function JobServicesSection({ job, services = [], onServicesChang
   // Show banner only when there are suggestions and at least one product exists
   const hasProducts =
     (job?.product_instances?.length > 0) ||
-    (job?.job_type && job.job_type !== "Other");
+    (getJobTypes(job).length && !hasJobType(job, "Other"));
 
   const showSuggestionBanner =
     hasProducts &&
@@ -275,7 +276,7 @@ export default function JobServicesSection({ job, services = [], onServicesChang
   } : {};
 
   const productNames = (job?.product_instances || []).map(p => p.label || p.product_type).join(", ") ||
-    job?.job_type || "product";
+    jobTypeLabel(job) || "product";
 
   return (
     <div>

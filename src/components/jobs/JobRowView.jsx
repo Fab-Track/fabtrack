@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { JOB_STATUSES, STATUS_COLORS, getJobHealth, getHealthBorder } from "@/lib/jobHelpers";
+import { jobTypeLabel } from "@/lib/jobType";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -105,8 +106,8 @@ function JobRow({ job, index, onStatusChange }) {
 
           {/* Type */}
           <div className="w-32 shrink-0 pr-3">
-            {job.job_type
-              ? <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">{job.job_type}</Badge>
+            {jobTypeLabel(job)
+              ? <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">{jobTypeLabel(job)}</Badge>
               : <span className="text-muted-foreground/40 text-xs">—</span>}
           </div>
 

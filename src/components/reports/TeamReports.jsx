@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { hasJobType } from "@/lib/jobType";
 import { format, parseISO, subMonths } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import ReportDateFilter from "./ReportDateFilter";
@@ -44,7 +45,7 @@ export default function TeamReports() {
     .sort((a,b) => b.totalHours - a.totalHours);
 
   // ── Report 2: Labor Cost per Lnft ────────────────────────────────
-  const railingJobs = jobs.filter(j => j.job_type === "Railing" || estimates.find(e => e.job_id === j.id && e.service_category === "Railing"));
+  const railingJobs = jobs.filter(j => hasJobType(j, "Railing") || estimates.find(e => e.job_id === j.id && e.service_category === "Railing"));
   const laborCostPerLnft = employees
     .filter(e => e.is_active && e.hourly_rate)
     .map(emp => {

@@ -3,6 +3,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { usePipelineStages, daysInStage, buildStageTransition, sortColumnJobs, closePriorityGap, reorderColumnPriority, getPaymentStatus } from "@/lib/pipelineHelpers";
+import { getJobTypes, jobTypeLabel } from "@/lib/jobType";
 import PriorityBadge from "./PriorityBadge";
 import PriorityMenuItems from "./PriorityMenuItems";
 import PaymentStatusBadge from "./PaymentStatusBadge";
@@ -59,7 +60,7 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], invoices = [], 
         <div className="flex items-center gap-1">
           <PriorityBadge rank={job.stage_priority?.[stage]} />
           <PaymentStatusBadge status={paymentStatus} />
-          {job.job_type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.job_type}</Badge>}
+          {jobTypeLabel(job) && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{jobTypeLabel(job)}</Badge>}
           <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger asChild>
               <button className="p-0.5 rounded hover:bg-muted text-muted-foreground" onClick={e => { e.preventDefault(); e.stopPropagation(); }} onMouseDown={e => e.stopPropagation()}>
@@ -337,7 +338,7 @@ export default function SalesBoard({ jobs = [], sortOrder = "newest" }) {
         customer_id: job.customer_id || "",
         customer_name: job.customer_name || "",
         job_name: job.job_name || "",
-        job_type: job.job_type || "",
+        job_type: getJobTypes(job),
         pipeline_board: "Shop",
         stage: "New Jobs Landed — Needs Approval",
         stage_entered_at: new Date().toISOString(),

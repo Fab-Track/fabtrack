@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { jobTypeLabel } from "@/lib/jobType";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,7 +121,7 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
   // Job type breakdown
   const typeMap = {};
   customerJobs.forEach(j => {
-    const t = j.job_type || "Other";
+    const t = jobTypeLabel(j) || "Other";
     typeMap[t] = (typeMap[t] || 0) + 1;
   });
   const typeData = Object.entries(typeMap).map(([name, value]) => ({ name, value }));

@@ -3,8 +3,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Info } from 'lucide-react';
+import JobTypeMultiSelect from '@/components/jobs/JobTypeMultiSelect';
 
-const JOB_TYPES = ['Railing', 'Gate', 'Structural', 'Stairs', 'Custom Furniture', 'Other'];
 const QUICK_STATUSES = ['Estimating', 'In Production', 'Ready to Install', 'Complete'];
 
 export default function FirstJobStep({ data, update }) {
@@ -44,19 +44,10 @@ export default function FirstJobStep({ data, update }) {
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Job type</Label>
-            <Select
-              value={data.job_type || ''}
-              onValueChange={(v) => update({ job_type: v })}
-            >
-              <SelectTrigger className="h-10">
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                {JOB_TYPES.map((t) => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <JobTypeMultiSelect
+              value={data.job_type || []}
+              onChange={(v) => update({ job_type: v })}
+            />
           </div>
 
           <div className="space-y-1.5">
