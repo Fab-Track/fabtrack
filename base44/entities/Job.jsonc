@@ -271,6 +271,24 @@
             "type": "string",
             "format": "date",
             "description": "Optional due date for this To-Do"
+          },
+          "attachments": {
+            "type": "array",
+            "description": "Optional photos/files attached to this note",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }

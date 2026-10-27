@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Send, ListTodo, User, Check, CalendarDays, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Send, ListTodo, User, Check, CalendarDays, Pencil, Trash2, FileText } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { format, parseISO } from "date-fns";
+import NoteAttachments from "@/components/jobs/NoteAttachments";
 
 /**
  * Shared job notes log — running list of timestamped notes, newest first.
@@ -22,6 +23,7 @@ export default function JobNotesSection({ job, highlightNoteId }) {
   const [assigneeId, setAssigneeId] = useState("");
   const [assigneeName, setAssigneeName] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [pendingAttachments, setPendingAttachments] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [textEditId, setTextEditId] = useState(null);
   const [textDraft, setTextDraft] = useState("");
@@ -52,6 +54,7 @@ export default function JobNotesSection({ job, highlightNoteId }) {
     setAssigneeId("");
     setAssigneeName("");
     setDueDate("");
+    setPendingAttachments([]);
   };
 
   const handleAdd = () => {
@@ -67,6 +70,7 @@ export default function JobNotesSection({ job, highlightNoteId }) {
       assignee_id: asTodo ? assigneeId : "",
       assignee_name: asTodo ? assigneeName : "",
       due_date: asTodo ? (dueDate || "") : "",
+      attachments: pendingAttachments,
     };
     saveNotesMutation.mutate([...notes, entry]);
     resetForm();
@@ -117,6 +121,11 @@ export default function JobNotesSection({ job, highlightNoteId }) {
           placeholder="Add a note…"
           rows={2}
           className="text-sm"
+        />
+        <NoteAttachments
+          attachments={pendingAttachments}
+          onChange={setPendingAttachments}
+          jobId={job.id}
         />
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -222,6 +231,25 @@ export default function JobNotesSection({ job, highlightNoteId }) {
                   <p className={`text-sm whitespace-pre-wrap ${note.is_todo && note.is_completed ? "line-through text-muted-foreground" : ""}`}>
                     {note.text}
                   </p>
+                )}
+                {note.attachments && note.attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {note.attachments.map(f => (
+                      <a
+                        key={f.url}
+                        href={f.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-14 h-14 rounded-md overflow-hidden border bg-muted/30 flex items-center justify-center"
+                      >
+                        {f.type && f.type.startsWith("image/") ? (
+                          <img src={f.url} alt={f.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <FileText className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </a>
+                    ))}
+                  </div>
                 )}
                 <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-xs text-muted-foreground">
                   <span className="font-medium">Added by {note.author_name}</span>
