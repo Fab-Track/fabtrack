@@ -1,7 +1,6 @@
 import React from "react";
 import { Gauge } from "lucide-react";
 import { parseISO, differenceInCalendarDays } from "date-fns";
-import { jobTypeLabel } from "@/lib/jobType";
 import { PHASE_COLORS } from "@/lib/scheduleUtils";
 
 export default function PipelineVelocityCard({ jobs }) {
@@ -11,7 +10,7 @@ export default function PipelineVelocityCard({ jobs }) {
   const categoryData = {};
   wonJobs.forEach(j => {
     // Determine service category from job_type or from linked estimates
-    const cat = jobTypeLabel(j) || "Other";
+    const cat = j.job_type || "Other";
     const created = parseISO(j.created_date);
     const closed = parseISO(j.lead_closed_at);
     const days = differenceInCalendarDays(closed, created) + 1;

@@ -3,7 +3,6 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
-import { jobTypeLabel } from "@/lib/jobType";
 import { format, parseISO, isValid, differenceInDays } from "date-fns";
 import {
   ChevronDown, ChevronRight, GripVertical, MoreHorizontal,
@@ -120,8 +119,8 @@ function PipelineJobRow({ job, index, board, readOnly = false, stage, columnJobs
 
             {/* Type */}
             <div className="w-28 shrink-0 pr-3">
-              {jobTypeLabel(job)
-                ? <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">{jobTypeLabel(job)}</Badge>
+              {job.job_type
+                ? <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">{job.job_type}</Badge>
                 : <span className="text-muted-foreground/40 text-xs">—</span>}
             </div>
 

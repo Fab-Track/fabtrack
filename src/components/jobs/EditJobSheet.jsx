@@ -20,10 +20,9 @@ import { toast } from "sonner";
 import { Wrench, Hash, CalendarDays, MapPin, ClipboardList, UserCheck, Building2, Save, Loader2, Check } from "lucide-react";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
 import { Checkbox } from "@/components/ui/checkbox";
-import JobTypeMultiSelect from "@/components/jobs/JobTypeMultiSelect";
-import { getJobTypes } from "@/lib/jobType";
 import { SHOP_STAGES } from "@/lib/pipelineHelpers";
 
+const JOB_TYPES = ["Railing", "Gate", "Fence", "Staircase", "Custom Structure", "Other"];
 const BOARDS = ["Sales", "Shop", "Billing"];
 
 export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
@@ -65,7 +64,7 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
       setForm({
         job_name: job.job_name || "",
         job_number: job.job_number || "",
-        job_type: getJobTypes(job),
+        job_type: job.job_type || "",
         expected_install_date: job.expected_install_date || "",
         site_address: job.site_address || "",
         onsite_contact_name: job.onsite_contact_name || "",
@@ -107,7 +106,7 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
     const updates = {
       job_name: formData.job_name,
       job_number: formData.job_number || null,
-      job_type: formData.job_type?.length ? formData.job_type : null,
+      job_type: formData.job_type || null,
       expected_install_date: formData.expected_install_date || null,
       site_address: formData.site_address || null,
       onsite_contact_name: formData.onsite_contact_name || null,
@@ -181,13 +180,6 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
             <div>
               <Label className="text-xs">Job Number</Label>
               <Input value={form.job_number || ""} onChange={e => f("job_number", e.target.value)} placeholder="HCMW-2025-001" />
-            </div>
-            <div>
-              <Label className="text-xs">Job Type</Label>
-              <JobTypeMultiSelect
-                value={form.job_type || []}
-                onChange={val => f("job_type", val)}
-              />
             </div>
           </fieldset>
 

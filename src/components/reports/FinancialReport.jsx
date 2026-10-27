@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { jobTypeLabel } from "@/lib/jobType";
 import { isWithinInterval, parseISO, format, differenceInDays, subMonths } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from "recharts";
 import KpiCard from "./shared/KpiCard";
@@ -146,7 +145,7 @@ export default function FinancialReport() {
   const typeRevMap = {};
   filteredInvoices.filter(i => i.status === "Paid").forEach(inv => {
     const job = jobs.find(j => j.id === inv.job_id);
-    const type = jobTypeLabel(job) || inv.service_category || "Other";
+    const type = job?.job_type || inv.service_category || "Other";
     if (!typeRevMap[type]) typeRevMap[type] = { revenue: 0, count: 0 };
     typeRevMap[type].revenue += inv.total || 0;
     typeRevMap[type].count++;

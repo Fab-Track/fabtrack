@@ -1,5 +1,4 @@
 // Sales Pipeline Foundation — stage definitions, gates, migration, and helpers
-import { getJobTypes } from "@/lib/jobType";
 
 // ── New Sales Stages (replaces the old 6-stage list) ──────────────────────────
 export const SALES_STAGES = [
@@ -189,7 +188,7 @@ export function validateStageGate(job, targetStage) {
   if (gate.required.includes("customer_name") && !job.customer_name) {
     missing.push("customer name");
   }
-  if (gate.required.includes("job_type") && !getJobTypes(job).length) {
+  if (gate.required.includes("job_type") && !job.job_type) {
     missing.push("job type");
   }
   if (gate.required.includes("lead_source") && !job.lead_source) {

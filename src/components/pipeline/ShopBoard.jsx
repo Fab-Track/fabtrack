@@ -3,7 +3,6 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { usePipelineStages, daysInStage, buildStageTransition, SALES_STAGES as SALES_STAGES_DEFAULT, BILLING_STAGES as BILLING_STAGES_DEFAULT, sortColumnJobs, closePriorityGap, reorderColumnPriority, getPaymentStatus } from "@/lib/pipelineHelpers";
-import { jobTypeLabel } from "@/lib/jobType";
 import PriorityBadge from "./PriorityBadge";
 import PriorityMenuItems from "./PriorityMenuItems";
 import PaymentStatusBadge from "./PaymentStatusBadge";
@@ -69,7 +68,7 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
         <div className="flex items-center gap-1">
           <PriorityBadge rank={job.stage_priority?.[stage]} />
           <PaymentStatusBadge status={paymentStatus} />
-          {jobTypeLabel(job) && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{jobTypeLabel(job)}</Badge>}
+          {job.job_type && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.job_type}</Badge>}
           <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger asChild>
               <button

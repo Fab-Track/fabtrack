@@ -23,21 +23,18 @@
       "description": "Job name / description"
     },
     "job_type": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "enum": [
-          "Railing",
-          "Stairs",
-          "Planters",
-          "Gate",
-          "Fence",
-          "Staircase",
-          "Custom Structure",
-          "Other"
-        ]
-      },
-      "description": "Job type(s) - supports multiple types per job"
+      "type": "string",
+      "enum": [
+        "Railing",
+        "Stairs",
+        "Planters",
+        "Gate",
+        "Fence",
+        "Staircase",
+        "Custom Structure",
+        "Other"
+      ],
+      "description": "Job type"
     },
     "pipeline_board": {
       "type": "string",

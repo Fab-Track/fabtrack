@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { startOfDay, startOfWeek, eachDayOfInterval } from "date-fns";
 import { getWindowForZoom, navigateWindow, getDaysInWindow, jobOverlapsWindow, isJobScheduled } from "@/lib/scheduleUtils";
-import { getJobTypes } from "@/lib/jobType";
 import ScheduleToolbar from "@/components/schedule/ScheduleToolbar";
 import TimelineView from "@/components/schedule/TimelineView";
 import CalendarView from "@/components/schedule/CalendarView";
@@ -108,7 +107,7 @@ export default function Schedule() {
         const hasPhase = (job.schedule_phases || []).some(p => p.name === phaseFilter && p.status !== "complete");
         if (!hasPhase) return false;
       }
-      if (typeFilter !== "all" && !getJobTypes(job).includes(typeFilter)) return false;
+      if (typeFilter !== "all" && job.job_type !== typeFilter) return false;
       if (crewFilter !== "all" && !(job.assigned_crew_names || []).includes(crewFilter)) return false;
       if (search) {
         const q = search.toLowerCase();

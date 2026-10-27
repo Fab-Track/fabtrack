@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { jobTypeLabel } from "@/lib/jobType";
 import { isWithinInterval, parseISO, format, subMonths } from "date-fns";
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
@@ -76,7 +75,7 @@ export default function OverviewReport({ onTabChange }) {
   const typeMap = {};
   filteredInvoices.forEach(inv => {
     const job = jobs.find(j => j.id === inv.job_id);
-    const type = jobTypeLabel(job) || "Other";
+    const type = job?.job_type || "Other";
     typeMap[type] = (typeMap[type] || 0) + (inv.total || 0);
   });
   const pieData = Object.entries(typeMap).map(([name, value]) => ({ name, value }));

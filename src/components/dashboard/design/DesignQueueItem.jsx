@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { differenceInDays, format, parseISO, isValid } from "date-fns";
 import { GripVertical, Clock, ArrowRight } from "lucide-react";
 import ApprovalReminderButton from "./ApprovalReminderButton";
-import { jobTypeLabel } from "@/lib/jobType";
 import { daysInStage } from "@/lib/pipelineHelpers";
 
 const STAGE_COLORS = {
@@ -57,9 +56,9 @@ export default function DesignQueueItem({ job, isManual, dragHandleProps = {}, i
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          {jobTypeLabel(job) && (
+          {job.job_type && (
             <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded border border-border font-medium">
-              {jobTypeLabel(job)}
+              {job.job_type}
             </span>
           )}
           <span className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${STAGE_COLORS[job.stage] || "bg-muted text-muted-foreground border-border"}`}>
