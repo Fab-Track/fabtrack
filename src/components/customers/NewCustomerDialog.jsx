@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, Building2, MapPin, Ban, ChevronDown } from "lucide-react";
+import { User, Building2, MapPin, Ban, ChevronDown, Copy } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const LEAD_SOURCE_OPTIONS = [
   "Facebook",
@@ -49,6 +50,7 @@ const EMPTY_FORM = {
   contact_phone: "",
   // Location Details
   create_location: true,
+  location_same_as_main: false,
   location_address: "",
   location_display_name: "",
   location_job_address: "",
@@ -86,6 +88,15 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
   // Auto-populate contact name from full name if empty
   const effectiveContactName = form.contact_name || fullName;
 
+  // Composed primary address for location "same as main"
+  const composedPrimaryAddress = [form.address_street, form.address_city, form.address_state, form.address_zip]
+    .filter(Boolean).join(", ");
+
+  // Effective location fields — if "same as main" is checked, use main form values
+  const effectiveLocationAddress = form.location_same_as_main ? composedPrimaryAddress : form.location_address;
+  const effectiveLocationDisplayName = form.location_same_as_main ? (fullName || form.company) : form.location_display_name;
+  const effectiveLocationJobAddress = form.location_same_as_main ? form.address_street : form.location_job_address;
+
   const createMutation = useMutation({
     mutationFn: async () => {
       const composedAddress = [form.address_street, form.address_city, form.address_state, form.address_zip]
@@ -104,12 +115,16 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
           }]
         : [];
 
-      const locations = form.create_location && (form.location_address || form.location_display_name || form.location_job_address)
+      const locAddr = form.location_same_as_main ? composedPrimaryAddress : form.location_address;
+      const locDisp = form.location_same_as_main ? (fullName || form.company) : form.location_display_name;
+      const locJob = form.location_same_as_main ? form.address_street : form.location_job_address;
+
+      const locations = form.create_location && (locAddr || locDisp || locJob)
         ? [{
             id: crypto.randomUUID(),
-            address: form.location_address || composedAddress || "",
-            display_name: form.location_display_name || "",
-            job_address: form.location_job_address || "",
+            address: locAddr || composedAddress || "",
+            display_name: locDisp || "",
+            job_address: locJob || "",
             created_at: new Date().toISOString(),
           }]
         : [];
@@ -412,29 +427,41 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
 
             {form.create_location ? (
               <div className="grid grid-cols-1 gap-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <Checkbox
+                    checked={form.location_same_as_main}
+                    onCheckedChange={(checked) => f("location_same_as_main", checked === true)}
+                  />
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Copy className="w-3 h-3" /> Same as main information (name, address)
+                  </span>
+                </label>
                 <div>
                   <Label className="text-xs">Address</Label>
                   <Input
-                    value={form.location_address}
+                    value={effectiveLocationAddress}
                     onChange={e => f("location_address", e.target.value)}
                     placeholder="123 Main St, City, State"
+                    disabled={form.location_same_as_main}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs">Display Name</Label>
                     <Input
-                      value={form.location_display_name}
+                      value={effectiveLocationDisplayName}
                       onChange={e => f("location_display_name", e.target.value)}
                       placeholder="Main Office, Job Site"
+                      disabled={form.location_same_as_main}
                     />
                   </div>
                   <div>
                     <Label className="text-xs">Job Address</Label>
                     <Input
-                      value={form.location_job_address}
+                      value={effectiveLocationJobAddress}
                       onChange={e => f("location_job_address", e.target.value)}
                       placeholder="456 Job Site Ave"
+                      disabled={form.location_same_as_main}
                     />
                   </div>
                 </div>
