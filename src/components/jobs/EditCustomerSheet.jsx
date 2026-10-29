@@ -13,6 +13,7 @@ import { PhoneInput } from "@/components/ui/PhoneInput";
 import { useAutosave } from "@/hooks/useAutosave";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
 import { Search } from "lucide-react";
+import { customerTypeToLeadType, deriveOnsiteContactFromCustomer } from "@/lib/customerToJob";
 
 const CUSTOMER_TYPES = [
   "Homeowner", "General Contractor", "Builder / Developer",
@@ -123,10 +124,13 @@ export default function EditCustomerSheet({ open, onOpenChange, customerId, jobI
 
   const handleReassignCustomer = async (newCustomer) => {
     if (!newCustomer || !jobId || newCustomer.id === customerId) return;
-    // Update the job to point to the new customer
+    const contactFields = deriveOnsiteContactFromCustomer(newCustomer);
     await base44.entities.Job.update(jobId, {
       customer_id: newCustomer.id,
       customer_name: newCustomer.name,
+      site_address: newCustomer.address || undefined,
+      lead_customer_type: newCustomer.type ? customerTypeToLeadType(newCustomer.type) : undefined,
+      ...contactFields,
     });
     qc.invalidateQueries({ queryKey: ["customer", customerId] });
     qc.invalidateQueries({ queryKey: ["job", jobId] });

@@ -21,6 +21,7 @@ import { Wrench, Hash, CalendarDays, MapPin, ClipboardList, UserCheck, Building2
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SHOP_STAGES } from "@/lib/pipelineHelpers";
+import { customerTypeToLeadType, deriveOnsiteContactFromCustomer } from "@/lib/customerToJob";
 
 const JOB_TYPES = ["Railing", "Gate", "Fence", "Staircase", "Custom Structure", "Other"];
 const BOARDS = ["Sales", "Shop", "Billing"];
@@ -69,6 +70,7 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
         site_address: job.site_address || "",
         onsite_contact_name: job.onsite_contact_name || "",
         onsite_contact_phone: job.onsite_contact_phone || "",
+        onsite_contact_email: job.onsite_contact_email || "",
         pipeline_board: job.pipeline_board || "Sales",
         stage: job.stage || "",
         assigned_rep_id: job.assigned_rep_id || "",
@@ -111,6 +113,7 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
       site_address: formData.site_address || null,
       onsite_contact_name: formData.onsite_contact_name || null,
       onsite_contact_phone: formData.onsite_contact_phone || null,
+      onsite_contact_email: formData.onsite_contact_email || null,
       pipeline_board: formData.pipeline_board || "Sales",
       stage: formData.stage || null,
       assigned_rep_id: formData.assigned_rep_id || null,
@@ -206,8 +209,7 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
                     setDirty(true);
                     setForm(prev => ({
                       ...prev,
-                      onsite_contact_name: selectedCustomer.job_contact_name || selectedCustomer.name || "",
-                      onsite_contact_phone: selectedCustomer.job_contact_phone || selectedCustomer.phone || "",
+                      ...deriveOnsiteContactFromCustomer(selectedCustomer),
                     }));
                   }
                 }}
@@ -224,6 +226,10 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
             <div>
               <Label className="text-xs">On-Site Contact Phone</Label>
               <Input value={form.onsite_contact_phone || ""} onChange={e => f("onsite_contact_phone", e.target.value)} placeholder="(555) 555-5555" disabled={sameAsCustomer} />
+            </div>
+            <div>
+              <Label className="text-xs">On-Site Contact Email</Label>
+              <Input type="email" value={form.onsite_contact_email || ""} onChange={e => f("onsite_contact_email", e.target.value)} placeholder="contact@example.com" disabled={sameAsCustomer} />
             </div>
           </fieldset>
 
@@ -270,9 +276,14 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
                 customers={allCustomers}
                 value={form.customer_id || null}
                 onChange={(selected) => {
-                  f("customer_id", selected?.id || "");
-                  f("customer_name", selected?.name || "");
-                }}
+                     f("customer_id", selected?.id || "");
+                     f("customer_name", selected?.name || "");
+                     if (selected) {
+                       const contact = deriveOnsiteContactFromCustomer(selected);
+                       setForm(prev => ({ ...prev, ...contact }));
+                       setDirty(true);
+                     }
+                   }}
               />
             </div>
           </fieldset>

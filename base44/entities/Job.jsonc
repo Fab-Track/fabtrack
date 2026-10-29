@@ -128,6 +128,10 @@
       "type": "string",
       "description": "Phone number of the on-site contact for this job"
     },
+    "onsite_contact_email": {
+      "type": "string",
+      "description": "Email of the on-site contact for this job"
+    },
     "expected_install_date": {
       "type": "string",
       "format": "date"

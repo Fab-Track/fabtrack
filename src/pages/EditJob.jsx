@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/lib/AuthContext";
 import { useRepCandidates } from "@/hooks/useRepCandidates";
 import { LEAD_SOURCES, LEAD_INTENTS, LEAD_CUSTOMER_TYPES, autoApplyMissingInfoBlocker, deriveSizeBand } from "@/lib/salesPipeline";
+import { customerTypeToLeadType, deriveOnsiteContactFromCustomer, contactToOnsiteFields } from "@/lib/customerToJob";
 
 export default function EditJob() {
   const { user } = useAuth();
@@ -53,6 +54,7 @@ export default function EditJob() {
       site_address: job.site_address || "",
       onsite_contact_name: job.onsite_contact_name || "",
       onsite_contact_phone: job.onsite_contact_phone || "",
+      onsite_contact_email: job.onsite_contact_email || "",
       expected_install_date: job.expected_install_date || "",
       assigned_rep_id: job.assigned_rep_id || "",
       assigned_rep_name: job.assigned_rep_name || "",
@@ -111,15 +113,14 @@ export default function EditJob() {
   };
 
   const handleCustomerChange = (customer) => {
+    const contactFields = sameAsCustomer ? deriveOnsiteContactFromCustomer(customer) : {};
     setForm(prev => ({
       ...prev,
       customer_id: customer?.id || "",
       customer_name: customer?.name || "",
       site_address: customer?.address || prev.site_address,
-      ...(sameAsCustomer ? {
-        onsite_contact_name: customer?.job_contact_name || customer?.name || "",
-        onsite_contact_phone: customer?.job_contact_phone || customer?.phone || "",
-      } : {}),
+      lead_customer_type: customer?.type ? customerTypeToLeadType(customer.type) : prev.lead_customer_type,
+      ...contactFields,
     }));
   };
 
@@ -128,8 +129,7 @@ export default function EditJob() {
     if (checked && selectedCustomer) {
       setForm(prev => ({
         ...prev,
-        onsite_contact_name: selectedCustomer.job_contact_name || selectedCustomer.name || "",
-        onsite_contact_phone: selectedCustomer.job_contact_phone || selectedCustomer.phone || "",
+        ...deriveOnsiteContactFromCustomer(selectedCustomer),
       }));
     }
   };
@@ -255,8 +255,10 @@ export default function EditJob() {
                     onValueChange={(val) => {
                       const c = selectedCustomer.contacts.find(c => c.id === val);
                       if (c) {
-                        updateField("onsite_contact_name", c.name || "");
-                        updateField("onsite_contact_phone", c.phone || "");
+                        setForm(prev => ({
+                          ...prev,
+                          ...contactToOnsiteFields(c),
+                        }));
                       }
                     }}
                   >
@@ -288,6 +290,16 @@ export default function EditJob() {
                   value={form.onsite_contact_phone}
                   onChange={e => updateField("onsite_contact_phone", e.target.value)}
                   placeholder="(555) 555-5555"
+                  disabled={sameAsCustomer}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">On-Site Contact Email</Label>
+                <Input
+                  type="email"
+                  value={form.onsite_contact_email}
+                  onChange={e => updateField("onsite_contact_email", e.target.value)}
+                  placeholder="contact@example.com"
                   disabled={sameAsCustomer}
                 />
               </div>

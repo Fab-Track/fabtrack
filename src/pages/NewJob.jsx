@@ -18,6 +18,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useWriteOrgId } from "@/lib/orgContext";
 import { useRepCandidates } from "@/hooks/useRepCandidates";
 import { LEAD_SOURCES, LEAD_INTENTS, LEAD_CUSTOMER_TYPES, LEAD_BLOCKERS, autoApplyMissingInfoBlocker, deriveSizeBand } from "@/lib/salesPipeline";
+import { customerTypeToLeadType, deriveOnsiteContactFromCustomer, contactToOnsiteFields } from "@/lib/customerToJob";
 
 export default function NewJob() {
   const { user } = useAuth();
@@ -55,6 +56,7 @@ export default function NewJob() {
     site_address: prefilledCustomer?.address || "",
     onsite_contact_name: "",
     onsite_contact_phone: "",
+    onsite_contact_email: "",
     expected_install_date: "",
     customer_approval_status: "pending",
     last_activity_date: new Date().toISOString(),
@@ -115,15 +117,14 @@ export default function NewJob() {
   };
 
   const handleCustomerChange = (customer) => {
+    const contactFields = sameAsCustomer ? deriveOnsiteContactFromCustomer(customer) : {};
     setForm(prev => ({
       ...prev,
       customer_id: customer?.id || "",
       customer_name: customer?.name || "",
       site_address: customer?.address || prev.site_address,
-      ...(sameAsCustomer ? {
-        onsite_contact_name: customer?.job_contact_name || customer?.name || "",
-        onsite_contact_phone: customer?.job_contact_phone || customer?.phone || "",
-      } : {}),
+      lead_customer_type: customer?.type ? customerTypeToLeadType(customer.type) : prev.lead_customer_type,
+      ...contactFields,
     }));
   };
 
@@ -132,8 +133,7 @@ export default function NewJob() {
     if (checked && selectedCustomer) {
       setForm(prev => ({
         ...prev,
-        onsite_contact_name: selectedCustomer.job_contact_name || selectedCustomer.name || "",
-        onsite_contact_phone: selectedCustomer.job_contact_phone || selectedCustomer.phone || "",
+        ...deriveOnsiteContactFromCustomer(selectedCustomer),
       }));
     }
   };
@@ -258,8 +258,10 @@ export default function NewJob() {
                     onValueChange={(val) => {
                       const c = selectedCustomer.contacts.find(c => c.id === val);
                       if (c) {
-                        updateField("onsite_contact_name", c.name || "");
-                        updateField("onsite_contact_phone", c.phone || "");
+                        setForm(prev => ({
+                          ...prev,
+                          ...contactToOnsiteFields(c),
+                        }));
                       }
                     }}
                   >
@@ -291,6 +293,16 @@ export default function NewJob() {
                   value={form.onsite_contact_phone}
                   onChange={e => updateField("onsite_contact_phone", e.target.value)}
                   placeholder="(555) 555-5555"
+                  disabled={sameAsCustomer}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">On-Site Contact Email</Label>
+                <Input
+                  type="email"
+                  value={form.onsite_contact_email}
+                  onChange={e => updateField("onsite_contact_email", e.target.value)}
+                  placeholder="contact@example.com"
                   disabled={sameAsCustomer}
                 />
               </div>

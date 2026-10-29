@@ -9,6 +9,7 @@ import CustomerCombobox from "@/components/customers/CustomerCombobox";
 import EditCustomerSheet from "@/components/jobs/EditCustomerSheet";
 import EditJobSheet from "@/components/jobs/EditJobSheet";
 import { formatPhoneDisplay } from "@/lib/phoneFormat";
+import { customerTypeToLeadType, deriveOnsiteContactFromCustomer } from "@/lib/customerToJob";
 
 // A small info cell: label + value
 function InfoCell({ label, value, icon: Icon, wrap }) {
@@ -43,9 +44,13 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
   });
 
   async function handleAssign(selected) {
+    const contactFields = deriveOnsiteContactFromCustomer(selected);
     await base44.entities.Job.update(job.id, {
       customer_id: selected.id,
       customer_name: selected.name,
+      site_address: selected.address || undefined,
+      lead_customer_type: selected.type ? customerTypeToLeadType(selected.type) : undefined,
+      ...contactFields,
     });
     queryClient.invalidateQueries({ queryKey: ["job", job.id] });
     onJobUpdated?.();
@@ -158,7 +163,8 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
             ) : null
           } />
           <InfoCell label="On-Site Contact" icon={User} value={job.onsite_contact_name} />
-          <InfoCell label="On-Site Contact Phone" icon={Phone} value={job.onsite_contact_phone ? formatPhoneDisplay(job.onsite_contact_phone) : null} />
+          <InfoCell label="On-Site Phone" icon={Phone} value={job.onsite_contact_phone ? formatPhoneDisplay(job.onsite_contact_phone) : null} />
+          <InfoCell label="On-Site Email" icon={Mail} value={job.onsite_contact_email} />
           <InfoCell label="Customer Email" icon={Mail} value={customer?.email} />
           <InfoCell label="Customer Phone" icon={Phone} value={customer?.phone ? formatPhoneDisplay(customer.phone) : null} />
         </div>
