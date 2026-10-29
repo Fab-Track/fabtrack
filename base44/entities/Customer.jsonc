@@ -8,7 +8,19 @@
     },
     "name": {
       "type": "string",
-      "description": "Customer name"
+      "description": "Customer display name (full name or company name)"
+    },
+    "first_name": {
+      "type": "string",
+      "description": "First name"
+    },
+    "last_name": {
+      "type": "string",
+      "description": "Last name"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Display name chosen from full name or company name"
     },
     "type": {
       "type": "string",
@@ -25,6 +37,18 @@
     "company": {
       "type": "string",
       "description": "Company name (for GCs)"
+    },
+    "job_code": {
+      "type": "string",
+      "enum": [
+        "Residential",
+        "Commercial"
+      ],
+      "description": "Job classification: Residential or Commercial"
+    },
+    "lead_source": {
+      "type": "string",
+      "description": "How the customer found us (Facebook, Instagram, Internet Search, Referral, etc.)"
     },
     "phone": {
       "type": "string",
@@ -64,7 +88,7 @@
     },
     "contacts": {
       "type": "array",
-      "description": "Historical directory of contacts associated with this customer (gathered from jobs and manual entry)",
+      "description": "Directory of contacts associated with this customer",
       "items": {
         "type": "object",
         "properties": {
@@ -84,6 +108,35 @@
           "role": {
             "type": "string",
             "description": "Role / title (e.g. Super, PM, HOA rep)"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "locations": {
+      "type": "array",
+      "description": "Directory of locations associated with this customer (job sites, service addresses, etc.)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique id for this location entry"
+          },
+          "address": {
+            "type": "string",
+            "description": "Location address"
+          },
+          "display_name": {
+            "type": "string",
+            "description": "Display name for this location (e.g. Main Office, Job Site)"
+          },
+          "job_address": {
+            "type": "string",
+            "description": "Specific job address if different from the location address"
           },
           "created_at": {
             "type": "string",

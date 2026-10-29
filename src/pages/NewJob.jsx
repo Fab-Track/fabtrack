@@ -124,6 +124,7 @@ export default function NewJob() {
       customer_name: customer?.name || "",
       site_address: customer?.address || prev.site_address,
       lead_customer_type: customer?.type ? customerTypeToLeadType(customer.type) : prev.lead_customer_type,
+      lead_source: customer?.lead_source || prev.lead_source,
       ...contactFields,
     }));
   };

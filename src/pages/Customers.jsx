@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import NewCustomerDialog from "@/components/customers/NewCustomerDialog";
 import CustomerCommTab from "@/components/comms/CustomerCommTab";
 import MessageComposerModal from "@/components/comms/MessageComposerModal";
 import CustomerTransactionsTab from "@/components/customers/CustomerTransactionsTab";
@@ -31,6 +32,7 @@ import QuickActionsBar from "@/components/customers/QuickActionsBar";
 import CustomerARSummaryBar from "@/components/customers/CustomerARSummaryBar";
 import CustomerContactsSection from "@/components/customers/CustomerContactsSection";
 import CustomerContactsDirectory from "@/components/customers/CustomerContactsDirectory";
+import CustomerLocationsDirectory from "@/components/customers/CustomerLocationsDirectory";
 import { useOrgFilter, useWriteOrgId } from "@/lib/orgContext";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { formatPhoneDisplay } from "@/lib/phoneFormat";
@@ -205,6 +207,20 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
               customer.company.trim().toLowerCase() !== (customer.name || "").trim().toLowerCase() && (
               <p className="text-sm text-muted-foreground">{customer.company}</p>
             )}
+            {(customer.job_code || customer.lead_source) && (
+              <div className="flex items-center gap-2 mt-1">
+                {customer.job_code && (
+                  <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                    {customer.job_code}
+                  </Badge>
+                )}
+                {customer.lead_source && (
+                  <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                    via {customer.lead_source}
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Action cluster — mirrors job header */}
@@ -274,6 +290,7 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
         {/* Contacts */}
         <CustomerContactsSection customer={customer} onUpdated={onUpdated} />
         <CustomerContactsDirectory customer={customer} onUpdated={onUpdated} />
+        <CustomerLocationsDirectory customer={customer} onUpdated={onUpdated} />
       </div>
 
       {/* Edit slide-out panel */}
@@ -540,7 +557,6 @@ export default function Customers() {
   const [filterType, setFilterType] = useState("all");
   const [filterOutstanding, setFilterOutstanding] = useState(false);
   const [sortBy, setSortBy] = useState("name"); // name | outstanding | lastJob
-  const [form, setForm] = useState({ name: "", type: "", company: "", phone: "", email: "", address_street: "", address_city: "", address_state: "", address_zip: "", notes: "" });
   const [editModeOpen, setEditModeOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -576,18 +592,6 @@ export default function Customers() {
   const { data: allInvoices = [] } = useQuery({
     queryKey: ["invoices-global", orgFilter],
     queryFn: () => base44.entities.Invoice.filter(orgFilter, "-created_date", 500),
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (data) => {
-      const composedAddress = [data.address_street, data.address_city, data.address_state, data.address_zip].filter(Boolean).join(", ");
-      return base44.entities.Customer.create({ ...data, address: composedAddress || null, organization_id: writeOrgId });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
-      setDialogOpen(false);
-      setForm({ name: "", type: "", company: "", phone: "", email: "", address_street: "", address_city: "", address_state: "", address_zip: "", notes: "" });
-    },
   });
 
   const deleteMutation = useMutation({
@@ -674,70 +678,15 @@ export default function Customers() {
           <Button size="sm" variant="outline" onClick={() => { setEditModeOpen(true); setSelectedIds(new Set()); }}>
             <Edit2 className="w-4 h-4 mr-1.5" /><span className="hidden sm:inline">Edit Customers</span><span className="sm:hidden">Edit</span>
           </Button>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm"><Plus className="w-4 h-4 mr-1.5" /><span className="hidden sm:inline">Add Customer</span><span className="sm:hidden">Add</span></Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>New Customer</DialogTitle></DialogHeader>
-              <form onSubmit={e => { e.preventDefault(); createMutation.mutate(form); }} className="space-y-3">
-                <div>
-                  <Label className="text-xs">Name *</Label>
-                  <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs">Type</Label>
-                    <Select value={form.type} onValueChange={v => setForm({...form, type: v})}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        {CUSTOMER_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Company</Label>
-                    <Input value={form.company} onChange={e => setForm({...form, company: e.target.value})} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs">Phone</Label>
-                    <PhoneInput value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="000-000-0000" />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Email</Label>
-                    <Input value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs">Street</Label>
-                  <Input value={form.address_street} onChange={e => setForm({...form, address_street: e.target.value})} placeholder="123 Main St, Unit 605" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs">City</Label>
-                    <Input value={form.address_city} onChange={e => setForm({...form, address_city: e.target.value})} placeholder="Provo" />
-                  </div>
-                  <div>
-                    <Label className="text-xs">State</Label>
-                    <Input value={form.address_state} onChange={e => setForm({...form, address_state: e.target.value})} placeholder="UT" />
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs">ZIP</Label>
-                  <Input value={form.address_zip} onChange={e => setForm({...form, address_zip: e.target.value})} placeholder="84604" />
-                </div>
-                <div>
-                  <Label className="text-xs">Notes</Label>
-                  <Input value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} />
-                </div>
-                <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Creating..." : "Create Customer"}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <NewCustomerDialog
+            open={dialogOpen}
+            onClose={() => setDialogOpen(false)}
+            onCreated={(c) => {
+              setDialogOpen(false);
+              // Auto-open the newly created customer profile
+              setTimeout(() => setSelectedCustomer(c), 100);
+            }}
+          />
         </div>
       </div>
 

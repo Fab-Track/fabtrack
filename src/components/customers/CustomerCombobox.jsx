@@ -1,113 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
-import { useWriteOrgId } from "@/lib/orgContext";
+import { ChevronDown, Plus, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ChevronDown, Plus, Check, User } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-// ── Quick-create modal ─────────────────────────────────────────────────────────
-function NewCustomerModal({ open, onClose, onCreated }) {
-  const qc = useQueryClient();
-  const writeOrgId = useWriteOrgId();
-  const [form, setForm] = useState({
-    first_name: "", last_name: "", company: "",
-    phone: "", email: "", address: "", type: "",
-  });
-
-  const f = (field, val) => setForm(p => ({ ...p, [field]: val }));
-
-  const fullName = [form.first_name, form.last_name].filter(Boolean).join(" ");
-
-  const createMutation = useMutation({
-    mutationFn: () => base44.entities.Customer.create({
-      organization_id: writeOrgId,
-      name: fullName || form.company,
-      company: form.company,
-      phone: form.phone,
-      email: form.email,
-      address: form.address,
-      type: form.type || undefined,
-    }),
-    onSuccess: (newCustomer) => {
-      qc.invalidateQueries({ queryKey: ["customers"] });
-      onCreated(newCustomer);
-      onClose();
-      setForm({ first_name: "", last_name: "", company: "", phone: "", email: "", address: "", type: "" });
-    },
-  });
-
-  const valid = form.first_name.trim() || form.company.trim();
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <User className="w-4 h-4" /> New Customer
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3 pt-1">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">First Name *</Label>
-              <Input value={form.first_name} onChange={e => f("first_name", e.target.value)} placeholder="Jane" autoFocus />
-            </div>
-            <div>
-              <Label className="text-xs">Last Name</Label>
-              <Input value={form.last_name} onChange={e => f("last_name", e.target.value)} placeholder="Smith" />
-            </div>
-          </div>
-          <div>
-            <Label className="text-xs">Company Name <span className="text-muted-foreground">(optional)</span></Label>
-            <Input value={form.company} onChange={e => f("company", e.target.value)} placeholder="ABC Contractors" />
-          </div>
-          <div>
-            <Label className="text-xs">Phone</Label>
-            <Input value={form.phone} onChange={e => f("phone", e.target.value)} placeholder="(555) 123-4567" />
-          </div>
-          <div>
-            <Label className="text-xs">Email</Label>
-            <Input value={form.email} onChange={e => f("email", e.target.value)} placeholder="jane@example.com" />
-          </div>
-          <div>
-            <Label className="text-xs">Address</Label>
-            <Input value={form.address} onChange={e => f("address", e.target.value)} placeholder="123 Main St, City, State" />
-          </div>
-          <div>
-            <Label className="text-xs">Customer Type</Label>
-            <Select value={form.type} onValueChange={val => f("type", val)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select type…" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Homeowner">Homeowner</SelectItem>
-                <SelectItem value="General Contractor">General Contractor</SelectItem>
-                <SelectItem value="Builder / Developer">Builder / Developer</SelectItem>
-                <SelectItem value="Commercial Business">Commercial Business</SelectItem>
-                <SelectItem value="Subcontractor">Subcontractor</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex gap-2 pt-1">
-            <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-            <Button
-              className="flex-1"
-              disabled={!valid || createMutation.isPending}
-              onClick={() => createMutation.mutate()}
-            >
-              {createMutation.isPending ? "Creating…" : "Create Customer"}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
+import NewCustomerDialog from "@/components/customers/NewCustomerDialog";
 
 // ── Searchable combobox ────────────────────────────────────────────────────────
 export default function CustomerCombobox({ customers = [], value, onChange }) {
@@ -208,7 +102,7 @@ export default function CustomerCombobox({ customers = [], value, onChange }) {
         )}
       </div>
 
-      <NewCustomerModal
+      <NewCustomerDialog
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onCreated={handleCustomerCreated}
