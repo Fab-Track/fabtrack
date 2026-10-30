@@ -33,6 +33,8 @@ import CustomerARSummaryBar from "@/components/customers/CustomerARSummaryBar";
 import CustomerContactsSection from "@/components/customers/CustomerContactsSection";
 import CustomerContactsDirectory from "@/components/customers/CustomerContactsDirectory";
 import CustomerLocationsDirectory from "@/components/customers/CustomerLocationsDirectory";
+import CustomerAccountBilling from "@/components/customers/CustomerAccountBilling";
+import CoiBadge, { isCoiExpiringSoon } from "@/components/customers/CoiBadge";
 import { useOrgFilter, useWriteOrgId } from "@/lib/orgContext";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { formatPhoneDisplay } from "@/lib/phoneFormat";
@@ -179,6 +181,7 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
             {/* Name row */}
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <h2 className="text-xl font-bold">{customer.name}</h2>
+              {isCoiExpiringSoon(customer) && <CoiBadge customer={customer} />}
               {editingType ? (
                 <Select
                   value={customer.type || ""}
@@ -291,6 +294,11 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
         <CustomerContactsSection customer={customer} onUpdated={onUpdated} />
         <CustomerContactsDirectory customer={customer} onUpdated={onUpdated} />
         <CustomerLocationsDirectory customer={customer} onUpdated={onUpdated} />
+      </div>
+
+      {/* Account & Billing */}
+      <div className="mb-5">
+        <CustomerAccountBilling customer={customer} onUpdated={onUpdated} />
       </div>
 
       {/* Edit slide-out panel */}
@@ -757,7 +765,10 @@ export default function Customers() {
                   onClick={() => setSelectedCustomer(customer)}
                 >
                   <div>
-                    <p className="font-semibold text-sm">{customer.name}</p>
+                    <p className="font-semibold text-sm flex items-center gap-1.5">
+                      {customer.name}
+                      {isCoiExpiringSoon(customer) && <CoiBadge customer={customer} />}
+                    </p>
                     {customer.company && (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                         <Building2 className="w-3 h-3" /> {customer.company}

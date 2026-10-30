@@ -243,6 +243,53 @@
       "type": "string",
       "format": "date",
       "description": "Deadline date for submitting billing for this customer"
+    },
+    "tax_exempt": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this customer is tax-exempt (builders/designers with resale certificates)"
+    },
+    "resale_certificate_uri": {
+      "type": "string",
+      "description": "Private file URI of the customer's resale certificate (stored privately)"
+    },
+    "coi_required": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether a Certificate of Insurance is required for this customer"
+    },
+    "coi_file_uri": {
+      "type": "string",
+      "description": "Private file URI of the customer's COI document (stored privately)"
+    },
+    "coi_expiration": {
+      "type": "string",
+      "format": "date",
+      "description": "Expiration date of the COI on file"
+    },
+    "w9_required": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether a W-9 is required for this customer"
+    },
+    "preferred_contact_method": {
+      "type": "string",
+      "enum": [
+        "Call",
+        "Text",
+        "Email"
+      ],
+      "description": "Customer's preferred method of contact"
+    },
+    "pricing_tier": {
+      "type": "string",
+      "enum": [
+        "Standard",
+        "Builder",
+        "Designer",
+        "Preferred"
+      ],
+      "description": "Pricing tier for this customer (Standard / Builder / Designer / Preferred)"
     }
   },
   "required": [

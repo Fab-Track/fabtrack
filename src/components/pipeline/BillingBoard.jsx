@@ -19,6 +19,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CompletedInvoicesTab from "./CompletedInvoicesTab";
+import CoiBadge from "@/components/customers/CoiBadge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -135,7 +136,9 @@ function BillingCard({ job, isDragging, invoice, jobInvoices = [], customer, onM
       </div>
       <Link to={`/jobs/${job.id}?board=Billing`}>
         <h4 className="text-sm font-bold leading-tight mb-0.5 line-clamp-1 hover:text-accent transition-colors">
-          {job.customer_name || "—"}{customer?.company ? <span className="font-medium text-muted-foreground"> — {customer.company}</span> : null}
+          {job.customer_name || "—"}
+          {customer?.company ? <span className="font-medium text-muted-foreground"> — {customer.company}</span> : null}
+          {customer && <CoiBadge customer={customer} className="ml-1" />}
         </h4>
         <p className="text-xs text-muted-foreground leading-tight mb-2 line-clamp-1">{job.job_name}</p>
       </Link>

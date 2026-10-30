@@ -21,6 +21,7 @@ import { useEffectiveRole } from "@/lib/PreviewRoleContext";
 import { differenceInDays, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { shouldSkipPricingReview, deriveSizeBand, autoApplyMissingInfoBlocker } from "@/lib/salesPipeline";
+import CoiBadge from "@/components/customers/CoiBadge";
 
 const EST_PILL = {
   Draft:    "bg-muted text-muted-foreground",
@@ -92,8 +93,10 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], invoices = [], 
       </div>
       <Link to={`/jobs/${job.id}?board=Sales`}>
         <h4 className="text-sm font-bold leading-tight mb-0.5 line-clamp-2 hover:text-accent transition-colors">
-          {job.customer_name || "—"}{customer?.company ? <span className="font-medium text-muted-foreground"> — {customer.company}</span> : null}
-        </h4>
+          {job.customer_name || "—"}
+          {customer?.company ? <span className="font-medium text-muted-foreground"> — {customer.company}</span> : null}
+          {customer && <CoiBadge customer={customer} className="ml-1" />}
+          </h4>
         <p className="text-xs text-muted-foreground leading-tight mb-2 line-clamp-2">{job.job_name}</p>
       </Link>
 

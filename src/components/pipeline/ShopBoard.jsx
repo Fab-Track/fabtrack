@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { format, parseISO, isValid } from "date-fns";
 import { useAuth } from "@/lib/AuthContext";
 import { isOwnerLevel } from "@/lib/roleHelpers";
+import CoiBadge from "@/components/customers/CoiBadge";
 
 const FLOWS = { Sales: SALES_STAGES_DEFAULT, Shop: BILLING_STAGES_DEFAULT, Billing: BILLING_STAGES_DEFAULT };
 
@@ -143,7 +144,9 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
       </div>
       <Link to={`/jobs/${job.id}?board=Shop`}>
         <h4 className="text-sm font-bold leading-tight mb-0.5 line-clamp-2 hover:text-accent transition-colors">
-          {job.customer_name || "—"}{customer?.company ? <span className="font-medium text-muted-foreground"> — {customer.company}</span> : null}
+          {job.customer_name || "—"}
+          {customer?.company ? <span className="font-medium text-muted-foreground"> — {customer.company}</span> : null}
+          {customer && <CoiBadge customer={customer} className="ml-1" />}
         </h4>
         <p className="text-xs text-muted-foreground leading-tight mb-2 line-clamp-2">{job.job_name}</p>
       </Link>
