@@ -124,7 +124,6 @@ export default function NewJob() {
       ...prev,
       customer_id: customer?.id || "",
       customer_name: customer?.name || "",
-      site_address: customer?.address || prev.site_address,
       lead_customer_type: customer?.type ? customerTypeToLeadType(customer.type) : prev.lead_customer_type,
       ...contactFields,
     }));
@@ -259,12 +258,13 @@ export default function NewJob() {
             )}
 
             <div>
-              <Label className="text-xs">Site Address</Label>
+              <Label className="text-xs">Project / Site Address</Label>
               <Input 
                 value={form.site_address} 
                 onChange={e => updateField("site_address", e.target.value)}
                 placeholder="123 Main St, City, State"
               />
+              <p className="text-[10px] text-muted-foreground mt-0.5">Where the work will be performed. This is separate from the customer's office/billing address.</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
