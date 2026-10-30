@@ -11,14 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { User, Building2, MapPin, Ban, ChevronDown, Copy } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
-const LEAD_SOURCE_OPTIONS = [
-  "Facebook",
-  "Instagram",
-  "Internet Search",
-  "Referral",
-  "Other",
-];
-
 const CUSTOMER_TYPES = [
   "Homeowner",
   "General Contractor",
@@ -33,7 +25,6 @@ const EMPTY_FORM = {
   last_name: "",
   company: "",
   job_code: "",
-  lead_source: "",
   type: "",
   display_name: "",
   phone: "",
@@ -43,7 +34,7 @@ const EMPTY_FORM = {
   address_state: "",
   address_zip: "",
   // Contact Details
-  create_contact: true,
+  create_contact: false,
   contact_name: "",
   contact_title: "",
   contact_email: "",
@@ -92,10 +83,10 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
   const composedPrimaryAddress = [form.address_street, form.address_city, form.address_state, form.address_zip]
     .filter(Boolean).join(", ");
 
-  // Effective location fields — if "same as main" is checked, use main form values
+  // Effective location fields — if "same as main" is checked, copy the primary address
   const effectiveLocationAddress = form.location_same_as_main ? composedPrimaryAddress : form.location_address;
-  const effectiveLocationDisplayName = form.location_same_as_main ? (fullName || form.company) : form.location_display_name;
-  const effectiveLocationJobAddress = form.location_same_as_main ? form.address_street : form.location_job_address;
+  const effectiveLocationDisplayName = form.location_same_as_main ? "Primary Address" : form.location_display_name;
+  const effectiveLocationJobAddress = form.location_same_as_main ? "" : form.location_job_address;
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -104,7 +95,7 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
 
       const name = autoDisplayName || fullName || form.company;
 
-      const contacts = form.create_contact && (effectiveContactName || form.contact_email || form.contact_phone)
+      const contacts = form.create_contact && (form.contact_email?.trim() || form.contact_phone?.trim())
         ? [{
             id: crypto.randomUUID(),
             name: effectiveContactName || name,
@@ -116,8 +107,8 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
         : [];
 
       const locAddr = form.location_same_as_main ? composedPrimaryAddress : form.location_address;
-      const locDisp = form.location_same_as_main ? (fullName || form.company) : form.location_display_name;
-      const locJob = form.location_same_as_main ? form.address_street : form.location_job_address;
+      const locDisp = form.location_same_as_main ? "Primary Address" : form.location_display_name;
+      const locJob = form.location_same_as_main ? "" : form.location_job_address;
 
       const locations = form.create_location && (locAddr || locDisp || locJob)
         ? [{
@@ -138,7 +129,7 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
         company: form.company || null,
         type: form.type || undefined,
         job_code: form.job_code || undefined,
-        lead_source: form.lead_source || undefined,
+
         phone: form.phone || null,
         email: form.email || null,
         address: composedAddress || null,
@@ -195,7 +186,7 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">First Name *</Label>
+                <Label className="text-xs">First Name</Label>
                 <Input
                   value={form.first_name}
                   onChange={e => f("first_name", e.target.value)}
@@ -233,33 +224,19 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
                 />
               </div>
             )}
+            <p className="text-[10px] text-muted-foreground">Either first name or company name is required.</p>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Job Code</Label>
-                <Select value={form.job_code} onValueChange={v => f("job_code", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Residential">Residential</SelectItem>
-                    <SelectItem value="Commercial">Commercial</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs">Lead Source</Label>
-                <Select value={form.lead_source} onValueChange={v => f("lead_source", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LEAD_SOURCE_OPTIONS.map(s => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label className="text-xs">Job Code</Label>
+              <Select value={form.job_code} onValueChange={v => f("job_code", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Residential">Residential</SelectItem>
+                  <SelectItem value="Commercial">Commercial</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
@@ -433,7 +410,7 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
                     onCheckedChange={(checked) => f("location_same_as_main", checked === true)}
                   />
                   <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Copy className="w-3 h-3" /> Same as main information (name, address)
+                    <Copy className="w-3 h-3" /> Same as primary address
                   </span>
                 </label>
                 <div>

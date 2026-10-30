@@ -46,6 +46,7 @@ export default function NewJob() {
   );
 
   const [sameAsCustomer, setSameAsCustomer] = useState(false);
+  const [selectedLocationId, setSelectedLocationId] = useState("");
 
   const [form, setForm] = useState({
     job_number: generateJobNumber(),
@@ -118,13 +119,13 @@ export default function NewJob() {
 
   const handleCustomerChange = (customer) => {
     const contactFields = sameAsCustomer ? deriveOnsiteContactFromCustomer(customer) : {};
+    setSelectedLocationId("");
     setForm(prev => ({
       ...prev,
       customer_id: customer?.id || "",
       customer_name: customer?.name || "",
       site_address: customer?.address || prev.site_address,
       lead_customer_type: customer?.type ? customerTypeToLeadType(customer.type) : prev.lead_customer_type,
-      lead_source: customer?.lead_source || prev.lead_source,
       ...contactFields,
     }));
   };
@@ -226,6 +227,36 @@ export default function NewJob() {
                 />
               </div>
             </div>
+
+            {selectedCustomer?.locations?.length > 0 && (
+              <div>
+                <Label className="text-xs">Use Saved Location</Label>
+                <Select
+                  value={selectedLocationId}
+                  onValueChange={(val) => {
+                    setSelectedLocationId(val);
+                    const loc = selectedCustomer.locations.find(l => l.id === val);
+                    if (loc) {
+                      setForm(prev => ({
+                        ...prev,
+                        site_address: loc.job_address || loc.address || "",
+                      }));
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a saved location…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {selectedCustomer.locations.map(l => (
+                      <SelectItem key={l.id} value={l.id}>
+                        {l.display_name || l.address}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div>
               <Label className="text-xs">Site Address</Label>
