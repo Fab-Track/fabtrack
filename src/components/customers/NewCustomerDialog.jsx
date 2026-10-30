@@ -160,6 +160,7 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
       qc.invalidateQueries({ queryKey: ["customers"] });
       onCreated?.(newCustomer);
       setForm(EMPTY_FORM);
+      onClose?.();
     },
   });
 
