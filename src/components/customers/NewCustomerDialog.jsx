@@ -35,6 +35,7 @@ const EMPTY_FORM = {
   address_zip: "",
   // Contact Details
   create_contact: false,
+  contact_same_as_main: false,
   contact_name: "",
   contact_title: "",
   contact_email: "",
@@ -95,12 +96,16 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
 
       const name = autoDisplayName || fullName || form.company;
 
-      const contacts = form.create_contact && (form.contact_email?.trim() || form.contact_phone?.trim())
+      const cName = form.contact_same_as_main ? (fullName || name) : (effectiveContactName || name);
+      const cEmail = form.contact_same_as_main ? (form.email || "") : (form.contact_email || "");
+      const cPhone = form.contact_same_as_main ? (form.phone || "") : (form.contact_phone || "");
+
+      const contacts = form.create_contact && (cEmail.trim() || cPhone.trim())
         ? [{
             id: crypto.randomUUID(),
-            name: effectiveContactName || name,
-            phone: form.contact_phone || "",
-            email: form.contact_email || "",
+            name: cName,
+            phone: cPhone,
+            email: cEmail,
             role: form.contact_title || "",
             created_at: new Date().toISOString(),
           }]
@@ -142,10 +147,10 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
       };
 
       // Also set job_contact fields from the contact if created
-      if (form.create_contact && effectiveContactName) {
-        payload.job_contact_name = effectiveContactName;
-        payload.job_contact_email = form.contact_email || "";
-        payload.job_contact_phone = form.contact_phone || "";
+      if (form.create_contact && cName) {
+        payload.job_contact_name = cName;
+        payload.job_contact_email = cEmail;
+        payload.job_contact_phone = cPhone;
       }
 
       const created = await base44.entities.Customer.create(payload);
@@ -346,39 +351,54 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
             </div>
 
             {form.create_contact ? (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Name</Label>
-                  <Input
-                    value={form.contact_name}
-                    onChange={e => f("contact_name", e.target.value)}
-                    placeholder={fullName || "Contact name"}
+              <div className="grid grid-cols-1 gap-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <Checkbox
+                    checked={form.contact_same_as_main}
+                    onCheckedChange={(checked) => f("contact_same_as_main", checked === true)}
                   />
-                </div>
-                <div>
-                  <Label className="text-xs">Title</Label>
-                  <Input
-                    value={form.contact_title}
-                    onChange={e => f("contact_title", e.target.value)}
-                    placeholder="Super, PM, HOA rep"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Email</Label>
-                  <Input
-                    type="email"
-                    value={form.contact_email}
-                    onChange={e => f("contact_email", e.target.value)}
-                    placeholder="contact@example.com"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Phone</Label>
-                  <PhoneInput
-                    value={form.contact_phone}
-                    onChange={e => f("contact_phone", e.target.value)}
-                    placeholder="(555) 123-4567"
-                  />
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Copy className="w-3 h-3" /> Same as main information
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Name</Label>
+                    <Input
+                      value={form.contact_same_as_main ? fullName : form.contact_name}
+                      onChange={e => f("contact_name", e.target.value)}
+                      placeholder={fullName || "Contact name"}
+                      disabled={form.contact_same_as_main}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Title</Label>
+                    <Input
+                      value={form.contact_title}
+                      onChange={e => f("contact_title", e.target.value)}
+                      placeholder="Super, PM, HOA rep"
+                      disabled={form.contact_same_as_main}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Email</Label>
+                    <Input
+                      type="email"
+                      value={form.contact_same_as_main ? form.email : form.contact_email}
+                      onChange={e => f("contact_email", e.target.value)}
+                      placeholder="contact@example.com"
+                      disabled={form.contact_same_as_main}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Phone</Label>
+                    <PhoneInput
+                      value={form.contact_same_as_main ? form.phone : form.contact_phone}
+                      onChange={e => f("contact_phone", e.target.value)}
+                      placeholder="(555) 123-4567"
+                      disabled={form.contact_same_as_main}
+                    />
+                  </div>
                 </div>
               </div>
             ) : (
