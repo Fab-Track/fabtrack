@@ -88,7 +88,7 @@
     },
     "contacts": {
       "type": "array",
-      "description": "Directory of contacts associated with this customer",
+      "description": "Directory of contacts associated with this customer. Every contact lives here; jobs reference them by id via site_contact_id / approver_contact_id / bill_to_contact_id.",
       "items": {
         "type": "object",
         "properties": {
@@ -99,15 +99,24 @@
           "name": {
             "type": "string"
           },
-          "phone": {
-            "type": "string"
+          "title": {
+            "type": "string",
+            "description": "Role / title (e.g. Super, PM, HOA rep)"
           },
           "email": {
             "type": "string"
           },
+          "phone": {
+            "type": "string"
+          },
           "role": {
             "type": "string",
-            "description": "Role / title (e.g. Super, PM, HOA rep)"
+            "description": "Legacy role field \u2014 kept for backward compat; title is the new field"
+          },
+          "is_primary": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether this is the customer's primary contact"
           },
           "created_at": {
             "type": "string",
@@ -118,7 +127,7 @@
     },
     "locations": {
       "type": "array",
-      "description": "Directory of locations associated with this customer (job sites, service addresses, etc.)",
+      "description": "Directory of locations associated with this customer (job sites, service addresses, etc.). Jobs reference them by id via location_id.",
       "items": {
         "type": "object",
         "properties": {
@@ -126,17 +135,34 @@
             "type": "string",
             "description": "Unique id for this location entry"
           },
-          "address": {
-            "type": "string",
-            "description": "Location address"
-          },
-          "display_name": {
+          "label": {
             "type": "string",
             "description": "Display name for this location (e.g. Main Office, Job Site)"
           },
+          "street": {
+            "type": "string",
+            "description": "Street address line"
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "zip": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string",
+            "description": "Full composed address \u2014 kept for backward compat"
+          },
+          "display_name": {
+            "type": "string",
+            "description": "Legacy display name \u2014 kept for backward compat; label is the new field"
+          },
           "job_address": {
             "type": "string",
-            "description": "Specific job address if different from the location address"
+            "description": "Specific job address if different from the location address \u2014 kept for backward compat"
           },
           "created_at": {
             "type": "string",
@@ -147,41 +173,41 @@
     },
     "job_contact_name": {
       "type": "string",
-      "description": "Job contact full name"
+      "description": "Legacy flat field \u2014 migrated into contacts[]. Hidden from UI."
     },
     "job_contact_email": {
       "type": "string",
-      "description": "Job contact email"
+      "description": "Legacy flat field \u2014 migrated into contacts[]. Hidden from UI."
     },
     "job_contact_phone": {
       "type": "string",
-      "description": "Job contact phone"
+      "description": "Legacy flat field \u2014 migrated into contacts[]. Hidden from UI."
     },
     "billing_contact_name": {
       "type": "string",
-      "description": "Billing contact full name"
+      "description": "Legacy flat field \u2014 migrated into contacts[]. Hidden from UI."
     },
     "billing_contact_email": {
       "type": "string",
-      "description": "Billing contact email"
+      "description": "Legacy flat field \u2014 migrated into contacts[]. Hidden from UI."
     },
     "billing_contact_phone": {
       "type": "string",
-      "description": "Billing contact phone"
+      "description": "Legacy flat field \u2014 migrated into contacts[]. Hidden from UI."
     },
     "billing_contact_address": {
       "type": "string",
-      "description": "Billing contact address"
+      "description": "Legacy flat field \u2014 hidden from UI."
     },
     "billing_same_as_job": {
       "type": "boolean",
       "default": true,
-      "description": "If true, billing contact is the same as job contact"
+      "description": "Legacy flag \u2014 hidden from UI."
     },
     "billing_same_as_primary": {
       "type": "boolean",
       "default": false,
-      "description": "If true, billing contact matches the customer's primary info"
+      "description": "Legacy flag \u2014 hidden from UI."
     },
     "payment_terms": {
       "type": "string",

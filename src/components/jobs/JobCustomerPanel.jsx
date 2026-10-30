@@ -8,8 +8,9 @@ import { Link } from "react-router-dom";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
 import EditCustomerSheet from "@/components/jobs/EditCustomerSheet";
 import EditJobSheet from "@/components/jobs/EditJobSheet";
+import JobContactRolesPanel from "@/components/jobs/JobContactRolesPanel";
 import { formatPhoneDisplay } from "@/lib/phoneFormat";
-import { customerTypeToLeadType, deriveOnsiteContactFromCustomer } from "@/lib/customerToJob";
+import { customerTypeToLeadType } from "@/lib/customerToJob";
 
 // A small info cell: label + value
 function InfoCell({ label, value, icon: Icon, wrap }) {
@@ -44,13 +45,11 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
   });
 
   async function handleAssign(selected) {
-    const contactFields = deriveOnsiteContactFromCustomer(selected);
     await base44.entities.Job.update(job.id, {
       customer_id: selected.id,
       customer_name: selected.name,
       site_address: selected.address || undefined,
       lead_customer_type: selected.type ? customerTypeToLeadType(selected.type) : undefined,
-      ...contactFields,
     });
     queryClient.invalidateQueries({ queryKey: ["job", job.id] });
     onJobUpdated?.();
@@ -143,32 +142,8 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
         )}
       </div>
 
-      {/* Divider */}
-      <div className="border-t border-border mt-3 pt-3">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          <InfoCell label="Site Address" icon={MapPin} wrap value={
-            job.site_address ? (
-              <div className="flex items-start gap-1">
-                <span className="text-accent select-text whitespace-pre-line">{job.site_address}</span>
-                <a
-                  href={`https://maps.apple.com/?q=${encodeURIComponent(job.site_address)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-accent shrink-0 mt-0.5"
-                  title="Open in Maps"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            ) : null
-          } />
-          <InfoCell label="On-Site Contact" icon={User} value={job.onsite_contact_name} />
-          <InfoCell label="On-Site Phone" icon={Phone} value={job.onsite_contact_phone ? formatPhoneDisplay(job.onsite_contact_phone) : null} />
-          <InfoCell label="On-Site Email" icon={Mail} value={job.onsite_contact_email} />
-          <InfoCell label="Customer Email" icon={Mail} value={customer?.email} />
-          <InfoCell label="Customer Phone" icon={Phone} value={customer?.phone ? formatPhoneDisplay(customer.phone) : null} />
-        </div>
-      </div>
+      {/* Contact roles + location */}
+      <JobContactRolesPanel job={job} customer={customer} onJobUpdated={onJobUpdated} />
 
       {/* Edit Customer slide-out */}
       <EditCustomerSheet

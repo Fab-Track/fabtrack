@@ -79,12 +79,10 @@
             "format": "date-time"
           },
           "user_id": {
-            "type": "string",
-            "description": "ID of the user who made the transition"
+            "type": "string"
           },
           "user_name": {
-            "type": "string",
-            "description": "Display name of the user who made the transition"
+            "type": "string"
           },
           "note": {
             "type": "string"
@@ -117,32 +115,49 @@
       "format": "date-time",
       "description": "When the job was archived"
     },
+    "location_id": {
+      "type": "string",
+      "description": "Reference to the Customer.locations[] entry that is this job's site"
+    },
     "site_address": {
-      "type": "string"
+      "type": "string",
+      "description": "Job site address (denormalized from location or typed manually)"
+    },
+    "site_contact_id": {
+      "type": "string",
+      "description": "Contact at the job site \u2014 reference to Customer.contacts[]"
+    },
+    "approver_contact_id": {
+      "type": "string",
+      "description": "Contact who approves drawings \u2014 reference to Customer.contacts[]"
+    },
+    "bill_to_contact_id": {
+      "type": "string",
+      "description": "Contact to bill for this job \u2014 reference to Customer.contacts[]"
     },
     "onsite_contact_name": {
       "type": "string",
-      "description": "Name of the on-site contact for this job"
+      "description": "Legacy flat field \u2014 migrated to site_contact_id. Hidden from UI."
     },
     "onsite_contact_phone": {
       "type": "string",
-      "description": "Phone number of the on-site contact for this job"
+      "description": "Legacy flat field \u2014 migrated to site_contact_id. Hidden from UI."
     },
     "onsite_contact_email": {
       "type": "string",
-      "description": "Email of the on-site contact for this job"
+      "description": "Legacy flat field \u2014 migrated to site_contact_id. Hidden from UI."
     },
     "project_contact_name": {
       "type": "string",
-      "description": "Name of the project contact (the person you communicate with about this project, which may differ from the on-site contact)"
+      "description": "Legacy flat field \u2014 migrated to approver_contact_id. Hidden from UI."
     },
     "project_contact_phone": {
       "type": "string",
-      "description": "Phone number of the project contact for this job"
+      "description": "Legacy flat field \u2014 migrated to approver_contact_id. Hidden from UI."
     },
     "project_contact_email": {
       "type": "string",
-      "description": "Email of the project contact for this job"
+      "description": "Legacy flat field \u2014 migrated to approver_contact_id. Hidden from UI."
     },
     "expected_install_date": {
       "type": "string",
