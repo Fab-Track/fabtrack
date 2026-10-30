@@ -686,6 +686,8 @@ export default function Customers() {
               // Auto-open the newly created customer profile
               setTimeout(() => setSelectedCustomer(c), 100);
             }}
+            customers={customers}
+            allJobs={allJobs}
           />
         </div>
       </div>

@@ -78,6 +78,14 @@
       "type": "string",
       "description": "ZIP code"
     },
+    "address_lat": {
+      "type": "number",
+      "description": "Latitude of the primary address (from Google Places)"
+    },
+    "address_lng": {
+      "type": "number",
+      "description": "Longitude of the primary address (from Google Places)"
+    },
     "notes": {
       "type": "string",
       "description": "Internal notes"
@@ -151,6 +159,14 @@
           },
           "zip": {
             "type": "string"
+          },
+          "lat": {
+            "type": "number",
+            "description": "Latitude (from Google Places)"
+          },
+          "lng": {
+            "type": "number",
+            "description": "Longitude (from Google Places)"
           },
           "address": {
             "type": "string",

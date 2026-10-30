@@ -18,6 +18,7 @@ import { useWriteOrgId } from "@/lib/orgContext";
 import { useRepCandidates } from "@/hooks/useRepCandidates";
 import { LEAD_SOURCES, LEAD_INTENTS, LEAD_CUSTOMER_TYPES, LEAD_BLOCKERS, autoApplyMissingInfoBlocker, deriveSizeBand } from "@/lib/salesPipeline";
 import { customerTypeToLeadType } from "@/lib/customerToJob";
+import AddressAutocomplete from "@/components/ui/AddressAutocomplete";
 
 export default function NewJob() {
   const { user } = useAuth();
@@ -33,6 +34,11 @@ export default function NewJob() {
   const { data: customers = [] } = useQuery({
     queryKey: ["customers"],
     queryFn: () => base44.entities.Customer.list("-created_date", 500),
+  });
+
+  const { data: allJobs = [] } = useQuery({
+    queryKey: ["jobs"],
+    queryFn: () => base44.entities.Job.list("-created_date", 500),
   });
 
   // Rep candidates — pulled from User entity via shared hook for consistency
@@ -51,6 +57,12 @@ export default function NewJob() {
     customer_name: prefilledCustomerName,
     status: "Estimate",
     site_address: prefilledCustomer?.address || "",
+    site_street: "",
+    site_city: "",
+    site_state: "",
+    site_zip: "",
+    site_lat: null,
+    site_lng: null,
     location_id: "",
     site_contact_id: "",
     approver_contact_id: "",
@@ -89,6 +101,18 @@ export default function NewJob() {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
+  // Handle address autocomplete for the job site — composes site_address from parts
+  const handleSiteAddressChange = (field, value) => {
+    setForm(prev => {
+      const updated = { ...prev, [field]: value };
+      if (field.startsWith("site_")) {
+        updated.site_address = [updated.site_street, updated.site_city, updated.site_state, updated.site_zip]
+          .filter(Boolean).join(", ");
+      }
+      return updated;
+    });
+  };
+
   const handleCustomerChange = (customer) => {
     setForm(prev => ({
       ...prev,
@@ -104,7 +128,7 @@ export default function NewJob() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const { notes_text, ...rest } = form;
+    const { notes_text, site_street, site_city, site_state, site_zip, ...rest } = form;
     const notes = notes_text?.trim()
       ? [{
           id: crypto.randomUUID(),
@@ -175,6 +199,7 @@ export default function NewJob() {
                 ) : (
                   <CustomerCombobox
                     customers={customers}
+                    allJobs={allJobs}
                     value={form.customer_id}
                     onChange={handleCustomerChange}
                   />
@@ -221,11 +246,19 @@ export default function NewJob() {
             </div>
 
             <div>
-              <Label className="text-xs">Project / Site Address</Label>
-              <Input
-                value={form.site_address}
-                onChange={e => updateField("site_address", e.target.value)}
-                placeholder="123 Main St, City, State"
+              <AddressAutocomplete
+                values={{
+                  street: form.site_street,
+                  city: form.site_city,
+                  state: form.site_state,
+                  zip: form.site_zip,
+                  lat: form.site_lat,
+                  lng: form.site_lng,
+                }}
+                fieldPrefix="site_"
+                onChange={handleSiteAddressChange}
+                placeholder="Search for the job site address…"
+                label="Project / Site Address"
               />
               <p className="text-[10px] text-muted-foreground mt-0.5">Where the work will be performed. This is separate from the customer's office/billing address.</p>
             </div>

@@ -123,6 +123,14 @@
       "type": "string",
       "description": "Job site address (denormalized from location or typed manually)"
     },
+    "site_lat": {
+      "type": "number",
+      "description": "Latitude of the job site (from Google Places)"
+    },
+    "site_lng": {
+      "type": "number",
+      "description": "Longitude of the job site (from Google Places)"
+    },
     "site_contact_id": {
       "type": "string",
       "description": "Contact at the job site \u2014 reference to Customer.contacts[]"

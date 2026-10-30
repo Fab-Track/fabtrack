@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, Building2, MapPin, Ban, ChevronDown, Copy } from "lucide-react";
+import { User, Building2, MapPin, Ban, ChevronDown, Copy, AlertTriangle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import AddressAutocomplete from "@/components/ui/AddressAutocomplete";
+import { findCustomerMatches } from "@/lib/customerMatch";
 
 const CUSTOMER_TYPES = [
   "Homeowner",
@@ -33,6 +35,8 @@ const EMPTY_FORM = {
   address_city: "",
   address_state: "",
   address_zip: "",
+  address_lat: null,
+  address_lng: null,
   // Contact Details
   create_contact: false,
   contact_same_as_main: false,
@@ -43,12 +47,17 @@ const EMPTY_FORM = {
   // Location Details
   create_location: true,
   location_same_as_main: false,
-  location_address: "",
+  location_street: "",
+  location_city: "",
+  location_state: "",
+  location_zip: "",
+  location_lat: null,
+  location_lng: null,
   location_display_name: "",
   location_job_address: "",
 };
 
-export default function NewCustomerDialog({ open, onClose, onCreated, title = "New Customer" }) {
+export default function NewCustomerDialog({ open, onClose, onCreated, title = "New Customer", customers = [], allJobs = [] }) {
   const qc = useQueryClient();
   const writeOrgId = useWriteOrgId();
   const [form, setForm] = useState(EMPTY_FORM);
@@ -62,6 +71,36 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
     if (form.company) opts.push(form.company);
     return opts;
   }, [fullName, form.company]);
+
+  // ── Duplicate customer detection ──
+  const [dismissedKey, setDismissedKey] = useState("");
+
+  const jobCounts = useMemo(() => {
+    const map = {};
+    (allJobs || []).forEach(j => {
+      if (j.customer_id) map[j.customer_id] = (map[j.customer_id] || 0) + 1;
+    });
+    return map;
+  }, [allJobs]);
+
+  const duplicateMatch = useMemo(() => {
+    const sig = `${fullName}|${form.phone}|${form.email}`;
+    if (sig === dismissedKey) return null;
+    if (!fullName && !form.phone && !form.email) return null;
+    const matches = findCustomerMatches(
+      { name: fullName, phone: form.phone, email: form.email },
+      customers,
+      jobCounts
+    );
+    return matches[0] || null;
+  }, [fullName, form.phone, form.email, customers, jobCounts, dismissedKey]);
+
+  const handleUseExisting = () => {
+    onCreated?.(duplicateMatch.customer);
+    setForm(EMPTY_FORM);
+    setDismissedKey("");
+    onClose?.();
+  };
 
   // Auto-set display_name when name parts change and display_name matches a previous suggestion
   const autoDisplayName = useMemo(() => {
@@ -85,7 +124,6 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
     .filter(Boolean).join(", ");
 
   // Effective location fields — if "same as main" is checked, copy the primary address
-  const effectiveLocationAddress = form.location_same_as_main ? composedPrimaryAddress : form.location_address;
   const effectiveLocationDisplayName = form.location_same_as_main ? "Primary Address" : form.location_display_name;
   const effectiveLocationJobAddress = form.location_same_as_main ? "" : form.location_job_address;
 
@@ -111,14 +149,26 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
           }]
         : [];
 
-      const locAddr = form.location_same_as_main ? composedPrimaryAddress : form.location_address;
+      const locStreet = form.location_same_as_main ? form.address_street : form.location_street;
+      const locCity = form.location_same_as_main ? form.address_city : form.location_city;
+      const locState = form.location_same_as_main ? form.address_state : form.location_state;
+      const locZip = form.location_same_as_main ? form.address_zip : form.location_zip;
+      const locLat = form.location_same_as_main ? form.address_lat : form.location_lat;
+      const locLng = form.location_same_as_main ? form.address_lng : form.location_lng;
+      const composedLocAddr = [locStreet, locCity, locState, locZip].filter(Boolean).join(", ");
       const locDisp = form.location_same_as_main ? "Primary Address" : form.location_display_name;
       const locJob = form.location_same_as_main ? "" : form.location_job_address;
 
-      const locations = form.create_location && (locAddr || locDisp || locJob)
+      const locations = form.create_location && (composedLocAddr || locDisp || locJob)
         ? [{
             id: crypto.randomUUID(),
-            address: locAddr || composedAddress || "",
+            street: locStreet || "",
+            city: locCity || "",
+            state: locState || "",
+            zip: locZip || "",
+            lat: locLat || null,
+            lng: locLng || null,
+            address: composedLocAddr || composedAddress || "",
             display_name: locDisp || "",
             job_address: locJob || "",
             created_at: new Date().toISOString(),
@@ -142,6 +192,8 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
         address_city: form.address_city || null,
         address_state: form.address_state || null,
         address_zip: form.address_zip || null,
+        address_lat: form.address_lat || null,
+        address_lng: form.address_lng || null,
         contacts,
         locations,
       };
@@ -160,6 +212,7 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
       qc.invalidateQueries({ queryKey: ["customers"] });
       onCreated?.(newCustomer);
       setForm(EMPTY_FORM);
+      setDismissedKey("");
       onClose?.();
     },
   });
@@ -173,6 +226,7 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
   const handleClose = () => {
     if (createMutation.isPending) return;
     setForm(EMPTY_FORM);
+    setDismissedKey("");
     onClose?.();
   };
 
@@ -186,6 +240,43 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* ── Duplicate customer warning ── */}
+          {duplicateMatch && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-2">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-amber-900">Possible existing customer</p>
+                  <p className="text-sm font-medium text-amber-900">{duplicateMatch.customer.name}</p>
+                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                    {duplicateMatch.customer.phone && (
+                      <span className="text-xs text-amber-700">{duplicateMatch.customer.phone}</span>
+                    )}
+                    {duplicateMatch.customer.email && (
+                      <span className="text-xs text-amber-700">{duplicateMatch.customer.email}</span>
+                    )}
+                    {duplicateMatch.jobCount > 0 && (
+                      <span className="text-xs text-amber-700 font-medium">{duplicateMatch.jobCount} job{duplicateMatch.jobCount !== 1 ? "s" : ""}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2 pl-6">
+                <Button type="button" size="sm" onClick={handleUseExisting}>
+                  Use this customer
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setDismissedKey(`${fullName}|${form.phone}|${form.email}`)}
+                >
+                  Create new anyway
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* ── Main Information ── */}
           <div className="space-y-3">
             <p className="text-xs font-bold text-accent uppercase tracking-wide">Main Information</p>
@@ -299,40 +390,20 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
               </div>
             </div>
 
-            <div>
-              <Label className="text-xs">Primary Address</Label>
-              <Input
-                value={form.address_street}
-                onChange={e => f("address_street", e.target.value)}
-                placeholder="123 Main St"
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label className="text-xs">City</Label>
-                <Input
-                  value={form.address_city}
-                  onChange={e => f("address_city", e.target.value)}
-                  placeholder="Provo"
-                />
-              </div>
-              <div>
-                <Label className="text-xs">State</Label>
-                <Input
-                  value={form.address_state}
-                  onChange={e => f("address_state", e.target.value)}
-                  placeholder="UT"
-                />
-              </div>
-              <div>
-                <Label className="text-xs">ZIP</Label>
-                <Input
-                  value={form.address_zip}
-                  onChange={e => f("address_zip", e.target.value)}
-                  placeholder="84604"
-                />
-              </div>
-            </div>
+            <AddressAutocomplete
+              values={{
+                street: form.address_street,
+                city: form.address_city,
+                state: form.address_state,
+                zip: form.address_zip,
+                lat: form.address_lat,
+                lng: form.address_lng,
+              }}
+              fieldPrefix="address_"
+              onChange={f}
+              placeholder="Search for the customer's address…"
+              label="Primary Address"
+            />
           </div>
 
           {/* ── Contact Details ── */}
@@ -434,15 +505,27 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
                     <Copy className="w-3 h-3" /> Same as primary address
                   </span>
                 </label>
-                <div>
-                  <Label className="text-xs">Address</Label>
-                  <Input
-                    value={effectiveLocationAddress}
-                    onChange={e => f("location_address", e.target.value)}
-                    placeholder="123 Main St, City, State"
-                    disabled={form.location_same_as_main}
+                {form.location_same_as_main ? (
+                  <div>
+                    <Label className="text-xs">Address</Label>
+                    <p className="text-sm text-muted-foreground py-2">{composedPrimaryAddress || "No primary address set"}</p>
+                  </div>
+                ) : (
+                  <AddressAutocomplete
+                    values={{
+                      street: form.location_street,
+                      city: form.location_city,
+                      state: form.location_state,
+                      zip: form.location_zip,
+                      lat: form.location_lat,
+                      lng: form.location_lng,
+                    }}
+                    fieldPrefix="location_"
+                    onChange={f}
+                    placeholder="Search for the location address…"
+                    label="Address"
                   />
-                </div>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs">Display Name</Label>

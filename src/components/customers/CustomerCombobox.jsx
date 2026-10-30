@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import NewCustomerDialog from "@/components/customers/NewCustomerDialog";
 
 // ── Searchable combobox ────────────────────────────────────────────────────────
-export default function CustomerCombobox({ customers = [], value, onChange }) {
+export default function CustomerCombobox({ customers = [], value, onChange, allJobs = [] }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -106,6 +106,8 @@ export default function CustomerCombobox({ customers = [], value, onChange }) {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onCreated={handleCustomerCreated}
+        customers={customers}
+        allJobs={allJobs}
       />
     </>
   );
