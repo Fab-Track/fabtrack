@@ -132,6 +132,18 @@
       "type": "string",
       "description": "Email of the on-site contact for this job"
     },
+    "project_contact_name": {
+      "type": "string",
+      "description": "Name of the project contact (the person you communicate with about this project, which may differ from the on-site contact)"
+    },
+    "project_contact_phone": {
+      "type": "string",
+      "description": "Phone number of the project contact for this job"
+    },
+    "project_contact_email": {
+      "type": "string",
+      "description": "Email of the project contact for this job"
+    },
     "expected_install_date": {
       "type": "string",
       "format": "date"

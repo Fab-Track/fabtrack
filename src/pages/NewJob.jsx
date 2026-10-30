@@ -18,7 +18,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useWriteOrgId } from "@/lib/orgContext";
 import { useRepCandidates } from "@/hooks/useRepCandidates";
 import { LEAD_SOURCES, LEAD_INTENTS, LEAD_CUSTOMER_TYPES, LEAD_BLOCKERS, autoApplyMissingInfoBlocker, deriveSizeBand } from "@/lib/salesPipeline";
-import { customerTypeToLeadType, deriveOnsiteContactFromCustomer, contactToOnsiteFields } from "@/lib/customerToJob";
+import { customerTypeToLeadType, deriveOnsiteContactFromCustomer, contactToOnsiteFields, contactToProjectFields } from "@/lib/customerToJob";
 
 export default function NewJob() {
   const { user } = useAuth();
@@ -47,6 +47,8 @@ export default function NewJob() {
 
   const [sameAsCustomer, setSameAsCustomer] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState("");
+  const [selectedProjectContactId, setSelectedProjectContactId] = useState("");
+  const [selectedOnsiteContactId, setSelectedOnsiteContactId] = useState("");
 
   const [form, setForm] = useState({
     job_number: generateJobNumber(),
@@ -58,6 +60,9 @@ export default function NewJob() {
     onsite_contact_name: "",
     onsite_contact_phone: "",
     onsite_contact_email: "",
+    project_contact_name: "",
+    project_contact_phone: "",
+    project_contact_email: "",
     expected_install_date: "",
     customer_approval_status: "pending",
     last_activity_date: new Date().toISOString(),
@@ -120,6 +125,8 @@ export default function NewJob() {
   const handleCustomerChange = (customer) => {
     const contactFields = sameAsCustomer ? deriveOnsiteContactFromCustomer(customer) : {};
     setSelectedLocationId("");
+    setSelectedProjectContactId("");
+    setSelectedOnsiteContactId("");
     setForm(prev => ({
       ...prev,
       customer_id: customer?.id || "",
@@ -131,6 +138,7 @@ export default function NewJob() {
 
   const handleSameAsCustomer = (checked) => {
     setSameAsCustomer(checked);
+    setSelectedOnsiteContactId("");
     if (checked && selectedCustomer) {
       setForm(prev => ({
         ...prev,
@@ -267,9 +275,73 @@ export default function NewJob() {
               <p className="text-[10px] text-muted-foreground mt-0.5">Where the work will be performed. This is separate from the customer's office/billing address.</p>
             </div>
 
+            {/* Project Contact */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Project Contact</p>
+                <p className="text-[10px] text-muted-foreground">The person you communicate with about this project (may differ from the on-site contact).</p>
+              </div>
+              {selectedCustomer?.contacts?.length > 0 && (
+                <div className="col-span-2">
+                  <Label className="text-xs">Choose from saved contacts</Label>
+                  <Select
+                    value={selectedProjectContactId}
+                    onValueChange={(val) => {
+                      setSelectedProjectContactId(val);
+                      const c = selectedCustomer.contacts.find(c => c.id === val);
+                      if (c) {
+                        setForm(prev => ({
+                          ...prev,
+                          ...contactToProjectFields(c),
+                        }));
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a saved contact…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedCustomer.contacts.map(c => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}{c.phone ? ` — ${c.phone}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div>
+                <Label className="text-xs">Project Contact Name</Label>
+                <Input
+                  value={form.project_contact_name}
+                  onChange={e => updateField("project_contact_name", e.target.value)}
+                  placeholder="Contact name"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Project Contact Phone</Label>
+                <Input
+                  value={form.project_contact_phone}
+                  onChange={e => updateField("project_contact_phone", e.target.value)}
+                  placeholder="(555) 555-5555"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Project Contact Email</Label>
+                <Input
+                  type="email"
+                  value={form.project_contact_email}
+                  onChange={e => updateField("project_contact_email", e.target.value)}
+                  placeholder="contact@example.com"
+                />
+              </div>
+            </div>
+
+            {/* On-Site Contact */}
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">On-Site Contact</p>
+                <p className="text-[10px] text-muted-foreground">The person physically present at the job site.</p>
               </div>
               <div className="col-span-2 flex items-center gap-2">
                 <Checkbox
@@ -279,15 +351,16 @@ export default function NewJob() {
                   disabled={!form.customer_id}
                 />
                 <Label htmlFor="same-as-customer" className="text-xs cursor-pointer">
-                  Use customer's job contact for on-site contact
+                  Use customer's primary contact for on-site contact
                 </Label>
               </div>
               {selectedCustomer?.contacts?.length > 0 && !sameAsCustomer && (
                 <div className="col-span-2">
                   <Label className="text-xs">Choose from saved contacts</Label>
                   <Select
-                    value=""
+                    value={selectedOnsiteContactId}
                     onValueChange={(val) => {
+                      setSelectedOnsiteContactId(val);
                       const c = selectedCustomer.contacts.find(c => c.id === val);
                       if (c) {
                         setForm(prev => ({

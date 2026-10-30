@@ -38,3 +38,16 @@ export function contactToOnsiteFields(contact) {
     onsite_contact_email: contact.email || "",
   };
 }
+
+/**
+ * Given a contact object from the customer's contacts[] array,
+ * returns the project contact fields.
+ */
+export function contactToProjectFields(contact) {
+  if (!contact) return { project_contact_name: "", project_contact_phone: "", project_contact_email: "" };
+  return {
+    project_contact_name: contact.name || "",
+    project_contact_phone: contact.phone || "",
+    project_contact_email: contact.email || "",
+  };
+}
