@@ -91,6 +91,7 @@ const Billing          = lazyRetry(() => import('@/pages/Billing'), 'Billing');
 const Reports          = lazyRetry(() => import('@/pages/Reports'), 'Reports');
 const Messages         = lazyRetry(() => import('@/pages/Messages'), 'Messages');
 const Conversations    = lazyRetry(() => import('@/pages/Conversations'), 'Conversations');
+const Assistant        = lazyRetry(() => import('@/pages/Assistant'), 'Assistant');
 const CalendarPage     = lazyRetry(() => import('@/pages/Calendar'), 'Calendar');
 const OnboardingWelcome = lazyRetry(() => import('@/pages/OnboardingWelcome'), 'OnboardingWelcome');
 const OnboardingWizard = lazyRetry(() => import('@/pages/OnboardingWizard'), 'OnboardingWizard');
@@ -298,6 +299,7 @@ const AuthenticatedApp = () => {
           <Route path="/messages" element={<Messages />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/conversations" element={<Conversations />} />
+          <Route path="/assistant" element={<Assistant />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/catalog" element={<Catalog />} />
           <Route path="/estimates" element={<Estimates />} />

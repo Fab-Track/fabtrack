@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Kanban, Wrench, Clock,
   FileText, CalendarDays, Calendar, Users, 
   Trophy, ChevronLeft, ChevronRight, ChevronDown,
-  FileSpreadsheet, BookOpen, Building2, Settings, Menu, X, BarChart2, MessageCircle, MessagesSquare, LogOut, Bug, Shield, CreditCard
+  FileSpreadsheet, BookOpen, Building2, Settings, Menu, X, BarChart2, MessageCircle, MessagesSquare, LogOut, Bug, Shield, CreditCard, Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -21,6 +21,7 @@ import ReportProblemModal from "@/components/super-admin/ReportProblemModal";
 // ── All possible nav items ──────────────────────────────────────────────────
 const ALL_ITEMS = {
   dashboard:      { label: "Dashboard",       icon: LayoutDashboard, path: "/dashboard" },
+  assistant:      { label: "Assistant",        icon: Sparkles,        path: "/assistant" },
   messages:       { label: "Messages",         icon: MessageCircle,   path: "/messages" },
   jobBoard:       { label: "Job Board",        icon: Kanban,          path: "/jobs" },
   customers:      { label: "Customers",        icon: Users,           path: "/customers" },
@@ -45,7 +46,7 @@ const ALL_ITEMS = {
 // ── Role → grouped nav config ───────────────────────────────────────────────
 const ROLE_NAV = {
   admin: [
-    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
+    { group: "OVERVIEW",    items: ["dashboard", "assistant", "messages"] },
     { group: "SALES",       items: ["jobBoard", "customers", "estimates", "catalog", "conversations", "documents"] },
     { group: "OPERATIONS",  items: ["calendar", "reports", "schedule", "workCenters"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
@@ -53,7 +54,7 @@ const ROLE_NAV = {
     { group: "ACCOUNT",     items: ["billing", "settings"] },
   ],
   owner: [
-    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
+    { group: "OVERVIEW",    items: ["dashboard", "assistant", "messages"] },
     { group: "SALES",       items: ["jobBoard", "customers", "estimates", "catalog", "conversations", "documents"] },
     { group: "OPERATIONS",  items: ["calendar", "reports", "schedule", "workCenters"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
@@ -61,7 +62,7 @@ const ROLE_NAV = {
     { group: "ACCOUNT",     items: ["billing", "settings"] },
   ],
   shop_manager: [
-    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
+    { group: "OVERVIEW",    items: ["dashboard", "assistant", "messages"] },
     { group: "OPERATIONS",  items: ["calendar", "jobBoard", "reports", "schedule", "workCenters"] },
     { group: "SALES",       items: ["conversations"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
@@ -70,7 +71,7 @@ const ROLE_NAV = {
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   estimator: [
-    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
+    { group: "OVERVIEW",    items: ["dashboard", "assistant", "messages"] },
     { group: "SALES",       items: ["jobBoard", "customers", "estimates", "catalog", "conversations", "documents"] },
     { group: "OPERATIONS",  items: ["calendar", "reports"] },
     { group: "TIME",        items: ["myTimesheet"] },
@@ -126,7 +127,7 @@ const ROLE_NAV = {
   ],
   // fallback for any unrecognized role — same as admin
   user: [
-    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
+    { group: "OVERVIEW",    items: ["dashboard", "assistant", "messages"] },
     { group: "SALES",       items: ["jobBoard", "customers", "estimates", "catalog", "conversations", "documents"] },
     { group: "OPERATIONS",  items: ["calendar", "reports", "schedule", "workCenters"] },
     { group: "SHOP",        items: ["shopFloor", "craftsmanScore", "employees"] },
