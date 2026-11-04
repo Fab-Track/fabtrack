@@ -1,7 +1,13 @@
 import React from "react";
-import { ClipboardPaste, Calculator, GraduationCap, Sparkles } from "lucide-react";
+import { ClipboardPaste, Calculator, GraduationCap, Sparkles, BarChart3 } from "lucide-react";
 
 const CAPABILITIES = [
+  {
+    icon: BarChart3,
+    title: "Ask about your numbers",
+    body: "Outstanding invoices, overdue balances, estimates waiting on the customer, what's sitting in each stage.",
+    prompt: "How much is outstanding on invoices?",
+  },
   {
     icon: ClipboardPaste,
     title: "Update job details",
@@ -34,10 +40,10 @@ export default function AssistantEmptyState({ onPickPrompt, jobName }) {
       <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
         {jobName
           ? `Working on ${jobName}. Ask me to update it, estimate it, or explain what you need.`
-          : "Your internal assistant for job updates, estimating, and company know-how."}
+          : "Your internal assistant for questions about your shop, job updates, and estimating."}
       </p>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         {CAPABILITIES.map((c) => (
           <button
             key={c.title}
@@ -52,7 +58,8 @@ export default function AssistantEmptyState({ onPickPrompt, jobName }) {
       </div>
 
       <p className="text-[11px] text-muted-foreground mt-8 leading-relaxed">
-        Nothing changes in your jobs or estimates until you confirm a proposal.
+        Questions are answered read-only from your own organization's records. Nothing changes in your jobs or
+        estimates until you confirm a proposal.
       </p>
     </div>
   );
