@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Kanban, Wrench, Clock,
   FileText, CalendarDays, Calendar, Users, 
   Trophy, ChevronLeft, ChevronRight, ChevronDown,
-  FileSpreadsheet, BookOpen, Building2, Settings, Menu, X, BarChart2, MessageCircle, MessagesSquare, LogOut, Bug, Shield, CreditCard, Sparkles
+  FileSpreadsheet, BookOpen, Building2, Settings, Menu, X, BarChart2, MessageCircle, MessagesSquare, LogOut, Bug, Shield, CreditCard, Sparkles, User
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -16,6 +16,7 @@ import { getUserRoles } from "@/lib/roleHelpers";
 import { assistantAccess } from "@/lib/assistantAccess";
 import { canAccessChannel } from "@/lib/messagingHelpers";
 import PreviewRoleSelector from "./PreviewRoleSelector";
+import AccountMenu from "./AccountMenu";
 import NotificationBell from "./NotificationBell";
 import ReportProblemModal from "@/components/super-admin/ReportProblemModal";
 
@@ -374,6 +375,7 @@ export default function Sidebar() {
 
       {/* Super Admin, Notifications, Report Problem, Preview Role, Log Out — collapsible "More" */}
       <div className="hidden md:block px-2 py-3 border-t border-sidebar-border space-y-1">
+        <AccountMenu collapsed={collapsed} />
         {collapsed ? (
           <>
             {isSuperAdmin && (
@@ -388,13 +390,6 @@ export default function Sidebar() {
               <Bug className="w-4 h-4 shrink-0 mx-auto" />
             </button>
             {userCanImpersonate && <PreviewRoleSelector collapsed={collapsed} />}
-            <button
-              onClick={() => base44.auth.logout("/login")}
-              title="Log Out"
-              className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-md text-sm text-sidebar-foreground/50 hover:text-red-400 hover:bg-sidebar-accent w-full transition-colors"
-            >
-              <LogOut className="w-4 h-4 shrink-0 mx-auto" />
-            </button>
           </>
         ) : (
           <>
@@ -422,13 +417,6 @@ export default function Sidebar() {
                   <span>Report a Problem</span>
                 </button>
                 {userCanImpersonate && <PreviewRoleSelector collapsed={collapsed} />}
-                <button
-                  onClick={() => base44.auth.logout("/login")}
-                  className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-md text-sm text-sidebar-foreground/50 hover:text-red-400 hover:bg-sidebar-accent w-full transition-colors"
-                >
-                  <LogOut className="w-4 h-4 shrink-0" />
-                  <span>Log Out</span>
-                </button>
               </div>
             )}
           </>
@@ -478,6 +466,14 @@ export default function Sidebar() {
             </button>
             <div className="flex-1 overflow-y-auto">{sidebarContent}</div>
             <div className="px-2 py-3 border-t border-sidebar-border shrink-0 space-y-1">
+              <Link
+                to="/account"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-md text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
+              >
+                <User className="w-4 h-4 shrink-0" />
+                <span>My Account</span>
+              </Link>
               <button
                 onClick={() => { setMobileOpen(false); setShowReportModal(true); }}
                 className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-md text-sm text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"

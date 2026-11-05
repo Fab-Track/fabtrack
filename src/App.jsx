@@ -105,6 +105,7 @@ const ForgotPassword   = lazyRetry(() => import('@/pages/ForgotPassword'), 'Forg
 const ResetPassword    = lazyRetry(() => import('@/pages/ResetPassword'), 'ResetPassword');
 const ShopLogPublicForm = lazyRetry(() => import('@/pages/ShopLogPublicForm'), 'ShopLogPublicForm');
 const OAuthConsent      = lazyRetry(() => import('@/pages/OAuthConsent'), 'OAuthConsent');
+const Account          = lazyRetry(() => import('@/pages/Account'), 'Account');
 
 // Minimal fallback shown while a lazy chunk loads
 function PageLoader() {
@@ -308,6 +309,7 @@ const AuthenticatedApp = () => {
           <Route path="/employees/:id" element={<EmployeeProfilePage />} />
           <Route path="/documents" element={<Documents />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/account" element={<Account />} />
           <Route path="/my-timesheet" element={<MyTimesheet />} />
           <Route path="/admin-payroll" element={<AdminPayroll />} />
           <Route path="/billing" element={<Billing />} />

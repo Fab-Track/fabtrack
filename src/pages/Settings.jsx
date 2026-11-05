@@ -3,8 +3,8 @@ import { useAuth } from "@/lib/AuthContext";
 import { getUserRoles, isOwnerLevel } from "@/lib/roleHelpers";
 import {
   Building2, Users, Bell, MessageSquare, Plug, LayoutDashboard, CreditCard,
-  User, ClipboardList, Shield, UserPlus, Calculator, BookOpen, Activity,
-  Timer, Paperclip, ListChecks, Globe, ChevronDown
+  Shield, UserPlus, Calculator, BookOpen, Activity,
+  Timer, Paperclip, ListChecks, Globe, ChevronDown, FileText, Search
 } from "lucide-react";
 import CompanySection from "@/components/settings/CompanySection";
 import UsersRolesSection from "@/components/settings/UsersRolesSection";
@@ -14,7 +14,6 @@ import MessageTemplatesSection from "@/components/settings/MessageTemplatesSecti
 import IntegrationsSection from "@/components/settings/IntegrationsSection";
 import JobBoardSettingsSection from "@/components/settings/JobBoardSettingsSection";
 import BillingSection from "@/components/settings/BillingSection";
-import MyAccountSection from "@/components/settings/MyAccountSection";
 import ServiceCatalogSection from "@/components/settings/ServiceCatalogSection";
 import AdminActivityLogSection from "@/components/settings/AdminActivityLogSection";
 import JobCostingSection from "@/components/settings/JobCostingSection";
@@ -26,44 +25,46 @@ import QuickBooksSection from "@/components/settings/QuickBooksSection";
 import EstimateContractSection from "@/components/settings/EstimateContractSection";
 import SecuritySection from "@/components/settings/SecuritySection";
 import PayrollSettingsSection from "@/components/settings/PayrollSettingsSection";
+import { Input } from "@/components/ui/input";
 
 // All settings items — visibility controlled per role below
 const ALL_ITEMS = [
-  { id: "company",      label: "Company",              icon: Building2,       ownerOnly: true,  group: "company_access" },
-  { id: "users",        label: "Users & Roles",         icon: Users,           ownerOnly: true,  group: "company_access" },
-  { id: "employees",    label: "Employees",              icon: UserPlus,        ownerOnly: true,  group: "company_access" },
-  { id: "account",      label: "My Account",             icon: User,            roles: ["owner","admin","shop_manager","estimator","fabricator","installer","accountant","design_specialist","user"], group: "company_access" },
-  { id: "security",     label: "Security",              icon: Shield,          ownerOnly: true,  group: "company_access" },
+  { id: "company",      label: "Company Profile",       icon: Building2,       ownerOnly: true,  group: "company" },
+  { id: "users",        label: "Users & Roles",          icon: Users,           ownerOnly: true,  group: "company" },
+  { id: "employees",    label: "Employees",              icon: UserPlus,        ownerOnly: true,  group: "company" },
+  { id: "security",     label: "Security",               icon: Shield,          ownerOnly: true,  group: "company" },
 
-  { id: "job_costing",  label: "Job Costing",           icon: Calculator,      ownerOnly: true,  group: "production" },
-  { id: "catalog",      label: "Service Catalog",       icon: BookOpen,        ownerOnly: true,  group: "production" },
-  { id: "contracts",    label: "Estimate Contracts",    icon: ClipboardList,   ownerOnly: true,  group: "production" },
+  { id: "catalog",      label: "Service Catalog",        icon: BookOpen,        ownerOnly: true,  group: "sales" },
+  { id: "job_costing",  label: "Job Costing",            icon: Calculator,      ownerOnly: true,  group: "sales" },
+  { id: "contracts",    label: "Document Templates",     icon: FileText,        ownerOnly: true,  group: "sales" },
+
   { id: "jobboard",     label: "Job Board",              icon: LayoutDashboard, roles: ["owner","admin","shop_manager"], group: "production" },
   { id: "jobdetail",    label: "Job Detail Options",     icon: ListChecks,      ownerOnly: true,  group: "production" },
   { id: "attachments",  label: "Attachment Categories",  icon: Paperclip,       ownerOnly: true,  group: "production" },
 
-  { id: "notifications", label: "Notifications",        icon: Bell,            roles: ["owner","admin","shop_manager","estimator","fabricator","accountant"], group: "comms" },
+  { id: "notifications", label: "Notifications",         icon: Bell,            roles: ["owner","admin","shop_manager","estimator","fabricator","accountant"], group: "comms" },
   { id: "templates",    label: "Message Templates",      icon: MessageSquare,   roles: ["owner","admin","estimator"], group: "comms" },
   { id: "ghl_webhook",  label: "Lead Webhook",           icon: Globe,           ownerOnly: true,  group: "comms" },
 
   { id: "integrations", label: "Integrations",           icon: Plug,            ownerOnly: true,  group: "integrations" },
   { id: "quickbooks",   label: "QuickBooks Online",      icon: BookOpen,        ownerOnly: true,  group: "integrations" },
   { id: "stripe",       label: "Stripe Payments",        icon: CreditCard,      ownerOnly: true,  group: "integrations" },
-  { id: "billing",      label: "Billing",                icon: CreditCard,      ownerOnly: true,  group: "integrations" },
 
+  { id: "billing",      label: "Billing",                icon: CreditCard,      ownerOnly: true,  group: "admin" },
   { id: "payroll_settings", label: "Payroll",            icon: Timer,           ownerOnly: true,  group: "admin" },
   { id: "activity",     label: "Activity Log",           icon: Activity,        ownerOnly: true,  group: "admin" },
 ];
 
 const GROUP_LABELS = {
-  company_access: "Company & Access",
-  production: "Estimates & Production",
+  company: "Company",
+  sales: "Sales & Estimating",
+  production: "Production",
   comms: "Communications",
-  integrations: "Integrations & Payments",
+  integrations: "Integrations",
   admin: "Administration",
 };
 
-const GROUP_ORDER = ["company_access", "production", "comms", "integrations", "admin"];
+const GROUP_ORDER = ["company", "sales", "production", "comms", "integrations", "admin"];
 
 export default function Settings() {
   const { user } = useAuth();
@@ -76,12 +77,17 @@ export default function Settings() {
     return false;
   });
 
-  const [active, setActive] = useState(visible[0]?.id || "account");
+  const [active, setActive] = useState(visible[0]?.id || "company");
   const [collapsed, setCollapsed] = useState({});
+  const [query, setQuery] = useState("");
+
+  const searching = query.trim().length > 0;
+  const q = query.trim().toLowerCase();
+  const matched = searching ? visible.filter(i => i.label.toLowerCase().includes(q)) : visible;
 
   // Group visible items, preserving GROUP_ORDER
   const grouped = GROUP_ORDER
-    .map(g => ({ group: g, items: visible.filter(i => i.group === g) }))
+    .map(g => ({ group: g, items: matched.filter(i => i.group === g) }))
     .filter(g => g.items.length > 0);
 
   const activeItem = visible.find(i => i.id === active);
@@ -111,7 +117,6 @@ export default function Settings() {
       case "activity":     return <AdminActivityLogSection />;
       case "attachments":  return <AttachmentCategoriesSection />;
       case "jobdetail":    return <JobDetailOptionsSection />;
-      case "account":      return <MyAccountSection />;
       default:             return null;
     }
   }
@@ -123,9 +128,23 @@ export default function Settings() {
         <div className="px-4 mb-4">
           <h1 className="text-base font-bold tracking-tight">Settings</h1>
         </div>
+        <div className="px-2 mb-3">
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search settings"
+              className="h-8 pl-8 text-xs"
+            />
+          </div>
+        </div>
         <nav className="flex-1 px-2 space-y-3">
+          {grouped.length === 0 && (
+            <p className="px-3 text-xs text-muted-foreground">No settings match “{query}”.</p>
+          )}
           {grouped.map(({ group, items }) => {
-            const isCollapsed = collapsed[group];
+            const isCollapsed = !searching && collapsed[group];
             return (
               <div key={group}>
                 <button
