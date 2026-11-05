@@ -22,7 +22,7 @@ import StripeSettingsSection from "@/components/settings/StripeSettingsSection";
 import JobDetailOptionsSection from "@/components/settings/JobDetailOptionsSection";
 import GHLLeadWebhookSection from "@/components/settings/GHLLeadWebhookSection";
 import QuickBooksSection from "@/components/settings/QuickBooksSection";
-import EstimateContractSection from "@/components/settings/EstimateContractSection";
+import DocumentTemplatesSection from "@/components/settings/DocumentTemplatesSection";
 import SecuritySection from "@/components/settings/SecuritySection";
 import PayrollSettingsSection from "@/components/settings/PayrollSettingsSection";
 import { Input } from "@/components/ui/input";
@@ -108,7 +108,7 @@ export default function Settings() {
       case "ghl_webhook":  return <GHLLeadWebhookSection />;
       case "jobboard":     return <JobBoardSettingsSection />;
       case "catalog":      return <ServiceCatalogSection />;
-      case "contracts":    return <EstimateContractSection />;
+      case "contracts":    return <DocumentTemplatesSection />;
       case "stripe":       return <StripeSettingsSection />;
       case "quickbooks":   return <QuickBooksSection />;
       case "billing":      return <BillingSection />;
