@@ -1,0 +1,77 @@
+{
+  "name": "JobDocument",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Organization ID for multi-tenant isolation"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Job this document belongs to"
+    },
+    "job_number": {
+      "type": "string",
+      "description": "Job number (denormalized)"
+    },
+    "document_type_id": {
+      "type": "string",
+      "description": "DocumentType record id"
+    },
+    "type_name": {
+      "type": "string",
+      "description": "Document type name (denormalized so the group still reads correctly if the type is renamed or removed)"
+    },
+    "template_name": {
+      "type": "string",
+      "description": "Template this document was started from, if any"
+    },
+    "title": {
+      "type": "string",
+      "description": "Document title shown in the job documents list"
+    },
+    "body": {
+      "type": "string",
+      "description": "Document content with merge fields resolved"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Sent",
+        "Approved",
+        "Void"
+      ],
+      "enumColors": [
+        "gray",
+        "blue",
+        "green",
+        "red"
+      ],
+      "default": "Draft"
+    },
+    "created_by_name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "organization_id",
+    "job_id",
+    "type_name",
+    "title"
+  ],
+  "rls": {
+    "create": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
+    "read": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
+    "update": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    },
+    "delete": {
+      "data.organization_id": "{{user.data.organization_id}}"
+    }
+  }
+}

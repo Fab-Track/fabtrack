@@ -7,6 +7,7 @@ import { CATEGORIES, DEFAULT_TEMPLATES } from "@/lib/documentTemplates";
 import TemplateCategoryBlock from "@/components/settings/document-templates/TemplateCategoryBlock";
 import TemplateEditorDialog from "@/components/settings/document-templates/TemplateEditorDialog";
 import EstimateContractSection from "@/components/settings/EstimateContractSection";
+import DocumentTypesCard from "@/components/settings/document-templates/DocumentTypesCard";
 
 const QUERY_KEY = "documentTemplates";
 
@@ -66,6 +67,8 @@ export default function DocumentTemplatesSection() {
 
   return (
     <div className="space-y-6">
+      <DocumentTypesCard orgId={orgId} />
+
       <div className="relative">
         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         <Input

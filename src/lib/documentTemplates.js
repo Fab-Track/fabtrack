@@ -50,6 +50,49 @@ export const MERGE_FIELDS = [
   "{{scope_description}}",
 ];
 
+const money = (n) =>
+  typeof n === "number" && n > 0
+    ? n.toLocaleString("en-US", { style: "currency", currency: "USD" })
+    : "";
+
+const shortDate = (d) => {
+  const date = d instanceof Date ? d : new Date();
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
+// Values pulled into {{merge}} fields when a document is created from a template.
+export function buildMergeContext({ job, customer, org } = {}) {
+  const contactId = job?.site_contact_id;
+  const siteContact = (customer?.contacts || []).find((c) => c.id === contactId);
+  return {
+    "{{company_name}}": org?.name || "",
+    "{{company_phone}}": org?.phone || "",
+    "{{company_email}}": org?.email || "",
+    "{{customer_name}}": customer?.display_name || customer?.name || job?.customer_name || "",
+    "{{customer_contact}}": siteContact?.name || "",
+    "{{job_number}}": job?.job_number || "",
+    "{{job_name}}": job?.job_name || "",
+    "{{site_address}}": job?.site_address || "",
+    "{{date}}": shortDate(),
+    "{{due_date}}": job?.promised_install_date || job?.expected_install_date || "",
+    "{{estimate_total}}": money(job?.estimate_total),
+    "{{invoice_number}}": "",
+    "{{invoice_total}}": "",
+    "{{balance_due}}": "",
+    "{{vendor_name}}": "",
+    "{{vendor_contact}}": "",
+    "{{scope_description}}": job?.design_details || job?.job_name || "",
+  };
+}
+
+export function renderTemplate(text, ctx = {}) {
+  if (!text) return "";
+  return Object.entries(ctx).reduce(
+    (out, [key, value]) => out.split(key).join(value == null ? "" : String(value)),
+    text
+  );
+}
+
 const body = (s) => s.trim();
 
 export const DEFAULT_TEMPLATES = [

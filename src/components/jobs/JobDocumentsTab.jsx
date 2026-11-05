@@ -14,6 +14,9 @@ import ChangeOrderEditor from "@/components/documents/ChangeOrderEditor";
 import JobFinancialSummary from "@/components/jobs/JobFinancialSummary";
 import RailingCalculatorModal from "@/components/estimates/RailingCalculatorModal";
 import NewInvoiceFlow from "@/components/invoices/NewInvoiceFlow";
+import NewDocumentMenu from "@/components/jobs/NewDocumentMenu";
+import CustomDocumentGroups from "@/components/jobs/CustomDocumentGroups";
+import JobDocumentDialog from "@/components/jobs/JobDocumentDialog";
 import { useAuth } from "@/lib/AuthContext";
 
 const EST_STATUS = {
@@ -88,6 +91,7 @@ export default function JobDocumentsTab({ job }) {
     () => !!localStorage.getItem(`inv-banner-dismissed-${job.id}`)
   );
   const [invoiceToDelete, setInvoiceToDelete] = useState(null);
+  const [customDoc, setCustomDoc] = useState(null);
 
   const deleteInvoiceMutation = useMutation({
     mutationFn: (invId) => base44.entities.Invoice.delete(invId),
@@ -118,6 +122,30 @@ export default function JobDocumentsTab({ job }) {
   const { data: changeOrders = [] } = useQuery({
     queryKey: ["changeOrders", job.id],
     queryFn: () => base44.entities.ChangeOrder.filter({ job_id: job.id }),
+  });
+
+  // Custom document types and documents created from them
+  const { data: documentTypes = [] } = useQuery({
+    queryKey: ["documentTypes", job.organization_id],
+    enabled: !!job.organization_id,
+    queryFn: async () => {
+      const page = await base44.entities.DocumentType.filter(
+        { organization_id: job.organization_id },
+        { sort: "sort_order", limit: 100 }
+      );
+      return page.items ?? page;
+    },
+  });
+
+  const { data: jobDocuments = [] } = useQuery({
+    queryKey: ["jobDocuments", job.id],
+    queryFn: async () => {
+      const page = await base44.entities.JobDocument.filter(
+        { job_id: job.id },
+        { sort: "-created_date", limit: 200 }
+      );
+      return page.items ?? page;
+    },
   });
 
   const { data: customer } = useQuery({
@@ -214,6 +242,18 @@ export default function JobDocumentsTab({ job }) {
 
   return (
     <div className="space-y-6">
+
+      {/* New document picker */}
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Documents</h2>
+        <NewDocumentMenu
+          customTypes={documentTypes}
+          onEstimate={handleNewEstimateClick}
+          onInvoice={() => setNewInvoiceFlowOpen(true)}
+          onChangeOrder={() => openCo()}
+          onCustom={(type) => setCustomDoc({ type, document: null })}
+        />
+      </div>
 
       {/* Post-approval invoice prompt banner */}
       {approvedEstimate && !invoiceBannerDismissed && invoices.length === 0 && (
@@ -453,6 +493,14 @@ export default function JobDocumentsTab({ job }) {
         )}
       </div>
 
+      {/* ── CUSTOM DOCUMENT TYPES ─────────────────────────────────── */}
+      <CustomDocumentGroups
+        types={documentTypes}
+        documents={jobDocuments}
+        onNew={(type) => setCustomDoc({ type, document: null })}
+        onOpen={(document, type) => setCustomDoc({ type, document })}
+      />
+
       {/* ── Railing prompt dialog ─────────────────────────────────── */}
       <Dialog open={railingPromptOpen} onOpenChange={setRailingPromptOpen}>
         <DialogContent className="max-w-sm">
@@ -516,6 +564,19 @@ export default function JobDocumentsTab({ job }) {
           />
         </DialogContent>
       </Dialog>
+
+      {/* ── Custom Document Dialog ────────────────────────────────── */}
+      {customDoc && (
+        <JobDocumentDialog
+          job={job}
+          customer={customer}
+          docType={customDoc.type}
+          document={customDoc.document}
+          currentUser={user}
+          onClose={() => setCustomDoc(null)}
+          onSaved={() => setCustomDoc(null)}
+        />
+      )}
 
       {/* ── Delete Invoice Confirmation ───────────────────────────── */}
       <AlertDialog open={!!invoiceToDelete} onOpenChange={(open) => { if (!open) setInvoiceToDelete(null); }}>
