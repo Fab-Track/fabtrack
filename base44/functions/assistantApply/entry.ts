@@ -1,5 +1,6 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.54";
 import { buildPatch } from "../../shared/assistantChanges.js";
+import { assistantAccess, forbidden } from "../../shared/assistantAccess.js";
 
 // Applies or dismisses a PENDING assistant proposal. Only called from the app UI,
 // never exposed to the agent — a person must confirm before anything is written.
@@ -32,6 +33,9 @@ export default async function (req) {
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
     if (!user.organization_id) return Response.json({ error: "No organization on this account" }, { status: 403 });
 
+    const access = assistantAccess(user);
+    if (!access) return forbidden();
+
     const body = await req.json().catch(() => ({}));
     const proposalId = String(body.proposal_id || "").trim();
     const action = body.action || "apply";
@@ -45,6 +49,22 @@ export default async function (req) {
     }
     if (proposal.status !== "pending") {
       return Response.json({ error: `This proposal is already ${proposal.status}` }, { status: 409 });
+    }
+
+    // Re-checked on every confirm: a proposal made earlier, or by someone else, still
+    // needs this user's own role to allow the write.
+    if (action !== "dismiss") {
+      const canApply =
+        proposal.proposal_type === "estimate"
+          ? access.estimating
+          : access.jobUpdates;
+      if (!canApply) {
+        return forbidden(
+          proposal.proposal_type === "estimate"
+            ? "Your role can't create estimates from an assistant proposal."
+            : "Your role can't apply job changes from an assistant proposal.",
+        );
+      }
     }
 
     const now = new Date().toISOString();

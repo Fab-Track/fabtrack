@@ -1,5 +1,6 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.54";
 import { buildPatch, labelFor } from "../../shared/assistantChanges.js";
+import { assistantAccess, forbidden } from "../../shared/assistantAccess.js";
 
 // Creates a PENDING proposal only. Nothing on the job or in estimating changes here —
 // a person has to confirm the proposal in the app first.
@@ -16,9 +17,26 @@ export default async function (req) {
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
     if (!user.organization_id) return Response.json({ error: "No organization on this account" }, { status: 403 });
 
+    const access = assistantAccess(user);
+    if (!access) return forbidden();
+
     const body = await req.json().catch(() => ({}));
     const { action, job_id, conversation_id, title, notes } = body;
     if (!job_id) return Response.json({ error: "job_id is required" }, { status: 400 });
+
+    const allowedAction =
+      action === "create_estimate"
+        ? access.estimating
+        : action === "create_job_update" || action === "create_job_note"
+          ? access.jobUpdates
+          : false;
+    if (!allowedAction) {
+      return forbidden(
+        action === "create_estimate"
+          ? "Your role can't draft estimates in the assistant."
+          : "Your role can't stage job changes from the assistant.",
+      );
+    }
 
     const job = await base44.asServiceRole.entities.Job.get(job_id).catch((e) => (e.status === 404 ? null : Promise.reject(e)));
     if (!job) return Response.json({ error: "Job not found" }, { status: 404 });

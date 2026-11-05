@@ -1,4 +1,5 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.54";
+import { assistantAccess, forbidden } from "../../shared/assistantAccess.js";
 
 // Saves organization-level knowledge the assistant should recall later.
 
@@ -8,6 +9,12 @@ export default async function (req) {
     const user = await base44.auth.me().catch((e) => (e.status === 401 ? null : Promise.reject(e)));
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
     if (!user.organization_id) return Response.json({ error: "No organization on this account" }, { status: 403 });
+
+    const access = assistantAccess(user);
+    if (!access) return forbidden();
+    if (!access.knowledge) {
+      return forbidden("Your role can't save or edit company knowledge in the assistant.");
+    }
 
     const body = await req.json().catch(() => ({}));
     const action = body.action || "save";

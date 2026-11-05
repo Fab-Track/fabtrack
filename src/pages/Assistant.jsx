@@ -2,7 +2,10 @@ import React, { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
+import { Navigate } from "react-router-dom";
 import { PanelLeft, Sparkles, Plus, BookOpen, Loader2 } from "lucide-react";
+import { useAuth } from "@/lib/AuthContext";
+import { assistantAccess, rolesOf } from "@/lib/assistantAccess";
 import ConversationList from "@/components/assistant/ConversationList";
 import AssistantEmptyState from "@/components/assistant/AssistantEmptyState";
 import AssistantComposer from "@/components/assistant/AssistantComposer";
@@ -15,6 +18,9 @@ const AGENT_NAME = "shop_assistant";
 
 export default function Assistant() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const access = assistantAccess(user);
+  const roleTag = rolesOf(user)[0] || "unknown";
   const [conversations, setConversations] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
   const [activeConv, setActiveConv] = useState(null);
@@ -118,9 +124,11 @@ export default function Assistant() {
         setActiveConv(conv);
         setConversations((prev) => [conv, ...prev]);
       }
-      const content = job
-        ? `[Job context: ${job.label} (id: ${job.id})]\n\n${text}`
-        : text;
+      const content = [
+        `[User role: ${roleTag}]`,
+        job ? `[Job context: ${job.label} (id: ${job.id})]` : null,
+        text,
+      ].filter(Boolean).join("\n");
       setMessages((prev) => [...prev, { role: "user", content }]);
       await base44.agents.addMessage(conv, { role: "user", content });
       queryClient.invalidateQueries({ queryKey: ["assistant-proposals", conv.id] });
@@ -146,6 +154,9 @@ export default function Assistant() {
       setBusyId(null);
     }
   };
+
+  // No assistant for this role — nothing to render
+  if (!access) return <Navigate to="/dashboard" replace />;
 
   const listProps = {
     conversations,
@@ -186,14 +197,16 @@ export default function Assistant() {
           <div className="flex-1 min-w-0 flex justify-end sm:justify-start sm:pl-2 overflow-hidden">
             <JobContextPicker value={job} onChange={setJob} />
           </div>
-          <button
-            onClick={() => setKnowledgeOpen(true)}
-            className="flex items-center gap-1.5 h-8 px-2 rounded-md text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors shrink-0"
-            title="Company knowledge"
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Knowledge</span>
-          </button>
+          {access.knowledge && (
+            <button
+              onClick={() => setKnowledgeOpen(true)}
+              className="flex items-center gap-1.5 h-8 px-2 rounded-md text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors shrink-0"
+              title="Company knowledge"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Knowledge</span>
+            </button>
+          )}
           <button
             onClick={newChat}
             className="flex items-center gap-1.5 h-8 px-2 rounded-md text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors shrink-0"
@@ -210,7 +223,7 @@ export default function Assistant() {
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
             </div>
           ) : messages.length === 0 ? (
-            <AssistantEmptyState onPickPrompt={(p) => setDraft(p + " ")} jobName={job?.label} />
+            <AssistantEmptyState onPickPrompt={(p) => setDraft(p + " ")} jobName={job?.label} access={access} />
           ) : (
             <div className="max-w-3xl mx-auto px-3 sm:px-4 py-5 space-y-4">
               {messages.map((m, i) => (

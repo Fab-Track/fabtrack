@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useEffectiveRole, usePreviewRole } from "@/lib/PreviewRoleContext";
 import { useImpersonation, canImpersonate } from "@/lib/ImpersonationContext";
 import { getUserRoles } from "@/lib/roleHelpers";
+import { assistantAccess } from "@/lib/assistantAccess";
 import { canAccessChannel } from "@/lib/messagingHelpers";
 import PreviewRoleSelector from "./PreviewRoleSelector";
 import NotificationBell from "./NotificationBell";
@@ -78,27 +79,27 @@ const ROLE_NAV = {
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   design_specialist: [
-    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
+    { group: "OVERVIEW",    items: ["dashboard", "assistant", "messages"] },
     { group: "WORK",        items: ["calendar", "jobBoard", "schedule"] },
     { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   fabricator: [
-    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
+    { group: "OVERVIEW",    items: ["dashboard", "assistant", "messages"] },
     { group: "JOBS",        items: ["jobBoard"] },
     { group: "SHOP",        items: ["schedule", "shopFloor"] },
     { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   installer: [
-    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
+    { group: "OVERVIEW",    items: ["dashboard", "assistant", "messages"] },
     { group: "JOBS",        items: ["jobBoard"] },
     { group: "SHOP",        items: ["calendar", "schedule", "shopFloor"] },
     { group: "TIME",        items: ["myTimesheet"] },
     { group: "ACCOUNT",     items: ["settings"] },
   ],
   accountant: [
-    { group: "OVERVIEW",    items: ["dashboard", "messages"] },
+    { group: "OVERVIEW",    items: ["dashboard", "assistant", "messages"] },
     { group: "SALES",       items: ["jobBoard"] },
     { group: "FINANCE",     items: ["calendar", "documents", "customers", "conversations", "reports"] },
     { group: "TIME",        items: ["myTimesheet"] },
@@ -243,7 +244,14 @@ export default function Sidebar() {
   const isSuperAdmin = userRoles.includes("super_admin");
   const userCanImpersonate = canImpersonate(userRoles[0] || "user");
 
-  const navGroups = getUnionNavGroups(userRoles);
+  // Roles without assistant access never see the entry point
+  const assistantAllowed = !!assistantAccess(user);
+  const navGroups = getUnionNavGroups(userRoles)
+    .map((g) => ({
+      ...g,
+      items: assistantAllowed ? g.items : g.items.filter((k) => k !== "assistant"),
+    }))
+    .filter((g) => g.items.length > 0);
   const mobileItems = getMobileItems(navGroups);
 
   // Org record — for name + logo in the header
