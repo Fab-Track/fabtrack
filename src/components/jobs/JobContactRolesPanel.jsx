@@ -1,5 +1,5 @@
 import React from "react";
-import { User, MapPin, Phone, Mail } from "lucide-react";
+import { User, MapPin, Phone, Mail, Navigation } from "lucide-react";
 import { formatPhoneDisplay } from "@/lib/phoneFormat";
 
 function FieldLabel({ icon: Icon, children }) {
@@ -44,6 +44,14 @@ export default function JobContactRolesPanel({ job, customer }) {
     job.site_address ||
     "";
 
+  // Coordinates make the maps link exact; address is the fallback
+  const lat = job.site_lat ?? location?.lat;
+  const lng = job.site_lng ?? location?.lng;
+  const mapsQuery = lat && lng ? `${lat},${lng}` : siteAddress;
+  const mapsUrl = mapsQuery
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`
+    : null;
+
   return (
     <div className="border-t border-border mt-3 pt-3">
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -52,7 +60,22 @@ export default function JobContactRolesPanel({ job, customer }) {
           {location || siteAddress ? (
             <div className="space-y-0.5">
               {location && <p className="text-sm font-medium truncate">{location.label || location.display_name || "Job Site"}</p>}
-              {siteAddress && <p className="text-[11px] text-muted-foreground truncate">{siteAddress}</p>}
+              {siteAddress && (
+                mapsUrl ? (
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-accent hover:underline truncate"
+                    title="Open in maps"
+                  >
+                    <Navigation className="w-2.5 h-2.5 shrink-0" />
+                    <span className="truncate">{siteAddress}</span>
+                  </a>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground truncate">{siteAddress}</p>
+                )
+              )}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Not set</p>
