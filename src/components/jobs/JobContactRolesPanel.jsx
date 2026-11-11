@@ -38,6 +38,25 @@ export default function JobContactRolesPanel({ job, customer }) {
   const locations = customer?.locations || [];
 
   const findContact = (id) => contacts.find((c) => c.id === id) || null;
+
+  // Site contact is entered on the job's Edit Job form
+  const siteContact =
+    findContact(job.site_contact_id) ||
+    (job.onsite_contact_name || job.onsite_contact_phone || job.onsite_contact_email
+      ? { name: job.onsite_contact_name, phone: job.onsite_contact_phone, email: job.onsite_contact_email }
+      : null);
+
+  // Bill-to comes from the customer's Edit Customer form
+  const billToContact =
+    findContact(job.bill_to_contact_id) ||
+    (customer?.billing_same_as_primary
+      ? (customer?.name || customer?.email || customer?.phone
+          ? { name: customer.name, phone: customer.phone, email: customer.email }
+          : null)
+      : (customer?.billing_contact_name || customer?.billing_contact_phone || customer?.billing_contact_email
+          ? { name: customer.billing_contact_name, phone: customer.billing_contact_phone, email: customer.billing_contact_email }
+          : null));
+
   const location = locations.find((l) => l.id === job.location_id) || null;
   const siteAddress =
     (location ? location.address || [location.street, location.city, location.state, location.zip].filter(Boolean).join(", ") : "") ||
@@ -84,7 +103,7 @@ export default function JobContactRolesPanel({ job, customer }) {
 
         <div className="min-w-0">
           <FieldLabel icon={User}>Site Contact</FieldLabel>
-          <ContactValue contact={findContact(job.site_contact_id)} />
+          <ContactValue contact={siteContact} />
         </div>
 
         <div className="min-w-0">
@@ -94,7 +113,7 @@ export default function JobContactRolesPanel({ job, customer }) {
 
         <div className="min-w-0">
           <FieldLabel icon={User}>Bill-To Contact</FieldLabel>
-          <ContactValue contact={findContact(job.bill_to_contact_id)} />
+          <ContactValue contact={billToContact} />
         </div>
       </div>
     </div>
