@@ -52,6 +52,10 @@ export default function EditJob() {
       customer_id: job.customer_id || "",
       customer_name: job.customer_name || "",
       site_address: job.site_address || "",
+      location_id: job.location_id || "",
+      site_contact_id: job.site_contact_id || "",
+      approver_contact_id: job.approver_contact_id || "",
+      bill_to_contact_id: job.bill_to_contact_id || "",
       onsite_contact_name: job.onsite_contact_name || "",
       onsite_contact_phone: job.onsite_contact_phone || "",
       onsite_contact_email: job.onsite_contact_email || "",
@@ -119,10 +123,20 @@ export default function EditJob() {
       customer_id: customer?.id || "",
       customer_name: customer?.name || "",
       site_address: customer?.address || prev.site_address,
+      location_id: "",
+      site_contact_id: "",
+      approver_contact_id: "",
+      bill_to_contact_id: "",
       lead_customer_type: customer?.type ? customerTypeToLeadType(customer.type) : prev.lead_customer_type,
       ...contactFields,
     }));
   };
+
+  const contactRoles = [
+    { field: "site_contact_id", label: "Site Contact" },
+    { field: "approver_contact_id", label: "Drawing Approver" },
+    { field: "bill_to_contact_id", label: "Bill-To Contact" },
+  ];
 
   const handleSameAsCustomer = (checked) => {
     setSameAsCustomer(checked);
@@ -230,6 +244,68 @@ export default function EditJob() {
                 onChange={e => updateField("site_address", e.target.value)}
                 placeholder="123 Main St, City, State"
               />
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Job Site & Contacts</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs">Job Site</Label>
+                  <Select
+                    value={form.location_id || "none"}
+                    onValueChange={val => {
+                      const locId = val === "none" ? "" : val;
+                      const loc = selectedCustomer?.locations?.find(l => l.id === locId);
+                      setForm(prev => ({
+                        ...prev,
+                        location_id: locId,
+                        site_address: loc
+                          ? (loc.address || [loc.street, loc.city, loc.state, loc.zip].filter(Boolean).join(", "))
+                          : prev.site_address,
+                      }));
+                    }}
+                    disabled={!selectedCustomer}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select site…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {(selectedCustomer?.locations || []).map(l => (
+                        <SelectItem key={l.id} value={l.id}>
+                          {l.label || l.display_name || l.address || "Unnamed"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {contactRoles.map(role => (
+                  <div key={role.field}>
+                    <Label className="text-xs">{role.label}</Label>
+                    <Select
+                      value={form[role.field] || "none"}
+                      onValueChange={val => updateField(role.field, val === "none" ? "" : val)}
+                      disabled={!selectedCustomer}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select contact…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {(selectedCustomer?.contacts || []).map(c => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}{c.phone ? ` — ${c.phone}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Sites and contacts come from the customer's saved locations and contacts.
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
