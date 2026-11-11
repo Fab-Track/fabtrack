@@ -122,7 +122,8 @@ export default function EditJob() {
       ...prev,
       customer_id: customer?.id || "",
       customer_name: customer?.name || "",
-      site_address: customer?.address || prev.site_address,
+      // A customer's primary address is not this job's site — the site is set deliberately
+      site_address: "",
       location_id: "",
       site_contact_id: "",
       approver_contact_id: "",
@@ -238,19 +239,22 @@ export default function EditJob() {
             </div>
 
             <div>
-              <Label className="text-xs">Site Address</Label>
+              <Label className="text-xs">Job Site Address</Label>
               <Input
                 value={form.site_address}
-                onChange={e => updateField("site_address", e.target.value)}
+                onChange={e => setForm(prev => ({ ...prev, site_address: e.target.value, location_id: "", site_lat: null, site_lng: null }))}
                 placeholder="123 Main St, City, State"
               />
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                This address applies to this job only. Saved customer locations are edited on the customer page.
+              </p>
             </div>
 
             <div className="space-y-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Job Site & Contacts</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-xs">Job Site</Label>
+                  <Label className="text-xs">Copy Address from Saved Location</Label>
                   <Select
                     value={form.location_id || "none"}
                     onValueChange={val => {
@@ -304,7 +308,7 @@ export default function EditJob() {
                 ))}
               </div>
               <p className="text-[10px] text-muted-foreground">
-                Sites and contacts come from the customer's saved locations and contacts.
+                Picking a saved location copies its address onto this job, where you can still change it. Contacts come from the customer's directory.
               </p>
             </div>
 

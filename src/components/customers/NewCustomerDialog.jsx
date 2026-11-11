@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { User, Building2, MapPin, Ban, ChevronDown, Copy, AlertTriangle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import AddressAutocomplete from "@/components/ui/AddressAutocomplete";
+import LocationFields from "@/components/customers/LocationFields";
 import { findCustomerMatches } from "@/lib/customerMatch";
 
 const CUSTOMER_TYPES = [
@@ -54,7 +55,6 @@ const EMPTY_FORM = {
   location_lat: null,
   location_lng: null,
   location_display_name: "",
-  location_job_address: "",
 };
 
 export default function NewCustomerDialog({ open, onClose, onCreated, title = "New Customer", customers = [], allJobs = [] }) {
@@ -124,8 +124,6 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
     .filter(Boolean).join(", ");
 
   // Effective location fields — if "same as main" is checked, copy the primary address
-  const effectiveLocationDisplayName = form.location_same_as_main ? "Primary Address" : form.location_display_name;
-  const effectiveLocationJobAddress = form.location_same_as_main ? "" : form.location_job_address;
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -157,11 +155,11 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
       const locLng = form.location_same_as_main ? form.address_lng : form.location_lng;
       const composedLocAddr = [locStreet, locCity, locState, locZip].filter(Boolean).join(", ");
       const locDisp = form.location_same_as_main ? "Primary Address" : form.location_display_name;
-      const locJob = form.location_same_as_main ? "" : form.location_job_address;
 
-      const locations = form.create_location && (composedLocAddr || locDisp || locJob)
+      const locations = form.create_location && (composedLocAddr || (!form.location_same_as_main && locDisp))
         ? [{
             id: crypto.randomUUID(),
+            label: locDisp || "",
             street: locStreet || "",
             city: locCity || "",
             state: locState || "",
@@ -170,7 +168,6 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
             lng: locLng || null,
             address: composedLocAddr || composedAddress || "",
             display_name: locDisp || "",
-            job_address: locJob || "",
             created_at: new Date().toISOString(),
           }]
         : [];
@@ -482,7 +479,7 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
           <div className="space-y-3 border-t pt-4">
             <div className="flex items-center justify-between">
               <p className="text-xs font-bold text-accent uppercase tracking-wide flex items-center gap-1.5">
-                <MapPin className="w-3 h-3" /> Location Details
+                <MapPin className="w-3 h-3" /> Save as Customer Location
               </p>
               <button
                 type="button"
@@ -505,47 +502,31 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
                     <Copy className="w-3 h-3" /> Same as primary address
                   </span>
                 </label>
-                {form.location_same_as_main ? (
+                {form.location_same_as_main && (
                   <div>
                     <Label className="text-xs">Address</Label>
                     <p className="text-sm text-muted-foreground py-2">{composedPrimaryAddress || "No primary address set"}</p>
                   </div>
-                ) : (
-                  <AddressAutocomplete
-                    values={{
-                      street: form.location_street,
-                      city: form.location_city,
-                      state: form.location_state,
-                      zip: form.location_zip,
-                      lat: form.location_lat,
-                      lng: form.location_lng,
-                    }}
-                    fieldPrefix="location_"
-                    onChange={f}
-                    placeholder="Search for the location address…"
-                    label="Address"
-                  />
                 )}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs">Display Name</Label>
-                    <Input
-                      value={effectiveLocationDisplayName}
-                      onChange={e => f("location_display_name", e.target.value)}
-                      placeholder="Main Office, Job Site"
-                      disabled={form.location_same_as_main}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Job Address</Label>
-                    <Input
-                      value={effectiveLocationJobAddress}
-                      onChange={e => f("location_job_address", e.target.value)}
-                      placeholder="456 Job Site Ave"
-                      disabled={form.location_same_as_main}
-                    />
-                  </div>
-                </div>
+                <LocationFields
+                  values={{
+                    label: form.location_display_name,
+                    street: form.location_street,
+                    city: form.location_city,
+                    state: form.location_state,
+                    zip: form.location_zip,
+                    lat: form.location_lat,
+                    lng: form.location_lng,
+                  }}
+                  showAddress={!form.location_same_as_main}
+                  onChange={(field, value) =>
+                    f(field === "label" ? "location_display_name" : `location_${field}`, value)
+                  }
+                  addressLabel="Location Address"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Optional. This saves a named address to the customer's location directory; jobs can then be created from it.
+                </p>
               </div>
             ) : (
               <p className="text-xs text-muted-foreground italic">No location record will be created. You can add locations later from the customer profile.</p>

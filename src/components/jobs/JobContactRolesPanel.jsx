@@ -58,14 +58,17 @@ export default function JobContactRolesPanel({ job, customer }) {
           : null));
 
   const location = locations.find((l) => l.id === job.location_id) || null;
-  const siteAddress =
-    (location ? location.address || [location.street, location.city, location.state, location.zip].filter(Boolean).join(", ") : "") ||
-    job.site_address ||
-    "";
+  const locationAddress = location
+    ? location.address || [location.street, location.city, location.state, location.zip].filter(Boolean).join(", ")
+    : "";
+
+  // The job's own site address always wins — job site edits never change a saved location
+  const siteAddress = job.site_address || locationAddress || "";
+  const usesLocation = !!locationAddress && siteAddress === locationAddress;
 
   // Coordinates make the maps link exact; address is the fallback
-  const lat = job.site_lat ?? location?.lat;
-  const lng = job.site_lng ?? location?.lng;
+  const lat = job.site_lat ?? (usesLocation ? location?.lat : null);
+  const lng = job.site_lng ?? (usesLocation ? location?.lng : null);
   const mapsQuery = lat && lng ? `${lat},${lng}` : siteAddress;
   const mapsUrl = mapsQuery
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`
@@ -76,9 +79,11 @@ export default function JobContactRolesPanel({ job, customer }) {
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         <div className="min-w-0">
           <FieldLabel icon={MapPin}>Job Site</FieldLabel>
-          {location || siteAddress ? (
+          {siteAddress ? (
             <div className="space-y-0.5">
-              {location && <p className="text-sm font-medium truncate">{location.label || location.display_name || "Job Site"}</p>}
+              {usesLocation && (
+                <p className="text-sm font-medium truncate">{location.label || location.display_name || "Job Site"}</p>
+              )}
               {siteAddress && (
                 mapsUrl ? (
                   <a

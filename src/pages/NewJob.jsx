@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Save, Lock } from "lucide-react";
+import { ArrowLeft, Save, Lock, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { generateJobNumber } from "@/lib/jobHelpers";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
@@ -19,6 +19,8 @@ import { useRepCandidates } from "@/hooks/useRepCandidates";
 import { LEAD_SOURCES, LEAD_INTENTS, LEAD_CUSTOMER_TYPES, LEAD_BLOCKERS, autoApplyMissingInfoBlocker, deriveSizeBand } from "@/lib/salesPipeline";
 import { customerTypeToLeadType } from "@/lib/customerToJob";
 import AddressAutocomplete from "@/components/ui/AddressAutocomplete";
+import { Checkbox } from "@/components/ui/checkbox";
+import LocationFields from "@/components/customers/LocationFields";
 
 export default function NewJob() {
   const { user } = useAuth();
@@ -64,6 +66,8 @@ export default function NewJob() {
     site_lat: null,
     site_lng: null,
     location_id: "",
+    save_site_location: false,
+    site_location_name: "",
     site_contact_id: "",
     approver_contact_id: "",
     bill_to_contact_id: "",
@@ -90,8 +94,33 @@ export default function NewJob() {
   );
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Job.create(data),
-    onSuccess: async (newJob) => {
+    mutationFn: async (data) => {
+      const newJob = await base44.entities.Job.create(data);
+
+      // Optionally save the job-only site address into the customer's location directory
+      if (form.save_site_location && form.customer_id && form.site_address?.trim()) {
+        const customer = customers.find(c => c.id === form.customer_id);
+        const label = form.site_location_name?.trim() || "Job Site";
+        const locations = [...(customer?.locations || []), {
+          id: crypto.randomUUID(),
+          label,
+          display_name: label,
+          street: form.site_street || "",
+          city: form.site_city || "",
+          state: form.site_state || "",
+          zip: form.site_zip || "",
+          lat: form.site_lat ?? null,
+          lng: form.site_lng ?? null,
+          address: form.site_address.trim(),
+          created_at: new Date().toISOString(),
+        }];
+        await base44.entities.Customer.update(form.customer_id, { locations });
+        queryClient.invalidateQueries({ queryKey: ["customers"] });
+      }
+
+      return newJob;
+    },
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       navigate("/jobs");
     },
@@ -108,6 +137,8 @@ export default function NewJob() {
       if (field.startsWith("site_")) {
         updated.site_address = [updated.site_street, updated.site_city, updated.site_state, updated.site_zip]
           .filter(Boolean).join(", ");
+        // A hand-entered site is this job's own address, not a saved customer location
+        if (field !== "site_address") updated.location_id = "";
       }
       return updated;
     });
@@ -128,7 +159,7 @@ export default function NewJob() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const { notes_text, site_street, site_city, site_state, site_zip, ...rest } = form;
+    const { notes_text, site_street, site_city, site_state, site_zip, save_site_location, site_location_name, ...rest } = form;
     const notes = notes_text?.trim()
       ? [{
           id: crypto.randomUUID(),
@@ -217,7 +248,7 @@ export default function NewJob() {
 
             {/* Job Site */}
             <div>
-              <Label className="text-xs">Job Site (from saved locations)</Label>
+              <Label className="text-xs">Start from a Saved Customer Location</Label>
               <Select
                 value={form.location_id || "none"}
                 onValueChange={(val) => {
@@ -226,6 +257,7 @@ export default function NewJob() {
                   setForm(prev => ({
                     ...prev,
                     location_id: locId,
+                    save_site_location: false,
                     site_address: loc ? (loc.address || [loc.street, loc.city, loc.state, loc.zip].filter(Boolean).join(", ")) : prev.site_address,
                   }));
                 }}
@@ -258,9 +290,35 @@ export default function NewJob() {
                 fieldPrefix="site_"
                 onChange={handleSiteAddressChange}
                 placeholder="Search for the job site address…"
-                label="Project / Site Address"
+                label="Job Site Address"
               />
               <p className="text-[10px] text-muted-foreground mt-0.5">Where the work will be performed. This is separate from the customer's office/billing address.</p>
+              {form.location_id && form.site_address && (
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                  <MapPin className="w-3 h-3 shrink-0" /> {form.site_address}
+                </p>
+              )}
+
+              {form.customer_id && !form.location_id && (
+                <div className="rounded-lg border border-dashed p-3 mt-2 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <Checkbox
+                      checked={!!form.save_site_location}
+                      onCheckedChange={(checked) => updateField("save_site_location", checked === true)}
+                    />
+                    <span className="text-xs">Save this site as a customer location</span>
+                  </label>
+                  {form.save_site_location && (
+                    <LocationFields
+                      values={{ label: form.site_location_name }}
+                      showAddress={false}
+                      onChange={(field, value) => updateField("site_location_name", value)}
+                      nameLabel="Location Name"
+                      namePlaceholder="Riverside House, Lot 12"
+                    />
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Contact Roles */}

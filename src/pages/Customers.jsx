@@ -280,7 +280,7 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
             {(customer.address || customer.address_street || customer.address_city) && (
               <div className="min-w-0">
                 <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5 flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />Billing Address
+                  <MapPin className="w-3 h-3" />Primary Address
                 </p>
                 <p className="text-sm font-medium">
                   {customer.address || [customer.address_street, [customer.address_city, customer.address_state].filter(Boolean).join(", "), customer.address_zip].filter(Boolean).join(", ")}
@@ -321,6 +321,12 @@ function CustomerDetail({ customer, allJobs, allInvoices, onBack, onUpdated }) {
             <div>
               <Label className="text-xs">Email</Label>
               <Input type="email" value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} placeholder="email@example.com" />
+            </div>
+            <div className="pt-1">
+              <Label className="text-xs">Primary Address</Label>
+              <p className="text-[10px] text-muted-foreground mb-2">
+                Changing this does not change any job site. Job sites are edited on the job.
+              </p>
             </div>
             <div>
               <Label className="text-xs">Street</Label>

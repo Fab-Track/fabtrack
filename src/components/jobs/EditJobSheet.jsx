@@ -68,6 +68,9 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
         job_type: job.job_type || "",
         expected_install_date: job.expected_install_date || "",
         site_address: job.site_address || "",
+        site_lat: job.site_lat ?? null,
+        site_lng: job.site_lng ?? null,
+        location_id: job.location_id || "",
         onsite_contact_name: job.onsite_contact_name || "",
         onsite_contact_phone: job.onsite_contact_phone || "",
         onsite_contact_email: job.onsite_contact_email || "",
@@ -86,6 +89,13 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
   const f = (field, val) => {
     setDirty(true);
     setForm(p => ({ ...p, [field]: val }));
+  };
+
+  // Job site edits only ever change this job. Typing a new address detaches the
+  // job from the customer's saved location rather than editing the saved location.
+  const setSiteAddress = (val) => {
+    setDirty(true);
+    setForm(p => ({ ...p, site_address: val, location_id: "", site_lat: null, site_lng: null }));
   };
 
   // Rep employees: estimators, admins, owners
@@ -111,6 +121,9 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
       job_type: formData.job_type || null,
       expected_install_date: formData.expected_install_date || null,
       site_address: formData.site_address || null,
+      location_id: formData.location_id || null,
+      site_lat: formData.site_lat ?? null,
+      site_lng: formData.site_lng ?? null,
       onsite_contact_name: formData.onsite_contact_name || null,
       onsite_contact_phone: formData.onsite_contact_phone || null,
       onsite_contact_email: formData.onsite_contact_email || null,
@@ -192,8 +205,11 @@ export default function EditJobSheet({ open, onOpenChange, job, onSaved }) {
               <MapPin className="w-3.5 h-3.5" /> Location & Date
             </legend>
             <div>
-              <Label className="text-xs">Site Address</Label>
-              <Input value={form.site_address || ""} onChange={e => f("site_address", e.target.value)} placeholder="123 Main St, City, State" />
+              <Label className="text-xs">Job Site Address</Label>
+              <Input value={form.site_address || ""} onChange={e => setSiteAddress(e.target.value)} placeholder="123 Main St, City, State" />
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                Changes affect this job only. Saved customer locations are edited on the customer page.
+              </p>
             </div>
             <div>
               <Label className="text-xs">Expected Install Date</Label>
