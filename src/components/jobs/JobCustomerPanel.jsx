@@ -2,11 +2,10 @@ import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { UserSearch, Wrench } from "lucide-react";
+import { UserSearch } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
-import EditJobSheet from "@/components/jobs/EditJobSheet";
 import JobContactRolesPanel from "@/components/jobs/JobContactRolesPanel";
 import { formatPhoneDisplay } from "@/lib/phoneFormat";
 import { customerTypeToLeadType } from "@/lib/customerToJob";
@@ -25,7 +24,6 @@ function InfoCell({ label, value, icon: Icon, wrap }) {
 
 export default function JobCustomerPanel({ job, onJobUpdated }) {
   const queryClient = useQueryClient();
-  const [editJobOpen, setEditJobOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
 
   // Fetch full customer record when we have a customer_id
@@ -54,11 +52,6 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
     onJobUpdated?.();
     setAssignOpen(false);
     toast.success(`Customer assigned: ${selected.name}`);
-  }
-
-  function handleSaved() {
-    queryClient.invalidateQueries({ queryKey: ["job", job.id] });
-    onJobUpdated?.();
   }
 
   // — No customer linked —
@@ -118,31 +111,10 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
           )}
         </div>
 
-        {/* Job-specific edit only — customer details are edited on the customer page */}
-        {job.customer_id && (
-          <div className="flex items-center gap-1">
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs gap-1.5"
-              onClick={() => setEditJobOpen(true)}
-            >
-              <Wrench className="w-3.5 h-3.5" /> Edit Job
-            </Button>
-          </div>
-        )}
       </div>
 
       {/* Contact roles + location */}
       <JobContactRolesPanel job={job} customer={customer} onJobUpdated={onJobUpdated} />
-
-      {/* Edit Job slide-out */}
-      <EditJobSheet
-        open={editJobOpen}
-        onOpenChange={setEditJobOpen}
-        job={job}
-        onSaved={handleSaved}
-      />
     </>
   );
 }
