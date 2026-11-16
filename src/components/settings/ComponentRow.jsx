@@ -18,7 +18,10 @@ function countedText(row, layout, mat) {
   const s = layout.steps;
   const unit = mat?.cost_method === "unit";
   if (row.slot === "Post") return unit ? `${s.posts} posts` : `${s.posts} posts × ${s.postHeight}"`;
-  if (row.slot === "Picket") return unit ? `${s.totalPickets} pickets` : `${s.totalPickets} pickets × ${s.picketLength}"`;
+  if (row.slot === "Picket") {
+    const dir = s.orientation === "Horizontal" ? "horizontal" : "vertical";
+    return unit ? `${s.totalPickets} ${dir} pickets` : `${s.totalPickets} ${dir} pickets × ${s.picketLength}"`;
+  }
   if (unit) return "1 per rail";
   return row.slot === "Bottom Rail" ? "Run length × (rail runs − 1)" : "Run length";
 }

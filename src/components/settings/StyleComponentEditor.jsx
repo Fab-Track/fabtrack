@@ -55,7 +55,7 @@ export default function StyleComponentEditor({ open, onOpenChange, serviceCatalo
   const layout = calc.layout;
   const results = calc.componentResults;
   const total = calc.costs.materials;
-  const warnings = isRailing ? componentWarnings(rows, layout) : [];
+  const warnings = isRailing ? componentWarnings(rows, layout, item?.infill_type) : [];
 
   const changeRow = (idx, field, value) => setRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: value } : r));
   const setMaterial = (idx, m) => setRows(prev => prev.map((r, i) => i === idx ? { ...r, material_id: m.id, material_name: m.name } : r));

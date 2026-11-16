@@ -62,7 +62,10 @@ export default function TakeoffDialog({ line, materials = [], settings, catalogI
         ["Pickets / section", s.picketsPerSection],
         ["Total pickets", s.totalPickets],
         ["Post height", `${s.postHeight}"`],
+        ["Clear height", s.clearHeight != null ? `${s.clearHeight}"` : "—"],
+        ["Picket length", s.picketLength != null ? `${s.picketLength}"` : "—"],
         ["Rail runs", (calc?.layout?.params || t?.params)?.rail_runs],
+        ...(s.infillSqFt > 0 ? [["Infill area", `${s.infillSqFt} sq ft`]] : []),
       ]
     : [];
   const th = "px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground";

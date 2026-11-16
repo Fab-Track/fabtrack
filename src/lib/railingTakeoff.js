@@ -9,8 +9,13 @@
 
 export const RAILING_SLOTS = ["Top Rail", "Bottom Rail", "Post", "Picket"];
 
-/** Offset (inches) subtracted from post height to derive picket length (top + bottom rail + gap). */
+/** Fallback offset (inches) when the org has no picket-length standard: top rail + bottom rail + clearance. */
 const PICKET_LENGTH_OFFSET_IN = 6.5;
+/** Fallbacks that reproduce the org's 36"/29.5" and 43"/36.5" standards. */
+const DEFAULT_RAIL_HEIGHT_IN = 1.5;
+const DEFAULT_BOTTOM_CLEARANCE_IN = 3.5;
+
+export const isInfillType = (item) => item?.infill_type === "Mesh" || item?.infill_type === "Glass";
 
 export const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
@@ -29,6 +34,9 @@ export function resolveSettings(input) {
   return {
     res_post_height_in: pick("res_post_height_in"),
     comm_post_height_in: pick("comm_post_height_in"),
+    res_picket_length_in: pick("res_picket_length_in"),
+    comm_picket_length_in: pick("comm_picket_length_in"),
+    rail_bottom_clearance_in: pick("rail_bottom_clearance_in"),
     labor_fab_rate: pick("labor_fab_rate"),
     labor_install_rate: pick("labor_install_rate"),
     install_hours_per_day: pick("install_hours_per_day") || 8,
@@ -62,25 +70,46 @@ export function computeLayout({ catalogItem, settings, length, isResidential, ca
 
   const postHeight = isResidential ? s.res_post_height_in : s.comm_post_height_in;
   if (!postHeight) return null;
-  const picketLength = Math.max(0, postHeight - PICKET_LENGTH_OFFSET_IN);
+
+  const orientation = catalogItem.picket_orientation || "Vertical";
+  const infill = catalogItem.infill_type || "Pickets";
+  const topRailHeight = num(catalogItem.top_rail_height_in) || DEFAULT_RAIL_HEIGHT_IN;
+  const bottomRailHeight = num(catalogItem.bottom_rail_height_in) || DEFAULT_RAIL_HEIGHT_IN;
+  // Clearance under the bottom rail: the org setting, else whatever reproduces the org picket-length standard.
+  const picketStandard = (isResidential ? s.res_picket_length_in : s.comm_picket_length_in) || (postHeight - PICKET_LENGTH_OFFSET_IN);
+  const bottomClearance = s.rail_bottom_clearance_in
+    || Math.max(0, postHeight - picketStandard - topRailHeight - bottomRailHeight);
+  // Open height between the rails — the space infill fills.
+  const clearHeight = Math.max(0, postHeight - topRailHeight - bottomRailHeight - bottomClearance);
 
   // inches = LF x 12; posts = max(1, ceil(inches / spacing)); net = inches - posts x post width
   const inches = length * 12;
   const posts = Math.max(1, Math.ceil(inches / post_spacing_in));
   const netIn = inches - posts * post_width_in;
   const sectionIn = netIn / posts;
-  const picketsPerSection = Math.max(0, Math.ceil(sectionIn / (picket_width_in + picket_clear_gap_in)));
+
+  // Vertical: pickets run the clear height, counted across the clear width of a section.
+  // Horizontal: pickets run the clear width, stacked up the clear height.
+  const barThickness = picket_width_in + picket_clear_gap_in;
+  const picketsPerSection = Math.max(0, Math.ceil((orientation === "Horizontal" ? clearHeight : sectionIn) / barThickness));
   const totalPickets = picketsPerSection * posts;
+  const picketLength = orientation === "Horizontal" ? sectionIn : clearHeight;
+  const infillSqFt = isInfillType({ infill_type: infill }) ? (sectionIn * clearHeight * posts) / 144 : 0;
 
   return {
     params: { post_spacing_in, post_width_in, picket_clear_gap_in, picket_width_in, rail_runs },
-    steps: { postsForNet: posts, netLength: netIn / 12, posts, sectionLength: sectionIn / 12, picketsPerSection, totalPickets, postHeight, picketLength },
+    steps: {
+      postsForNet: posts, netLength: netIn / 12, posts, sectionLength: sectionIn / 12, picketsPerSection, totalPickets,
+      postHeight, picketLength, clearHeight, clearWidth: sectionIn, orientation, infill,
+      topRailHeight, bottomRailHeight, bottomClearance, infillSqFt: r2(infillSqFt),
+    },
     // top rail = LF; bottom rail = LF x (rail runs - 1)
     railFeet: length,
     topRailFeet: length,
     bottomRailFeet: length * Math.max(0, rail_runs - 1),
     postFeet: posts * (postHeight / 12),
     picketFeet: totalPickets * (picketLength / 12),
+    infillSqFt: r2(infillSqFt),
   };
 }
 
@@ -137,7 +166,8 @@ export function aggregateMaterials(componentResults, materials) {
         qty_unit: c.qty_unit,
         stock_length_ft: mat.stock_length_ft || 0,
         cost_per_stick: mat.cost_per_stick || 0,
-        cost_per_foot: mat.cost_per_foot || 0,
+        // Unit items carry their per-piece cost here so aggregation never loses it.
+        cost_per_foot: mat.cost_method === "unit" ? num(mat.cost_per_unit) : num(mat.cost_per_foot),
         cost_method: mat.cost_method || "linear_foot",
       };
     }
@@ -167,14 +197,15 @@ export function aggregateMaterials(componentResults, materials) {
 /**
  * Warnings for a railing style's component list (display only, never auto-fixed).
  */
-export function componentWarnings(components, layout) {
+export function componentWarnings(components, layout, infillType) {
   const list = components || [];
   const warnings = [];
+  const infill = infillType || layout?.steps?.infill || "Pickets";
   RAILING_SLOTS.forEach((slot) => {
     if (list.filter((c) => c.slot === slot).length > 1) warnings.push(`More than one line in the ${slot} slot.`);
   });
   const hasPosts = layout ? layout.steps.posts > 0 : true;
-  const hasPickets = layout ? layout.steps.totalPickets > 0 : true;
+  const hasPickets = infill === "Pickets" && (layout ? layout.steps.totalPickets > 0 : true);
   if (hasPosts && !list.some((c) => c.slot === "Post")) warnings.push("This style has posts but no Post line.");
   if (hasPickets && !list.some((c) => c.slot === "Picket")) warnings.push("This style has pickets but no Picket line.");
   return warnings;
@@ -201,9 +232,31 @@ export function computeRailingCosts({ catalogItem, category, settings, materials
   const layout = railing && s ? computeLayout({ catalogItem, category, settings: s, length: qty, isResidential }) : null;
 
   // Row-aligned results (nulls kept) for component tables, then the resolved ones for costing.
-  const componentResults = rows.map((c) => costComponent(c, (materials || []).find((m) => m.id === c.material_id), layout, qty));
+  const infill = catalogItem?.infill_type || "Pickets";
+  // A Picket line only counts when the style is actually infilled with pickets.
+  const costedRows = rows.filter((c) => c.slot !== "Picket" || infill === "Pickets");
+  const componentResults = rows.map((c) =>
+    costedRows.includes(c) ? costComponent(c, (materials || []).find((m) => m.id === c.material_id), layout, qty) : null
+  );
   const components = componentResults.filter(Boolean);
-  const materialLines = aggregateMaterials(components, materials);
+
+  // Mesh/Glass infill: priced per square foot of open area, from the style's infill cost item.
+  const infillMaterial = isInfillType({ infill_type: infill })
+    ? (materials || []).find((m) => m.id === catalogItem?.infill_material_id)
+    : null;
+  const infillSqFt = layout?.infillSqFt || 0;
+  const infillRate = infillMaterial
+    ? (infillMaterial.cost_method === "unit" ? num(infillMaterial.cost_per_unit) : num(infillMaterial.cost_per_foot))
+    : 0;
+  const infillLine = infillMaterial && infillSqFt > 0 && infillRate > 0
+    ? {
+        component_label: `${infill} infill`, slot: "Infill", material_id: infillMaterial.id, material_name: infillMaterial.name,
+        qty: infillSqFt, qty_unit: "sqft", unit_cost: infillRate, cost: r2(infillSqFt * infillRate),
+      }
+    : null;
+
+  const allComponents = infillLine ? [...components, infillLine] : components;
+  const materialLines = aggregateMaterials(allComponents, materials);
 
   const fabHours = num(catalogItem?.cost_fab_hours_per_unit) / 10 * qty;
   const installHours = num(catalogItem?.cost_install_hours_per_unit) / 10 * qty;
@@ -225,14 +278,15 @@ export function computeRailingCosts({ catalogItem, category, settings, materials
 
   let warn = null;
   if (railing && !layout) warn = "Missing railing standards or layout defaults";
-  else if (components.length < rows.length) warn = "A component is missing its material or cost";
+  else if (components.length < costedRows.length) warn = "A component is missing its material or cost";
+  else if (isInfillType({ infill_type: infill }) && !infillLine) warn = `The ${infill} infill cost item is missing or has no price`;
 
   return {
     isRailing: railing,
     settings: s,
     layout,
     componentResults,
-    components,
+    components: allComponents,
     materialLines,
     costs,
     hours,

@@ -23,6 +23,8 @@ export default function LayoutCard({ layout, item, category, onSaveOverride }) {
     ["Pickets / section", s?.picketsPerSection],
     ["Total pickets", s?.totalPickets],
     ["Post height", s ? `${s.postHeight}"` : null],
+    ["Clear height", s ? `${s.clearHeight}"` : null],
+    ["Picket length", s ? `${s.picketLength}"` : null],
   ];
 
   return (
@@ -63,6 +65,7 @@ export default function LayoutCard({ layout, item, category, onSaveOverride }) {
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
         {computed.map(([label, val]) => cellVal(label, val))}
         {cellVal("Rail runs", layout?.params.rail_runs)}
+        {s?.infillSqFt > 0 && cellVal("Infill area", `${s.infillSqFt} sq ft`)}
       </div>
     </div>
   );
