@@ -78,10 +78,12 @@ export default function LineRow({ line, idx, cols, estMargin, frozen, colors, lo
           fabRate={fabRate}
           installRate={installRate}
           frozen={frozen}
-          margin={line.labor_margin_pct}
+          fabMargin={line.fab_margin_pct}
+          instMargin={line.install_margin_pct}
           estMargin={hasMargin(line.margin_pct) ? line.margin_pct : estMargin}
           onChange={(v) => set({ hours_override: v })}
-          onMarginChange={(v) => set({ labor_margin_pct: v === "" ? null : parseFloat(v) })}
+          onFabMargin={(v) => set({ fab_margin_pct: v === "" ? null : parseFloat(v) })}
+          onInstMargin={(v) => set({ install_margin_pct: v === "" ? null : parseFloat(v) })}
         />
       )}
       <div className="px-4 pb-2">

@@ -87,13 +87,19 @@ export function priceLine(line, ctx, estMargin, frozen) {
   }
 
   const m = hasMargin(line.margin_pct) ? line.margin_pct : estMargin;
-  // Labor can carry its own margin; the rest of the line is priced at the line margin.
-  const laborMargin = hasMargin(line.labor_margin_pct) ? line.labor_margin_pct : null;
+  // Fabrication and install labor are priced on their own margins; blank follows the line margin.
+  const bdNext = next.cost_breakdown || {};
+  const fab = num(bdNext.fabrication);
+  const inst = num(bdNext.install);
+  const fabMargin = hasMargin(line.fab_margin_pct) ? num(line.fab_margin_pct) : num(m);
+  const instMargin = hasMargin(line.install_margin_pct) ? num(line.install_margin_pct) : num(m);
   let total;
-  if (laborMargin != null && num(laborMargin) !== num(m)) {
-    const bd = next.cost_breakdown || {};
-    const labor = num(bd.fabrication) + num(bd.install);
-    total = r2(priceFromHard(num(next.hard_cost) - labor, m) + priceFromHard(labor, laborMargin));
+  if (fabMargin !== num(m) || instMargin !== num(m)) {
+    total = r2(
+      priceFromHard(num(next.hard_cost) - fab - inst, m) +
+      priceFromHard(fab, fabMargin) +
+      priceFromHard(inst, instMargin)
+    );
   } else {
     total = r2(priceFromHard(num(next.hard_cost), m));
   }

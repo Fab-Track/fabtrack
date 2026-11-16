@@ -128,9 +128,13 @@
             "type": "number",
             "description": "Per-line margin override; empty = estimate target margin"
           },
-          "labor_margin_pct": {
+          "fab_margin_pct": {
             "type": "number",
-            "description": "Margin applied to this line's labor (fabrication + install) when it should differ from the line margin; empty = same as the line margin"
+            "description": "Margin applied to this line's fabrication labor when it should differ from the line margin; empty = same as the line margin"
+          },
+          "install_margin_pct": {
+            "type": "number",
+            "description": "Margin applied to this line's install labor when it should differ from the line margin; empty = same as the line margin"
           },
           "_is_fuel": {
             "type": "boolean",
