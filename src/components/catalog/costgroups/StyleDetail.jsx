@@ -8,6 +8,7 @@ import LayoutCard from "./LayoutCard";
 import ComponentsCard from "./ComponentsCard";
 import LaborCard from "./LaborCard";
 import CostSummary from "./CostSummary";
+import StyleDefinitionCard from "./StyleDefinitionCard";
 import EditStyleDialog from "./EditStyleDialog";
 import TestBar from "./TestBar";
 import { computeRailingCosts } from "@/lib/railingTakeoff";
@@ -109,6 +110,7 @@ export default function StyleDetail({ item, category, settings, materials, orgId
             {unitChip(category) && <span className={chip}>Priced {unitChip(category)}</span>}
             {ov.length > 0 && <span className={chip}>Override: {ov.map((o) => `${o.short.toLowerCase()} ${o.value}`).join(", ")}</span>}
             {item.qbo_item_name && <span className={chip}>QuickBooks: {item.qbo_item_name}</span>}
+            {st.missing?.length > 0 && <p className="w-full text-xs text-destructive">Missing: {st.missing.join(", ")}</p>}
           </div>
         </div>
         <div className="flex gap-2">
@@ -119,6 +121,7 @@ export default function StyleDetail({ item, category, settings, materials, orgId
       <div className="grid gap-4 lg:grid-cols-[1fr_300px] items-start">
         <div className="space-y-4 min-w-0">
           <TestBar length={length} setLength={setLength} unit={unit} railing={railing} isResidential={isResidential} setResidential={setIsResidential} />
+          {railing && <StyleDefinitionCard item={item} materials={materials} onSave={saveOverride} />}
           {railing && <LayoutCard layout={calc.layout} item={item} category={category} onSaveOverride={saveOverride} />}
           <ComponentsCard rows={rows} setRows={setRows} results={calc.componentResults} materials={materials} layout={calc.layout} length={qty} railing={railing}
             materialCost={calc.costs.materials} dirty={dirty} saving={saving} onSave={saveComponents} orgId={orgId} refresh={refresh} />

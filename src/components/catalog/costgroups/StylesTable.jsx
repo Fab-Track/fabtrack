@@ -37,7 +37,14 @@ export default function StylesTable({ category, items, onOpen }) {
                 <td className="px-3 py-3"><Pill tone={comp.tone}>{comp.label}</Pill></td>
                 <td className="px-3 py-3">{perJob ? <Pill>Per job</Pill> : <Pill tone={hasCostModel(it) ? "info" : "muted"}>{hasCostModel(it) ? "Set" : "Missing"}</Pill>}</td>
                 <td className={`px-3 py-3 ${generic ? "font-bold text-red-800" : ""}`}>{it.qbo_item_name || "—"}</td>
-                <td className="px-3 py-3"><Pill tone={st.tone}>{st.label}</Pill></td>
+                <td className="px-3 py-3">
+                  <Pill tone={st.tone}>{st.label}</Pill>
+                  {st.missing?.length > 0 && (
+                    <p className="text-[11px] text-muted-foreground mt-1 max-w-[220px]">
+                      {st.missing.slice(0, 3).join(", ")}{st.missing.length > 3 ? ` +${st.missing.length - 3}` : ""}
+                    </p>
+                  )}
+                </td>
               </tr>
             );
           })}

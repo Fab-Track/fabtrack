@@ -80,6 +80,46 @@
       "type": "number",
       "description": "Railing takeoff override: number of horizontal rail runs (top + bottom rails). Null = use category default."
     },
+    "top_rail_height_in": {
+      "type": "number",
+      "description": "Railing style definition: height of the top rail profile in inches, used in the layout and infill-area math."
+    },
+    "bottom_rail_height_in": {
+      "type": "number",
+      "description": "Railing style definition: height of the bottom rail profile in inches, used in the layout and infill-area math."
+    },
+    "picket_orientation": {
+      "type": "string",
+      "enum": [
+        "Vertical",
+        "Horizontal"
+      ],
+      "enumColors": [
+        "blue",
+        "purple"
+      ],
+      "description": "Railing style definition: whether pickets run vertical or horizontal."
+    },
+    "infill_type": {
+      "type": "string",
+      "enum": [
+        "Pickets",
+        "Mesh",
+        "Glass",
+        "None"
+      ],
+      "enumColors": [
+        "blue",
+        "purple",
+        "green",
+        "gray"
+      ],
+      "description": "Railing style definition: what fills the space between rails. Mesh and Glass are costed from infill_material_id per square foot of infill area."
+    },
+    "infill_material_id": {
+      "type": "string",
+      "description": "MaterialPriceList id used to cost Mesh/Glass infill per square foot."
+    },
     "components": {
       "type": "array",
       "description": "Ordered component lines for this item. Railing slots (Top Rail, Bottom Rail, Post, Picket) use the railing takeoff; 'Other' lines are counted from qty_per_unit, fixed_qty and waste_pct.",

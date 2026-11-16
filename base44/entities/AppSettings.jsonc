@@ -103,6 +103,11 @@
       "default": 36.5,
       "description": "Org-level railing standard: commercial picket length in inches."
     },
+    "rail_bottom_clearance_in": {
+      "type": "number",
+      "default": 3.6875,
+      "description": "Org-level railing standard: clear gap under the bottom rail in inches (default 3.6875)."
+    },
     "default_target_margin_pct": {
       "type": "number",
       "default": 33.3,
