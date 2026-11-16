@@ -19,6 +19,8 @@ import { generateEstimatePDF } from "@/lib/estimatePdf";
 import useCostGroupData from "@/components/catalog/costgroups/useCostGroupData";
 import CatalogPicker from "@/components/estimates/v2/CatalogPicker";
 import LineRow from "@/components/estimates/v2/LineRow";
+import LineBlock from "@/components/estimates/v2/LineBlock";
+import { COMPONENT_COLS, COMPONENT_HEADERS } from "@/components/estimates/v2/ComponentRow";
 import FuelRow from "@/components/estimates/v2/FuelRow";
 import TakeoffDialog from "@/components/estimates/v2/TakeoffDialog";
 import ProfitCard from "@/components/estimates/v2/ProfitCard";
@@ -28,8 +30,9 @@ import { unitLabel, money } from "@/lib/costGroups";
 import { nextEstimateNumber } from "@/lib/estimateNumber";
 import { calcFuel, fuelLine, hasMargin, lineKind, num, priceLine, r2 } from "@/lib/estimateCalc";
 
-const COLS = "1.9fr 1.2fr 0.9fr 1.1fr 0.8fr 1fr 0.8fr 28px";
-const HEADERS = ["Cost group", "Install location", "Color", "Qty", "Hard cost", "Price", "Margin", ""];
+// The one grid every line block shares: cost, then margin, then price.
+const COLS = COMPONENT_COLS;
+const HEADERS = COMPONENT_HEADERS;
 const INSTALL_LOCATIONS = [
   "Interior — Main Staircase", "Interior — Secondary Staircase", "Interior — Loft / Mezzanine",
   "Interior — Balcony / Overlook", "Interior — Basement Staircase", "Interior — Other",
@@ -47,6 +50,9 @@ function cleanLine({ _id, _warn, _railing_style, _is_staircase, _staircase_type,
   if (!hasMargin(rest.margin_pct)) delete rest.margin_pct;
   if (!hasMargin(rest.fab_margin_pct)) delete rest.fab_margin_pct;
   if (!hasMargin(rest.install_margin_pct)) delete rest.install_margin_pct;
+  if (!hasMargin(rest.material_margin_pct)) delete rest.material_margin_pct;
+  if (!hasMargin(rest.powder_coat_margin_pct)) delete rest.powder_coat_margin_pct;
+  if (rest.show_on_customer_estimate == null) delete rest.show_on_customer_estimate;
   if (!rest._railing_takeoff) delete rest._railing_takeoff;
   if (!rest.hours_override) delete rest.hours_override;
   if (rest.photo_url == null) delete rest.photo_url;
@@ -75,7 +81,9 @@ export default function EstimatePage() {
   const [targetMargin, setTargetMargin] = useState(null);
   const [miles, setMiles] = useState("");
   const [extra, setExtra] = useState(1);
-  const [fuelMarginState, setFuelMargin] = useState(null);
+  const [fuelMarginPct, setFuelMarginPct] = useState(null);
+  const [fuelLegacyMargin, setFuelLegacyMargin] = useState(null);
+  const [fuelSeparate, setFuelSeparate] = useState(false);
   const [markup, setMarkup] = useState(0);
   const [overhead, setOverhead] = useState(0);
   const [tax, setTax] = useState(0);
@@ -129,7 +137,9 @@ export default function EstimatePage() {
       setTargetMargin(e.target_margin_pct ?? null);
       setMiles(e.miles_one_way ?? "");
       setExtra(e.extra_trips ?? 1);
-      setFuelMargin(e.fuel_margin ?? null);
+      setFuelLegacyMargin(e.fuel_margin ?? null);
+      setFuelMarginPct(e.fuel_margin_pct ?? null);
+      setFuelSeparate(!!e.fuel_show_as_separate_line);
       setMarkup(e.markup_percent || 0);
       setOverhead(e.overhead_percent || 0);
       setDiscount(e.discount_percent || 0);
@@ -144,9 +154,19 @@ export default function EstimatePage() {
     }
   }, [existingEstimate, estimateId]);
 
+  // A brand-new estimate starts its fuel margin at the target, like every other row.
+  const fuelInit = useRef(false);
+  useEffect(() => {
+    if (isNew && !fuelInit.current && settings?.default_target_margin_pct != null) {
+      fuelInit.current = true;
+      setFuelMarginPct(settings.default_target_margin_pct);
+    }
+  }, [isNew, settings]);
+
   const frozen = status !== "Draft";
   const estMargin = targetMargin ?? settings?.default_target_margin_pct ?? 33.3;
-  const fuelMargin = fuelMarginState ?? !!settings?.fuel_margin_default;
+  // Fuel keeps its own margin; an older estimate saved at cost (legacy boolean false) still costs out.
+  const fuelEffMargin = hasMargin(fuelMarginPct) ? num(fuelMarginPct) : (fuelLegacyMargin === false ? 0 : estMargin);
   const snap = frozen && existingEstimate?.fuel_price_per_gal_snapshot != null;
   const fuelPrice = snap ? existingEstimate.fuel_price_per_gal_snapshot : settings?.fuel_price_per_gal || 0;
   const mpg = snap ? existingEstimate.truck_mpg_snapshot : settings?.truck_mpg || 0;
@@ -157,8 +177,8 @@ export default function EstimatePage() {
   );
   const fabRate = settings?.labor_fab_rate || 0;
   const installRate = settings?.labor_install_rate || 0;
-  const crewOf = (l) => num(cat.items.find((i) => i.id === l.service_catalog_id)?.cost_install_crew_size);
-  const fuel = calcFuel({ lines: priced, miles, extra, fuelMargin, targetMargin: estMargin, price: fuelPrice, mpg, hoursPerDay: settings?.install_hours_per_day || 8 });
+  const ctx = useMemo(() => ({ items: cat.items, categories: cat.categories, materials: cat.materials, settings }), [cat.items, cat.categories, cat.materials, settings]);
+  const fuel = calcFuel({ lines: priced, miles, extra, fuelMarginPct: fuelEffMargin, price: fuelPrice, mpg, hoursPerDay: settings?.install_hours_per_day || 8 });
   const fLine = fuelLine(fuel, miles, extra);
 
   const subtotal = priced.reduce((s, l) => s + (l.total || 0), 0) + fuel.price;
@@ -194,7 +214,8 @@ export default function EstimatePage() {
         organization_id: writeOrgId, job_id: jobId, job_number: job?.job_number, status: finalStatus,
         estimate_number: number, estimate_date: estimateDate, expiration_date: expirationDate,
         line_items: outLines(priced), subtotal, discount_percent: discount, markup_percent: markup, overhead_percent: overhead, tax_percent: tax, total,
-        target_margin_pct: estMargin, miles_one_way: num(miles), extra_trips: num(extra), fuel_margin: fuelMargin,
+        target_margin_pct: estMargin, miles_one_way: num(miles), extra_trips: num(extra),
+        fuel_margin_pct: hasMargin(fuelMarginPct) ? num(fuelMarginPct) : null, fuel_show_as_separate_line: !!fuelSeparate,
         fuel_price_per_gal_snapshot: fuelPrice, truck_mpg_snapshot: mpg, fuel_cost: fuel.cost, fuel_price: fuel.price, total_hard_cost: r2(hardTotal),
         ...(existingEstimate?.share_token ? {} : { share_token: crypto.randomUUID().replace(/-/g, "") }),
         notes, internal_notes: internalNotes, customer_signature: signature, view_mode: viewMode,
@@ -261,7 +282,7 @@ export default function EstimatePage() {
     setSendPanelOpen(true);
   }
 
-  const publicLines = (list) => outLines(list).map(({ _is_railing, _railing_takeoff, hard_cost, cost_breakdown, install_hours, hours_override, margin_pct, ...r }) => ({
+  const publicLines = (list) => outLines(list).map(({ _is_railing, _railing_takeoff, hard_cost, cost_breakdown, install_hours, hours_override, margin_pct, _takeoff_locked, material_margin_pct, powder_coat_margin_pct, show_on_customer_estimate, ...r }) => ({
     ...r, components: (r.components || []).map((c) => ({ component_type: c.component_type, name: c.name })),
   }));
   const estimateForView = {
@@ -323,22 +344,27 @@ export default function EstimatePage() {
         {view === "internal" ? (
           <>
             <div className="bg-card border rounded-xl overflow-x-auto">
-              <div style={{ minWidth: 900 }}>
+              <div style={{ minWidth: 1120 }}>
                 <div className="flex items-center justify-between p-4">
                   <h2 className="text-lg font-bold">Line items</h2>
                   <Button variant="outline" onClick={() => setPickerOpen(true)}><Plus className="w-4 h-4 mr-1" />Add from catalog</Button>
                 </div>
-                <div className="grid gap-2 px-4 py-2 bg-muted/40 border-t text-[11px] font-bold uppercase tracking-wider text-muted-foreground" style={{ gridTemplateColumns: COLS }}>
-                  {HEADERS.map((h, i) => <span key={i} className={i >= 3 && i <= 6 ? "text-right" : ""}>{h}</span>)}
+                <div className="grid items-center gap-2 px-4 py-1.5 border-y bg-muted/40" style={{ gridTemplateColumns: COLS }}>
+                  {HEADERS.map((h, i) => <span key={i} className={`text-[11px] font-bold uppercase tracking-wider text-muted-foreground ${i >= 2 && i <= 4 ? "text-right" : ""}`}>{h}</span>)}
                 </div>
-                {priced.map((l, idx) => (
-                  <LineRow key={l._id} line={l} idx={idx} cols={COLS} estMargin={estMargin} frozen={frozen} colors={jobDetailConfig.powdercoat_colors}
-                    locations={INSTALL_LOCATIONS} fabRate={fabRate} installRate={installRate} crewOf={crewOf}
+                {priced.map((l, idx) => lineKind(l) === "cost" ? (
+                  <LineBlock key={l._id} line={l} idx={idx} estMargin={estMargin} frozen={frozen} ctx={ctx} item={cat.items.find((i) => i.id === l.service_catalog_id)}
+                    colors={jobDetailConfig.powdercoat_colors} locations={INSTALL_LOCATIONS} fabRate={fabRate} installRate={installRate}
                     onChange={changeLine} onRemove={(i) => setLines((p) => p.filter((_, k) => k !== i))} onTakeoff={setTakeoffLine} />
+                ) : (
+                  <LineRow key={l._id} line={l} idx={idx} frozen={frozen}
+                    onChange={changeLine} onRemove={(i) => setLines((p) => p.filter((_, k) => k !== i))} />
                 ))}
                 {priced.length === 0 && <p className="text-sm text-muted-foreground text-center py-8 border-t">No line items yet. Click "Add from catalog".</p>}
-                <FuelRow fuel={fuel} miles={miles} setMiles={setMiles} extra={extra} setExtra={setExtra} fuelMargin={fuelMargin} setFuelMargin={setFuelMargin}
-                  price={fuelPrice} mpg={mpg} estMargin={estMargin} frozen={frozen} cols={COLS} />
+                <FuelRow fuel={fuel} miles={miles} setMiles={setMiles} extra={extra} setExtra={setExtra}
+                  fuelMarginPct={hasMargin(fuelMarginPct) ? fuelMarginPct : ""} setFuelMarginPct={(v) => setFuelMarginPct(v === "" ? null : parseFloat(v))}
+                  placeholder={fuelEffMargin} separate={fuelSeparate} setSeparate={setFuelSeparate}
+                  price={fuelPrice} mpg={mpg} targetMargin={estMargin} frozen={frozen} />
               </div>
             </div>
             <div className="grid md:grid-cols-2 gap-4">

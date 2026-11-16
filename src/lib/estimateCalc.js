@@ -18,6 +18,38 @@ export function priceFromHard(hard, marginPct) {
   return m < 100 ? hard / (1 - m / 100) : 0;
 }
 
+// Margin → price for one cost component. A margin of 100% or more cannot be divided
+// into, so the component simply stands at cost instead of blowing up.
+export function componentPrice(cost, marginPct) {
+  const m = num(marginPct);
+  return m < 100 ? num(cost) / (1 - m / 100) : num(cost);
+}
+
+// Each component's effective margin: its own override, else the line margin, else the target.
+export function componentMargins(line, estMargin) {
+  const m = hasMargin(line.margin_pct) ? num(line.margin_pct) : num(estMargin);
+  const pick = (v) => (hasMargin(v) ? num(v) : m);
+  return {
+    materials: pick(line.material_margin_pct),
+    powder_coat: pick(line.powder_coat_margin_pct),
+    fabrication: pick(line.fab_margin_pct),
+    install: pick(line.install_margin_pct),
+  };
+}
+
+export const componentPrices = (bd, margins) => ({
+  materials: componentPrice(bd?.materials, margins.materials),
+  powder_coat: componentPrice(bd?.powder_coat, margins.powder_coat),
+  fabrication: componentPrice(bd?.fabrication, margins.fabrication),
+  install: componentPrice(bd?.install, margins.install),
+});
+
+// What the catalog suggests for this line, ignoring every override — the Reset target.
+export function catalogCost(line, ctx) {
+  const c = computeCost(line, ctx);
+  return c ? { hard: c.hard, breakdown: c.breakdown, fabHrs: r2(c.fabHrs), instHrs: r2(c.instHrs), crew: c.crew } : null;
+}
+
 function computeCost(line, ctx) {
   const item = ctx.items.find((i) => i.id === line.service_catalog_id);
   if (!item || !ctx.settings) return null;
@@ -51,8 +83,10 @@ export function priceLine(line, ctx, estMargin, frozen) {
   const qty = num(line.quantity);
   const ov = line.hours_override || {};
   let next = line;
-  // If takeoff overrides are locked and the quantity hasn't changed, keep stored costs
-  const takeoffLocked = line._takeoff_locked && line._railing_takeoff?.inputs?.length === qty;
+  // If cost overrides are locked and the quantity hasn't changed, keep the stored costs.
+  // The lock rides on the saved takeoff snapshot, since a bare _takeoff_locked key is not
+  // a stored field and would be dropped the moment the estimate is saved.
+  const takeoffLocked = (line._takeoff_locked || line._railing_takeoff?.overridden) && line._railing_takeoff?.inputs?.length === qty;
   if (!(frozen && line.hard_cost != null) && !takeoffLocked) {
     const c = computeCost(line, ctx);
     if (c) {
@@ -86,33 +120,21 @@ export function priceLine(line, ctx, estMargin, frozen) {
     };
   }
 
-  const m = hasMargin(line.margin_pct) ? line.margin_pct : estMargin;
-  // Fabrication and install labor are priced on their own margins; blank follows the line margin.
+  // Every component carries its own margin; blank falls back to the line margin, then the target.
+  // With all four equal this is exactly the whole-job price the estimate had before.
   const bdNext = next.cost_breakdown || {};
-  const fab = num(bdNext.fabrication);
-  const inst = num(bdNext.install);
-  const fabMargin = hasMargin(line.fab_margin_pct) ? num(line.fab_margin_pct) : num(m);
-  const instMargin = hasMargin(line.install_margin_pct) ? num(line.install_margin_pct) : num(m);
-  let total;
-  if (fabMargin !== num(m) || instMargin !== num(m)) {
-    total = r2(
-      priceFromHard(num(next.hard_cost) - fab - inst, m) +
-      priceFromHard(fab, fabMargin) +
-      priceFromHard(inst, instMargin)
-    );
-  } else {
-    total = r2(priceFromHard(num(next.hard_cost), m));
-  }
+  const p = componentPrices(bdNext, componentMargins(line, estMargin));
+  const total = r2(p.materials + p.powder_coat + p.fabrication + p.install);
   return { ...next, total, unit_cost: qty > 0 ? total / qty : 0 };
 }
 
-export function calcFuel({ lines, miles, extra, fuelMargin, targetMargin, price, mpg, hoursPerDay }) {
+export function calcFuel({ lines, miles, extra, fuelMarginPct, price, mpg, hoursPerDay }) {
   const hrs = lines.reduce((a, l) => a + (lineKind(l) === "cost" ? num(l.install_hours) : 0), 0);
   const days = hrs > 0 && hoursPerDay > 0 ? Math.ceil(hrs / hoursPerDay) : 0;
   const trips = num(miles) > 0 ? days + num(extra) : 0;
   const gallons = num(mpg) > 0 ? (num(miles) * 2 * trips) / num(mpg) : 0;
   const cost = r2(gallons * num(price));
-  return { days, trips, gallons, cost, price: fuelMargin ? r2(priceFromHard(cost, targetMargin)) : cost };
+  return { days, trips, gallons, cost, price: r2(componentPrice(cost, fuelMarginPct)) };
 }
 
 export function fuelLine(f, miles, extra) {
