@@ -37,7 +37,7 @@ export function generateEstimatePDF(d) {
     txt(`${l.name}${l.color ? " — " + l.color : ""}`, M + 2);
     doc.setFont("helvetica", "normal"); doc.setFontSize(9);
     txt(l.location || "—", colX.loc);
-    txt(`${l.qty} ${l.unit}`.trim(), colX.qty, { align: "right" });
+    txt(l.qty == null ? "" : `${l.qty} ${l.unit || ""}`.trim(), colX.qty, { align: "right" });
     doc.setFont("helvetica", "bold"); txt(money(l.amount), colX.amt, { align: "right" });
     doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(90);
     desc.forEach((ln) => { y += 4; txt(ln, M + 2); });

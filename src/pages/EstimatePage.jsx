@@ -282,11 +282,15 @@ export default function EstimatePage() {
     setSendPanelOpen(true);
   }
 
-  const publicLines = (list) => outLines(list).map(({ _is_railing, _railing_takeoff, hard_cost, cost_breakdown, install_hours, hours_override, margin_pct, _takeoff_locked, material_margin_pct, powder_coat_margin_pct, show_on_customer_estimate, ...r }) => ({
+  // show_on_customer_estimate survives this allow-list: it decides what the customer sees.
+  const publicLines = (list) => outLines(list).map(({ _is_railing, _railing_takeoff, hard_cost, cost_breakdown, install_hours, hours_override, margin_pct, _takeoff_locked, material_margin_pct, powder_coat_margin_pct, ...r }) => ({
     ...r, components: (r.components || []).map((c) => ({ component_type: c.component_type, name: c.name })),
   }));
   const estimateForView = {
     ...(existingEstimate || {}), status, line_items: publicLines(priced),
+    // A sent/approved estimate shows the fuel amount it was saved with, exactly as the share page does.
+    fuel_price: frozen && existingEstimate?.fuel_price != null ? existingEstimate.fuel_price : r2(fuel.price),
+    fuel_show_as_separate_line: !!fuelSeparate,
     discount_percent: discount, markup_percent: markup, overhead_percent: overhead, tax_percent: tax, subtotal, total,
     notes, view_mode: viewMode, estimate_number: estimateNumber, estimate_date: estimateDate, expiration_date: expirationDate, customer_signature: signature,
   };

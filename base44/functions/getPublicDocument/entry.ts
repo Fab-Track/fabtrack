@@ -93,19 +93,20 @@ Deno.serve(async (req) => {
         const m = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'main', organization_id: doc.organization_id });
         mainSettings = m[0] || {};
       } catch { mainSettings = {}; }
+      // Customer-safe line rows only. Which rows itemize and where fuel lands is decided by the
+      // shared rule on the client (src/lib/customerEstimate), never here, so the share page,
+      // the customer view and the PDF cannot disagree. Amounts are read, never recomputed.
       const lines = (doc.line_items || []).map((l: any) => ({
-        name: l.service_name || '',
+        service_name: l.service_name || '',
         color: l.color || '',
-        description: l._is_fuel ? '' : (l.description || ''),
-        location: l._is_fuel || !l.install_location || l.install_location === 'N/A' ? '' : l.install_location,
-        qty: l._is_fuel ? 1 : l.quantity,
-        unit: l._is_fuel ? '' : (l.unit || ''),
-        amount: l.total || 0,
-        is_fuel: !!l._is_fuel,
+        description: l.description || '',
+        install_location: l.install_location || '',
+        quantity: l.quantity ?? null,
+        unit: l.unit || '',
+        total: l.total || 0,
+        show_on_customer_estimate: l.show_on_customer_estimate === false ? false : null,
+        _is_fuel: !!l._is_fuel,
       }));
-      const total = doc.total || 0;
-      const depositPct = mainSettings.deposit_pct ?? 50;
-      const deposit = Math.round(total * depositPct) / 100;
       documentPayload = {
         share_token: doc.share_token || null,
         business: { name: businessInfo?.name || 'High Country Metal Works', address: businessInfo?.address || '' },
@@ -113,11 +114,10 @@ Deno.serve(async (req) => {
         valid_days: mainSettings.estimate_valid_days ?? 30,
         status: doc.status || 'Draft',
         lines,
-        subtotal: doc.subtotal ?? lines.reduce((s: number, l: any) => s + l.amount, 0),
-        total,
-        deposit_pct: depositPct,
-        deposit,
-        balance: Math.round((total - deposit) * 100) / 100,
+        fuel_price: doc.fuel_price || 0,
+        fuel_show_as_separate_line: !!doc.fuel_show_as_separate_line,
+        deposit_pct: mainSettings.deposit_pct ?? 50,
+        total: doc.total || 0,
         terms: customer?.payment_terms === 'Custom' ? `Net ${customer.payment_terms_custom_days || 0}` : (customer?.payment_terms || 'Net 15'),
         // After signing, show the exact text that was signed
         agreement_text: doc.status === 'Approved' && doc.agreement_text_snapshot != null ? doc.agreement_text_snapshot : (contractText || ''),

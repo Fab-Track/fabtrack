@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import CustomerEstimateDoc from "@/components/estimates/customer/CustomerEstimateDoc";
+import { applyCustomerFold } from "@/lib/customerEstimate";
 
 export default function EstimateView() {
   const { token } = useParams();
@@ -38,7 +39,8 @@ export default function EstimateView() {
     return <div className="min-h-screen bg-muted/30 flex items-center justify-center text-sm text-muted-foreground">Estimate not found.</div>;
   }
 
-  const doc = { ...data.document, agreement_text: data.document.agreement_text || data.contract_text || "" };
+  // Same fold the customer view and the PDF use, over the allow-listed rows only.
+  const doc = applyCustomerFold({ ...data.document, agreement_text: data.document.agreement_text || data.contract_text || "" });
   return (
     <div className="min-h-screen bg-muted/30 py-8 px-4">
       <CustomerEstimateDoc

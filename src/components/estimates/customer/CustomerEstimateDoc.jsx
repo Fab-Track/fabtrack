@@ -35,7 +35,7 @@ export default function CustomerEstimateDoc({ doc, onSign, preview, pending, err
                   {l.description && <p className="text-muted-foreground text-[13px]">{l.description}</p>}
                 </div>
                 <span>{l.location || "—"}</span>
-                <span className="text-right font-mono">{l.qty} {l.unit}</span>
+                <span className="text-right font-mono">{l.qty == null ? "" : `${l.qty} ${l.unit || ""}`.trim()}</span>
                 <span className="text-right font-mono font-bold">{money(l.amount)}</span>
               </div>
             ))}
