@@ -82,7 +82,6 @@ export default function EstimatePage() {
   const [miles, setMiles] = useState("");
   const [extra, setExtra] = useState(1);
   const [fuelMarginPct, setFuelMarginPct] = useState(null);
-  const [fuelLegacyMargin, setFuelLegacyMargin] = useState(null);
   const [fuelSeparate, setFuelSeparate] = useState(false);
   const [markup, setMarkup] = useState(0);
   const [overhead, setOverhead] = useState(0);
@@ -137,7 +136,6 @@ export default function EstimatePage() {
       setTargetMargin(e.target_margin_pct ?? null);
       setMiles(e.miles_one_way ?? "");
       setExtra(e.extra_trips ?? 1);
-      setFuelLegacyMargin(e.fuel_margin ?? null);
       setFuelMarginPct(e.fuel_margin_pct ?? null);
       setFuelSeparate(!!e.fuel_show_as_separate_line);
       setMarkup(e.markup_percent || 0);
@@ -165,8 +163,8 @@ export default function EstimatePage() {
 
   const frozen = status !== "Draft";
   const estMargin = targetMargin ?? settings?.default_target_margin_pct ?? 33.3;
-  // Fuel keeps its own margin; an older estimate saved at cost (legacy boolean false) still costs out.
-  const fuelEffMargin = hasMargin(fuelMarginPct) ? num(fuelMarginPct) : (fuelLegacyMargin === false ? 0 : estMargin);
+  // Fuel keeps its own margin on every record; 0 means at cost.
+  const fuelEffMargin = hasMargin(fuelMarginPct) ? num(fuelMarginPct) : 0;
   const snap = frozen && existingEstimate?.fuel_price_per_gal_snapshot != null;
   const fuelPrice = snap ? existingEstimate.fuel_price_per_gal_snapshot : settings?.fuel_price_per_gal || 0;
   const mpg = snap ? existingEstimate.truck_mpg_snapshot : settings?.truck_mpg || 0;

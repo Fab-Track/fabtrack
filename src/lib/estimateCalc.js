@@ -83,10 +83,8 @@ export function priceLine(line, ctx, estMargin, frozen) {
   const qty = num(line.quantity);
   const ov = line.hours_override || {};
   let next = line;
-  // If cost overrides are locked and the quantity hasn't changed, keep the stored costs.
-  // The lock rides on the saved takeoff snapshot, since a bare _takeoff_locked key is not
-  // a stored field and would be dropped the moment the estimate is saved.
-  const takeoffLocked = (line._takeoff_locked || line._railing_takeoff?.overridden) && line._railing_takeoff?.inputs?.length === qty;
+  // If the estimator locked this line's costs and the quantity hasn't changed, keep the stored costs.
+  const takeoffLocked = line._takeoff_locked === true && line._railing_takeoff?.inputs?.length === qty;
   if (!(frozen && line.hard_cost != null) && !takeoffLocked) {
     const c = computeCost(line, ctx);
     if (c) {

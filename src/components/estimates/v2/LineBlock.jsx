@@ -17,9 +17,8 @@ export default function LineBlock({ line, idx, estMargin, frozen, ctx, item, col
   const unit = line.unit || "unit";
   const margins = componentMargins(line, estMargin);
   const prices = componentPrices(bd, margins);
-  // The lock is a stored line field now. A record saved before it existed carries the same flag
-  // as a marker inside its takeoff snapshot, which is still read as a fallback.
-  const locked = line._takeoff_locked === true || line._railing_takeoff?.overridden === true;
+  // The lock is a stored line field; nothing else is consulted.
+  const locked = line._takeoff_locked === true;
   // The catalog suggestion is only needed to describe a Reset, so only price it when one shows.
   const isModified = ov.fabrication != null || ov.install != null || ov.crew != null || hasMargin(line.material_margin_pct)
     || hasMargin(line.powder_coat_margin_pct) || hasMargin(line.fab_margin_pct) || hasMargin(line.install_margin_pct) || locked;
@@ -38,16 +37,15 @@ export default function LineBlock({ line, idx, estMargin, frozen, ctx, item, col
     else next[key] = parseFloat(raw);
     set({ hours_override: Object.keys(next).length ? next : null });
   };
-  // Overriding a cost freezes the line's costs on _takeoff_locked, now a stored field, so the
-  // override survives a reload. The snapshot keeps the inputs the recompute gate reads; its old
-  // overridden marker is no longer written (it is only read, for records saved before the field).
+  // Overriding a cost freezes the line's costs on _takeoff_locked, the stored field, so the
+  // override survives a reload. The snapshot keeps the inputs the recompute gate reads.
   const setCost = (key, raw) => set({
     cost_breakdown: { ...bd, [key]: num(raw) },
     _takeoff_locked: true,
     _railing_takeoff: line._railing_takeoff || { inputs: { length: qty, isResidential: line.building_type !== "Commercial" } },
   });
   // Clearing the lock lets the takeoff re-derive both shared costs on the next render.
-  const unlock = (patch) => set({ ...patch, _takeoff_locked: false, _railing_takeoff: line._railing_takeoff ? { ...line._railing_takeoff, overridden: false } : null });
+  const unlock = (patch) => set({ ...patch, _takeoff_locked: false });
 
   const hint = (key, label) => (cat
     ? `Restore the catalog ${label} cost: ${money(cat.breakdown[key])} for ${qty} ${unit}.`

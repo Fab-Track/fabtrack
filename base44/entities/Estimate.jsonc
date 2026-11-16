@@ -275,7 +275,7 @@
           },
           "_takeoff_locked": {
             "type": "boolean",
-            "description": "Whether this line's material and powder coat costs were overridden by the estimator. When true, the takeoff keeps the stored costs instead of re-deriving them. Older records carry the same flag as _railing_takeoff.overridden, which is still read as a fallback."
+            "description": "Whether this line's material and powder coat costs were overridden by the estimator. When true, the takeoff keeps the stored costs instead of re-deriving them."
           },
           "_railing_takeoff": {
             "type": "object",
@@ -321,13 +321,9 @@
       "default": 1,
       "description": "Extra trips beyond install days (measure, delivery)"
     },
-    "fuel_margin": {
-      "type": "boolean",
-      "description": "Whether the target margin is applied to fuel"
-    },
     "fuel_margin_pct": {
       "type": "number",
-      "description": "Margin applied to fuel when it should differ from the target margin; empty = target margin"
+      "description": "Margin applied to fuel; 0 = at cost. Absent = at cost."
     },
     "fuel_show_as_separate_line": {
       "type": "boolean",
