@@ -136,6 +136,18 @@
             "type": "number",
             "description": "Margin applied to this line's install labor when it should differ from the line margin; empty = same as the line margin"
           },
+          "material_margin_pct": {
+            "type": "number",
+            "description": "Margin applied to this line's materials when it should differ from the line margin; empty = same as the line margin"
+          },
+          "powder_coat_margin_pct": {
+            "type": "number",
+            "description": "Margin applied to this line's powder coat when it should differ from the line margin; empty = same as the line margin"
+          },
+          "show_on_customer_estimate": {
+            "type": "boolean",
+            "description": "Whether this line appears on the customer estimate; absent = shown"
+          },
           "_is_fuel": {
             "type": "boolean",
             "description": "Generated Fuel & travel line"
@@ -308,6 +320,14 @@
     "fuel_margin": {
       "type": "boolean",
       "description": "Whether the target margin is applied to fuel"
+    },
+    "fuel_margin_pct": {
+      "type": "number",
+      "description": "Margin applied to fuel when it should differ from the target margin; empty = target margin"
+    },
+    "fuel_show_as_separate_line": {
+      "type": "boolean",
+      "description": "Whether fuel appears as its own line on the customer estimate; absent = false (folded into the single customer line)"
     },
     "fuel_price_per_gal_snapshot": {
       "type": "number",
