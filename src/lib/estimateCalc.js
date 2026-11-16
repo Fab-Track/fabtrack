@@ -65,16 +65,18 @@ export function priceLine(line, ctx, estMargin, frozen) {
     }
   }
 
-  // Estimator-edited hours replace the catalog estimate, priced at the Settings rates.
-  if (!frozen && (ov.fabrication != null || ov.install != null)) {
+  // Estimator-edited hours / crew replace the catalog estimate, priced at the Settings rates.
+  if (!frozen && (ov.fabrication != null || ov.install != null || ov.crew != null)) {
     const bd = next.cost_breakdown || {};
     const fabRate = num(ctx.settings?.labor_fab_rate);
     const installRate = num(ctx.settings?.labor_install_rate);
-    const crew = num(ctx.items.find((i) => i.id === line.service_catalog_id)?.cost_install_crew_size);
+    const catalogCrew = num(ctx.items.find((i) => i.id === line.service_catalog_id)?.cost_install_crew_size);
+    // Crew typed on the line wins; the catalog crew is the default.
+    const crew = ov.crew != null ? num(ov.crew) : catalogCrew;
     // Base hours: freshly computed, or read back from the stored breakdown (takeoff-locked line).
     const baseFab = next._fab_hours_base != null ? next._fab_hours_base : fabRate > 0 ? num(bd.fabrication) / fabRate : 0;
     const baseInst = next._install_hours_base != null ? next._install_hours_base
-      : crew > 0 && installRate > 0 ? num(bd.install) / (crew * installRate) : num(next.install_hours);
+      : catalogCrew > 0 && installRate > 0 ? num(bd.install) / (catalogCrew * installRate) : num(next.install_hours);
     const fabHrs = ov.fabrication != null ? num(ov.fabrication) : baseFab;
     const instHrs = ov.install != null ? num(ov.install) : baseInst;
     const parts = { ...bd, fabrication: r2(fabHrs * fabRate), install: r2(instHrs * crew * installRate) };

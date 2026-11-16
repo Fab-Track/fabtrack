@@ -13,46 +13,17 @@ export default function LineLaborHours({ line, crew, fabRate, installRate, froze
   const baseInst = line._install_hours_base ?? line.install_hours ?? null;
   const fabHrs = ov.fabrication != null ? ov.fabrication : baseFab;
   const instHrs = ov.install != null ? ov.install : baseInst;
-  const edited = ov.fabrication != null || ov.install != null;
+  // Crew assigned to the install: the estimator's number, else the catalog default.
+  const catalogCrew = num(crew);
+  const crewCount = ov.crew != null ? ov.crew : catalogCrew;
+  const edited = ov.fabrication != null || ov.install != null || ov.crew != null;
 
-  const setHours = (key, raw) => {
+  const setOverride = (key, raw) => {
     const next = { ...ov };
     if (raw === "" || isNaN(parseFloat(raw))) delete next[key];
     else next[key] = parseFloat(raw);
     onChange(Object.keys(next).length ? next : null);
   };
-
-  const group = ({ label, key, value, rate, crewCount, cost }) => (
-    <div className="flex items-end gap-2.5">
-      <div className="space-y-1">
-        <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
-        <div className="flex items-center gap-1.5">
-          <Input
-            type="number"
-            step="any"
-            min="0"
-            disabled={frozen}
-            className="h-9 w-24 bg-background text-right font-mono text-sm"
-            value={value ?? ""}
-            onChange={(e) => setHours(key, e.target.value)}
-          />
-          <span className="text-[11px] text-muted-foreground">hrs</span>
-        </div>
-      </div>
-      <div className="flex items-center gap-1 pb-1.5 text-[11px] whitespace-nowrap text-muted-foreground">
-        <span>×</span>
-        {crewCount != null && (
-          <>
-            <b className="font-mono font-semibold text-foreground">{crewCount}</b>
-            <span>crew ×</span>
-          </>
-        )}
-        <span className="font-mono">{money(rate, 2)}/hr</span>
-        <span>=</span>
-        <b className="font-mono text-sm font-semibold text-foreground">{money(cost || 0)}</b>
-      </div>
-    </div>
-  );
 
   return (
     <div className="border-t bg-muted/20 px-4 py-2.5">
@@ -72,22 +43,67 @@ export default function LineLaborHours({ line, crew, fabRate, installRate, froze
           )}
         </div>
 
-        {group({
-          label: "Fabrication",
-          key: "fabrication",
-          value: fabHrs,
-          rate: fabRate,
-          crewCount: null,
-          cost: line.cost_breakdown?.fabrication,
-        })}
-        {group({
-          label: "Install",
-          key: "install",
-          value: instHrs,
-          rate: installRate,
-          crewCount: num(crew),
-          cost: line.cost_breakdown?.install,
-        })}
+        {/* Fabrication */}
+        <div className="flex items-end gap-2.5">
+          <div className="space-y-1">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Fabrication</label>
+            <div className="flex items-center gap-1.5">
+              <Input
+                type="number"
+                step="any"
+                min="0"
+                disabled={frozen}
+                className="h-9 w-24 bg-background text-right font-mono text-sm"
+                value={fabHrs ?? ""}
+                onChange={(e) => setOverride("fabrication", e.target.value)}
+              />
+              <span className="text-[11px] text-muted-foreground">hrs</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 whitespace-nowrap pb-1.5 text-[11px] text-muted-foreground">
+            <span>×</span>
+            <span className="font-mono">{money(fabRate, 2)}/hr</span>
+            <span>=</span>
+            <b className="font-mono text-sm font-semibold text-foreground">{money(line.cost_breakdown?.fabrication || 0)}</b>
+          </div>
+        </div>
+
+        {/* Install */}
+        <div className="flex items-end gap-2.5">
+          <div className="space-y-1">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Install</label>
+            <div className="flex items-center gap-1.5">
+              <Input
+                type="number"
+                step="any"
+                min="0"
+                disabled={frozen}
+                className="h-9 w-24 bg-background text-right font-mono text-sm"
+                value={instHrs ?? ""}
+                onChange={(e) => setOverride("install", e.target.value)}
+              />
+              <span className="text-[11px] text-muted-foreground">hrs</span>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Crew on site</label>
+            <Input
+              type="number"
+              step="1"
+              min="1"
+              disabled={frozen}
+              className="h-9 w-16 bg-background text-center font-mono text-sm"
+              value={crewCount ?? ""}
+              onChange={(e) => setOverride("crew", e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-1 whitespace-nowrap pb-1.5 text-[11px] text-muted-foreground">
+            <span>×</span>
+            <span className="font-mono">{money(installRate, 2)}/hr</span>
+            <span>=</span>
+            <b className="font-mono text-sm font-semibold text-foreground">{money(line.cost_breakdown?.install || 0)}</b>
+          </div>
+        </div>
 
         <p className="ml-auto pb-2 text-[11px] text-muted-foreground">Rates are set in Settings › Job costing</p>
       </div>

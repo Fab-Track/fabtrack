@@ -110,13 +110,17 @@
           },
           "hours_override": {
             "type": "object",
-            "description": "Labor hours typed by the estimator on this line. Overrides the catalog estimate; rates still come from Settings",
+            "description": "Labor hours and crew typed by the estimator on this line. Overrides the catalog estimate; rates still come from Settings",
             "properties": {
               "fabrication": {
                 "type": "number"
               },
               "install": {
                 "type": "number"
+              },
+              "crew": {
+                "type": "number",
+                "description": "Crew members assigned to the install on this line; defaults to the catalog crew size"
               }
             }
           },
@@ -332,7 +336,7 @@
     },
     "customer_printed_name": {
       "type": "string",
-      "description": "Printed name from customer approval form"
+      "description": "Printed name from the customer approval form"
     },
     "approval_method": {
       "type": "string",
