@@ -95,6 +95,8 @@ export default function EstimatePage() {
   const [estimateDate, setEstimateDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [expirationDate, setExpirationDate] = useState(format(addDays(new Date(), 30), "yyyy-MM-dd"));
   const [estimateNumber, setEstimateNumber] = useState("");
+  // Token minted by a save in this session — protects it from being re-minted before the record reloads.
+  const mintedShareToken = useRef(null);
 
   const { data: job } = useQuery({
     queryKey: ["job", jobId],
@@ -215,7 +217,7 @@ export default function EstimatePage() {
         target_margin_pct: estMargin, miles_one_way: num(miles), extra_trips: num(extra),
         fuel_margin_pct: hasMargin(fuelMarginPct) ? num(fuelMarginPct) : null, fuel_show_as_separate_line: !!fuelSeparate,
         fuel_price_per_gal_snapshot: fuelPrice, truck_mpg_snapshot: mpg, fuel_cost: fuel.cost, fuel_price: fuel.price, total_hard_cost: r2(hardTotal),
-        ...(existingEstimate?.share_token ? {} : { share_token: crypto.randomUUID().replace(/-/g, "") }),
+        ...(existingEstimate?.share_token || mintedShareToken.current ? {} : { share_token: crypto.randomUUID().replace(/-/g, "") }),
         notes, internal_notes: internalNotes, customer_signature: signature, view_mode: viewMode,
         ...(finalStatus === "Approved" ? { approved_date: approvedDate || new Date().toISOString().split("T")[0] } : {}),
       };
@@ -244,6 +246,22 @@ export default function EstimatePage() {
       else toast.success("Estimate saved");
     },
   });
+
+  // A share link is only ever built from a persisted token. If the record has none, this
+  // awaits the ordinary save, which mints one; the token then comes back on the saved record.
+  async function ensureShareToken() {
+    if (existingEstimate?.share_token) return existingEstimate.share_token;
+    if (isNew && priced.length === 0) return null;
+    // A saved record that has not loaded yet must never be saved over unseen data.
+    if (!isNew && !existingEstimate) return null;
+    try {
+      const saved = await save.mutateAsync();
+      mintedShareToken.current = saved?.share_token || null;
+      return mintedShareToken.current;
+    } catch {
+      return null;
+    }
+  }
 
   function changeLine(idx, patch) {
     setLines((prev) => prev.map((l, i) => {
@@ -382,7 +400,7 @@ export default function EstimatePage() {
             </div>
             <CustomerEstimateDoc doc={customerDoc} preview />
             {sendPanelOpen && (
-              <SendEstimatePanel customerDoc={customerDoc} estimate={estimateForView} job={job} customer={customer} businessInfo={businessInfo} onClose={() => setSendPanelOpen(false)}
+              <SendEstimatePanel customerDoc={customerDoc} estimate={estimateForView} job={job} customer={customer} businessInfo={businessInfo} onClose={() => setSendPanelOpen(false)} onEnsureShareToken={ensureShareToken}
                 onSent={(email) => {
                   setSendPanelOpen(false);
                   setLines(priced);

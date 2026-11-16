@@ -20,17 +20,19 @@ function getPhone(customer) {
   return customer?.job_contact_phone || customer?.phone || "";
 }
 
-function getShareableLink(estimate) {
-  return `${window.location.origin}/estimate-view/${estimate?.share_token || estimate?.id}`;
+// A share link is built only from a persisted share_token — never a record id, never an empty value.
+function shareLinkFor(token) {
+  return token ? `${window.location.origin}/estimate-view/${token}` : null;
 }
 
 const METHODS = ["email", "text", "both"];
 
-export default function SendEstimatePanel({ estimate, job, customer, businessInfo, customerDoc, onClose, onSent }) {
+export default function SendEstimatePanel({ estimate, job, customer, businessInfo, customerDoc, onClose, onSent, onEnsureShareToken }) {
   const { user } = useAuth();
   const orgName = user?.organization_name || "";
   const firstName = customer?.name?.split(" ")[0] || customer?.name || "there";
-  const link = getShareableLink(estimate);
+  // The link this panel opened with; a token minted later replaces it in the message text.
+  const initialLink = shareLinkFor(estimate?.share_token);
 
   // Email fields
   const [to, setTo] = useState(getBillingEmail(customer));
@@ -40,10 +42,10 @@ export default function SendEstimatePanel({ estimate, job, customer, businessInf
   );
 
   // SMS fields
-  const estimateNum = estimate?.job_number ? `EST-${estimate.job_number}` : `EST-${estimate?.id?.slice(-6).toUpperCase()}`;
+  const estimateNum = estimate?.job_number ? `EST-${estimate.job_number}` : estimate?.id ? `EST-${estimate.id.slice(-6).toUpperCase()}` : "";
   const [phone, setPhone] = useState(getPhone(customer));
   const [smsBody, setSmsBody] = useState(
-    `Hi ${firstName}, your estimate ${estimateNum}${orgName ? ` from ${orgName}` : ""} is ready to view here: ${link}`
+    `Hi ${firstName}, your estimate${estimateNum ? ` ${estimateNum}` : ""}${orgName ? ` from ${orgName}` : ""} is ready to view here:${initialLink ? ` ${initialLink}` : ""}`
   );
 
   // Send method
@@ -54,8 +56,19 @@ export default function SendEstimatePanel({ estimate, job, customer, businessInf
   const showEmail = method === "email" || method === "both";
   const showText = method === "text" || method === "both";
 
-  function handleCopyLink() {
-    navigator.clipboard.writeText(link);
+  // Keeps whatever the sender typed; the live share URL replaces the link it opened with.
+  function withShareLink(body, url) {
+    if (initialLink) return body.split(initialLink).join(url);
+    return `${body.trimEnd()} ${url}`;
+  }
+
+  async function handleCopyLink() {
+    const url = shareLinkFor(await onEnsureShareToken());
+    if (!url) {
+      toast.error("Save the estimate first to generate a shareable link");
+      return;
+    }
+    await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     toast.success("Link copied to clipboard");
@@ -64,8 +77,16 @@ export default function SendEstimatePanel({ estimate, job, customer, businessInf
   async function handleSend() {
     setSending(true);
     try {
+      // The message only goes out once a persisted token exists for its link.
+      const url = shareLinkFor(await onEnsureShareToken());
+      if (!url) {
+        toast.error("Save the estimate first to generate a shareable link");
+        return;
+      }
+      const finalSmsBody = withShareLink(smsBody, url);
+      setSmsBody(finalSmsBody);
       if (showEmail) {
-        const body = `${message}\n\nView your estimate: ${link}\n\n---\nEstimate Total: $${(estimate?.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+        const body = `${message}\n\nView your estimate: ${url}\n\n---\nEstimate Total: $${(estimate?.total || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
         const html = body.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
         const resp = await base44.functions.invoke("sendOrgEmail", {
           to, subject, html, text: body, purpose: "estimate",
@@ -83,7 +104,7 @@ export default function SendEstimatePanel({ estimate, job, customer, businessInf
         await base44.functions.invoke("sendCustomerMessage", {
           channel: "SMS",
           to_phone: phone,
-          body: smsBody,
+          body: finalSmsBody,
           job_id: job?.id,
           job_number: job?.job_number,
           job_name: job?.job_name,
