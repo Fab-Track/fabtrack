@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { money } from "@/lib/costGroups";
-import { aggregateMaterials, computeRailingCosts } from "@/lib/railingTakeoff";
+import { aggregateMaterials, computeRailingCosts, resolveSettings } from "@/lib/railingTakeoff";
 
 const r2 = (n) => Math.round((n || 0) * 100) / 100;
 
@@ -48,8 +48,15 @@ export default function TakeoffDialog({ line, materials = [], settings, catalogI
     [line?.components, quantities]
   );
 
+  // Org setting: cost whole sticks (rounded up) or only the feet the layout uses
+  const costingMode = useMemo(() => resolveSettings(settings)?.material_costing_mode || "Whole sticks", [settings]);
+  const perFootMode = costingMode === "Per foot used";
+
   // Recalculate aggregated materials with overridden quantities
-  const aggMats = useMemo(() => aggregateMaterials(componentResults, materials), [componentResults, materials]);
+  const aggMats = useMemo(
+    () => aggregateMaterials(componentResults, materials, costingMode),
+    [componentResults, materials, costingMode]
+  );
 
   // Recalculate costs (fab/powder/install don't change with material qty overrides)
   const newMaterialCost = r2(aggMats.reduce((sum, m) => sum + m.material_cost, 0));
@@ -153,28 +160,50 @@ export default function TakeoffDialog({ line, materials = [], settings, catalogI
         {/* Aggregated materials with stick quantities */}
         <div>
           <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
-            Material sticks (combined &amp; rounded up)
+            Materials — {perFootMode ? "per foot used" : "whole sticks (combined & rounded up)"}
           </h4>
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left">
                 <th className={th}>Material</th>
-                <th className={`${th} text-right`}>Total ft</th>
-                <th className={`${th} text-right`}>Stick len</th>
-                <th className={`${th} text-right`}>Sticks</th>
-                <th className={`${th} text-right`}>Cost / stick</th>
-                <th className={`${th} text-right`}>Cost</th>
+                <th className={`${th} text-right`}>Feet needed</th>
+                {perFootMode ? (
+                  <>
+                    <th className={`${th} text-right`}>Cost / ft</th>
+                    <th className={`${th} text-right`}>Cost</th>
+                  </>
+                ) : (
+                  <>
+                    <th className={`${th} text-right`}>Stick len</th>
+                    <th className={`${th} text-right`}>Sticks to buy</th>
+                    <th className={`${th} text-right`}>Leftover</th>
+                    <th className={`${th} text-right`}>Cost / stick</th>
+                    <th className={`${th} text-right`}>Cost</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
               {aggMats.map((m, i) => (
                 <tr key={i} className="border-t">
                   <td className="px-2 py-1.5">{m.material_name}</td>
-                  <td className="px-2 py-1.5 text-right font-mono">{m.total_qty.toFixed(2)}</td>
-                  <td className="px-2 py-1.5 text-right font-mono">{m.stock_length_ft || "—"}</td>
-                  <td className="px-2 py-1.5 text-right font-mono font-bold">{m.sticks || "—"}</td>
-                  <td className="px-2 py-1.5 text-right font-mono">{m.cost_per_stick ? money(m.cost_per_stick) : "—"}</td>
-                  <td className="px-2 py-1.5 text-right font-mono font-semibold">{money(m.material_cost)}</td>
+                  <td className="px-2 py-1.5 text-right font-mono">{m.total_qty.toFixed(2)} {m.qty_unit}</td>
+                  {perFootMode ? (
+                    <>
+                      <td className="px-2 py-1.5 text-right font-mono">{money(m.cost_per_foot, 4)}</td>
+                      <td className="px-2 py-1.5 text-right font-mono font-semibold">{money(m.material_cost)}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="px-2 py-1.5 text-right font-mono">{m.stock_length_ft || "—"}</td>
+                      <td className="px-2 py-1.5 text-right font-mono font-bold">{m.sticks || "—"}</td>
+                      <td className="px-2 py-1.5 text-right font-mono text-muted-foreground">
+                        {m.sticks ? `${m.leftover_ft.toFixed(2)} ft` : "—"}
+                      </td>
+                      <td className="px-2 py-1.5 text-right font-mono">{m.cost_per_stick ? money(m.cost_per_stick) : "—"}</td>
+                      <td className="px-2 py-1.5 text-right font-mono font-semibold">{money(m.material_cost)}</td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -184,7 +213,7 @@ export default function TakeoffDialog({ line, materials = [], settings, catalogI
         {/* Cost summary */}
         <div className="space-y-1 border-t pt-3">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Materials (sticks):</span>
+            <span className="text-muted-foreground">Materials ({perFootMode ? "per foot used" : "whole sticks"}):</span>
             <span className="font-mono">{money(newMaterialCost)}</span>
           </div>
           <div className="flex justify-between">

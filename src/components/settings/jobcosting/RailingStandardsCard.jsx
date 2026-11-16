@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import RateField from "./RateField";
 import { toast } from "sonner";
 
@@ -27,6 +28,7 @@ export default function RailingStandardsCard() {
   useEffect(() => {
     const f = {};
     FIELDS.forEach((k) => { f[k] = String(main?.[k] ?? DEFAULTS[k]); });
+    f.material_costing_mode = main?.material_costing_mode || "Whole sticks";
     setForm(f);
   }, [main]);
 
@@ -36,6 +38,7 @@ export default function RailingStandardsCard() {
     setSaving(true);
     const data = {};
     FIELDS.forEach((k) => { data[k] = parseFloat(form[k]) || 0; });
+    data.material_costing_mode = form.material_costing_mode || "Whole sticks";
     if (main) await base44.entities.AppSettings.update(main.id, data);
     else await base44.entities.AppSettings.create({ organization_id: orgId, setting_key: "main", ...data });
     qc.invalidateQueries({ queryKey: ["appSettings"] });
@@ -48,13 +51,28 @@ export default function RailingStandardsCard() {
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
           <h3 className="font-bold text-base">Railing standards</h3>
-          <p className="text-xs text-muted-foreground">Default post heights applied at estimate time.</p>
+          <p className="text-xs text-muted-foreground">Default post heights and how railing materials are costed.</p>
         </div>
         <Button onClick={save} disabled={saving} className="shrink-0">{saving ? "Saving…" : "Save"}</Button>
       </div>
       <div className="grid grid-cols-2 gap-3 max-w-md">
         <RateField label="Residential post height" helper="Inches" suffix="in" value={form.res_post_height_in ?? ""} onChange={set("res_post_height_in")} />
         <RateField label="Commercial post height" helper="Inches" suffix="in" value={form.comm_post_height_in ?? ""} onChange={set("comm_post_height_in")} />
+      </div>
+
+      <div className="mt-4 max-w-md">
+        <p className="text-sm font-medium mb-1.5">Material costing</p>
+        <Select value={form.material_costing_mode || "Whole sticks"} onValueChange={set("material_costing_mode")}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Whole sticks">Whole sticks</SelectItem>
+            <SelectItem value="Per foot used">Per foot used</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-muted-foreground mt-1.5">
+          Whole sticks pools the feet needed per material across all slots and rounds up to full stock lengths.
+          Per foot used charges only the feet the layout needs, at cost per foot.
+        </p>
       </div>
     </div>
   );

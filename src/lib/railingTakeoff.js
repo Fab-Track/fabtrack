@@ -37,6 +37,7 @@ export function resolveSettings(input) {
     res_picket_length_in: pick("res_picket_length_in"),
     comm_picket_length_in: pick("comm_picket_length_in"),
     rail_bottom_clearance_in: pick("rail_bottom_clearance_in"),
+    material_costing_mode: rec.material_costing_mode || "Whole sticks",
     labor_fab_rate: pick("labor_fab_rate"),
     labor_install_rate: pick("labor_install_rate"),
     install_hours_per_day: pick("install_hours_per_day") || 8,
@@ -147,11 +148,13 @@ export function costComponent(c, mat, layout, length) {
 }
 
 /**
- * Aggregate component results by catalog material, rounding up to whole sticks.
- * Combines footage for the same material before stick calculation so the customer
- * pays for full sticks including leftover.
+ * Aggregate component results by catalog material.
+ * Combines footage for the same material across every slot first (rails and posts
+ * that use the same tube are pooled), then:
+ *   "Whole sticks"  — rounds up to full stock lengths x cost per stick (customer pays the leftover).
+ *   "Per foot used" — charges only the feet the layout needs, at cost per foot.
  */
-export function aggregateMaterials(componentResults, materials) {
+export function aggregateMaterials(componentResults, materials, costingMode = "Whole sticks") {
   const groups = {};
   for (const c of componentResults) {
     if (!c || !c.material_id) continue;
@@ -174,23 +177,27 @@ export function aggregateMaterials(componentResults, materials) {
     groups[key].total_qty += c.qty;
   }
 
+  const perFootMode = costingMode === "Per foot used";
+
   return Object.values(groups).map((g) => {
     let sticks = 0;
+    let leftover_ft = 0;
     let material_cost = 0;
 
     if (g.cost_method === "unit") {
       // Unit items: no stick rounding, cost per piece
       material_cost = g.total_qty * g.cost_per_foot; // cost_per_foot holds cost_per_unit for unit items
-    } else if (g.stock_length_ft > 0 && g.cost_per_stick > 0) {
-      // Stick pricing: round up to whole sticks
+    } else if (!perFootMode && g.stock_length_ft > 0 && g.cost_per_stick > 0) {
+      // Stick pricing: round up to whole sticks, leftover included in the cost
       sticks = Math.ceil(g.total_qty / g.stock_length_ft);
       material_cost = sticks * g.cost_per_stick;
+      leftover_ft = r2(sticks * g.stock_length_ft - g.total_qty);
     } else {
-      // Fallback: per-foot pricing (no stick rounding)
+      // Per foot used (or no stick price on file): feet needed x cost per foot
       material_cost = g.total_qty * g.cost_per_foot;
     }
 
-    return { ...g, sticks, material_cost };
+    return { ...g, sticks, leftover_ft, material_cost };
   });
 }
 
@@ -213,7 +220,8 @@ export function componentWarnings(components, layout, infillType) {
 
 /**
  * THE calculation. One style + one length + the org railing standards in, and you get
- * the layout and the same four hard-cost parts every time — materials (whole sticks),
+ * the layout and the same four hard-cost parts every time — materials (whole sticks or
+ * per foot used, per the org's material costing setting),
  * fabrication, powder coat and install — plus the labor hours behind them.
  *
  * @param {object}  args.catalogItem  ServiceCatalog item carrying the railing spec
@@ -256,7 +264,7 @@ export function computeRailingCosts({ catalogItem, category, settings, materials
     : null;
 
   const allComponents = infillLine ? [...components, infillLine] : components;
-  const materialLines = aggregateMaterials(allComponents, materials);
+  const materialLines = aggregateMaterials(allComponents, materials, s?.material_costing_mode);
 
   const fabHours = num(catalogItem?.cost_fab_hours_per_unit) / 10 * qty;
   const installHours = num(catalogItem?.cost_install_hours_per_unit) / 10 * qty;

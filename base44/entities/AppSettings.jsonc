@@ -108,6 +108,19 @@
       "default": 3.6875,
       "description": "Org-level railing standard: clear gap under the bottom rail in inches (default 3.6875)."
     },
+    "material_costing_mode": {
+      "type": "string",
+      "enum": [
+        "Whole sticks",
+        "Per foot used"
+      ],
+      "enumColors": [
+        "blue",
+        "purple"
+      ],
+      "default": "Whole sticks",
+      "description": "How railing materials are costed. Whole sticks pools the feet needed per material across all slots, rounds up to full stock lengths and multiplies by cost per stick. Per foot used charges only the feet the layout needs, at cost per foot."
+    },
     "default_target_margin_pct": {
       "type": "number",
       "default": 33.3,

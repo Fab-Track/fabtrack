@@ -41,7 +41,7 @@ export default function ComponentsCard({ rows, setRows, results, materials, layo
           {rows.length > 0 && (
             <tfoot><tr className="border-t bg-muted/20">
               <td colSpan={5} className="px-3 py-2 text-right text-xs font-semibold">
-                Materials <span className="font-normal text-muted-foreground">(whole sticks — cost/ft {money(perFoot / Math.max(length, 1), 4)})</span>
+                Materials <span className="font-normal text-muted-foreground">(cost/ft {money(total / Math.max(length, 1), 4)})</span>
               </td>
               <td className="px-3 py-2 text-right font-mono font-bold">{money(total)}</td><td />
             </tr></tfoot>
