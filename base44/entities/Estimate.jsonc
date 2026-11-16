@@ -273,6 +273,10 @@
             "type": "boolean",
             "description": "Whether this line item is priced via the railing takeoff."
           },
+          "_takeoff_locked": {
+            "type": "boolean",
+            "description": "Whether this line's material and powder coat costs were overridden by the estimator. When true, the takeoff keeps the stored costs instead of re-deriving them. Older records carry the same flag as _railing_takeoff.overridden, which is still read as a fallback."
+          },
           "_railing_takeoff": {
             "type": "object",
             "description": "Snapshot of the railing takeoff: inputs (length, isResidential), layout steps and params."
