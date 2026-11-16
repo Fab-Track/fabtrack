@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import LineItemPhotoUpload from "@/components/estimates/LineItemPhotoUpload";
 import LineLaborHours from "@/components/estimates/v2/LineLaborHours";
+import MarginInput from "@/components/estimates/v2/MarginInput";
 import { money } from "@/lib/costGroups";
 import { lineKind, hasMargin } from "@/lib/estimateCalc";
 
@@ -48,13 +49,6 @@ export default function LineRow({ line, idx, cols, estMargin, frozen, colors, lo
           <span className="text-xs text-muted-foreground w-6">{line.unit}</span>
         </div>
         <span className="text-right font-mono text-sm pt-1.5">{cost ? money(line.hard_cost || 0) : "—"}</span>
-        <div className="text-right pt-0.5">
-          {cost ? (
-            <span className="inline-flex items-center gap-0.5">
-              <Input type="number" disabled={lock} className="h-8 w-16 text-right text-xs" placeholder={String(estMargin)} value={hasMargin(line.margin_pct) ? line.margin_pct : ""} onChange={(e) => set({ margin_pct: e.target.value === "" ? null : parseFloat(e.target.value) })} />%
-            </span>
-          ) : <span className="font-mono text-sm text-muted-foreground inline-block pt-1">{fixed ? "fixed" : "—"}</span>}
-        </div>
         <div className="text-right">
           {fixed ? (
             <Input type="number" min="0" className="h-8 text-right font-mono text-sm" placeholder="Price" value={line.unit_cost ?? ""} onChange={(e) => set({ unit_cost: e.target.value })} />
@@ -62,6 +56,11 @@ export default function LineRow({ line, idx, cols, estMargin, frozen, colors, lo
             <Input type="number" className="h-8 text-right font-mono text-sm" value={line.unit_cost ?? ""} onChange={(e) => set({ unit_cost: e.target.value })} />
           ) : null}
           <p className="font-mono font-bold text-sm pt-1">{money(line.total || 0)}</p>
+        </div>
+        <div className="text-right pt-0.5">
+          {cost ? (
+            <MarginInput disabled={lock} placeholder={String(estMargin)} value={hasMargin(line.margin_pct) ? line.margin_pct : ""} onChange={(v) => set({ margin_pct: v === "" ? null : parseFloat(v) })} />
+          ) : <span className="font-mono text-sm text-muted-foreground inline-block pt-1">{fixed ? "fixed" : "—"}</span>}
         </div>
         <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => onRemove(idx)}><Trash2 className="w-3.5 h-3.5" /></Button>
       </div>

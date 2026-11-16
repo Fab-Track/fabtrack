@@ -28,8 +28,8 @@ import { unitLabel, money } from "@/lib/costGroups";
 import { nextEstimateNumber } from "@/lib/estimateNumber";
 import { calcFuel, fuelLine, hasMargin, lineKind, num, priceLine, r2 } from "@/lib/estimateCalc";
 
-const COLS = "1.9fr 1.2fr 0.9fr 1.1fr 0.8fr 0.8fr 1fr 28px";
-const HEADERS = ["Cost group", "Install location", "Color", "Qty", "Hard cost", "Margin", "Price", ""];
+const COLS = "1.9fr 1.2fr 0.9fr 1.1fr 0.8fr 1fr 0.8fr 28px";
+const HEADERS = ["Cost group", "Install location", "Color", "Qty", "Hard cost", "Price", "Margin", ""];
 const INSTALL_LOCATIONS = [
   "Interior — Main Staircase", "Interior — Secondary Staircase", "Interior — Loft / Mezzanine",
   "Interior — Balcony / Overlook", "Interior — Basement Staircase", "Interior — Other",
@@ -338,7 +338,7 @@ export default function EstimatePage() {
                 ))}
                 {priced.length === 0 && <p className="text-sm text-muted-foreground text-center py-8 border-t">No line items yet. Click "Add from catalog".</p>}
                 <FuelRow fuel={fuel} miles={miles} setMiles={setMiles} extra={extra} setExtra={setExtra} fuelMargin={fuelMargin} setFuelMargin={setFuelMargin}
-                  price={fuelPrice} mpg={mpg} frozen={frozen} cols={COLS} />
+                  price={fuelPrice} mpg={mpg} estMargin={estMargin} frozen={frozen} cols={COLS} />
               </div>
             </div>
             <div className="grid md:grid-cols-2 gap-4">

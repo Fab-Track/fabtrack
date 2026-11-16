@@ -1,6 +1,7 @@
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { money } from "@/lib/costGroups";
+import MarginInput from "@/components/estimates/v2/MarginInput";
 
 // One labor line: hours × rate = cost, its own margin, and its own priced amount.
 export default function LaborLine({ label, hours, rate, cost, margin, placeholder, priced, frozen, onHours, onMargin, extra }) {
@@ -28,16 +29,7 @@ export default function LaborLine({ label, hours, rate, cost, margin, placeholde
       </div>
       <div className="flex items-center gap-1.5">
         <span className="pb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Margin</span>
-        <Input
-          type="number"
-          step="any"
-          disabled={frozen}
-          className="h-8 w-16 bg-background text-right font-mono text-sm"
-          placeholder={placeholder}
-          value={margin ?? ""}
-          onChange={(e) => onMargin(e.target.value)}
-        />
-        <span className="text-[11px] text-muted-foreground">%</span>
+        <MarginInput disabled={frozen} placeholder={placeholder} value={margin} onChange={onMargin} />
       </div>
       <div className="ml-auto flex items-center gap-1 whitespace-nowrap pb-1.5 text-[11px] text-muted-foreground">
         <span>priced</span>
