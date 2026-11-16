@@ -2,10 +2,11 @@ import React from "react";
 import { Input } from "@/components/ui/input";
 import { Clock } from "lucide-react";
 import { money } from "@/lib/costGroups";
+import { priceFromHard } from "@/lib/estimateCalc";
 
 const num = (v) => parseFloat(v) || 0;
 
-export default function LineLaborHours({ line, crew, fabRate, installRate, frozen, onChange }) {
+export default function LineLaborHours({ line, crew, fabRate, installRate, frozen, margin, estMargin, onChange, onMarginChange }) {
   const ov = line.hours_override || {};
   const r2 = (n) => Math.round((n || 0) * 100) / 100;
   // Frozen lines keep their stored snapshot, so read the hours back from the cost when needed.
@@ -17,6 +18,9 @@ export default function LineLaborHours({ line, crew, fabRate, installRate, froze
   const catalogCrew = num(crew);
   const crewCount = ov.crew != null ? ov.crew : catalogCrew;
   const edited = ov.fabrication != null || ov.install != null || ov.crew != null;
+  // Labor can carry its own margin; blank means it follows the line margin.
+  const laborMargin = margin != null && margin !== "" ? margin : estMargin;
+  const laborPriced = r2(num(line.cost_breakdown?.fabrication) + num(line.cost_breakdown?.install));
 
   const setOverride = (key, raw) => {
     const next = { ...ov };
@@ -103,6 +107,28 @@ export default function LineLaborHours({ line, crew, fabRate, installRate, froze
             <span>=</span>
             <b className="font-mono text-sm font-semibold text-foreground">{money(line.cost_breakdown?.install || 0)}</b>
           </div>
+        </div>
+
+        {/* Labor margin — blank follows the line margin */}
+        <div className="space-y-1">
+          <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Labor margin</label>
+          <div className="flex items-center gap-1.5">
+            <Input
+              type="number"
+              step="any"
+              disabled={frozen}
+              className="h-9 w-20 bg-background text-right font-mono text-sm"
+              placeholder={estMargin != null ? String(estMargin) : ""}
+              value={margin ?? ""}
+              onChange={(e) => onMarginChange(e.target.value)}
+            />
+            <span className="text-[11px] text-muted-foreground">%</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 whitespace-nowrap pb-1.5 text-[11px] text-muted-foreground">
+          <span className="font-mono">{money(laborPriced, 2)}</span>
+          <span>labor priced at</span>
+          <b className="font-mono text-sm font-semibold text-foreground">{money(priceFromHard(laborPriced, laborMargin))}</b>
         </div>
 
         <p className="ml-auto pb-2 text-[11px] text-muted-foreground">Rates are set in Settings › Job costing</p>

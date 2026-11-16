@@ -30,7 +30,6 @@ export default function LineRow({ line, idx, cols, estMargin, frozen, colors, lo
               </select>
             )}
           </div>
-          <Input className="h-8 text-xs" placeholder="Description" value={line.description || ""} onChange={(e) => set({ description: e.target.value })} />
           {line._warn && <p className="text-xs text-amber-700">{line._warn}</p>}
         </div>
         <Select value={line.install_location || "N/A"} onValueChange={(v) => set({ install_location: v })}>
@@ -79,7 +78,10 @@ export default function LineRow({ line, idx, cols, estMargin, frozen, colors, lo
           fabRate={fabRate}
           installRate={installRate}
           frozen={frozen}
+          margin={line.labor_margin_pct}
+          estMargin={hasMargin(line.margin_pct) ? line.margin_pct : estMargin}
           onChange={(v) => set({ hours_override: v })}
+          onMarginChange={(v) => set({ labor_margin_pct: v === "" ? null : parseFloat(v) })}
         />
       )}
       <div className="px-4 pb-2">

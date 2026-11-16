@@ -45,6 +45,7 @@ const baseLine = { install_location: "N/A", category: "Labor", quantity: 1, unit
 // Strip UI-only keys and nulls before saving
 function cleanLine({ _id, _warn, _railing_style, _is_staircase, _staircase_type, _fab_hours_base, _install_hours_base, ...rest }) {
   if (!hasMargin(rest.margin_pct)) delete rest.margin_pct;
+  if (!hasMargin(rest.labor_margin_pct)) delete rest.labor_margin_pct;
   if (!rest._railing_takeoff) delete rest._railing_takeoff;
   if (!rest.hours_override) delete rest.hours_override;
   if (rest.photo_url == null) delete rest.photo_url;
