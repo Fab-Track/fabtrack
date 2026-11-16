@@ -8,7 +8,7 @@ import { Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import AddMaterialDialog from "./AddMaterialDialog";
 import ComponentRow from "./ComponentRow";
-import { computeLayout, costComponent, componentWarnings, resolveSettings } from "@/lib/railingTakeoff";
+import { componentWarnings, computeRailingCosts } from "@/lib/railingTakeoff";
 
 const money = (n) => `$${(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -48,12 +48,13 @@ export default function StyleComponentEditor({ open, onOpenChange, serviceCatalo
   const isRailing = !!item?.is_railing;
   const len = parseFloat(length) || 0;
   const category = categories.find(c => c.id === item?.category_id);
-  const layout = useMemo(
-    () => isRailing ? computeLayout({ catalogItem: item, settings: resolveSettings(settingsRecords), length: len, isResidential, category }) : null,
-    [item, isRailing, settingsRecords, len, isResidential, category]
+  const calc = useMemo(
+    () => computeRailingCosts({ catalogItem: { ...item, components: rows }, category, settings: settingsRecords, materials, length: len, isResidential }),
+    [item, rows, category, settingsRecords, materials, len, isResidential]
   );
-  const results = rows.map(r => costComponent(r, materials.find(m => m.id === r.material_id), layout, len));
-  const total = results.reduce((s, r) => s + (r?.cost || 0), 0);
+  const layout = calc.layout;
+  const results = calc.componentResults;
+  const total = calc.costs.materials;
   const warnings = isRailing ? componentWarnings(rows, layout) : [];
 
   const changeRow = (idx, field, value) => setRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: value } : r));

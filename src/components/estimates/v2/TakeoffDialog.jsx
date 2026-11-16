@@ -3,13 +3,30 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { money } from "@/lib/costGroups";
-import { aggregateMaterials } from "@/lib/railingTakeoff";
+import { aggregateMaterials, computeRailingCosts } from "@/lib/railingTakeoff";
 
 const r2 = (n) => Math.round((n || 0) * 100) / 100;
 
-export default function TakeoffDialog({ line, materials = [], onClose, onApply }) {
+export default function TakeoffDialog({ line, materials = [], settings, catalogItem, category, onClose, onApply }) {
   const t = line?._railing_takeoff;
-  const s = t?.steps;
+
+  // Same engine as the estimate line and the catalog preview — never a second copy of the math.
+  const calc = useMemo(
+    () =>
+      catalogItem && line
+        ? computeRailingCosts({
+            catalogItem,
+            category,
+            settings,
+            materials,
+            length: line.quantity,
+            isResidential: t?.inputs?.isResidential ?? line.building_type !== "Commercial",
+          })
+        : null,
+    [catalogItem, category, settings, materials, line, t]
+  );
+  const s = calc?.layout?.steps || t?.steps;
+  const costs = calc?.costs || line?.cost_breakdown || {};
 
   // Local editable quantities, initialized from the line's computed components
   const [quantities, setQuantities] = useState(() => (line?.components || []).map((c) => c.qty));
@@ -24,6 +41,7 @@ export default function TakeoffDialog({ line, materials = [], onClose, onApply }
     () =>
       (line?.components || []).map((c, i) => ({
         ...c,
+        material_name: c.material_name || c.name || c.material,
         qty: quantities[i] ?? c.qty,
         cost: r2((quantities[i] ?? c.qty) * (c.unit_cost || 0)),
       })),
@@ -35,8 +53,7 @@ export default function TakeoffDialog({ line, materials = [], onClose, onApply }
 
   // Recalculate costs (fab/powder/install don't change with material qty overrides)
   const newMaterialCost = r2(aggMats.reduce((sum, m) => sum + m.material_cost, 0));
-  const oldBreakdown = line?.cost_breakdown || {};
-  const newHardCost = r2(newMaterialCost + (oldBreakdown.fabrication || 0) + (oldBreakdown.powder_coat || 0) + (oldBreakdown.install || 0));
+  const newHardCost = r2(newMaterialCost + (costs.fabrication || 0) + (costs.powder_coat || 0) + (costs.install || 0));
 
   const cells = s
     ? [
@@ -45,7 +62,7 @@ export default function TakeoffDialog({ line, materials = [], onClose, onApply }
         ["Pickets / section", s.picketsPerSection],
         ["Total pickets", s.totalPickets],
         ["Post height", `${s.postHeight}"`],
-        ["Rail runs", t.params?.rail_runs],
+        ["Rail runs", (calc?.layout?.params || t?.params)?.rail_runs],
       ]
     : [];
   const th = "px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground";
@@ -59,7 +76,7 @@ export default function TakeoffDialog({ line, materials = [], onClose, onApply }
       components: componentResults.map((c) => ({ ...c, cost: r2(c.cost) })),
       aggregatedMaterials: aggMats,
       hard_cost: newHardCost,
-      cost_breakdown: { ...oldBreakdown, materials: newMaterialCost },
+      cost_breakdown: { ...costs, materials: newMaterialCost },
     });
     onClose();
   }
@@ -168,16 +185,20 @@ export default function TakeoffDialog({ line, materials = [], onClose, onApply }
             <span className="font-mono">{money(newMaterialCost)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Fabrication:</span>
-            <span className="font-mono">{money(oldBreakdown.fabrication || 0)}</span>
+            <span className="text-muted-foreground">
+              Fabrication:{calc ? ` ${calc.hours.fabrication} hrs` : ""}
+            </span>
+            <span className="font-mono">{money(costs.fabrication || 0)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Powder coat:</span>
-            <span className="font-mono">{money(oldBreakdown.powder_coat || 0)}</span>
+            <span className="font-mono">{money(costs.powder_coat || 0)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Install:</span>
-            <span className="font-mono">{money(oldBreakdown.install || 0)}</span>
+            <span className="text-muted-foreground">
+              Install:{calc ? ` ${calc.hours.install} hrs × ${catalogItem?.cost_install_crew_size || 0} crew` : ""}
+            </span>
+            <span className="font-mono">{money(costs.install || 0)}</span>
           </div>
           <div className="flex justify-between border-t pt-1 font-bold">
             <span>Hard cost:</span>

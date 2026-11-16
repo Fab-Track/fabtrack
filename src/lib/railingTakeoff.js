@@ -1,7 +1,10 @@
 /**
- * Railing takeoff calculation utilities.
- * Reads from Service Catalog item parameters and components, MaterialPriceList,
- * and org-level AppSettings to compute hard cost and final price.
+ * THE railing cost engine — single source of truth.
+ *
+ * Every surface that shows railing numbers (Catalog > Cost Groups > style preview,
+ * estimate line items, "View takeoff", the Service Catalog component editor) calls
+ * computeRailingCosts(). Never re-implement this math anywhere else: if a number
+ * needs to change, it changes here.
  */
 
 export const RAILING_SLOTS = ["Top Rail", "Bottom Rail", "Post", "Picket"];
@@ -9,19 +12,26 @@ export const RAILING_SLOTS = ["Top Rail", "Bottom Rail", "Post", "Picket"];
 /** Offset (inches) subtracted from post height to derive picket length (top + bottom rail + gap). */
 const PICKET_LENGTH_OFFSET_IN = 6.5;
 
+export const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+
 /**
- * Build the settings object from AppSettings records.
- * Labor rates and railing standards come from the "main" row only.
+ * Org-level railing standards and labor rates.
+ * Accepts a raw AppSettings record, the full settings array, an already-resolved
+ * object, or null — always returns the same normalized shape.
  */
-export function resolveSettings(records) {
-  if (!records || records.length === 0) return null;
-  const main = records.find(r => r.setting_key === "main");
-  const mainVal = (field) => (main && main[field] != null && main[field] > 0 ? main[field] : 0);
+export function resolveSettings(input) {
+  let rec = null;
+  if (Array.isArray(input)) rec = input.find((r) => r && r.setting_key === "main") || null;
+  else if (input && typeof input === "object") rec = input;
+  if (!rec) return null;
+  const pick = (f) => (rec[f] != null && rec[f] > 0 ? rec[f] : 0);
   return {
-    res_post_height_in: mainVal("res_post_height_in"),
-    comm_post_height_in: mainVal("comm_post_height_in"),
-    labor_fab_rate: mainVal("labor_fab_rate"),
-    labor_install_rate: mainVal("labor_install_rate"),
+    res_post_height_in: pick("res_post_height_in"),
+    comm_post_height_in: pick("comm_post_height_in"),
+    labor_fab_rate: pick("labor_fab_rate"),
+    labor_install_rate: pick("labor_install_rate"),
+    install_hours_per_day: pick("install_hours_per_day") || 8,
   };
 }
 
@@ -44,12 +54,13 @@ export function resolveRailingParams(catalogItem, category) {
  * Railing layout (posts, sections, pickets) for a given length. Returns null if inputs are missing.
  */
 export function computeLayout({ catalogItem, settings, length, isResidential, category }) {
-  if (!catalogItem || !settings || !length || length <= 0) return null;
+  const s = resolveSettings(settings);
+  if (!catalogItem || !s || !length || length <= 0) return null;
 
   const { post_spacing_in, post_width_in, picket_clear_gap_in, picket_width_in, rail_runs } = resolveRailingParams(catalogItem, category);
   if (!post_spacing_in || !post_width_in || !picket_clear_gap_in || !picket_width_in || !rail_runs) return null;
 
-  const postHeight = isResidential ? settings.res_post_height_in : settings.comm_post_height_in;
+  const postHeight = isResidential ? s.res_post_height_in : s.comm_post_height_in;
   if (!postHeight) return null;
   const picketLength = Math.max(0, postHeight - PICKET_LENGTH_OFFSET_IN);
 
@@ -110,16 +121,12 @@ export function costComponent(c, mat, layout, length) {
  * Aggregate component results by catalog material, rounding up to whole sticks.
  * Combines footage for the same material before stick calculation so the customer
  * pays for full sticks including leftover.
- *
- * Returns an array of aggregated material lines:
- *   { material_id, material_name, total_qty, qty_unit, stock_length_ft,
- *     cost_per_stick, cost_per_foot, cost_method, sticks, material_cost }
  */
 export function aggregateMaterials(componentResults, materials) {
   const groups = {};
   for (const c of componentResults) {
     if (!c || !c.material_id) continue;
-    const mat = materials.find((m) => m.id === c.material_id);
+    const mat = (materials || []).find((m) => m.id === c.material_id);
     if (!mat) continue;
     const key = c.material_id;
     if (!groups[key]) {
@@ -163,56 +170,74 @@ export function aggregateMaterials(componentResults, materials) {
 export function componentWarnings(components, layout) {
   const list = components || [];
   const warnings = [];
-  RAILING_SLOTS.forEach(slot => {
-    if (list.filter(c => c.slot === slot).length > 1) warnings.push(`More than one line in the ${slot} slot.`);
+  RAILING_SLOTS.forEach((slot) => {
+    if (list.filter((c) => c.slot === slot).length > 1) warnings.push(`More than one line in the ${slot} slot.`);
   });
   const hasPosts = layout ? layout.steps.posts > 0 : true;
   const hasPickets = layout ? layout.steps.totalPickets > 0 : true;
-  if (hasPosts && !list.some(c => c.slot === "Post")) warnings.push("This style has posts but no Post line.");
-  if (hasPickets && !list.some(c => c.slot === "Picket")) warnings.push("This style has pickets but no Picket line.");
+  if (hasPosts && !list.some((c) => c.slot === "Post")) warnings.push("This style has posts but no Post line.");
+  if (hasPickets && !list.some((c) => c.slot === "Picket")) warnings.push("This style has pickets but no Picket line.");
   return warnings;
 }
 
 /**
- * Compute railing takeoff from catalog item (its components), materials, settings, and category.
- * Returns a detailed breakdown object, or null if required data is missing.
+ * THE calculation. One style + one length + the org railing standards in, and you get
+ * the layout and the same four hard-cost parts every time — materials (whole sticks),
+ * fabrication, powder coat and install — plus the labor hours behind them.
+ *
+ * @param {object}  args.catalogItem  ServiceCatalog item carrying the railing spec
+ * @param {object}  args.category     its CatalogCategory (railing defaults live here)
+ * @param {object|array} args.settings AppSettings record / records / resolved settings
+ * @param {array}   args.materials    MaterialPriceList records
+ * @param {number}  args.length       run length in linear feet
+ * @param {boolean} args.isResidential residential (true) or commercial (false) height
  */
-export function computeRailingTakeoff({ catalogItem, materials, settings, length, isResidential, category }) {
-  if (!catalogItem || !materials || !settings) return null;
-  const layout = computeLayout({ catalogItem, settings, length, isResidential, category });
-  if (!layout) return null;
+export function computeRailingCosts({ catalogItem, category, settings, materials, length, isResidential = true }) {
+  const s = resolveSettings(settings);
+  const qty = num(length);
+  const rows = catalogItem?.components || [];
+  const railing = !!(category?.is_railing || catalogItem?.is_railing);
 
-  const componentResults = (catalogItem.components || []).map(c =>
-    costComponent(c, materials.find(m => m.id === c.material_id), layout, length)
-  );
+  const layout = railing && s ? computeLayout({ catalogItem, category, settings: s, length: qty, isResidential }) : null;
 
-  // If any component failed to resolve, return null (fallback to manual)
-  if (componentResults.some(c => c === null)) return null;
+  // Row-aligned results (nulls kept) for component tables, then the resolved ones for costing.
+  const componentResults = rows.map((c) => costComponent(c, (materials || []).find((m) => m.id === c.material_id), layout, qty));
+  const components = componentResults.filter(Boolean);
+  const materialLines = aggregateMaterials(components, materials);
 
-  // Aggregate by material and round up to whole sticks — customer pays for full sticks
-  const aggregatedMaterials = aggregateMaterials(componentResults, materials);
-  const materialCost = aggregatedMaterials.reduce((s, m) => s + m.material_cost, 0);
+  const fabHours = num(catalogItem?.cost_fab_hours_per_unit) / 10 * qty;
+  const installHours = num(catalogItem?.cost_install_hours_per_unit) / 10 * qty;
 
-  // Step 8: Labor costs (cost fields are hours per 10 LF — divide by 10 to get per-LF)
-  const fabCost = (catalogItem.cost_fab_hours_per_unit || 0) / 10 * (settings.labor_fab_rate || 0) * length;
-  const powderCost = (catalogItem.cost_powder_coat_per_unit || 0) * length;
-  const installCost = (catalogItem.cost_install_crew_size || 0) * (catalogItem.cost_install_hours_per_unit || 0) / 10 * (settings.labor_install_rate || 0) * length;
+  const costs = {
+    materials: r2(materialLines.reduce((a, m) => a + m.material_cost, 0)),
+    fabrication: r2(fabHours * num(s?.labor_fab_rate)),
+    powder_coat: r2(num(catalogItem?.cost_powder_coat_per_unit) * qty),
+    install: r2(installHours * num(catalogItem?.cost_install_crew_size) * num(s?.labor_install_rate)),
+  };
+  const hardCost = r2(costs.materials + costs.fabrication + costs.powder_coat + costs.install);
 
-  const hardCost = materialCost + fabCost + powderCost + installCost;
-  const totalPrice = hardCost * (catalogItem.cost_markup_multiplier || 1);
+  const hoursPerDay = num(s?.install_hours_per_day) || 8;
+  const hours = {
+    fabrication: r2(fabHours),
+    install: r2(installHours),
+    installDays: installHours > 0 ? Math.ceil(installHours / hoursPerDay) : 0,
+  };
+
+  let warn = null;
+  if (railing && !layout) warn = "Missing railing standards or layout defaults";
+  else if (components.length < rows.length) warn = "A component is missing its material or cost";
 
   return {
-    inputs: { length, isResidential },
-    params: layout.params,
-    steps: layout.steps,
-    components: componentResults,
-    aggregatedMaterials,
-    materialCost,
-    fabCost,
-    powderCost,
-    installCost,
+    isRailing: railing,
+    settings: s,
+    layout,
+    componentResults,
+    components,
+    materialLines,
+    costs,
+    hours,
     hardCost,
-    markupMultiplier: catalogItem.cost_markup_multiplier || 1,
-    totalPrice,
+    costPerUnit: qty > 0 ? r2(hardCost / qty) : 0,
+    warn,
   };
 }

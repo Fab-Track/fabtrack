@@ -9,12 +9,21 @@ import ComponentsCard from "./ComponentsCard";
 import LaborCard from "./LaborCard";
 import CostSummary from "./CostSummary";
 import EditStyleDialog from "./EditStyleDialog";
-import { computeLayout, costComponent, resolveSettings } from "@/lib/railingTakeoff";
+import TestBar from "./TestBar";
+import { computeRailingCosts } from "@/lib/railingTakeoff";
 import { overridesOf, statusOf, unitChip, unitLabel } from "@/lib/costGroups";
 
 const FIELD = { fab: "cost_fab_hours_per_unit", pc: "cost_powder_coat_per_unit", crew: "cost_install_crew_size", inst: "cost_install_hours_per_unit" };
 const num = (v) => parseFloat(v) || 0;
 const toRules = (it) => ({ fab: it.cost_fab_hours_per_unit ?? 0, pc: it.cost_powder_coat_per_unit ?? 0, crew: it.cost_install_crew_size ?? 0, inst: it.cost_install_hours_per_unit ?? 0 });
+// Fold the in-progress labor inputs into the style so the preview stays live while typing.
+const withRules = (it, rules) => ({
+  ...it,
+  cost_fab_hours_per_unit: num(rules.fab),
+  cost_powder_coat_per_unit: num(rules.pc),
+  cost_install_crew_size: num(rules.crew),
+  cost_install_hours_per_unit: num(rules.inst),
+});
 
 export default function StyleDetail({ item, category, settings, materials, orgId, refresh, onBack, onBackToCategory, onOpenItem }) {
   const [rows, setRows] = useState(item.components || []);
@@ -22,33 +31,43 @@ export default function StyleDetail({ item, category, settings, materials, orgId
   const [margin, setMargin] = useState(String(settings?.default_target_margin_pct ?? 33.3));
   const [saving, setSaving] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [length, setLength] = useState("20");
+  const [isResidential, setIsResidential] = useState(true);
 
   useEffect(() => { setRows(item.components || []); setRules(toRules(item)); }, [item.id, item.updated_date]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (settings?.default_target_margin_pct != null) setMargin(String(settings.default_target_margin_pct)); }, [settings?.default_target_margin_pct]);
 
   const railing = !!(category?.is_railing || item.is_railing);
   const unit = unitLabel(category);
-  const qty = 20;
-  const isResidential = true;
+  const qty = num(length);
   const s = settings || {};
-  const layout = useMemo(
-    () => (railing ? computeLayout({ catalogItem: item, settings: resolveSettings(settings ? [settings] : []), length: qty, isResidential, category }) : null),
-    [railing, item, settings, qty, isResidential, category]
+
+  // One engine — exactly what the estimate line and View takeoff use.
+  const calc = useMemo(
+    () => computeRailingCosts({
+      catalogItem: withRules({ ...item, components: rows }, rules),
+      category,
+      settings,
+      materials,
+      length: qty,
+      isResidential,
+    }),
+    [item, rows, rules, category, settings, materials, qty, isResidential]
   );
-  const results = rows.map((r) => costComponent(r, materials.find((m) => m.id === r.material_id), layout, qty));
+
   const rates = { fab: s.labor_fab_rate || 0, install: s.labor_install_rate || 0 };
   const hoursPerDay = s.install_hours_per_day || 8;
-  const fabHrs = num(rules.fab) / 10 * qty;
-  const instHrs = num(rules.inst) / 10 * qty;
-  const calc = {
-    qty, fabHrs, instHrs,
-    fab: fabHrs * rates.fab,
-    pc: num(rules.pc) * qty,
-    install: instHrs * num(rules.crew) * rates.install,
-    days: instHrs > 0 ? Math.ceil(instHrs / hoursPerDay) : 0,
+  const calcCard = {
+    qty,
+    fabHrs: calc.hours.fabrication,
+    instHrs: calc.hours.install,
+    fab: calc.costs.fabrication,
+    pc: calc.costs.powder_coat,
+    install: calc.costs.install,
+    days: calc.hours.installDays,
   };
-  const parts = { materials: results.reduce((a, r) => a + (r?.cost || 0), 0), fab: calc.fab, pc: calc.pc, install: calc.install };
-  const hard = parts.materials + parts.fab + parts.pc + parts.install;
+  const parts = { materials: calc.costs.materials, fab: calc.costs.fabrication, pc: calc.costs.powder_coat, install: calc.costs.install };
+  const hard = calc.hardCost;
 
   const st = statusOf({ ...item, components: rows }, category);
   const ov = overridesOf(item, category);
@@ -99,10 +118,11 @@ export default function StyleDetail({ item, category, settings, materials, orgId
       </div>
       <div className="grid gap-4 lg:grid-cols-[1fr_300px] items-start">
         <div className="space-y-4 min-w-0">
-          {railing && <LayoutCard layout={layout} item={item} category={category} onSaveOverride={saveOverride} />}
-          <ComponentsCard rows={rows} setRows={setRows} results={results} materials={materials} layout={layout} length={qty} railing={railing}
-            dirty={dirty} saving={saving} onSave={saveComponents} orgId={orgId} refresh={refresh} />
-          <LaborCard rules={rules} setRule={(f, v) => setRules((p) => ({ ...p, [f]: v }))} commit={commitRule} calc={calc} unit={unit} rates={rates} hoursPerDay={hoursPerDay} />
+          <TestBar length={length} setLength={setLength} unit={unit} railing={railing} isResidential={isResidential} setResidential={setIsResidential} />
+          {railing && <LayoutCard layout={calc.layout} item={item} category={category} onSaveOverride={saveOverride} />}
+          <ComponentsCard rows={rows} setRows={setRows} results={calc.componentResults} materials={materials} layout={calc.layout} length={qty} railing={railing}
+            materialCost={calc.costs.materials} dirty={dirty} saving={saving} onSave={saveComponents} orgId={orgId} refresh={refresh} />
+          <LaborCard rules={rules} setRule={(f, v) => setRules((p) => ({ ...p, [f]: v }))} commit={commitRule} calc={calcCard} unit={unit} rates={rates} hoursPerDay={hoursPerDay} />
         </div>
         <CostSummary qty={qty} unit={unit} parts={parts} hard={hard} margin={margin} setMargin={setMargin} jobMin={s.job_minimum || 0} />
       </div>

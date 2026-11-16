@@ -1,4 +1,4 @@
-import { computeLayout, costComponent, aggregateMaterials, resolveSettings } from "@/lib/railingTakeoff";
+import { computeRailingCosts } from "@/lib/railingTakeoff";
 
 export const num = (v) => parseFloat(v) || 0;
 export const r2 = (n) => Math.round((n || 0) * 100) / 100;
@@ -22,28 +22,19 @@ function computeCost(line, ctx) {
   const item = ctx.items.find((i) => i.id === line.service_catalog_id);
   if (!item || !ctx.settings) return null;
   const category = ctx.categories.find((c) => c.id === item.category_id);
-  const railing = !!(category?.is_railing || item.is_railing);
   const qty = num(line.quantity);
   const isResidential = line.building_type !== "Commercial";
-  const s = ctx.settings;
-  const layout = railing ? computeLayout({ catalogItem: item, settings: resolveSettings([s]), length: qty, isResidential, category }) : null;
-  const comps = (item.components || []).map((c) => costComponent(c, ctx.materials.find((m) => m.id === c.material_id), layout, qty)).filter(Boolean);
-  // Aggregate by material and round up to whole sticks — customer pays for full sticks
-  const aggMats = aggregateMaterials(comps, ctx.materials);
-  const materials = aggMats.reduce((a, m) => a + m.material_cost, 0);
-  const instHrs = num(item.cost_install_hours_per_unit) / 10 * qty;
-  const breakdown = {
-    materials: r2(materials),
-    fabrication: r2(num(item.cost_fab_hours_per_unit) / 10 * qty * num(s.labor_fab_rate)),
-    powder_coat: r2(num(item.cost_powder_coat_per_unit) * qty),
-    install: r2(instHrs * num(item.cost_install_crew_size) * num(s.labor_install_rate)),
-  };
+  // One engine: same style + LF + org standards => same takeoff and same four costs.
+  const calc = computeRailingCosts({ catalogItem: item, category, settings: ctx.settings, materials: ctx.materials, length: qty, isResidential });
   return {
-    hard: r2(breakdown.materials + breakdown.fabrication + breakdown.powder_coat + breakdown.install),
-    breakdown, instHrs, railing, layout,
-    warn: railing && !layout ? "Missing railing standards or layout defaults" : comps.length < (item.components || []).length ? "A component is missing its material or cost" : null,
-    components: comps.map((c) => ({ component_type: c.slot, name: c.material_name, slot: c.slot, material: c.material_name, material_id: c.material_id, qty: c.qty, qty_unit: c.qty_unit, unit_cost: c.unit_cost, cost: r2(c.cost) })),
-    aggregatedMaterials: aggMats,
+    hard: calc.hardCost,
+    breakdown: calc.costs,
+    instHrs: calc.hours.install,
+    railing: calc.isRailing,
+    layout: calc.layout,
+    warn: calc.warn,
+    components: calc.components.map((c) => ({ component_type: c.slot, name: c.material_name, slot: c.slot, material: c.material_name, material_id: c.material_id, qty: c.qty, qty_unit: c.qty_unit, unit_cost: c.unit_cost, cost: r2(c.cost) })),
+    aggregatedMaterials: calc.materialLines,
   };
 }
 

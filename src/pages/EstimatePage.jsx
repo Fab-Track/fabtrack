@@ -364,6 +364,9 @@ export default function EstimatePage() {
       <TakeoffDialog
         line={takeoffLine}
         materials={cat.materials}
+        settings={settings}
+        catalogItem={cat.items.find((i) => i.id === takeoffLine?.service_catalog_id)}
+        category={cat.categories.find((c) => c.id === cat.items.find((i) => i.id === takeoffLine?.service_catalog_id)?.category_id)}
         onClose={() => setTakeoffLine(null)}
         onApply={(result) => {
           setLines((prev) =>
