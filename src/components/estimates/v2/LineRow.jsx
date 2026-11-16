@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import LineItemPhotoUpload from "@/components/estimates/LineItemPhotoUpload";
+import LineLaborHours from "@/components/estimates/v2/LineLaborHours";
 import { money } from "@/lib/costGroups";
 import { lineKind, hasMargin } from "@/lib/estimateCalc";
 
 const BD = [["Materials", "materials"], ["Fabrication", "fabrication"], ["Powder coat", "powder_coat"], ["Install", "install"]];
 
-export default function LineRow({ line, idx, cols, estMargin, frozen, colors, locations, onChange, onRemove, onTakeoff }) {
+export default function LineRow({ line, idx, cols, estMargin, frozen, colors, locations, fabRate = 0, installRate = 0, crewOf, onChange, onRemove, onTakeoff }) {
   const kind = lineKind(line);
   const cost = kind === "cost";
   const fixed = kind === "fixed";
@@ -70,6 +71,16 @@ export default function LineRow({ line, idx, cols, estMargin, frozen, colors, lo
           {BD.map(([l, k]) => <span key={k}>{l} <b className="font-mono">{money(line.cost_breakdown?.[k] || 0)}</b></span>)}
           {line.components?.length > 0 && <button type="button" className="text-primary underline" onClick={() => onTakeoff(line)}>View takeoff</button>}
         </div>
+      )}
+      {cost && (
+        <LineLaborHours
+          line={line}
+          crew={crewOf ? crewOf(line) : 0}
+          fabRate={fabRate}
+          installRate={installRate}
+          frozen={frozen}
+          onChange={(v) => set({ hours_override: v })}
+        />
       )}
       <div className="px-4 pb-2">
         <LineItemPhotoUpload photoUrl={line.photo_url} showPhoto={line.show_photo} onChange={(url) => set({ photo_url: url })} onToggleShow={() => set({ show_photo: line.show_photo === false })} />

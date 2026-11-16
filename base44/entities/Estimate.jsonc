@@ -106,7 +106,19 @@
           },
           "install_hours": {
             "type": "number",
-            "description": "Install hours on this line (before crew size); drives install days"
+            "description": "Effective install hours on this line (catalog estimate or the estimator's edited hours); drives install days and fuel"
+          },
+          "hours_override": {
+            "type": "object",
+            "description": "Labor hours typed by the estimator on this line. Overrides the catalog estimate; rates still come from Settings",
+            "properties": {
+              "fabrication": {
+                "type": "number"
+              },
+              "install": {
+                "type": "number"
+              }
+            }
           },
           "margin_pct": {
             "type": "number",

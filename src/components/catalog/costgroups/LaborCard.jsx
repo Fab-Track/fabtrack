@@ -27,10 +27,10 @@ export default function LaborCard({ rules, setRule, commit, calc, unit, rates, h
         </p>
       </div>
       <div className="px-5 pb-4 space-y-2 text-xs text-muted-foreground border-b">
-        <p><span className="font-semibold text-foreground">Fabrication:</span> hours ÷ 10 × total {unit} × fab labor rate. Enter the hours it takes one person to fabricate 10 {unit} of this style.</p>
-        <p><span className="font-semibold text-foreground">Powder coat:</span> $/{unit} × total {unit}. Enter the powder coat cost per {unit}.</p>
-        <p><span className="font-semibold text-foreground">Install:</span> hours ÷ 10 × crew size × install labor rate × total {unit}. Enter the elapsed install hours per 10 {unit} and the crew size.</p>
-        <p><span className="font-semibold text-foreground">Install days:</span> install hours ÷ hours per day (from Settings). Used to calculate fuel trips on the estimate.</p>
+        <p><span className="font-semibold text-foreground">Fabrication:</span> hours ÷ 10 × test length × fab labor rate. Enter the hours it takes one person to fabricate 10 {unit} of this style.</p>
+        <p><span className="font-semibold text-foreground">Powder coat:</span> $/{unit} × test length. Enter the powder coat cost per {unit}.</p>
+        <p><span className="font-semibold text-foreground">Install (estimated):</span> estimated install time = hours ÷ 10 × test length. Cost = estimated hours × crew size × install labor rate. Enter the elapsed install hours per 10 {unit} and the crew size.</p>
+        <p><span className="font-semibold text-foreground">Install days:</span> estimated install time ÷ hours per day (from Settings). Used to calculate fuel trips on the estimate.</p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -49,20 +49,23 @@ export default function LaborCard({ rules, setRule, commit, calc, unit, rates, h
               <td className={`${td} text-right font-bold font-mono`}>{money(calc.pc)}</td>
             </tr>
             <tr className="border-t">
-              <td className={`${td} font-bold`}>Install</td>
+              <td className={`${td} font-bold`}>Install<br /><span className="text-xs font-normal text-muted-foreground">estimated</span></td>
               <td className={td}>
                 <div className="space-y-1">
                   <Rule field="inst" value={rules.inst} {...rp} suffix={`hr / 10 ${unit}`} />
                   <Rule field="crew" value={rules.crew} {...rp} prefix="crew of " />
                 </div>
               </td>
-              <td className={`${td} text-muted-foreground`}>{n1(calc.instHrs)} hrs × {rules.crew || 0} × {money(rates.install, 0)}/hr</td>
+              <td className={`${td} text-muted-foreground`}>
+                <div className="font-semibold text-foreground">est. {n1(calc.instHrs)} hrs for {n1(calc.qty)} {unit}</div>
+                <div>{n1(calc.instHrs)} hrs × {rules.crew || 0} × {money(rates.install, 0)}/hr</div>
+              </td>
               <td className={`${td} text-right font-bold font-mono`}>{money(calc.install)}</td>
             </tr>
             <tr className="border-t">
               <td className={`${td} font-bold`}>Install days</td>
               <td className={`${td} font-mono text-xs`}>{hoursPerDay} hrs / day (Settings)</td>
-              <td className={`${td} text-muted-foreground`}>{calc.days} {calc.days === 1 ? "day" : "days"} → sets trips for fuel on the estimate</td>
+              <td className={`${td} text-muted-foreground`}>est. {n1(calc.instHrs)} hrs ÷ {hoursPerDay} = {calc.days} {calc.days === 1 ? "day" : "days"} → sets trips for fuel on the estimate</td>
               <td className={`${td} text-right font-bold`}>—</td>
             </tr>
           </tbody>

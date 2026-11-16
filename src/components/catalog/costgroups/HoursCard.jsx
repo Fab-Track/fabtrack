@@ -22,7 +22,7 @@ export default function HoursCard({ qty, unit, hours, crew }) {
       <h4 className={cap}>Labor hours at {qty} {unit}</h4>
       <p className="text-xs text-muted-foreground">Hours and days are derived from the rules under Labor &amp; finish.</p>
       <Row label="Fabrication" value={`${h1(fab)} hrs`} />
-      <Row label="Install (elapsed)" value={`${h1(inst)} hrs × ${Number(crew) || 0} crew`} />
+      <Row label="Install (estimated)" value={`${h1(inst)} hrs × ${Number(crew) || 0} crew`} />
       <Row label="Install days" value={`${days} ${days === 1 ? "day" : "days"}`} />
       <div className="border-t pt-2">
         <Row label="Shop labor hours" value={`${h1(fab + crewHours)} hrs`} bold />

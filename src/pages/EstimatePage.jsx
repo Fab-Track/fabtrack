@@ -43,9 +43,10 @@ const newId = () => Math.random().toString(36).slice(2);
 const baseLine = { install_location: "N/A", category: "Labor", quantity: 1, unit: "ls", unit_cost: 0, total: 0, show_photo: true };
 
 // Strip UI-only keys and nulls before saving
-function cleanLine({ _id, _warn, _railing_style, _is_staircase, _staircase_type, ...rest }) {
+function cleanLine({ _id, _warn, _railing_style, _is_staircase, _staircase_type, _fab_hours_base, _install_hours_base, ...rest }) {
   if (!hasMargin(rest.margin_pct)) delete rest.margin_pct;
   if (!rest._railing_takeoff) delete rest._railing_takeoff;
+  if (!rest.hours_override) delete rest.hours_override;
   if (rest.photo_url == null) delete rest.photo_url;
   return { ...rest, quantity: num(rest.quantity), unit_cost: num(rest.unit_cost) };
 }
@@ -152,6 +153,9 @@ export default function EstimatePage() {
     () => lines.map((l) => priceLine(l, { items: cat.items, categories: cat.categories, materials: cat.materials, settings }, estMargin, frozen)),
     [lines, cat.items, cat.categories, cat.materials, settings, estMargin, frozen]
   );
+  const fabRate = settings?.labor_fab_rate || 0;
+  const installRate = settings?.labor_install_rate || 0;
+  const crewOf = (l) => num(cat.items.find((i) => i.id === l.service_catalog_id)?.cost_install_crew_size);
   const fuel = calcFuel({ lines: priced, miles, extra, fuelMargin, targetMargin: estMargin, price: fuelPrice, mpg, hoursPerDay: settings?.install_hours_per_day || 8 });
   const fLine = fuelLine(fuel, miles, extra);
 
@@ -255,7 +259,7 @@ export default function EstimatePage() {
     setSendPanelOpen(true);
   }
 
-  const publicLines = (list) => outLines(list).map(({ _is_railing, _railing_takeoff, hard_cost, cost_breakdown, install_hours, margin_pct, ...r }) => ({
+  const publicLines = (list) => outLines(list).map(({ _is_railing, _railing_takeoff, hard_cost, cost_breakdown, install_hours, hours_override, margin_pct, ...r }) => ({
     ...r, components: (r.components || []).map((c) => ({ component_type: c.component_type, name: c.name })),
   }));
   const estimateForView = {
@@ -327,7 +331,8 @@ export default function EstimatePage() {
                 </div>
                 {priced.map((l, idx) => (
                   <LineRow key={l._id} line={l} idx={idx} cols={COLS} estMargin={estMargin} frozen={frozen} colors={jobDetailConfig.powdercoat_colors}
-                    locations={INSTALL_LOCATIONS} onChange={changeLine} onRemove={(i) => setLines((p) => p.filter((_, k) => k !== i))} onTakeoff={setTakeoffLine} />
+                    locations={INSTALL_LOCATIONS} fabRate={fabRate} installRate={installRate} crewOf={crewOf}
+                    onChange={changeLine} onRemove={(i) => setLines((p) => p.filter((_, k) => k !== i))} onTakeoff={setTakeoffLine} />
                 ))}
                 {priced.length === 0 && <p className="text-sm text-muted-foreground text-center py-8 border-t">No line items yet. Click "Add from catalog".</p>}
                 <FuelRow fuel={fuel} miles={miles} setMiles={setMiles} extra={extra} setExtra={setExtra} fuelMargin={fuelMargin} setFuelMargin={setFuelMargin}

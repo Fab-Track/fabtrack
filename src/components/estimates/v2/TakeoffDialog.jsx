@@ -26,7 +26,10 @@ export default function TakeoffDialog({ line, materials = [], settings, catalogI
     [catalogItem, category, settings, materials, line, t]
   );
   const s = calc?.layout?.steps || t?.steps;
-  const costs = calc?.costs || line?.cost_breakdown || {};
+  // The line's stored breakdown already includes any estimator-edited labor hours.
+  const costs = line?.cost_breakdown || calc?.costs || {};
+  const fabHrs = line?.hours_override?.fabrication ?? calc?.hours?.fabrication;
+  const instHrs = line?.hours_override?.install ?? calc?.hours?.install;
 
   // Local editable quantities, initialized from the line's computed components
   const [quantities, setQuantities] = useState(() => (line?.components || []).map((c) => c.qty));
@@ -218,7 +221,7 @@ export default function TakeoffDialog({ line, materials = [], settings, catalogI
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">
-              Fabrication:{calc ? ` ${calc.hours.fabrication} hrs` : ""}
+              Fabrication:{fabHrs != null ? ` ${fabHrs} hrs` : ""}
             </span>
             <span className="font-mono">{money(costs.fabrication || 0)}</span>
           </div>
@@ -228,7 +231,7 @@ export default function TakeoffDialog({ line, materials = [], settings, catalogI
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">
-              Install:{calc ? ` ${calc.hours.install} hrs × ${catalogItem?.cost_install_crew_size || 0} crew` : ""}
+              Install:{instHrs != null ? ` ${instHrs} hrs × ${catalogItem?.cost_install_crew_size || 0} crew` : ""}
             </span>
             <span className="font-mono">{money(costs.install || 0)}</span>
           </div>
