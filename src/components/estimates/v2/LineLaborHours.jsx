@@ -1,5 +1,6 @@
 import React from "react";
 import { Input } from "@/components/ui/input";
+import { Clock } from "lucide-react";
 import { money } from "@/lib/costGroups";
 
 const num = (v) => parseFloat(v) || 0;
@@ -21,33 +22,75 @@ export default function LineLaborHours({ line, crew, fabRate, installRate, froze
     onChange(Object.keys(next).length ? next : null);
   };
 
-  const field = (key, value) => (
-    <Input
-      type="number"
-      step="any"
-      min="0"
-      disabled={frozen}
-      className="h-7 w-16 text-right font-mono text-xs"
-      value={value ?? ""}
-      onChange={(e) => setHours(key, e.target.value)}
-    />
+  const group = ({ label, key, value, rate, crewCount, cost }) => (
+    <div className="flex items-end gap-2.5">
+      <div className="space-y-1">
+        <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
+        <div className="flex items-center gap-1.5">
+          <Input
+            type="number"
+            step="any"
+            min="0"
+            disabled={frozen}
+            className="h-9 w-24 bg-background text-right font-mono text-sm"
+            value={value ?? ""}
+            onChange={(e) => setHours(key, e.target.value)}
+          />
+          <span className="text-[11px] text-muted-foreground">hrs</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-1 pb-1.5 text-[11px] whitespace-nowrap text-muted-foreground">
+        <span>×</span>
+        {crewCount != null && (
+          <>
+            <b className="font-mono font-semibold text-foreground">{crewCount}</b>
+            <span>crew ×</span>
+          </>
+        )}
+        <span className="font-mono">{money(rate, 2)}/hr</span>
+        <span>=</span>
+        <b className="font-mono text-sm font-semibold text-foreground">{money(cost || 0)}</b>
+      </div>
+    </div>
   );
 
   return (
-    <div className="bg-muted/10 border-t px-4 py-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
-      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Labor hrs</span>
-      <span className="flex items-center gap-1">
-        Fab {field("fabrication", fabHrs)} × <span className="font-mono">{money(fabRate, 2)}</span>/hr =
-        <b className="font-mono">{money(line.cost_breakdown?.fabrication || 0)}</b>
-      </span>
-      <span className="flex items-center gap-1">
-        Install {field("install", instHrs)} × crew {num(crew)} × <span className="font-mono">{money(installRate, 2)}</span>/hr =
-        <b className="font-mono">{money(line.cost_breakdown?.install || 0)}</b>
-      </span>
-      {edited && !frozen && (
-        <button type="button" className="text-primary underline" onClick={() => onChange(null)}>Reset to catalog</button>
-      )}
-      <span className="text-muted-foreground">Rates are set in Settings › Job costing</span>
+    <div className="border-t bg-muted/20 px-4 py-2.5">
+      <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+        <div className="space-y-0.5 pb-1.5">
+          <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            <Clock className="h-3 w-3" /> Labor hours
+          </p>
+          {frozen ? (
+            <p className="text-[11px] text-muted-foreground">Locked on a sent estimate</p>
+          ) : edited ? (
+            <button type="button" className="text-[11px] text-primary underline" onClick={() => onChange(null)}>
+              Reset to catalog
+            </button>
+          ) : (
+            <p className="text-[11px] text-muted-foreground">From catalog</p>
+          )}
+        </div>
+
+        {group({
+          label: "Fabrication",
+          key: "fabrication",
+          value: fabHrs,
+          rate: fabRate,
+          crewCount: null,
+          cost: line.cost_breakdown?.fabrication,
+        })}
+        {group({
+          label: "Install",
+          key: "install",
+          value: instHrs,
+          rate: installRate,
+          crewCount: num(crew),
+          cost: line.cost_breakdown?.install,
+        })}
+
+        <p className="ml-auto pb-2 text-[11px] text-muted-foreground">Rates are set in Settings › Job costing</p>
+      </div>
     </div>
   );
 }
