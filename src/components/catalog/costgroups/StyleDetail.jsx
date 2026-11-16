@@ -8,6 +8,7 @@ import LayoutCard from "./LayoutCard";
 import ComponentsCard from "./ComponentsCard";
 import LaborCard from "./LaborCard";
 import CostSummary from "./CostSummary";
+import HoursCard from "./HoursCard";
 import StyleDefinitionCard from "./StyleDefinitionCard";
 import EditStyleDialog from "./EditStyleDialog";
 import TestBar from "./TestBar";
@@ -127,7 +128,10 @@ export default function StyleDetail({ item, category, settings, materials, orgId
             materialCost={calc.costs.materials} dirty={dirty} saving={saving} onSave={saveComponents} orgId={orgId} refresh={refresh} />
           <LaborCard rules={rules} setRule={(f, v) => setRules((p) => ({ ...p, [f]: v }))} commit={commitRule} calc={calcCard} unit={unit} rates={rates} hoursPerDay={hoursPerDay} />
         </div>
-        <CostSummary qty={qty} unit={unit} parts={parts} hard={hard} margin={margin} setMargin={setMargin} jobMin={s.job_minimum || 0} />
+        <div className="space-y-4">
+          <CostSummary qty={qty} unit={unit} parts={parts} hard={hard} margin={margin} setMargin={setMargin} jobMin={s.job_minimum || 0} />
+          <HoursCard qty={qty} unit={unit} hours={calc.hours} crew={rules.crew} />
+        </div>
       </div>
       <EditStyleDialog open={editOpen} onOpenChange={setEditOpen} item={item} category={category} onSaved={refresh} />
     </div>
