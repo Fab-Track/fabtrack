@@ -261,37 +261,6 @@ export default function EditJob() {
             <div className="space-y-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Job Site & Contacts</p>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs">Copy Address from Saved Location</Label>
-                  <Select
-                    value={form.location_id || "none"}
-                    onValueChange={val => {
-                      const locId = val === "none" ? "" : val;
-                      const loc = selectedCustomer?.locations?.find(l => l.id === locId);
-                      setForm(prev => ({
-                        ...prev,
-                        location_id: locId,
-                        site_address: loc
-                          ? (loc.address || [loc.street, loc.city, loc.state, loc.zip].filter(Boolean).join(", "))
-                          : prev.site_address,
-                      }));
-                    }}
-                    disabled={!selectedCustomer}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select site…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {(selectedCustomer?.locations || []).map(l => (
-                        <SelectItem key={l.id} value={l.id}>
-                          {l.label || l.display_name || l.address || "Unnamed"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 {contactRoles.map(role => (
                   <div key={role.field}>
                     <Label className="text-xs">{role.label}</Label>
@@ -316,7 +285,7 @@ export default function EditJob() {
                 ))}
               </div>
               <p className="text-[10px] text-muted-foreground">
-                Picking a saved location copies its address onto this job, where you can still change it. Site and bill-to contacts come from the customer's directory; the drawing approver is a user in the app.
+                Site and bill-to contacts come from the customer's directory; the drawing approver is a user in the app.
               </p>
             </div>
 
