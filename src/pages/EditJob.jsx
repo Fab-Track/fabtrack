@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/lib/AuthContext";
 import { useRepCandidates } from "@/hooks/useRepCandidates";
+import { useOrgUsers } from "@/hooks/useOrgUsers";
 import { LEAD_SOURCES, LEAD_INTENTS, LEAD_CUSTOMER_TYPES, autoApplyMissingInfoBlocker, deriveSizeBand } from "@/lib/salesPipeline";
 import { customerTypeToLeadType, deriveOnsiteContactFromCustomer, contactToOnsiteFields } from "@/lib/customerToJob";
 
@@ -39,6 +40,8 @@ export default function EditJob() {
   });
 
   const repCandidates = useRepCandidates();
+  // The drawing approver is an internal user, not a customer contact
+  const { users: orgUsers = [] } = useOrgUsers();
 
   const [sameAsCustomer, setSameAsCustomer] = useState(false);
   const [form, setForm] = useState(null);
@@ -126,7 +129,6 @@ export default function EditJob() {
       site_address: "",
       location_id: "",
       site_contact_id: "",
-      approver_contact_id: "",
       bill_to_contact_id: "",
       lead_customer_type: customer?.type ? customerTypeToLeadType(customer.type) : prev.lead_customer_type,
       ...contactFields,
@@ -134,10 +136,16 @@ export default function EditJob() {
   };
 
   const contactRoles = [
-    { field: "site_contact_id", label: "Site Contact" },
-    { field: "approver_contact_id", label: "Drawing Approver" },
-    { field: "bill_to_contact_id", label: "Bill-To Contact" },
+    { field: "site_contact_id", label: "Site Contact", source: "contacts" },
+    { field: "approver_contact_id", label: "Drawing Approver", source: "users" },
+    { field: "bill_to_contact_id", label: "Bill-To Contact", source: "contacts" },
   ];
+
+  // Contacts come from the customer's directory; the drawing approver is anyone with an app login
+  const roleOptions = (role) =>
+    role.source === "users"
+      ? orgUsers.map(u => ({ id: u.id, label: u.email ? `${u.displayName} — ${u.email}` : u.displayName }))
+      : (selectedCustomer?.contacts || []).map(c => ({ id: c.id, label: c.phone ? `${c.name} — ${c.phone}` : c.name }));
 
   const handleSameAsCustomer = (checked) => {
     setSameAsCustomer(checked);
@@ -290,16 +298,16 @@ export default function EditJob() {
                     <Select
                       value={form[role.field] || "none"}
                       onValueChange={val => updateField(role.field, val === "none" ? "" : val)}
-                      disabled={!selectedCustomer}
+                      disabled={role.source === "contacts" && !selectedCustomer}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select contact…" />
+                        <SelectValue placeholder={role.source === "users" ? "Select user…" : "Select contact…"} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">None</SelectItem>
-                        {(selectedCustomer?.contacts || []).map(c => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}{c.phone ? ` — ${c.phone}` : ""}
+                        {roleOptions(role).map(o => (
+                          <SelectItem key={o.id} value={o.id}>
+                            {o.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -308,7 +316,7 @@ export default function EditJob() {
                 ))}
               </div>
               <p className="text-[10px] text-muted-foreground">
-                Picking a saved location copies its address onto this job, where you can still change it. Contacts come from the customer's directory.
+                Picking a saved location copies its address onto this job, where you can still change it. Site and bill-to contacts come from the customer's directory; the drawing approver is a user in the app.
               </p>
             </div>
 

@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/lib/AuthContext";
 import { useWriteOrgId } from "@/lib/orgContext";
 import { useRepCandidates } from "@/hooks/useRepCandidates";
+import { useOrgUsers } from "@/hooks/useOrgUsers";
 import { LEAD_SOURCES, LEAD_INTENTS, LEAD_CUSTOMER_TYPES, LEAD_BLOCKERS, autoApplyMissingInfoBlocker, deriveSizeBand } from "@/lib/salesPipeline";
 import { customerTypeToLeadType } from "@/lib/customerToJob";
 import AddressAutocomplete from "@/components/ui/AddressAutocomplete";
@@ -45,6 +46,8 @@ export default function NewJob() {
 
   // Rep candidates — pulled from User entity via shared hook for consistency
   const repCandidates = useRepCandidates();
+  // The drawing approver is an internal user, not a customer contact
+  const { users: orgUsers = [] } = useOrgUsers();
 
   // Find the pre-filled customer record to get site_address
   const prefilledCustomer = useMemo(() =>
@@ -152,7 +155,6 @@ export default function NewJob() {
       lead_customer_type: customer?.type ? customerTypeToLeadType(customer.type) : prev.lead_customer_type,
       location_id: "",
       site_contact_id: "",
-      approver_contact_id: "",
       bill_to_contact_id: "",
     }));
   };
@@ -325,7 +327,7 @@ export default function NewJob() {
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contact Roles</p>
-                <p className="text-[10px] text-muted-foreground">Assign contacts from the customer's directory to each role on this job.</p>
+                <p className="text-[10px] text-muted-foreground">Site and bill-to contacts come from the customer's directory; the drawing approver is a user in the app.</p>
               </div>
               <div>
                 <Label className="text-xs">Site Contact</Label>
@@ -350,15 +352,16 @@ export default function NewJob() {
                 <Select
                   value={form.approver_contact_id || "none"}
                   onValueChange={val => updateField("approver_contact_id", val === "none" ? "" : val)}
-                  disabled={!selectedCustomer?.contacts?.length}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder={selectedCustomer?.contacts?.length ? "Select…" : "No contacts"} />
+                    <SelectValue placeholder="Select user…" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    {selectedCustomer?.contacts?.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    {orgUsers.map(u => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.email ? `${u.displayName} — ${u.email}` : u.displayName}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

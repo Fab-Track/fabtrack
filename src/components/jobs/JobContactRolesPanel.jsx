@@ -1,6 +1,7 @@
 import React from "react";
 import { User, MapPin, Phone, Mail, Navigation } from "lucide-react";
 import { formatPhoneDisplay } from "@/lib/phoneFormat";
+import { useOrgUsers } from "@/hooks/useOrgUsers";
 
 function FieldLabel({ icon: Icon, children }) {
   return (
@@ -38,6 +39,13 @@ export default function JobContactRolesPanel({ job, customer }) {
   const locations = customer?.locations || [];
 
   const findContact = (id) => contacts.find((c) => c.id === id) || null;
+
+  const { users: orgUsers = [] } = useOrgUsers();
+  // The drawing approver is an internal user; older jobs still hold a customer contact id here
+  const approverUser = orgUsers.find((u) => u.id === job.approver_contact_id) || null;
+  const drawingApprover =
+    findContact(job.approver_contact_id) ||
+    (approverUser ? { name: approverUser.displayName, email: approverUser.email } : null);
 
   // Site contact is entered on the job's Edit Job form
   const siteContact =
@@ -113,7 +121,7 @@ export default function JobContactRolesPanel({ job, customer }) {
 
         <div className="min-w-0">
           <FieldLabel icon={User}>Drawing Approver</FieldLabel>
-          <ContactValue contact={findContact(job.approver_contact_id)} />
+          <ContactValue contact={drawingApprover} />
         </div>
 
         <div className="min-w-0">
