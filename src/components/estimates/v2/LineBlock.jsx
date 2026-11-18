@@ -94,7 +94,7 @@ export default function LineBlock({ line, idx, estMargin, frozen, ctx, item, col
         label="Fabrication labor"
         note={perTen(item?.cost_fab_hours_per_unit)}
         detail={
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1">
             <Input type="number" step="any" min="0" disabled={frozen} className="h-7 w-16 bg-background text-right font-mono text-sm" value={hrs(fabHrs)} onChange={(e) => setHours("fabrication", e.target.value)} />
             <span className="whitespace-nowrap text-[11px] text-muted-foreground">hrs × {money(fabRate, 2)}/hr</span>
           </div>
@@ -113,7 +113,7 @@ export default function LineBlock({ line, idx, estMargin, frozen, ctx, item, col
         label="Install labor"
         note={perTen(item?.cost_install_hours_per_unit)}
         detail={
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1">
             <Input type="number" step="any" min="0" disabled={frozen} className="h-7 w-16 bg-background text-right font-mono text-sm" value={hrs(instHrs)} onChange={(e) => setHours("install", e.target.value)} />
             <span className="whitespace-nowrap text-[11px] text-muted-foreground">hrs ×</span>
             <Input type="number" step="1" min="1" disabled={frozen} className="h-7 w-12 bg-background text-center font-mono text-sm" value={crew ?? ""} onChange={(e) => setHours("crew", e.target.value)} />

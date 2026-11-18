@@ -7,7 +7,7 @@ import MarginInput from "@/components/estimates/v2/MarginInput";
 import { money } from "@/lib/costGroups";
 
 // One grid shared by every component row and by the fuel row: cost, then margin, then price.
-export const COMPONENT_COLS = "1.3fr 1.9fr 1fr 0.9fr 1fr 28px";
+export const COMPONENT_COLS = "minmax(0,1.2fr) minmax(0,1.9fr) minmax(0,0.95fr) minmax(0,0.8fr) minmax(0,0.95fr) 28px";
 export const COMPONENT_HEADERS = ["Component", "Catalog basis", "Hard cost", "Margin", "Price", ""];
 
 // One component of a cost-group line: label, its inputs/basis, cost, margin, priced amount.
@@ -52,7 +52,7 @@ export function CostInput({ value, frozen, onChange }) {
         min="0"
         step="any"
         disabled={frozen}
-        className="h-7 w-24 bg-background text-right font-mono text-sm"
+        className="h-7 w-20 bg-background text-right font-mono text-sm"
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
       />

@@ -25,12 +25,12 @@ export default function LineHeader({ line, frozen, colors, locations, blended, o
       </div>
 
       <Select value={line.install_location || "N/A"} onValueChange={(v) => onChange({ install_location: v })}>
-        <SelectTrigger className="h-8 w-[190px] text-xs" disabled={frozen}><SelectValue placeholder="Install location" /></SelectTrigger>
+        <SelectTrigger className="h-8 w-[150px] text-xs" disabled={frozen}><SelectValue placeholder="Install location" /></SelectTrigger>
         <SelectContent>{locations.map((l) => <SelectItem key={l} value={l} className="text-xs">{l}</SelectItem>)}</SelectContent>
       </Select>
 
       <Select value={line.color || "none"} onValueChange={(v) => onChange({ color: v === "none" ? "" : v })}>
-        <SelectTrigger className="h-8 w-[130px] text-xs" disabled={frozen}><SelectValue placeholder="Color" /></SelectTrigger>
+        <SelectTrigger className="h-8 w-[110px] text-xs" disabled={frozen}><SelectValue placeholder="Color" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="none" className="text-xs">—</SelectItem>
           {colors.map((c) => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}

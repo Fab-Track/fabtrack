@@ -363,8 +363,7 @@ export default function EstimatePage() {
 
         {view === "internal" ? (
           <>
-            <div className="bg-card border rounded-xl overflow-x-auto">
-              <div style={{ minWidth: 1120 }}>
+            <div className="bg-card border rounded-xl">
                 <div className="flex items-center justify-between p-4">
                   <h2 className="text-lg font-bold">Line items</h2>
                   <Button variant="outline" onClick={() => setPickerOpen(true)}><Plus className="w-4 h-4 mr-1" />Add from catalog</Button>
@@ -385,7 +384,6 @@ export default function EstimatePage() {
                   fuelMarginPct={hasMargin(fuelMarginPct) ? fuelMarginPct : ""} setFuelMarginPct={(v) => setFuelMarginPct(v === "" ? null : parseFloat(v))}
                   placeholder={fuelEffMargin} separate={fuelSeparate} setSeparate={setFuelSeparate}
                   price={fuelPrice} mpg={mpg} targetMargin={estMargin} frozen={frozen} />
-              </div>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
               <ProfitCard hard={hardTotal} price={calcPrice} />
