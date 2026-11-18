@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
+import { hasAnyRole } from "@/lib/roleHelpers";
 import useCostGroupData from "./costgroups/useCostGroupData";
 import CategoryGrid from "./costgroups/CategoryGrid";
 import CategoryPage from "./costgroups/CategoryPage";
@@ -13,6 +18,17 @@ export default function CostGroupsTab({ actionsSlot }) {
   const [nav, setNav] = useState({ catId: null, itemId: null });
   const [dlg, setDlg] = useState(null);
   const { categories, items, settings, materials, orgId, refresh, loading } = data;
+  const { user } = useAuth();
+  const canDelete = hasAnyRole(user, ["owner", "admin"]);
+
+  const del = useMutation({
+    mutationFn: (id) => base44.entities.ServiceCatalog.delete(id),
+    onSuccess: () => { refresh(); toast.success("Style deleted."); },
+  });
+  const deleteStyle = (it) => {
+    if (!canDelete) return;
+    if (confirm(`Delete the "${it.name}" style? This cannot be undone.`)) del.mutate(it.id);
+  };
 
   const category = categories.find((c) => c.id === nav.catId);
   const item = items.find((i) => i.id === nav.itemId);
@@ -37,7 +53,8 @@ export default function CostGroupsTab({ actionsSlot }) {
   } else if (category) {
     body = (
       <CategoryPage category={category} items={catItems} settings={settings} orgId={orgId} refresh={refresh} onBack={root}
-        onOpenStyle={(id) => setNav({ catId: category.id, itemId: id })} onNewStyle={() => setDlg("group")} />
+        onOpenStyle={(id) => setNav({ catId: category.id, itemId: id })} onNewStyle={() => setDlg("group")}
+        onDeleteStyle={deleteStyle} canDelete={canDelete} />
     );
   } else {
     body = <CategoryGrid categories={categories} items={items} onOpen={(id) => setNav({ catId: id, itemId: null })} />;

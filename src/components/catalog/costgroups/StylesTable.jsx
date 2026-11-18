@@ -1,8 +1,10 @@
 import React from "react";
+import { Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import Pill from "./Pill";
 import { componentsState, hasCostModel, isGenericQbo, isPerJob, overridesOf, statusOf } from "@/lib/costGroups";
 
-export default function StylesTable({ category, items, onOpen }) {
+export default function StylesTable({ category, items, onOpen, onDelete, canDelete }) {
   const railing = !!category.is_railing;
   const th = "px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap";
   return (
@@ -18,10 +20,11 @@ export default function StylesTable({ category, items, onOpen }) {
             <th className={th}>Cost model</th>
             <th className={th}>QuickBooks item</th>
             <th className={th}>Status</th>
+            {canDelete && <th className={th}><span className="sr-only">Delete</span></th>}
           </tr>
         </thead>
         <tbody>
-          {items.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No cost groups in this category yet.</td></tr>}
+          {items.length === 0 && <tr><td colSpan={9} className="p-8 text-center text-muted-foreground">No cost groups in this category yet.</td></tr>}
           {items.map((it) => {
             const perJob = isPerJob(it) && !category.is_fixed_price;
             const comp = perJob ? { label: "Per job", tone: "muted" } : componentsState(it, category);
@@ -45,6 +48,14 @@ export default function StylesTable({ category, items, onOpen }) {
                     </p>
                   )}
                 </td>
+                {canDelete && (
+                  <td className="px-3 py-3 text-right">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive"
+                      title={`Delete ${it.name}`} onClick={() => onDelete(it)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </td>
+                )}
               </tr>
             );
           })}

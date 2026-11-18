@@ -5,7 +5,7 @@ import StandardsCards from "./StandardsCards";
 import StylesTable from "./StylesTable";
 import { isReady, unitChip } from "@/lib/costGroups";
 
-export default function CategoryPage({ category, items, settings, orgId, refresh, onBack, onOpenStyle, onNewStyle }) {
+export default function CategoryPage({ category, items, settings, orgId, refresh, onBack, onOpenStyle, onNewStyle, onDeleteStyle, canDelete }) {
   const ready = items.filter((i) => isReady(i, category)).length;
   const chip = "rounded bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground";
   return (
@@ -23,7 +23,7 @@ export default function CategoryPage({ category, items, settings, orgId, refresh
         <Button onClick={onNewStyle}>+ New style</Button>
       </div>
       {category.is_railing && <StandardsCards category={category} settings={settings} orgId={orgId} refresh={refresh} />}
-      <StylesTable category={category} items={items} onOpen={onOpenStyle} />
+      <StylesTable category={category} items={items} onOpen={onOpenStyle} onDelete={onDeleteStyle} canDelete={canDelete} />
     </div>
   );
 }
