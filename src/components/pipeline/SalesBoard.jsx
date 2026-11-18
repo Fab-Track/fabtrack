@@ -22,6 +22,7 @@ import { differenceInDays, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { shouldSkipPricingReview, deriveSizeBand, autoApplyMissingInfoBlocker } from "@/lib/salesPipeline";
 import CoiBadge from "@/components/customers/CoiBadge";
+import JobCardDetails from "./JobCardDetails";
 
 const EST_PILL = {
   Draft:    "bg-muted text-muted-foreground",
@@ -146,6 +147,8 @@ function SalesCard({ job, isDragging, onPromote, estimates = [], invoices = [], 
           )}
         </div>
       )}
+
+      <JobCardDetails job={job} />
 
       {job.estimate_deadline && (
         <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">

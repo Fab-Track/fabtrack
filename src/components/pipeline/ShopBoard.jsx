@@ -20,6 +20,7 @@ import { format, parseISO, isValid } from "date-fns";
 import { useAuth } from "@/lib/AuthContext";
 import { isOwnerLevel } from "@/lib/roleHelpers";
 import CoiBadge from "@/components/customers/CoiBadge";
+import JobCardDetails from "./JobCardDetails";
 
 const FLOWS = { Sales: SALES_STAGES_DEFAULT, Shop: BILLING_STAGES_DEFAULT, Billing: BILLING_STAGES_DEFAULT };
 
@@ -158,17 +159,13 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
             <span>{installDate}</span>
           </div>
         )}
-        {job.powder_coat_color && (
-          <div className="flex items-center gap-1">
-            <Paintbrush className="w-3 h-3" />
-            <span className="truncate max-w-[80px]">{job.powder_coat_color}</span>
-          </div>
-        )}
         <div className={`flex items-center gap-1 ml-auto ${isStale ? "text-amber-600 font-semibold" : ""}`}>
           <Clock className="w-3 h-3" />
           <span>{days}d</span>
         </div>
       </div>
+
+      <JobCardDetails job={job} />
 
       {(job.assigned_rep_name || job.assigned_crew_names?.length > 0) && (
         <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
