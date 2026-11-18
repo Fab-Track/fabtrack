@@ -170,16 +170,28 @@ function ShopCard({ job, isDragging, onComplete, readOnly = false, stage, column
         </div>
       </div>
 
-      {job.assigned_crew_names?.length > 0 && (
-        <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-          <Users className="w-3 h-3" />
-          <div className="flex gap-0.5">
-            {job.assigned_crew_names.slice(0, 3).map((name, i) => (
-              <div key={i} className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[9px] font-bold text-primary" title={name}>
-                {name[0]}
+      {(job.assigned_rep_name || job.assigned_crew_names?.length > 0) && (
+        <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+          {job.assigned_rep_name && (
+            <>
+              <div className="w-4 h-4 rounded-full bg-accent/20 flex items-center justify-center text-[9px] font-bold text-accent" title="Assigned rep">
+                {job.assigned_rep_name[0]}
               </div>
-            ))}
-          </div>
+              <span>{job.assigned_rep_name}</span>
+            </>
+          )}
+          {job.assigned_crew_names?.length > 0 && (
+            <>
+              <Users className="w-3 h-3 ml-1" />
+              <div className="flex gap-0.5">
+                {job.assigned_crew_names.slice(0, 3).map((name, i) => (
+                  <div key={i} className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[9px] font-bold text-primary" title={name}>
+                    {name[0]}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 

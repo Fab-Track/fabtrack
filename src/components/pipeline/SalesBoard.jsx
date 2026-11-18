@@ -326,6 +326,8 @@ export default function SalesBoard({ jobs = [], sortOrder = "newest" }) {
 
   function handlePromoteClick(job) {
     setPromoting(job);
+    // Default the reassignment to whoever currently owns the card
+    setPromoteRepId(job.assigned_rep_id || null);
   }
 
   async function handlePromoteConfirm(note) {
@@ -334,6 +336,7 @@ export default function SalesBoard({ jobs = [], sortOrder = "newest" }) {
 
     // Create the Shop Pipeline job carrying over customer, scope, amount, install target
     try {
+      const pickedRep = estimatorReps.find(r => r.id === promoteRepId);
       const shopJobData = {
         organization_id: job.organization_id,
         job_number: job.job_number,
@@ -354,8 +357,8 @@ export default function SalesBoard({ jobs = [], sortOrder = "newest" }) {
         design_details: job.design_details || "",
         powder_coat_color: job.powder_coat_color || "",
         powder_coat_code: job.powder_coat_code || "",
-        assigned_rep_id: job.assigned_rep_id || promoteRepId || "",
-        assigned_rep_name: job.assigned_rep_name || estimatorReps.find(r => r.id === promoteRepId)?.name || "",
+        assigned_rep_id: promoteRepId || job.assigned_rep_id || "",
+        assigned_rep_name: pickedRep?.name || job.assigned_rep_name || "",
         assigned_estimator: job.assigned_estimator || promoteRepId || "",
         assigned_estimator_name: job.assigned_estimator_name || estimatorReps.find(r => r.id === promoteRepId)?.name || "",
         estimate_total: job.estimate_total || 0,
@@ -480,6 +483,8 @@ export default function SalesBoard({ jobs = [], sortOrder = "newest" }) {
           reps: estimatorReps,
           selectedRepId: promoteRepId,
           onSelect: setPromoteRepId,
+          label: "Who should this job be assigned to?",
+          placeholder: "Select who owns it…",
         }}
       />
 

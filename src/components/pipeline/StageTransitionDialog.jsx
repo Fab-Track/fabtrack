@@ -57,10 +57,10 @@ export default function StageTransitionDialog({
           </div>
           {repSelector && repSelector.reps.length > 0 && (
             <div>
-              <Label className="text-xs">Who gets sales credit?</Label>
+              <Label className="text-xs">{repSelector.label || "Who gets sales credit?"}</Label>
               <Select value={repSelector.selectedRepId || ""} onValueChange={repSelector.onSelect}>
                 <SelectTrigger className="mt-1 text-sm h-9">
-                  <SelectValue placeholder="Select a rep…" />
+                  <SelectValue placeholder={repSelector.placeholder || "Select a rep…"} />
                 </SelectTrigger>
                 <SelectContent>
                   {repSelector.reps.map(rep => (
