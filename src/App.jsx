@@ -75,6 +75,7 @@ const TimeCard         = lazyRetry(() => import('@/pages/TimeCard'), 'TimeCard')
 const Schedule         = lazyRetry(() => import('@/pages/Schedule'), 'Schedule');
 const Customers        = lazyRetry(() => import('@/pages/Customers'), 'Customers');
 const Catalog          = lazyRetry(() => import('@/pages/Catalog'), 'Catalog');
+const CatalogImport    = lazyRetry(() => import('@/pages/CatalogImport'), 'CatalogImport');
 const Estimates        = lazyRetry(() => import('@/pages/Estimates'), 'Estimates');
 const CraftsmanScore   = lazyRetry(() => import('@/pages/CraftsmanScore'), 'CraftsmanScore');
 const Employees        = lazyRetry(() => import('@/pages/Employees'), 'Employees');
@@ -303,6 +304,7 @@ const AuthenticatedApp = () => {
           <Route path="/assistant" element={<Assistant />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/catalog" element={<Catalog />} />
+          <Route path="/catalog/import" element={<CatalogImport />} />
           <Route path="/estimates" element={<Estimates />} />
           <Route path="/craftsman" element={<CraftsmanScore />} />
           <Route path="/employees" element={<Employees />} />

@@ -1,18 +1,19 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
+import { hasAnyRole } from "@/lib/roleHelpers";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { DEFAULT_MATERIALS } from "@/lib/railingData";
 import { DEFAULT_SHAPES, RAILING_SLOTS } from "@/lib/costItems";
-import { exportCostItems, loadAllCostItems, parseCostItemsCsv } from "@/lib/costItemsCsv";
+import { exportCostItems } from "@/lib/costItemsCsv";
 import CostItemsToolbar from "./CostItemsToolbar";
 import CostItemsTable from "./CostItemsTable";
 import CostItemDialog from "./CostItemDialog";
-import CostItemsImportDialog from "./CostItemsImportDialog";
 
 const PAGE = 100;
 const escapeRegex = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -21,7 +22,8 @@ export default function CostItemsTab({ actionsSlot }) {
   const { user } = useAuth();
   const orgId = user?.organization_id;
   const qc = useQueryClient();
-  const fileRef = useRef(null);
+  const navigate = useNavigate();
+  const canImport = hasAnyRole(user, ["owner", "admin"]);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [shape, setShape] = useState("all");
@@ -31,8 +33,6 @@ export default function CostItemsTab({ actionsSlot }) {
   const [limit, setLimit] = useState(PAGE);
   const [dialog, setDialog] = useState({ open: false, item: null });
   const [seeded, setSeeded] = useState(false);
-  const [reading, setReading] = useState(false);
-  const [importState, setImportState] = useState({ open: false, fileName: "", rows: [], existing: [] });
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search.trim()), 300);
@@ -104,28 +104,9 @@ export default function CostItemsTab({ actionsSlot }) {
   const shapes = [...new Set([...DEFAULT_SHAPES, ...shapeValues.filter(Boolean)])];
   const items = page?.items || [];
 
-  async function onImport(e) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    setReading(true);
-    try {
-      const text = await file.text();
-      const existing = await loadAllCostItems(orgId);
-      const rows = parseCostItemsCsv(text, { costCodes, existing });
-      if (!rows.length) return toast.error("That file has no rows to import.");
-      setImportState({ open: true, fileName: file.name, rows, existing });
-    } catch (err) {
-      toast.error(err?.message || "That file could not be read.");
-    } finally {
-      setReading(false);
-    }
-  }
-
   const actions = (
     <div className="flex gap-2">
-      <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={onImport} />
-      <Button variant="outline" disabled={reading} onClick={() => fileRef.current?.click()}>{reading ? "Reading…" : "Import"}</Button>
+      {canImport && <Button variant="outline" onClick={() => navigate("/catalog/import")}>Import</Button>}
       <Button variant="outline" onClick={() => exportCostItems(orgId, costCodes)}>Export</Button>
       <Button className="gap-1.5" onClick={() => setDialog({ open: true, item: null })}><Plus className="w-4 h-4" /> Cost Item</Button>
     </div>
@@ -147,11 +128,6 @@ export default function CostItemsTab({ actionsSlot }) {
       <CostItemDialog
         open={dialog.open} onOpenChange={(o) => setDialog((d) => ({ ...d, open: o }))}
         item={dialog.item} shapes={shapes} costCodes={costCodes} orgId={orgId} onSaved={refresh}
-      />
-      <CostItemsImportDialog
-        open={importState.open} onOpenChange={(o) => setImportState((s) => ({ ...s, open: o }))}
-        fileName={importState.fileName} rows={importState.rows} existing={importState.existing}
-        orgId={orgId} onApplied={refresh}
       />
     </div>
   );
