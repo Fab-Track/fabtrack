@@ -9,7 +9,10 @@ const QUICK = [
   { id: "review", label: "Needs review" },
 ];
 
-export default function CostItemsToolbar({ search, setSearch, shape, setShape, used, setUsed, quick, setQuick, shapes, counts }) {
+const pill = (active) =>
+  `rounded-md border px-3 py-1.5 text-sm font-semibold ${active ? "bg-foreground text-background border-foreground" : "bg-card hover:bg-muted"}`;
+
+export default function CostItemsToolbar({ search, setSearch, shape, setShape, used, setUsed, quick, onQuick, code, onCode, shapes, counts, costCodes = [], codeCounts = {} }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-col sm:flex-row gap-3">
@@ -29,14 +32,17 @@ export default function CostItemsToolbar({ search, setSearch, shape, setShape, u
           </SelectContent>
         </Select>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {QUICK.map((q) => (
-          <button
-            key={q.id}
-            onClick={() => setQuick(q.id)}
-            className={`rounded-md border px-3 py-1.5 text-sm font-semibold ${quick === q.id ? "bg-foreground text-background border-foreground" : "bg-card hover:bg-muted"}`}
-          >
+          <button key={q.id} onClick={() => onQuick(q.id)} className={pill(quick === q.id && !code)}>
             {q.label} · {counts[q.id] ?? 0}
+          </button>
+        ))}
+        {costCodes.length > 0 && <span className="w-px h-6 bg-border mx-1" />}
+        {costCodes.map((c) => (
+          <button key={c.id} onClick={() => onCode(c.id)} className={pill(code === c.id)}
+            title={`Cost code ${c.code_number ? `${c.code_number} · ` : ""}${c.name}`}>
+            {c.name} · {codeCounts[c.id] ?? 0}
           </button>
         ))}
       </div>
