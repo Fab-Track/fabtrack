@@ -87,7 +87,7 @@ export function materialForSlot(catalogItem, materials, slot) {
 
 /**
  * Railing layout (posts, sections, pickets) for a given length. Returns null if inputs are missing.
- * Picket and rail sizes are read from the materials assigned to their component slots;
+ * Post, picket and rail sizes are read from the materials assigned to their component slots;
  * a value typed on the style only stands in when that material has no size on file.
  */
 export function computeLayout({ catalogItem, settings, length, isResidential, category, materials }) {
@@ -95,9 +95,13 @@ export function computeLayout({ catalogItem, settings, length, isResidential, ca
   if (!catalogItem || !s || !length || length <= 0) return null;
 
   const p = resolveRailingParams(catalogItem, category);
-  const { post_spacing_in, post_width_in, picket_clear_gap_in, rail_runs } = p;
+  const { post_spacing_in, picket_clear_gap_in, rail_runs } = p;
   const cross = materialCrossSection(materialForSlot(catalogItem, materials, "Picket"));
-  const picket_width_in = num(p.picket_width_in) || cross?.width || 0;
+  // Post and picket sizes follow the material assigned to their slot, like the rails do;
+  // the style value (already merged with the category default) only stands in when the
+  // material has no size on file.
+  const post_width_in = materialCrossSection(materialForSlot(catalogItem, materials, "Post"))?.height ?? num(p.post_width_in);
+  const picket_width_in = cross?.height ?? (num(p.picket_width_in) || cross?.width || 0);
   const picket_height_in = num(p.picket_height_in) || cross?.height || 0;
   if (!post_spacing_in || !post_width_in || !picket_clear_gap_in || !rail_runs) return null;
   if (!picket_width_in && !picket_height_in) return null;
