@@ -59,14 +59,39 @@ export function resolveRailingParams(catalogItem, category) {
   };
 }
 
+const DIM_RE = /(\d+\s+\d+\/\d+|\d+-\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?)\s*"/g;
+const toInches = (t) => {
+  const mixed = t.match(/^(\d+)[\s-](\d+)\/(\d+)$/);
+  if (mixed) return Number(mixed[1]) + Number(mixed[2]) / Number(mixed[3]);
+  const frac = t.match(/^(\d+)\/(\d+)$/);
+  if (frac) return Number(frac[1]) / Number(frac[2]);
+  return Number(t);
+};
+
+/**
+ * Picket cross-section read from its material name — `SQUARE TUBE 1/2" × 1/2" × 0.065"`
+ * gives 0.5" wide by 0.5" tall, `FLATBAR 1/2" × 2"` gives 0.5" wide by 2" tall.
+ * The first two dimensions are the cross-section; a third is wall thickness and is ignored.
+ */
+export function picketCrossSection(mat) {
+  const dims = [...(mat?.name || "").matchAll(DIM_RE)].map((m) => toInches(m[1])).filter((n) => n > 0);
+  if (!dims.length) return null;
+  return { width: dims[0], height: dims[1] ?? dims[0] };
+}
+
 /**
  * Railing layout (posts, sections, pickets) for a given length. Returns null if inputs are missing.
+ * Picket width/height are typed on the style, else read from its picket material.
  */
-export function computeLayout({ catalogItem, settings, length, isResidential, category }) {
+export function computeLayout({ catalogItem, settings, length, isResidential, category, picketMaterial }) {
   const s = resolveSettings(settings);
   if (!catalogItem || !s || !length || length <= 0) return null;
 
-  const { post_spacing_in, post_width_in, picket_clear_gap_in, picket_width_in, picket_height_in, rail_runs } = resolveRailingParams(catalogItem, category);
+  const p = resolveRailingParams(catalogItem, category);
+  const { post_spacing_in, post_width_in, picket_clear_gap_in, rail_runs } = p;
+  const cross = picketCrossSection(picketMaterial);
+  const picket_width_in = num(p.picket_width_in) || cross?.width || 0;
+  const picket_height_in = num(p.picket_height_in) || cross?.height || 0;
   if (!post_spacing_in || !post_width_in || !picket_clear_gap_in || !rail_runs) return null;
   if (!picket_width_in && !picket_height_in) return null;
 
@@ -110,6 +135,7 @@ export function computeLayout({ catalogItem, settings, length, isResidential, ca
     steps: {
       postsForNet: posts, netLength: netIn / 12, posts, bays, sectionLength: bayIn / 12, bayWidth: bayIn,
       picketsPerSection, totalPickets, postHeight: railingHeight, railingHeight, picketLength,
+      picketWidth: picket_width_in, picketHeight: picket_height_in,
       clearHeight, clearWidth: bayIn, orientation, infill,
       topRailHeight, bottomRailHeight, bottomClearance, infillSqFt: r2(infillSqFt),
     },
@@ -246,7 +272,8 @@ export function computeRailingCosts({ catalogItem, category, settings, materials
   const rows = catalogItem?.components || [];
   const railing = !!(category?.is_railing || catalogItem?.is_railing);
 
-  const layout = railing && s ? computeLayout({ catalogItem, category, settings: s, length: qty, isResidential }) : null;
+  const picketMaterial = (materials || []).find((m) => m.id === (rows.find((c) => c.slot === "Picket") || {}).material_id) || null;
+  const layout = railing && s ? computeLayout({ catalogItem, category, settings: s, length: qty, isResidential, picketMaterial }) : null;
 
   // Row-aligned results (nulls kept) for component tables, then the resolved ones for costing.
   const infill = catalogItem?.infill_type || "Pickets";

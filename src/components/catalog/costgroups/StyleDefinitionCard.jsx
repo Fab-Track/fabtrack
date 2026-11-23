@@ -67,8 +67,8 @@ export default function StyleDefinitionCard({ item, materials, onSave }) {
         </div>
       )}
       <p className="text-[11px] text-muted-foreground">
-        Post width, picket width and picket height are set under Layout — horizontal pickets stack by height,
-        vertical pickets space by width. Cost items for each slot are set under Components.
+        Picket width and height calculate from the picket cost item's size (1/2" × 1/2" gives 0.5" by 0.5");
+        horizontal pickets stack by height, vertical pickets space by width. Any value typed under Layout overrides it.
       </p>
     </div>
   );

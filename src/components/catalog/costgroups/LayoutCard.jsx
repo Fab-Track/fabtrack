@@ -24,6 +24,8 @@ export default function LayoutCard({ layout, item, category, onSaveOverride }) {
     ["Total pickets", s?.totalPickets],
     ["Railing height", s ? `${s.postHeight}"` : null],
     ["Clear height", s ? `${s.clearHeight.toFixed(2)}"` : null],
+    ["Picket width", s ? `${s.picketWidth}"` : null],
+    ["Picket height", s ? `${s.picketHeight}"` : null],
     ["Picket length", s ? `${s.picketLength.toFixed(2)}"` : null],
   ];
 
@@ -31,7 +33,9 @@ export default function LayoutCard({ layout, item, category, onSaveOverride }) {
     <div className="bg-card border rounded-xl p-5">
       <div className="flex items-baseline justify-between gap-2 flex-wrap mb-3">
         <h3 className="text-lg font-bold">Layout</h3>
-        <span className="text-xs text-muted-foreground">Leave blank to inherit the category default</span>
+        <span className="text-xs text-muted-foreground">
+          Leave blank to inherit the category default — picket width and height come from the picket cost item's size
+        </span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 mb-4">
         {OVERRIDE_FIELDS.map((f) => {
