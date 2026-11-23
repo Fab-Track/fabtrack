@@ -348,12 +348,12 @@ function CatalogItemForm({ initial = {}, categories, onSave, onCancel, fabRate =
             <div>
               <p className="text-sm font-semibold">Railing Parameters</p>
               <p className="text-[11px] text-muted-foreground">
-                Leave blank to use the category default. Post height comes from org standards at estimate time.
+                Leave blank to use the category default. Max spacing is the largest allowed — posts and pickets are fitted at or under it. Post height comes from org standards at estimate time.
               </p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               <div>
-                <span className="text-[10px] text-muted-foreground">Post spacing (in)</span>
+                <span className="text-[10px] text-muted-foreground">Max Post Spacing (in)</span>
                 <Input type="number" step="0.01" className="h-8 text-xs" value={postSpacing} onChange={e => setPostSpacing(e.target.value)} />
               </div>
               <div>
@@ -361,7 +361,7 @@ function CatalogItemForm({ initial = {}, categories, onSave, onCancel, fabRate =
                 <Input type="number" step="0.01" className="h-8 text-xs" value={postWidth} onChange={e => setPostWidth(e.target.value)} />
               </div>
               <div>
-                <span className="text-[10px] text-muted-foreground">Picket clear gap (in)</span>
+                <span className="text-[10px] text-muted-foreground">Max Picket Spacing (in)</span>
                 <Input type="number" step="0.01" className="h-8 text-xs" value={picketGap} onChange={e => setPicketGap(e.target.value)} />
               </div>
               <div>

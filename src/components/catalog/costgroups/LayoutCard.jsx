@@ -36,7 +36,7 @@ export default function LayoutCard({ layout, item, category, onSaveOverride }) {
       <div className="flex items-baseline justify-between gap-2 flex-wrap mb-3">
         <h3 className="text-lg font-bold">Layout</h3>
         <span className="text-xs text-muted-foreground">
-          Leave blank to inherit the category default — picket width and height come from the picket cost item's size
+          Leave blank to inherit the category default — max spacing is the largest allowed gap; picket width and height come from the picket cost item's size
         </span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 mb-4">
