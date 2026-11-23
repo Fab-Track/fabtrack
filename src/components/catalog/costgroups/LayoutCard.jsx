@@ -23,6 +23,8 @@ export default function LayoutCard({ layout, item, category, onSaveOverride }) {
     ["Pickets / section", s?.picketsPerSection],
     ["Total pickets", s?.totalPickets],
     ["Railing height", s ? `${s.postHeight}"` : null],
+    ["Top rail", s ? `${s.topRailHeight}"` : null],
+    ["Bottom rail", s ? `${s.bottomRailHeight}"` : null],
     ["Clear height", s ? `${s.clearHeight.toFixed(2)}"` : null],
     ["Picket width", s ? `${s.picketWidth}"` : null],
     ["Picket height", s ? `${s.picketHeight}"` : null],

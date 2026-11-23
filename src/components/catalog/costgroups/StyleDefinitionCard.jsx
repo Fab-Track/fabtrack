@@ -1,38 +1,25 @@
-import React, { useState } from "react";
-import { Input } from "@/components/ui/input";
+import React from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import MaterialCombobox from "@/components/settings/MaterialCombobox";
 import { INFILL_TYPES, PICKET_ORIENTATIONS, needsInfillItem } from "@/lib/costGroups";
+import { materialCrossSection, materialForSlot } from "@/lib/railingTakeoff";
 
 const Lbl = ({ children }) => <p className="text-xs text-muted-foreground mb-1">{children}</p>;
 
-// Number field that saves on blur (same pattern as the layout overrides).
-function DimField({ field, label, item, draft, setDraft, onSave }) {
-  const val = draft[field] != null ? draft[field] : (item[field] ?? "");
+// Rail profile height, read off the material assigned to that rail in Components.
+const RailSize = ({ slot, item, materials }) => {
+  const h = materialCrossSection(materialForSlot(item, materials, slot))?.height;
   return (
     <div>
-      <Lbl>{label}</Lbl>
-      <Input
-        type="number"
-        step="any"
-        className="h-9 text-sm font-mono"
-        value={val}
-        onChange={(e) => setDraft((d) => ({ ...d, [field]: e.target.value }))}
-        onBlur={() => {
-          if (draft[field] == null) return;
-          const n = parseFloat(draft[field]);
-          const next = draft[field] === "" || isNaN(n) ? null : n;
-          setDraft((d) => ({ ...d, [field]: undefined }));
-          if (next !== (item[field] ?? null)) onSave(field, next);
-        }}
-      />
+      <Lbl>{slot} (in)</Lbl>
+      <div className="h-9 flex items-center rounded-md border bg-muted/40 px-3 font-mono text-sm">
+        {h ?? "—"}
+      </div>
     </div>
   );
-}
+};
 
 export default function StyleDefinitionCard({ item, materials, onSave }) {
-  const [draft, setDraft] = useState({});
-
   return (
     <div className="bg-card border rounded-xl p-5 space-y-4">
       <div>
@@ -54,8 +41,8 @@ export default function StyleDefinitionCard({ item, materials, onSave }) {
             <SelectContent>{INFILL_TYPES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
           </Select>
         </div>
-        <DimField field="top_rail_height_in" label="Top rail height (in)" item={item} draft={draft} setDraft={setDraft} onSave={onSave} />
-        <DimField field="bottom_rail_height_in" label="Bottom rail height (in)" item={item} draft={draft} setDraft={setDraft} onSave={onSave} />
+        <RailSize slot="Top Rail" item={item} materials={materials} />
+        <RailSize slot="Bottom Rail" item={item} materials={materials} />
       </div>
       {needsInfillItem(item) && (
         <div className="grid sm:grid-cols-2 gap-3 items-start border-t pt-4">
@@ -67,8 +54,8 @@ export default function StyleDefinitionCard({ item, materials, onSave }) {
         </div>
       )}
       <p className="text-[11px] text-muted-foreground">
-        Picket width and height calculate from the picket cost item's size (1/2" × 1/2" gives 0.5" by 0.5");
-        horizontal pickets stack by height, vertical pickets space by width. Any value typed under Layout overrides it.
+        Rail and picket sizes come from the cost items assigned under Components (1/2" × 1/2" gives 0.5" by 0.5").
+        Horizontal pickets stack up the clear height between the rails, vertical pickets space across the bay.
       </p>
     </div>
   );
