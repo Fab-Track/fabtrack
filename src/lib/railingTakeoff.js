@@ -13,8 +13,6 @@ export const RAILING_SLOTS = ["Top Rail", "Bottom Rail", "Post", "Picket"];
 const DEFAULT_RAIL_HEIGHT_IN = 1.5;
 /** Clear gap under the bottom rail — the shop standard, 3-11/16". */
 const DEFAULT_BOTTOM_CLEARANCE_IN = 3.6875;
-/** Default efficiency factor applied to the catalog's standard fabrication hours. */
-const DEFAULT_TIME_REDUCER_PCT = 15;
 
 export const isInfillType = (item) => item?.infill_type === "Mesh" || item?.infill_type === "Glass";
 
@@ -32,13 +30,12 @@ export function resolveSettings(input) {
   else if (input && typeof input === "object") rec = input;
   if (!rec) return null;
   const pick = (f) => (rec[f] != null && rec[f] > 0 ? rec[f] : 0);
-  // Zero is a real value for these two (flush bottom rail, no time reduction).
+  // Zero is a real value here (flush bottom rail).
   const numOr = (f, fallback) => (rec[f] != null && Number.isFinite(Number(rec[f])) ? Number(rec[f]) : fallback);
   return {
     res_post_height_in: pick("res_post_height_in"),
     comm_post_height_in: pick("comm_post_height_in"),
     rail_bottom_clearance_in: numOr("rail_bottom_clearance_in", DEFAULT_BOTTOM_CLEARANCE_IN),
-    labor_time_reducer_pct: numOr("labor_time_reducer_pct", DEFAULT_TIME_REDUCER_PCT),
     material_costing_mode: rec.material_costing_mode || "Whole sticks",
     labor_fab_rate: pick("labor_fab_rate"),
     labor_install_rate: pick("labor_install_rate"),
@@ -278,8 +275,8 @@ export function computeRailingCosts({ catalogItem, category, settings, materials
   const allComponents = infillLine ? [...components, infillLine] : components;
   const materialLines = aggregateMaterials(allComponents, materials, s?.material_costing_mode);
 
-  // Standard time, less the org's efficiency reduction (labor_time_reducer_pct).
-  const fabHours = num(catalogItem?.cost_fab_hours_per_unit) / 10 * qty * (1 - num(s?.labor_time_reducer_pct) / 100);
+  // Standard fabrication hours per 10 units, as entered on the style (Labor and Finish).
+  const fabHours = num(catalogItem?.cost_fab_hours_per_unit) / 10 * qty;
   const installHours = num(catalogItem?.cost_install_hours_per_unit) / 10 * qty;
 
   const costs = {

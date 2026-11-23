@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import RateField from "./RateField";
 import { toast } from "sonner";
 
-const FIELDS = ["res_post_height_in", "comm_post_height_in", "labor_time_reducer_pct"];
-const DEFAULTS = { res_post_height_in: 36, comm_post_height_in: 43, labor_time_reducer_pct: 15 };
+const FIELDS = ["res_post_height_in", "comm_post_height_in"];
+const DEFAULTS = { res_post_height_in: 36, comm_post_height_in: 43 };
 
 // Residential / commercial post heights (read by the railing takeoff). Picket length is derived.
 export default function RailingStandardsCard() {
@@ -58,13 +58,6 @@ export default function RailingStandardsCard() {
       <div className="grid grid-cols-2 gap-3 max-w-md">
         <RateField label="Residential post height" helper="Inches" suffix="in" value={form.res_post_height_in ?? ""} onChange={set("res_post_height_in")} />
         <RateField label="Commercial post height" helper="Inches" suffix="in" value={form.comm_post_height_in ?? ""} onChange={set("comm_post_height_in")} />
-        <RateField
-          label="Fabrication time reduction"
-          helper="Off the catalog's standard hours"
-          suffix="%"
-          value={form.labor_time_reducer_pct ?? ""}
-          onChange={set("labor_time_reducer_pct")}
-        />
       </div>
 
       <div className="mt-4 max-w-md">

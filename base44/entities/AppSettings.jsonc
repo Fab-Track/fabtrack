@@ -78,11 +78,6 @@
       "default": 0,
       "description": "Global install labor rate ($/hour) used by the Service Catalog cost model"
     },
-    "labor_time_reducer_pct": {
-      "type": "number",
-      "default": 15,
-      "description": "Percentage taken off the catalog's standard fabrication hours when costing railing labor (e.g. 15 = standard time less 15%). 0 = use the catalog hours as entered."
-    },
     "steel_price_per_lb": {
       "type": "number",
       "default": 0,
