@@ -78,6 +78,11 @@
       "default": 0,
       "description": "Global install labor rate ($/hour) used by the Service Catalog cost model"
     },
+    "labor_time_reducer_pct": {
+      "type": "number",
+      "default": 15,
+      "description": "Percentage taken off the catalog's standard fabrication hours when costing railing labor (e.g. 15 = standard time less 15%). 0 = use the catalog hours as entered."
+    },
     "steel_price_per_lb": {
       "type": "number",
       "default": 0,
@@ -86,27 +91,27 @@
     "res_post_height_in": {
       "type": "number",
       "default": 36,
-      "description": "Org-level railing standard: residential post height in inches."
+      "description": "Org-level railing standard: residential railing height in inches."
     },
     "res_picket_length_in": {
       "type": "number",
       "default": 29.5,
-      "description": "Org-level railing standard: residential picket length in inches."
+      "description": "Legacy residential picket length in inches. No longer read: the takeoff derives picket length from the railing height, the rail profiles and the bottom clearance."
     },
     "comm_post_height_in": {
       "type": "number",
       "default": 43,
-      "description": "Org-level railing standard: commercial post height in inches."
+      "description": "Org-level railing standard: commercial railing height in inches."
     },
     "comm_picket_length_in": {
       "type": "number",
       "default": 36.5,
-      "description": "Org-level railing standard: commercial picket length in inches."
+      "description": "Legacy commercial picket length in inches. No longer read: the takeoff derives picket length from the railing height, the rail profiles and the bottom clearance."
     },
     "rail_bottom_clearance_in": {
       "type": "number",
       "default": 3.6875,
-      "description": "Org-level railing standard: clear gap under the bottom rail in inches (default 3.6875)."
+      "description": "Org-level railing standard: clear gap under the bottom rail in inches (default 3-11/16)."
     },
     "material_costing_mode": {
       "type": "string",

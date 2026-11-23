@@ -8,7 +8,7 @@ const STD_FIELDS = [
   { key: "res_post_height_in", label: "Residential post height (in)" },
   { key: "comm_post_height_in", label: "Commercial post height (in)" },
 ];
-const LAYOUT_UNITS = { post_spacing_in: '"', post_width_in: '"', picket_clear_gap_in: '"', picket_width_in: '"', rail_runs: "" };
+const LAYOUT_UNITS = { post_spacing_in: '"', post_width_in: '"', picket_clear_gap_in: '"', picket_width_in: '"', picket_height_in: '"', rail_runs: "" };
 const show = (v, u = '"') => (v == null ? "—" : `${v}${u}`);
 
 export default function StandardsCards({ category, settings, orgId, refresh }) {
@@ -51,7 +51,7 @@ export default function StandardsCards({ category, settings, orgId, refresh }) {
           <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Default layout — every style inherits</h4>
           <Button size="sm" variant="outline" onClick={() => setDlg("layout")}>Edit</Button>
         </div>
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
           {OVERRIDE_FIELDS.map((f) => (
             <div key={f.key} className="bg-muted/40 rounded-lg p-2 text-center">
               <p className="font-mono text-lg font-bold">{show(category[f.key], LAYOUT_UNITS[f.key])}</p>

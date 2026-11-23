@@ -68,12 +68,13 @@ export default function TakeoffDialog({ line, materials = [], settings, catalogI
   const cells = s
     ? [
         ["Posts", s.posts],
-        ["Section length", `${s.sectionLength.toFixed(2)} ft`],
+        ["Sections", s.bays ?? "—"],
+        ["Section length", s.sectionLength != null ? `${s.sectionLength.toFixed(2)} ft` : "—"],
         ["Pickets / section", s.picketsPerSection],
         ["Total pickets", s.totalPickets],
-        ["Post height", `${s.postHeight}"`],
-        ["Clear height", s.clearHeight != null ? `${s.clearHeight}"` : "—"],
-        ["Picket length", s.picketLength != null ? `${s.picketLength}"` : "—"],
+        ["Railing height", s.postHeight != null ? `${s.postHeight}"` : "—"],
+        ["Clear height", s.clearHeight != null ? `${s.clearHeight.toFixed(2)}"` : "—"],
+        ["Picket length", s.picketLength != null ? `${s.picketLength.toFixed(2)}"` : "—"],
         ["Rail runs", (calc?.layout?.params || t?.params)?.rail_runs],
         ...(s.infillSqFt > 0 ? [["Infill area", `${s.infillSqFt} sq ft`]] : []),
       ]

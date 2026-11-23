@@ -9,11 +9,12 @@
 
 export const RAILING_SLOTS = ["Top Rail", "Bottom Rail", "Post", "Picket"];
 
-/** Fallback offset (inches) when the org has no picket-length standard: top rail + bottom rail + clearance. */
-const PICKET_LENGTH_OFFSET_IN = 6.5;
-/** Fallbacks that reproduce the org's 36"/29.5" and 43"/36.5" standards. */
+/** Fallback rail profile height when a style has none on file. */
 const DEFAULT_RAIL_HEIGHT_IN = 1.5;
-const DEFAULT_BOTTOM_CLEARANCE_IN = 3.5;
+/** Clear gap under the bottom rail — the shop standard, 3-11/16". */
+const DEFAULT_BOTTOM_CLEARANCE_IN = 3.6875;
+/** Default efficiency factor applied to the catalog's standard fabrication hours. */
+const DEFAULT_TIME_REDUCER_PCT = 15;
 
 export const isInfillType = (item) => item?.infill_type === "Mesh" || item?.infill_type === "Glass";
 
@@ -31,12 +32,13 @@ export function resolveSettings(input) {
   else if (input && typeof input === "object") rec = input;
   if (!rec) return null;
   const pick = (f) => (rec[f] != null && rec[f] > 0 ? rec[f] : 0);
+  // Zero is a real value for these two (flush bottom rail, no time reduction).
+  const numOr = (f, fallback) => (rec[f] != null && Number.isFinite(Number(rec[f])) ? Number(rec[f]) : fallback);
   return {
     res_post_height_in: pick("res_post_height_in"),
     comm_post_height_in: pick("comm_post_height_in"),
-    res_picket_length_in: pick("res_picket_length_in"),
-    comm_picket_length_in: pick("comm_picket_length_in"),
-    rail_bottom_clearance_in: pick("rail_bottom_clearance_in"),
+    rail_bottom_clearance_in: numOr("rail_bottom_clearance_in", DEFAULT_BOTTOM_CLEARANCE_IN),
+    labor_time_reducer_pct: numOr("labor_time_reducer_pct", DEFAULT_TIME_REDUCER_PCT),
     material_costing_mode: rec.material_costing_mode || "Whole sticks",
     labor_fab_rate: pick("labor_fab_rate"),
     labor_install_rate: pick("labor_install_rate"),
@@ -55,6 +57,7 @@ export function resolveRailingParams(catalogItem, category) {
     post_width_in: pick("post_width_in"),
     picket_clear_gap_in: pick("picket_clear_gap_in"),
     picket_width_in: pick("picket_width_in"),
+    picket_height_in: pick("picket_height_in"),
     rail_runs: pick("rail_runs"),
   };
 }
@@ -66,49 +69,58 @@ export function computeLayout({ catalogItem, settings, length, isResidential, ca
   const s = resolveSettings(settings);
   if (!catalogItem || !s || !length || length <= 0) return null;
 
-  const { post_spacing_in, post_width_in, picket_clear_gap_in, picket_width_in, rail_runs } = resolveRailingParams(catalogItem, category);
-  if (!post_spacing_in || !post_width_in || !picket_clear_gap_in || !picket_width_in || !rail_runs) return null;
+  const { post_spacing_in, post_width_in, picket_clear_gap_in, picket_width_in, picket_height_in, rail_runs } = resolveRailingParams(catalogItem, category);
+  if (!post_spacing_in || !post_width_in || !picket_clear_gap_in || !rail_runs) return null;
+  if (!picket_width_in && !picket_height_in) return null;
 
-  const postHeight = isResidential ? s.res_post_height_in : s.comm_post_height_in;
-  if (!postHeight) return null;
+  // Overall railing height (floor to top of the top rail) — posts are cut to this.
+  const railingHeight = isResidential ? s.res_post_height_in : s.comm_post_height_in;
+  if (!railingHeight) return null;
 
   const orientation = catalogItem.picket_orientation || "Vertical";
+  const horizontal = orientation === "Horizontal";
   const infill = catalogItem.infill_type || "Pickets";
   const topRailHeight = num(catalogItem.top_rail_height_in) || DEFAULT_RAIL_HEIGHT_IN;
   const bottomRailHeight = num(catalogItem.bottom_rail_height_in) || DEFAULT_RAIL_HEIGHT_IN;
-  // Clearance under the bottom rail: the org setting, else whatever reproduces the org picket-length standard.
-  const picketStandard = (isResidential ? s.res_picket_length_in : s.comm_picket_length_in) || (postHeight - PICKET_LENGTH_OFFSET_IN);
-  const bottomClearance = s.rail_bottom_clearance_in
-    || Math.max(0, postHeight - picketStandard - topRailHeight - bottomRailHeight);
+  const bottomClearance = num(s.rail_bottom_clearance_in);
   // Open height between the rails — the space infill fills.
-  const clearHeight = Math.max(0, postHeight - topRailHeight - bottomRailHeight - bottomClearance);
+  const clearHeight = Math.max(0, railingHeight - topRailHeight - bottomRailHeight - bottomClearance);
 
-  // inches = LF x 12; posts = max(1, ceil(inches / spacing)); net = inches - posts x post width
+  // Posts: the shop formula fits the post width inside every spacing module, min 2 posts.
+  // Bays are the spaces between posts — one fewer than the posts.
   const inches = length * 12;
-  const posts = Math.max(1, Math.ceil(inches / post_spacing_in));
-  const netIn = inches - posts * post_width_in;
-  const sectionIn = netIn / posts;
+  const posts = Math.max(2, Math.ceil((inches * (post_spacing_in - post_width_in)) / (post_spacing_in ** 2)) + 1);
+  const bays = Math.max(1, posts - 1);
+  const netIn = Math.max(0, inches - posts * post_width_in);
+  const bayIn = netIn / bays;
 
-  // Vertical: pickets run the clear height, counted across the clear width of a section.
-  // Horizontal: pickets run the clear width, stacked up the clear height.
-  const barThickness = picket_width_in + picket_clear_gap_in;
-  const picketsPerSection = Math.max(0, Math.ceil((orientation === "Horizontal" ? clearHeight : sectionIn) / barThickness));
-  const totalPickets = picketsPerSection * posts;
-  const picketLength = orientation === "Horizontal" ? sectionIn : clearHeight;
-  const infillSqFt = isInfillType({ infill_type: infill }) ? (sectionIn * clearHeight * posts) / 144 : 0;
+  // Horizontal: pickets run the bay width and stack up the clear height, spaced by their
+  // vertical thickness. Vertical: pickets run the clear height and are spaced across the
+  // bay width. Either way n bars leave n+1 gaps, so one gap comes off the span.
+  const barSpan = horizontal
+    ? (num(picket_height_in) || num(picket_width_in))
+    : (num(picket_width_in) || num(picket_height_in));
+  const spanIn = horizontal ? clearHeight : bayIn;
+  const picketsPerSection = barSpan > 0
+    ? Math.max(0, Math.ceil((spanIn - picket_clear_gap_in) / (picket_clear_gap_in + barSpan)))
+    : 0;
+  const totalPickets = picketsPerSection * bays;
+  const picketLength = horizontal ? bayIn : clearHeight;
+  const infillSqFt = isInfillType({ infill_type: infill }) ? (bayIn * clearHeight * bays) / 144 : 0;
 
   return {
-    params: { post_spacing_in, post_width_in, picket_clear_gap_in, picket_width_in, rail_runs },
+    params: { post_spacing_in, post_width_in, picket_clear_gap_in, picket_width_in, picket_height_in, rail_runs },
     steps: {
-      postsForNet: posts, netLength: netIn / 12, posts, sectionLength: sectionIn / 12, picketsPerSection, totalPickets,
-      postHeight, picketLength, clearHeight, clearWidth: sectionIn, orientation, infill,
+      postsForNet: posts, netLength: netIn / 12, posts, bays, sectionLength: bayIn / 12, bayWidth: bayIn,
+      picketsPerSection, totalPickets, postHeight: railingHeight, railingHeight, picketLength,
+      clearHeight, clearWidth: bayIn, orientation, infill,
       topRailHeight, bottomRailHeight, bottomClearance, infillSqFt: r2(infillSqFt),
     },
-    // top rail = LF; bottom rail = LF x (rail runs - 1)
-    railFeet: length,
-    topRailFeet: length,
-    bottomRailFeet: length * Math.max(0, rail_runs - 1),
-    postFeet: posts * (postHeight / 12),
+    // rails are net of the posts: LF per run; bottom rail = run x (rail runs - 1)
+    railFeet: netIn / 12,
+    topRailFeet: netIn / 12,
+    bottomRailFeet: (netIn / 12) * Math.max(0, rail_runs - 1),
+    postFeet: posts * (railingHeight / 12),
     picketFeet: totalPickets * (picketLength / 12),
     infillSqFt: r2(infillSqFt),
   };
@@ -266,7 +278,8 @@ export function computeRailingCosts({ catalogItem, category, settings, materials
   const allComponents = infillLine ? [...components, infillLine] : components;
   const materialLines = aggregateMaterials(allComponents, materials, s?.material_costing_mode);
 
-  const fabHours = num(catalogItem?.cost_fab_hours_per_unit) / 10 * qty;
+  // Standard time, less the org's efficiency reduction (labor_time_reducer_pct).
+  const fabHours = num(catalogItem?.cost_fab_hours_per_unit) / 10 * qty * (1 - num(s?.labor_time_reducer_pct) / 100);
   const installHours = num(catalogItem?.cost_install_hours_per_unit) / 10 * qty;
 
   const costs = {

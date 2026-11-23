@@ -66,7 +66,10 @@ export default function StyleDefinitionCard({ item, materials, onSave }) {
           <p className="text-[11px] text-muted-foreground sm:pt-6">Costed per square foot of infill area (clear height × clear width per section).</p>
         </div>
       )}
-      <p className="text-[11px] text-muted-foreground">Post width and picket width are set under Layout. Cost items for each slot are set under Components.</p>
+      <p className="text-[11px] text-muted-foreground">
+        Post width, picket width and picket height are set under Layout — horizontal pickets stack by height,
+        vertical pickets space by width. Cost items for each slot are set under Components.
+      </p>
     </div>
   );
 }

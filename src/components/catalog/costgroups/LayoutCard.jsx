@@ -18,13 +18,13 @@ export default function LayoutCard({ layout, item, category, onSaveOverride }) {
 
   const computed = [
     ["Posts", s?.posts],
-    ["Sections", s?.posts],
+    ["Sections", s?.bays],
     ["Section length", s ? `${s.sectionLength.toFixed(2)} ft` : null],
     ["Pickets / section", s?.picketsPerSection],
     ["Total pickets", s?.totalPickets],
-    ["Post height", s ? `${s.postHeight}"` : null],
-    ["Clear height", s ? `${s.clearHeight}"` : null],
-    ["Picket length", s ? `${s.picketLength}"` : null],
+    ["Railing height", s ? `${s.postHeight}"` : null],
+    ["Clear height", s ? `${s.clearHeight.toFixed(2)}"` : null],
+    ["Picket length", s ? `${s.picketLength.toFixed(2)}"` : null],
   ];
 
   return (
@@ -33,7 +33,7 @@ export default function LayoutCard({ layout, item, category, onSaveOverride }) {
         <h3 className="text-lg font-bold">Layout</h3>
         <span className="text-xs text-muted-foreground">Leave blank to inherit the category default</span>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 mb-4">
         {OVERRIDE_FIELDS.map((f) => {
           const placeholder = category?.[f.key] ?? "";
           const val = draft[f.key] != null ? draft[f.key] : (item?.[f.key] ?? "");

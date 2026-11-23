@@ -14,6 +14,7 @@ export const OVERRIDE_FIELDS = [
   { key: "post_width_in", label: "Post width", short: "Post width" },
   { key: "picket_clear_gap_in", label: "Picket gap", short: "Gap" },
   { key: "picket_width_in", label: "Picket width", short: "Picket width" },
+  { key: "picket_height_in", label: "Picket height", short: "Picket height" },
   { key: "rail_runs", label: "Rail runs", short: "Rail runs" },
 ];
 
