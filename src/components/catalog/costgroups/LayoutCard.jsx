@@ -19,7 +19,7 @@ export default function LayoutCard({ layout, item, category, onSaveOverride }) {
   const computed = [
     ["Posts", s?.posts],
     ["Sections", s?.bays],
-    ["Section length", s ? `${s.sectionLength.toFixed(2)} ft` : null],
+    ["Bay width", s ? `${s.bayWidth.toFixed(2)}"` : null],
     ["Pickets / section", s?.picketsPerSection],
     ["Total pickets", s?.totalPickets],
     ["Railing height", s ? `${s.postHeight}"` : null],

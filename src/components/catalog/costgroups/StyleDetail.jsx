@@ -6,6 +6,7 @@ import Crumbs from "./Crumbs";
 import Pill from "./Pill";
 import LayoutCard from "./LayoutCard";
 import ComponentsCard from "./ComponentsCard";
+import MaterialsStockCard from "./MaterialsStockCard";
 import LaborCard from "./LaborCard";
 import CostSummary from "./CostSummary";
 import HoursCard from "./HoursCard";
@@ -126,6 +127,7 @@ export default function StyleDetail({ item, category, settings, materials, orgId
           {railing && <LayoutCard layout={calc.layout} item={item} category={category} onSaveOverride={saveOverride} />}
           <ComponentsCard rows={rows} setRows={setRows} results={calc.componentResults} materials={materials} layout={calc.layout} length={qty} railing={railing}
             materialCost={calc.costs.materials} dirty={dirty} saving={saving} onSave={saveComponents} orgId={orgId} refresh={refresh} />
+          <MaterialsStockCard lines={calc.materialLines} costingMode={calc.settings?.material_costing_mode} />
           <LaborCard rules={rules} setRule={(f, v) => setRules((p) => ({ ...p, [f]: v }))} commit={commitRule} calc={calcCard} unit={unit} rates={rates} hoursPerDay={hoursPerDay} />
         </div>
         <div className="space-y-4">

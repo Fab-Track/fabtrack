@@ -133,8 +133,9 @@ export function computeLayout({ catalogItem, settings, length, isResidential, ca
     ? (num(picket_height_in) || num(picket_width_in))
     : (num(picket_width_in) || num(picket_height_in));
   const spanIn = horizontal ? clearHeight : bayIn;
+  // The most bars that still leave the full clear gap in every space between them.
   const picketsPerSection = barSpan > 0
-    ? Math.max(0, Math.ceil((spanIn - picket_clear_gap_in) / (picket_clear_gap_in + barSpan)))
+    ? Math.max(0, Math.floor((spanIn - picket_clear_gap_in) / (picket_clear_gap_in + barSpan)))
     : 0;
   const totalPickets = picketsPerSection * bays;
   const picketLength = horizontal ? bayIn : clearHeight;
