@@ -44,6 +44,7 @@ export default function StyleDetail({ item, category, settings, materials, orgId
   const unit = unitLabel(category);
   const qty = num(length);
   const s = settings || {};
+  const orgClearance = s.rail_bottom_clearance_in ?? 3.6875;
 
   // One engine — exactly what the estimate line and View takeoff use.
   const calc = useMemo(
@@ -124,7 +125,7 @@ export default function StyleDetail({ item, category, settings, materials, orgId
         <div className="space-y-4 min-w-0">
           <TestBar length={length} setLength={setLength} unit={unit} railing={railing} isResidential={isResidential} setResidential={setIsResidential} />
           {railing && <StyleDefinitionCard item={item} materials={materials} onSave={saveOverride} />}
-          {railing && <LayoutCard layout={calc.layout} item={item} category={category} onSaveOverride={saveOverride} />}
+          {railing && <LayoutCard layout={calc.layout} item={item} category={category} orgClearance={orgClearance} onSaveOverride={saveOverride} />}
           <ComponentsCard rows={rows} setRows={setRows} results={calc.componentResults} materials={materials} layout={calc.layout} length={qty} railing={railing}
             materialCost={calc.costs.materials} dirty={dirty} saving={saving} onSave={saveComponents} orgId={orgId} refresh={refresh} />
           <MaterialsStockCard lines={calc.materialLines} costingMode={calc.settings?.material_costing_mode} />

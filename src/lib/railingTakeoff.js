@@ -114,7 +114,10 @@ export function computeLayout({ catalogItem, settings, length, isResidential, ca
     materialCrossSection(materialForSlot(catalogItem, materials, slot))?.height || num(stored) || DEFAULT_RAIL_HEIGHT_IN;
   const topRailHeight = railProfile("Top Rail", catalogItem.top_rail_height_in);
   const bottomRailHeight = railProfile("Bottom Rail", catalogItem.bottom_rail_height_in);
-  const bottomClearance = num(s.rail_bottom_clearance_in);
+  // Clearance under the bottom rail: the style's own value wins, else the org standard.
+  const bottomClearance = num(
+    catalogItem.floor_to_bottom_rail_in ?? s.rail_bottom_clearance_in ?? DEFAULT_BOTTOM_CLEARANCE_IN
+  );
   // Open height between the rails — the space infill fills.
   const clearHeight = Math.max(0, railingHeight - topRailHeight - bottomRailHeight - bottomClearance);
 

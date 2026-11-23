@@ -92,6 +92,10 @@
       "type": "number",
       "description": "Railing style definition: height of the bottom rail profile in inches, used in the layout and infill-area math."
     },
+    "floor_to_bottom_rail_in": {
+      "type": "number",
+      "description": "Railing style override: clear distance from the floor to the underside of the bottom rail in inches. Null = use the org default (AppSettings.rail_bottom_clearance_in). Not the bottom rail's profile height."
+    },
     "picket_orientation": {
       "type": "string",
       "enum": [
