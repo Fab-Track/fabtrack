@@ -133,9 +133,9 @@ export function computeLayout({ catalogItem, settings, length, isResidential, ca
     ? (num(picket_height_in) || num(picket_width_in))
     : (num(picket_width_in) || num(picket_height_in));
   const spanIn = horizontal ? clearHeight : bayIn;
-  // The most bars that still leave the full clear gap in every space between them.
+  // Round up so the gap between bars never exceeds the max clear gap.
   const picketsPerSection = barSpan > 0
-    ? Math.max(0, Math.floor((spanIn - picket_clear_gap_in) / (picket_clear_gap_in + barSpan)))
+    ? Math.max(0, Math.ceil((spanIn - picket_clear_gap_in) / (picket_clear_gap_in + barSpan)))
     : 0;
   const totalPickets = picketsPerSection * bays;
   const picketLength = horizontal ? bayIn : clearHeight;
@@ -152,7 +152,7 @@ export function computeLayout({ catalogItem, settings, length, isResidential, ca
     },
     // rails are net of the posts: LF per run; bottom rail = run x (rail runs - 1)
     railFeet: netIn / 12,
-    topRailFeet: netIn / 12,
+    topRailFeet: inches / 12,
     bottomRailFeet: (netIn / 12) * Math.max(0, rail_runs - 1),
     postFeet: posts * (railingHeight / 12),
     picketFeet: totalPickets * (picketLength / 12),
