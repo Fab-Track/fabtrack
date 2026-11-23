@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { OVERRIDE_FIELDS } from "@/lib/costGroups";
+import { STYLE_OVERRIDE_FIELDS } from "@/lib/costGroups";
 
 const num = (v) => parseFloat(v);
 const fmt = (v, d = 2) => (v == null ? "—" : typeof v === "number" ? v.toFixed(d) : v);
@@ -40,7 +40,7 @@ export default function LayoutCard({ layout, item, category, orgClearance = 3.68
         </span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 mb-4">
-        {OVERRIDE_FIELDS.map((f) => {
+        {STYLE_OVERRIDE_FIELDS.map((f) => {
           const placeholder = category?.[f.key] ?? "";
           const val = draft[f.key] != null ? draft[f.key] : (item?.[f.key] ?? "");
           return (

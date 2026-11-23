@@ -254,9 +254,7 @@ function CatalogItemForm({ initial = {}, categories, onSave, onCancel, fabRate =
   const [photoUrl, setPhotoUrl] = useState(initial.photo_url || "");
   const [isRailing, setIsRailing] = useState(initial.is_railing === true);
   const [postSpacing, setPostSpacing] = useState(initial.post_spacing_in ?? "");
-  const [postWidth, setPostWidth] = useState(initial.post_width_in ?? "");
   const [picketGap, setPicketGap] = useState(initial.picket_clear_gap_in ?? "");
-  const [picketWidth, setPicketWidth] = useState(initial.picket_width_in ?? "");
   const [railRuns, setRailRuns] = useState(initial.rail_runs ?? "");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
@@ -357,16 +355,8 @@ function CatalogItemForm({ initial = {}, categories, onSave, onCancel, fabRate =
                 <Input type="number" step="0.01" className="h-8 text-xs" value={postSpacing} onChange={e => setPostSpacing(e.target.value)} />
               </div>
               <div>
-                <span className="text-[10px] text-muted-foreground">Post width (in)</span>
-                <Input type="number" step="0.01" className="h-8 text-xs" value={postWidth} onChange={e => setPostWidth(e.target.value)} />
-              </div>
-              <div>
                 <span className="text-[10px] text-muted-foreground">Max Picket Spacing (in)</span>
                 <Input type="number" step="0.01" className="h-8 text-xs" value={picketGap} onChange={e => setPicketGap(e.target.value)} />
-              </div>
-              <div>
-                <span className="text-[10px] text-muted-foreground">Picket width (in)</span>
-                <Input type="number" step="0.01" className="h-8 text-xs" value={picketWidth} onChange={e => setPicketWidth(e.target.value)} />
               </div>
               <div>
                 <span className="text-[10px] text-muted-foreground">Rail runs</span>
@@ -431,9 +421,7 @@ function CatalogItemForm({ initial = {}, categories, onSave, onCancel, fabRate =
             photo_url: photoUrl || null,
             is_railing: isRailing,
             post_spacing_in: isRailing ? (postSpacing === "" ? null : parseFloat(postSpacing) || null) : null,
-            post_width_in: isRailing ? (postWidth === "" ? null : parseFloat(postWidth) || null) : null,
             picket_clear_gap_in: isRailing ? (picketGap === "" ? null : parseFloat(picketGap) || null) : null,
-            picket_width_in: isRailing ? (picketWidth === "" ? null : parseFloat(picketWidth) || null) : null,
             rail_runs: isRailing ? (railRuns === "" ? null : parseInt(railRuns) || null) : null,
             ...costModelRef.current,
           })}

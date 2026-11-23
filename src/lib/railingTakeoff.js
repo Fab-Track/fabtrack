@@ -45,16 +45,19 @@ export function resolveSettings(input) {
 
 /**
  * Resolve railing takeoff parameters: style override if not null, else category default.
+ * Post and picket sizes have no style-level field — they come from the component
+ * materials, with the category value as the fallback.
  */
 export function resolveRailingParams(catalogItem, category) {
   const cat = category || {};
   const pick = (f) => (catalogItem?.[f] != null ? catalogItem[f] : cat[f] ?? null);
+  const catOnly = (f) => (cat[f] ?? null);
   return {
     post_spacing_in: pick("post_spacing_in"),
-    post_width_in: pick("post_width_in"),
+    post_width_in: catOnly("post_width_in"),
     picket_clear_gap_in: pick("picket_clear_gap_in"),
-    picket_width_in: pick("picket_width_in"),
-    picket_height_in: pick("picket_height_in"),
+    picket_width_in: catOnly("picket_width_in"),
+    picket_height_in: catOnly("picket_height_in"),
     rail_runs: pick("rail_runs"),
   };
 }
@@ -98,8 +101,7 @@ export function computeLayout({ catalogItem, settings, length, isResidential, ca
   const { post_spacing_in, picket_clear_gap_in, rail_runs } = p;
   const cross = materialCrossSection(materialForSlot(catalogItem, materials, "Picket"));
   // Post and picket sizes follow the material assigned to their slot, like the rails do;
-  // the style value (already merged with the category default) only stands in when the
-  // material has no size on file.
+  // the category default only stands in when the material has no size on file.
   const post_width_in = materialCrossSection(materialForSlot(catalogItem, materials, "Post"))?.height ?? num(p.post_width_in);
   const picket_width_in = cross?.height ?? (num(p.picket_width_in) || cross?.width || 0);
   const picket_height_in = num(p.picket_height_in) || cross?.height || 0;

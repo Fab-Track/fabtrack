@@ -18,6 +18,11 @@ export const OVERRIDE_FIELDS = [
   { key: "rail_runs", label: "Rail runs", short: "Rail runs" },
 ];
 
+// Style-level overrides: post and picket sizes come from the component materials,
+// so they are not editable on a style (the category still carries the fallback).
+const SIZE_KEYS = ["post_width_in", "picket_width_in", "picket_height_in"];
+export const STYLE_OVERRIDE_FIELDS = OVERRIDE_FIELDS.filter((f) => !SIZE_KEYS.includes(f.key));
+
 export const hasCostModel = (i) => (i.cost_fab_hours_per_unit || 0) > 0 || (i.cost_install_hours_per_unit || 0) > 0;
 export const isPerJob = (i) => (i.name || "").trim().toLowerCase() === "custom";
 
@@ -78,7 +83,7 @@ export function statusOf(item, cat) {
 }
 
 export function overridesOf(item, cat) {
-  return OVERRIDE_FIELDS.filter((f) => item[f.key] != null && item[f.key] !== cat?.[f.key]).map((f) => ({
+  return STYLE_OVERRIDE_FIELDS.filter((f) => item[f.key] != null && item[f.key] !== cat?.[f.key]).map((f) => ({
     ...f,
     value: item[f.key],
   }));

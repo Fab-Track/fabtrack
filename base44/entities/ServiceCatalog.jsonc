@@ -64,21 +64,9 @@
       "type": "number",
       "description": "Railing takeoff override: spacing between posts in inches. Null = use category default."
     },
-    "post_width_in": {
-      "type": "number",
-      "description": "Railing takeoff override: post width in inches. Null = use category default."
-    },
     "picket_clear_gap_in": {
       "type": "number",
       "description": "Railing takeoff override: clear gap between pickets in inches. Null = use category default."
-    },
-    "picket_width_in": {
-      "type": "number",
-      "description": "Railing style definition: the picket's horizontal thickness in inches. Vertical pickets are spaced across a bay by this dimension; horizontal pickets run the bay and fall back to it only when no picket height is set."
-    },
-    "picket_height_in": {
-      "type": "number",
-      "description": "Railing style definition: the picket's vertical thickness in inches. Horizontal pickets stack up the clear height by this dimension plus the gap; vertical pickets fall back to it only when no picket width is set."
     },
     "rail_runs": {
       "type": "number",
