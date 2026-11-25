@@ -27,6 +27,27 @@ export function deriveOnsiteContactFromCustomer(customer) {
 }
 
 /**
+ * The site contact a job starts with when it is created for a customer:
+ * the customer's primary directory contact if there is one, otherwise the
+ * customer's own details. Without this the job card shows "Not set" until
+ * someone opens Edit Job and ticks "Use customer's job contact".
+ */
+export function deriveSiteContactFromCustomer(customer) {
+  if (!customer) return { site_contact_id: "", onsite_contact_name: "", onsite_contact_phone: "", onsite_contact_email: "" };
+  const contacts = customer.contacts || [];
+  const contact = contacts.find((c) => c.is_primary) || contacts[0] || null;
+  if (contact) {
+    return {
+      site_contact_id: contact.id,
+      onsite_contact_name: contact.name || "",
+      onsite_contact_phone: contact.phone || "",
+      onsite_contact_email: contact.email || "",
+    };
+  }
+  return { site_contact_id: "", ...deriveOnsiteContactFromCustomer(customer) };
+}
+
+/**
  * Given a contact object from the customer's contacts[] array,
  * returns the on-site contact fields.
  */

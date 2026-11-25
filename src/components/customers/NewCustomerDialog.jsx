@@ -236,7 +236,9 @@ export default function NewCustomerDialog({ open, onClose, onCreated, title = "N
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Stop the submit from bubbling to a form on the page behind the dialog
+            (React portals bubble through the React tree, not the DOM). */}
+        <form onSubmit={(e) => { e.stopPropagation(); handleSubmit(e); }} className="space-y-5">
           {/* ── Duplicate customer warning ── */}
           {duplicateMatch && (
             <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-2">

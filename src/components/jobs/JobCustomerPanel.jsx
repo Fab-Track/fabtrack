@@ -8,7 +8,7 @@ import { Link } from "react-router-dom";
 import CustomerCombobox from "@/components/customers/CustomerCombobox";
 import JobContactRolesPanel from "@/components/jobs/JobContactRolesPanel";
 import { formatPhoneDisplay } from "@/lib/phoneFormat";
-import { customerTypeToLeadType } from "@/lib/customerToJob";
+import { customerTypeToLeadType, deriveSiteContactFromCustomer } from "@/lib/customerToJob";
 
 // A small info cell: label + value
 function InfoCell({ label, value, icon: Icon, wrap }) {
@@ -41,12 +41,17 @@ export default function JobCustomerPanel({ job, onJobUpdated }) {
   });
 
   async function handleAssign(selected) {
+    // Give the job the customer's contact when it has none of its own
+    const siteContact = !job.site_contact_id && !job.onsite_contact_name
+      ? deriveSiteContactFromCustomer(selected)
+      : {};
     await base44.entities.Job.update(job.id, {
       customer_id: selected.id,
       customer_name: selected.name,
       site_address: selected.address || undefined,
       location_id: null,
       lead_customer_type: selected.type ? customerTypeToLeadType(selected.type) : undefined,
+      ...siteContact,
     });
     queryClient.invalidateQueries({ queryKey: ["job", job.id] });
     onJobUpdated?.();

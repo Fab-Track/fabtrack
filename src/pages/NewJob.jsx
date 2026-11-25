@@ -18,7 +18,7 @@ import { useWriteOrgId } from "@/lib/orgContext";
 import { useRepCandidates } from "@/hooks/useRepCandidates";
 import { useOrgUsers } from "@/hooks/useOrgUsers";
 import { LEAD_SOURCES, LEAD_INTENTS, LEAD_CUSTOMER_TYPES, LEAD_BLOCKERS, autoApplyMissingInfoBlocker, deriveSizeBand } from "@/lib/salesPipeline";
-import { customerTypeToLeadType } from "@/lib/customerToJob";
+import { customerTypeToLeadType, deriveSiteContactFromCustomer } from "@/lib/customerToJob";
 import AddressAutocomplete from "@/components/ui/AddressAutocomplete";
 import { Checkbox } from "@/components/ui/checkbox";
 import LocationFields from "@/components/customers/LocationFields";
@@ -72,6 +72,9 @@ export default function NewJob() {
     save_site_location: false,
     site_location_name: "",
     site_contact_id: "",
+    onsite_contact_name: "",
+    onsite_contact_phone: "",
+    onsite_contact_email: "",
     approver_contact_id: "",
     bill_to_contact_id: "",
     expected_install_date: "",
@@ -156,12 +159,19 @@ export default function NewJob() {
       location_id: "",
       site_contact_id: "",
       bill_to_contact_id: "",
+      // Start from the customer's own contact so the job card is never blank
+      ...deriveSiteContactFromCustomer(customer),
     }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const { notes_text, site_street, site_city, site_state, site_zip, save_site_location, site_location_name, ...rest } = form;
+
+    // Customer known but no site contact picked yet (e.g. arriving from the customer page)
+    if (rest.customer_id && !rest.site_contact_id && !rest.onsite_contact_name && selectedCustomer) {
+      Object.assign(rest, deriveSiteContactFromCustomer(selectedCustomer));
+    }
     const notes = notes_text?.trim()
       ? [{
           id: crypto.randomUUID(),
